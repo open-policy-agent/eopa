@@ -1,3 +1,4 @@
+GOPRIVATE=github.com/StyraInc/opa
 KO_DOCKER_REPO?=dont-publish-yet
 build:
 	ko build --push=false
