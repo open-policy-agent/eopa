@@ -7,7 +7,7 @@ push:
 	ko build
 
 run:
-	docker run -it -p 8181:8181 $$(ko build --local) run -s
+	docker run -it -p 8181:8181 $$(ko build --local) run -s --log-level debug
 
 update:
 	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@load

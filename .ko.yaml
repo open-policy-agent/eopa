@@ -1,0 +1,9 @@
+builds:
+- id: main
+  env:
+  - GOPRIVATE=github.com/StyraInc/opa
+  flags:
+  - -buildmode=exe
+  ldflags:
+  - -X github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=https://telemetry.openpolicyagent.org
+  - -X github.com/open-policy-agent/opa/version.Hostname=github.actions.local
