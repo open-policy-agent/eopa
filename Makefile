@@ -1,4 +1,4 @@
-KO_DOCKER_REPO?= # FIXME: ghcr.io/StyraInc/load ?
+KO_DOCKER_REPO?=dont-publish-yet
 build:
 	ko build --push=false
 
