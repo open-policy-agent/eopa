@@ -13,6 +13,10 @@ Build with `make build`, run with `make run`, publish with `make push`.
 
 ## FAQ
 
+### How can I update the `load` branch of the github.com/StyraInc/opa fork?
+
+- `make update`
+
 ### Can't build locally: private github repo
 
 ````
