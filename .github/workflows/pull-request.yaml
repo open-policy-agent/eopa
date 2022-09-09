@@ -22,7 +22,7 @@ jobs:
     name: build
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
       - uses: imjasonh/setup-ko@v0.6
         env:
           KO_DOCKER_REPO: dont-publish-yet
