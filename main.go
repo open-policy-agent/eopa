@@ -18,7 +18,7 @@ func main() {
 	}
 	for _, c := range cmd.RootCommand.Commands() {
 		switch c.Name() {
-		case "run": // redo
+		case "run":
 			load.AddCommand(loadCmd.Run(c))
 		default:
 			load.AddCommand(c)
