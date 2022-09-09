@@ -5,6 +5,8 @@ import (
 	"os"
 	"path"
 
+	loadCmd "github.com/StyraInc/load/cmd"
+
 	"github.com/open-policy-agent/opa/cmd"
 	"github.com/spf13/cobra"
 )
@@ -16,7 +18,8 @@ func main() {
 	}
 	for _, c := range cmd.RootCommand.Commands() {
 		switch c.Name() {
-		case "run": // ignore
+		case "run": // redo
+			load.AddCommand(loadCmd.Run(c))
 		default:
 			load.AddCommand(c)
 		}
