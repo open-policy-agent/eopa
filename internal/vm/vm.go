@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	bjson "github.com/open-policy-agent/opa/json"
 	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/open-policy-agent/opa/topdown/print"
@@ -128,9 +127,8 @@ func (vm *VM) WithDataNamespace(data interface{}) *VM {
 
 // WithDataJSON stores golang native data for the evaluation to use as
 // 'data.'.
-func (vm *VM) WithDataJSON(data bjson.Json) *VM {
-	var v interface{} = data
-	vm.data = &v
+func (vm *VM) WithDataJSON(data interface{}) *VM {
+	vm.data = &data
 	return vm
 }
 

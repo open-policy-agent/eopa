@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path"
 
 	loadCmd "github.com/StyraInc/load/cmd"
+	_ "github.com/StyraInc/load/pkg/rego_vm"
 
 	"github.com/open-policy-agent/opa/cmd"
 	"github.com/spf13/cobra"
@@ -23,10 +23,9 @@ func main() {
 		default:
 			load.AddCommand(c)
 		}
-
 	}
+
 	if err := load.Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
 }

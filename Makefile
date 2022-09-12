@@ -18,7 +18,7 @@ push:
 	ko build --sbom=none --base-import-paths --tags $(VERSION) --platform=linux/amd64
 
 run:
-	docker run -it -p 8181:8181 $$(ko build --local) run -s --log-level debug
+	docker run -p 8181:8181 -v $$(pwd):/cwd -w /cwd $$(ko build --local) run --config-file config.yml -s --log-level debug
 
 update:
 	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@load
