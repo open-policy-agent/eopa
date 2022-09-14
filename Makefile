@@ -1,4 +1,4 @@
-GOPRIVATE=github.com/StyraInc/opa
+export GOPRIVATE=github.com/StyraInc/opa
 
 VERSION_OPA := $(shell ./build/get-opa-version.sh)
 VERSION := $(VERSION_OPA)$(shell ./build/get-plugin-rev.sh)
