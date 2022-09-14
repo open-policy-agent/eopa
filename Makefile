@@ -28,5 +28,6 @@ ko-login:
 	@echo "Ko Login..."
 	@echo $(ECR_USER)
 	@echo aws ecr get-login-password --region us-east-1 | ko login 547414210802.dkr.ecr.us-east-1.amazonaws.com --username AWS --password-stdin
+	@echo docker pull 547414210802.dkr.ecr.us-east-1.amazonaws.com/styra/load:latest
 
 deploy-ci: ko-login push
