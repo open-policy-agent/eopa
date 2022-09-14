@@ -2,7 +2,6 @@ GOPRIVATE=github.com/StyraInc/opa
 
 VERSION_OPA := $(shell ./build/get-opa-version.sh)
 VERSION := $(VERSION_OPA)$(shell ./build/get-plugin-rev.sh)
-ECR_USER := $(shell aws sts get-caller-identity)
 ECR_PASSWORD := $(shell aws ecr get-login-password --region us-east-1)
 
 export KO_DOCKER_REPO=547414210802.dkr.ecr.us-east-1.amazonaws.com/styra
@@ -16,7 +15,7 @@ build-local:
 	ko build --sbom=none --local --base-import-paths --tags $(VERSION) --platform=linux/amd64
 
 push:
-	ko build -v --sbom=none --base-import-paths --tags $(VERSION) --platform=linux/amd64
+	ko build --sbom=none --base-import-paths --tags $(VERSION) --platform=linux/amd64
 
 run:
 	docker run -it -p 8181:8181 $$(ko build --local) run -s --log-level debug
@@ -27,8 +26,6 @@ update:
 
 docker-login:
 	@echo "Docker Login..."
-	@echo ${ECR_USER}
 	@echo ${ECR_PASSWORD} | docker login --username AWS --password-stdin 547414210802.dkr.ecr.us-east-1.amazonaws.com
-	docker pull 547414210802.dkr.ecr.us-east-1.amazonaws.com/styra/load:latest
 
 deploy-ci: docker-login push
