@@ -1,10 +1,10 @@
 name: Check
 
 on:
- push:
-   branches: [ main ]
- pull_request:
-   branches: [ main ]
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 # When a new revision is pushed to a PR, cancel all in-progress CI runs for that
 # PR. See https://docs.github.com/en/actions/using-jobs/using-concurrency
@@ -13,6 +13,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    name: test
+    runs-on: ubuntu-22.04
+    environment: ci
+    env:
+      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
+    steps:
+      - uses: actions/setup-go@v3
+      - name: checkout Load
+        uses: actions/checkout@v3
+        with:
+          path: load
+      - name: checkout OPA
+        uses: actions/checkout@v3
+        with:
+          repository: open-policy-agent/opa
+          ref: v0.44.0 # TODO(sr): make this pick up the depended-upon version via the build script
+          path: opa
+      - name: pick up opa directory
+        id: opa
+        working-directory: opa
+        run: echo "::set-output name=dir::$(pwd)"
+      - name: setup github api token
+        run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+      - run: make test
+        working-directory: load
+        env:
+          OPA_ROOT: ${{ steps.opa.outputs.dir }}
+
   ko-build:
     name: Ko Build
     runs-on: ubuntu-22.04
@@ -30,6 +59,7 @@ jobs:
       - uses: imjasonh/setup-ko@v0.6
       - name: Build
         run: make build
+
   deploy:
     name: Push Latest Release
     if: github.ref == 'refs/heads/main' # only true for pushes to `main`

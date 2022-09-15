@@ -17,6 +17,9 @@ build-local:
 push:
 	ko build --sbom=none --base-import-paths --tags $(VERSION) --platform=linux/amd64
 
+test:
+	go test ./...
+
 run:
 	docker run -p 8181:8181 -v $$(pwd):/cwd -w /cwd $$(ko build --local) run --config-file config.yml -s --log-level debug
 

@@ -17,7 +17,7 @@ import (
 	"github.com/open-policy-agent/opa/topdown"
 )
 
-const Name = "rego.target.vm"
+const Name = "rego_target_vm"
 
 func init() {
 	runtime.RegisterPlugin(Name, &factory{})
