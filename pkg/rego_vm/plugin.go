@@ -4,9 +4,9 @@ package rego_vm
 import (
 	"context"
 
-	"github.com/StyraInc/load/internal/vm"
 	bjson "github.com/StyraInc/load/pkg/json"
 	regovm "github.com/StyraInc/load/pkg/rego_vm/vm"
+	"github.com/StyraInc/load/pkg/vm"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/ir"

@@ -7,8 +7,8 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/StyraInc/load/internal/vm"
 	fjson "github.com/StyraInc/load/pkg/json"
+	"github.com/StyraInc/load/pkg/vm"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/util"
