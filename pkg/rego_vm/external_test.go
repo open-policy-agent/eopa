@@ -14,11 +14,12 @@ import (
 	"testing"
 	"time"
 
+	inmem "github.com/StyraInc/load/pkg/store"
+
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/runtime"
 	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/storage/inmem"
 	"github.com/open-policy-agent/opa/test/cases"
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/types"
@@ -77,6 +78,8 @@ func TestRegoE2E(t *testing.T) {
 			var store storage.Store
 			if tc.Data != nil {
 				store = inmem.NewFromObject(*tc.Data)
+			} else {
+				store = inmem.New()
 			}
 
 			opts := []func(*rego.Rego){

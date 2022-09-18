@@ -6,6 +6,7 @@ import (
 
 	bjson "github.com/StyraInc/load/pkg/json"
 	regovm "github.com/StyraInc/load/pkg/rego_vm/vm"
+	inmem "github.com/StyraInc/load/pkg/store"
 	"github.com/StyraInc/load/pkg/vm"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -60,16 +61,19 @@ func (*vmp) IsTarget(t string) bool {
 // TODO(sr): move store and tx into PrepareOption?
 func (*vmp) PrepareForEval(ctx context.Context, policy *ir.Policy, store storage.Store, txn storage.Transaction, _ ...rego.PrepareOption) (rego.TargetPluginEval, error) {
 
-	data, err := store.Read(ctx, txn, storage.Path{})
+	bs := store.(inmem.BJSONReader) // anything else is unacceptable, so let's panic
+	data, err := bs.ReadBJSON(ctx, txn, storage.Path{})
 	if err != nil {
 		return nil, err
 	}
 
 	filtered := bjson.NewObject(nil)
-	obj := bjson.MustNew(data).(bjson.Object)
-	for _, k := range obj.Names() {
-		if k != "system" {
-			filtered.Set(k, obj.Value(k))
+	if data != nil {
+		obj := data.(bjson.Object)
+		for _, k := range obj.Names() {
+			if k != "system" {
+				filtered.Set(k, obj.Value(k))
+			}
 		}
 	}
 

@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/StyraInc/load/pkg/rego_vm"
+	inmem "github.com/StyraInc/load/pkg/store"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -273,6 +275,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	// Enable rego target plugin
 	// NOTE(sr): This is why the plugin name cannot have dots in it.
 	params.rt.ConfigOverrides = append(params.rt.ConfigOverrides, fmt.Sprintf("plugins.%s={}", rego_vm.Name))
+
+	params.rt.Store = inmem.New()
 
 	rt, err := runtime.NewRuntime(ctx, params.rt)
 	if err != nil {
