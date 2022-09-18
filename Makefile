@@ -13,7 +13,7 @@ build:
 	$(KO_BUILD) --push=false
 
 build-local:
-	$(KO_BUILD) --local
+	@$(KO_BUILD) --local
 
 push:
 	$(KO_BUILD)

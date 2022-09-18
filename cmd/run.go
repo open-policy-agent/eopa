@@ -9,7 +9,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/StyraInc/load/pkg/rego_vm"
 	inmem "github.com/StyraInc/load/pkg/store"
 
 	"github.com/spf13/cobra"
@@ -271,10 +270,6 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	if params.rt.BundleVerificationConfig != nil && !params.rt.BundleMode {
 		return nil, fmt.Errorf("enable bundle mode (ie. --bundle) to verify bundle files or directories")
 	}
-
-	// Enable rego target plugin
-	// NOTE(sr): This is why the plugin name cannot have dots in it.
-	params.rt.ConfigOverrides = append(params.rt.ConfigOverrides, fmt.Sprintf("plugins.%s={}", rego_vm.Name))
 
 	params.rt.Store = inmem.New()
 
