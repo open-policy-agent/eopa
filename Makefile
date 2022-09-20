@@ -10,7 +10,7 @@ KO_BUILD := ko build --sbom=none --base-import-paths --platform=linux/amd64 --ta
 .PHONY: build build-local push run update docker-login deploy-ci
 
 build:
-	$(KO_BUILD) --push=false
+	$(KO_BUILD) --push=false --tarball=local.tar
 
 build-local:
 	@$(KO_BUILD) --local

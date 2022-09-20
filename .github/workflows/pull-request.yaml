@@ -45,6 +45,7 @@ jobs:
   test-e2e:
     name: Test E2E
     runs-on: ubuntu-22.04
+    needs: build
     environment: ci
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
@@ -57,9 +58,13 @@ jobs:
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: imjasonh/setup-ko@v0.6
-      - name: Build
-        id: build
-        run:  echo "::set-output name=image::$(make build-local)"
+      - name: Download image tarball
+        uses: actions/download-artifact@v3
+        with:
+          name: image
+      - name: Load image
+        id: load
+        run:  echo "::set-output name=image::$(docker load --quiet --input local.tar | awk '{print $3}')"
       - name: checkout opa-testing-e2e
         uses: actions/checkout@v3
         with:
@@ -71,7 +76,7 @@ jobs:
       - run: make test
         working-directory: e2e
         env:
-          IMAGE: ${{ steps.build.outputs.image }}
+          IMAGE: ${{ steps.load.outputs.image }}
           BUNDLE_HOST: 172.17.0.1
 
   build:
@@ -91,6 +96,11 @@ jobs:
       - uses: imjasonh/setup-ko@v0.6
       - name: Build
         run: make build
+      - name: Upload image tarball
+        uses: actions/upload-artifact@v3
+        with:
+          name: image
+          path: local.tar
 
   deploy:
     name: Push Latest Release
