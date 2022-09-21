@@ -18,7 +18,6 @@ import (
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
-	"github.com/open-policy-agent/opa/runtime"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/test/cases"
 	"github.com/open-policy-agent/opa/topdown"
@@ -58,15 +57,6 @@ func TestRegoE2E(t *testing.T) {
 
 	ctx := context.Background()
 
-	// NOTE(sr): Our plugin is initialized through the package's init() function. But
-	// we still need to enable it via config, or a config override:
-	rt, err := runtime.NewRuntime(ctx, runtime.Params{
-		ConfigOverrides: []string{`plugins.` + Name + `={}`},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	for _, tc := range cases.MustLoad(*caseDir).Sorted().Cases {
 		name := fmt.Sprintf("%s/%s", strings.TrimPrefix(tc.Filename, opaRootDir), tc.Note)
 		t.Run(name, func(t *testing.T) {
@@ -83,7 +73,6 @@ func TestRegoE2E(t *testing.T) {
 			}
 
 			opts := []func(*rego.Rego){
-				rego.PluginManager(rt.Manager),
 				rego.Query(tc.Query),
 				rego.StrictBuiltinErrors(tc.StrictError),
 				rego.Store(store),

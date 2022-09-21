@@ -11,9 +11,7 @@ import (
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/ir"
-	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/rego"
-	"github.com/open-policy-agent/opa/runtime"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
 )
@@ -21,37 +19,10 @@ import (
 const Name = "rego_target_vm"
 
 func init() {
-	runtime.RegisterPlugin(Name, &factory{})
+	rego.RegisterPlugin(Name, &vmp{})
 }
 
-type factory struct{}
-
-func (*factory) New(m *plugins.Manager, _ interface{}) plugins.Plugin {
-	return New(m)
-}
-func (*factory) Validate(*plugins.Manager, []byte) (interface{}, error) {
-	return nil, nil
-}
-
-type vmp struct {
-	m *plugins.Manager
-}
-
-func New(m *plugins.Manager) plugins.Plugin {
-	return &vmp{m: m}
-}
-
-func (v *vmp) Start(context.Context) error {
-	// v.m.RegisterCompilerTrigger(...) // TODO(sr) Do we care?
-	v.m.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateOK})
-	return nil
-}
-
-func (*vmp) Stop(context.Context) {
-}
-
-func (*vmp) Reconfigure(context.Context, interface{}) {
-}
+type vmp struct{}
 
 // We want this target to be the default.
 func (*vmp) IsTarget(t string) bool {
@@ -60,21 +31,21 @@ func (*vmp) IsTarget(t string) bool {
 
 // TODO(sr): move store and tx into PrepareOption?
 func (*vmp) PrepareForEval(ctx context.Context, policy *ir.Policy, store storage.Store, txn storage.Transaction, _ ...rego.PrepareOption) (rego.TargetPluginEval, error) {
+	var data bjson.Json
+	var err error
 
-	bs := store.(inmem.BJSONReader) // anything else is unacceptable, so let's panic
-	data, err := bs.ReadBJSON(ctx, txn, storage.Path{})
-	if err != nil {
-		return nil, err
-	}
-
-	filtered := bjson.NewObject(nil)
-	if data != nil {
-		obj := data.(bjson.Object)
-		for _, k := range obj.Names() {
-			if k != "system" {
-				filtered.Set(k, obj.Value(k))
-			}
+	switch s := store.(type) {
+	case inmem.BJSONReader:
+		data, err = s.ReadBJSON(ctx, txn, storage.Path{})
+		if err != nil {
+			return nil, err
 		}
+	default:
+		blob, err := s.Read(ctx, txn, storage.Path{})
+		if err != nil {
+			return nil, err
+		}
+		data = bjson.MustNew(blob)
 	}
 
 	ops := regovm.NewDataOperations()
@@ -84,7 +55,7 @@ func (*vmp) PrepareForEval(ctx context.Context, policy *ir.Policy, store storage
 	}
 
 	return &vme{
-		vm: vm.NewVM().WithDataOperations(ops).WithDataJSON(filtered).WithExecutable(executable),
+		vm: vm.NewVM().WithDataOperations(ops).WithDataJSON(data).WithExecutable(executable),
 	}, nil
 }
 

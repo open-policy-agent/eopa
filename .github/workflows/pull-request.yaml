@@ -69,7 +69,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: StyraInc/opa-testing-e2e
-          ref: sr/load # TODO: that branch has a discovery doc enabling the rego plugin (https://github.com/StyraInc/load/issues/25)
           path: e2e
           token: ${{ secrets.GH_API_TOKEN }}
           persist-credentials: false
