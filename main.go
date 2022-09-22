@@ -12,20 +12,24 @@ import (
 )
 
 func main() {
-	load := &cobra.Command{
+	root := &cobra.Command{
 		Use:   path.Base(os.Args[0]),
 		Short: "Styra Load",
 	}
 	for _, c := range cmd.RootCommand.Commands() {
 		switch c.Name() {
 		case "run":
-			load.AddCommand(loadCmd.Run(c))
+			root.AddCommand(loadCmd.Run(c))
 		default:
-			load.AddCommand(c)
+			root.AddCommand(c)
 		}
 	}
+	load := loadCmd.Load()
+	load.AddCommand(loadCmd.Convert())
+	load.AddCommand(loadCmd.Dump())
 
-	if err := load.Execute(); err != nil {
+	root.AddCommand(load)
+	if err := root.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
