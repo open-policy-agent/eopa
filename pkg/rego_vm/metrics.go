@@ -7,6 +7,7 @@ import (
 )
 
 const prefix = "regovm_"
+const evalTimer = "regovm_eval"
 
 func statsToMetrics(m metrics.Metrics, s *vm.Statistics) {
 	for key, count := range map[string]int64{

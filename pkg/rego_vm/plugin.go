@@ -70,8 +70,10 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext) (ast.Value, erro
 		input = &i
 	}
 
+	ectx.Metrics().Timer(evalTimer).Start()
 	var s *vm.Statistics
 	s, ctx = vm.WithStatistics(ctx)
+
 	result, err := t.vm.Eval(ctx, "eval", vm.EvalOpts{
 		Metrics:                ectx.Metrics(),
 		Input:                  input,
@@ -81,6 +83,7 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext) (ast.Value, erro
 		PrintHook:              ectx.PrintHook(),
 		StrictBuiltinErrors:    ectx.StrictBuiltinErrors(),
 	})
+	ectx.Metrics().Timer(evalTimer).Stop()
 	if err != nil {
 		if err == vm.ErrVarAssignConflict {
 			return nil, &topdown.Error{
