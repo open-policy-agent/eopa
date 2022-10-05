@@ -11,6 +11,8 @@ import (
 	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/open-policy-agent/opa/topdown/print"
+
+	bjson "github.com/StyraInc/load/pkg/json"
 )
 
 var (
@@ -37,6 +39,7 @@ type (
 		Metrics                metrics.Metrics
 		Time                   time.Time
 		Seed                   io.Reader
+		Runtime                bjson.Object
 		InterQueryBuiltinCache cache.InterQueryCache
 		PrintHook              print.Hook
 		StrictBuiltinErrors    bool
@@ -61,6 +64,7 @@ type (
 		Metrics                metrics.Metrics
 		Time                   time.Time
 		Seed                   io.Reader
+		Runtime                bjson.Object
 		InterQueryBuiltinCache cache.InterQueryCache
 		PrintHook              print.Hook
 		StrictBuiltinErrors    bool
@@ -175,6 +179,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (Value, erro
 				Metrics:             opts.Metrics,
 				Time:                opts.Time,
 				Seed:                opts.Seed,
+				Runtime:             opts.Runtime,
 				PrintHook:           opts.PrintHook,
 				StrictBuiltinErrors: opts.StrictBuiltinErrors,
 			}

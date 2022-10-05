@@ -63,7 +63,7 @@ type vme struct {
 	vm *vm.VM
 }
 
-func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext) (ast.Value, error) {
+func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (ast.Value, error) {
 	input := ectx.RawInput()
 	if p := ectx.ParsedInput(); p != nil {
 		i := interface{}(p)
@@ -79,6 +79,7 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext) (ast.Value, erro
 		Input:                  input,
 		Time:                   ectx.Time(),
 		Seed:                   ectx.Seed(),
+		Runtime:                runtime(rt),
 		InterQueryBuiltinCache: ectx.InterQueryBuiltinCache(),
 		PrintHook:              ectx.PrintHook(),
 		StrictBuiltinErrors:    ectx.StrictBuiltinErrors(),
@@ -96,4 +97,15 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext) (ast.Value, erro
 	}
 	statsToMetrics(ectx.Metrics(), s)
 	return result.(ast.Value), nil
+}
+
+func runtime(rt ast.Value) bjson.Object {
+	if rt == nil {
+		return bjson.NewObject(nil)
+	}
+	ri, err := ast.ValueToInterface(rt, nil)
+	if err != nil {
+		panic(err)
+	}
+	return bjson.MustNew(ri).(bjson.Object)
 }

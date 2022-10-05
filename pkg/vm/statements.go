@@ -89,8 +89,8 @@ func (builtin builtin) Execute(state *State, args []*Value) error {
 		Seed:    state.Globals.Seed,
 		Time:    ast.NumberTerm(gojson.Number(strconv.FormatInt(state.Globals.Time.UnixNano(), 10))),
 		// Cancel:                 e.cancel,
-		// Runtime:                e.runtime,
-		Cache: builtins.Cache{}, // TODO
+		Runtime: ast.NewTerm(state.Globals.Runtime.AST()),
+		Cache:   builtins.Cache{}, // TODO
 		// InterQueryBuiltinCache: e.interQueryBuiltinCache,
 		// Location:               e.query[e.index].Location,
 		// QueryTracers:           e.tracers,
