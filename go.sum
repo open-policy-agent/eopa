@@ -42,8 +42,8 @@ github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAE
 github.com/OneOfOne/xxhash v1.2.8 h1:31czK/TI9sNkxIKfaUfGlU47BAxQ0ztGgd9vPyqimf8=
 github.com/OneOfOne/xxhash v1.2.8/go.mod h1:eZbhyaAYD41SGSSsnmcpxVoRiQ/MPUTjUdIIOT9Um7Q=
 github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d h1:UrqY+r/OJnIp5u0s1SbQ8dVfLCZJsnvazdBP5hS4iRs=
-github.com/StyraInc/opa v0.26.1-0.20220920081428-feb47f17ff3f h1:Q6aTjUH1KFLxfW6hV1YUn1a10E1CbEEUVuvzftX35as=
-github.com/StyraInc/opa v0.26.1-0.20220920081428-feb47f17ff3f/go.mod h1:yfET067S3HLri9rNxOqKTZBJjPznowti6ALjmuOrUPI=
+github.com/StyraInc/opa v0.26.1-0.20221005100517-645cc67179e4 h1:IwX/tOfLKvXuaLKcltsk9y3ZKDKiSHxNawUrwX3LK5E=
+github.com/StyraInc/opa v0.26.1-0.20221005100517-645cc67179e4/go.mod h1:yfET067S3HLri9rNxOqKTZBJjPznowti6ALjmuOrUPI=
 github.com/agnivade/levenshtein v1.1.1 h1:QY8M92nrzkmr798gCo3kmMyqXFzdQVpxLlGPRBij0P8=
 github.com/agnivade/levenshtein v1.1.1/go.mod h1:veldBMzWxcCG2ZvUTKD2kJNRdCk5hVbJomOvKkmgYbo=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=

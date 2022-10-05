@@ -58,14 +58,13 @@ jobs:
           fetch-depth: 0
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      - uses: imjasonh/setup-ko@v0.6
       - name: Download image tarball
         uses: actions/download-artifact@v3
         with:
           name: image
       - name: Load image
         id: load
-        run:  echo "::set-output name=image::$(docker load --quiet --input local.tar | awk '{print $3}')"
+        run: echo "::set-output name=image::$(docker load --quiet --input local.tar | awk '{print $3}')"
       - name: checkout opa-testing-e2e
         uses: actions/checkout@v3
         with:
@@ -101,6 +100,28 @@ jobs:
         with:
           name: image
           path: local.tar
+
+  smoke-cli:
+    name: Smoke Test CLI
+    runs-on: ubuntu-22.04
+    needs: build
+    environment: ci
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Download image tarball
+        uses: actions/download-artifact@v3
+        with:
+          name: image
+      - name: Load image
+        id: load
+        run: echo "::set-output name=image::$(docker load --quiet --input local.tar | awk '{print $3}')"
+      - run: make test
+        working-directory: e2e/cli
+        env:
+          IMAGE: ${{ steps.load.outputs.image }}
 
   deploy:
     name: Push Latest Release
