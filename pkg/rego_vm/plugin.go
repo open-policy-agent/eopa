@@ -3,6 +3,7 @@ package rego_vm
 
 import (
 	"context"
+	"crypto/rand"
 
 	bjson "github.com/StyraInc/load/pkg/json"
 	regovm "github.com/StyraInc/load/pkg/rego_vm/vm"
@@ -74,11 +75,16 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 	var s *vm.Statistics
 	s, ctx = vm.WithStatistics(ctx)
 
+	seed := ectx.Seed()
+	if seed == nil {
+		seed = rand.Reader
+	}
+
 	result, err := t.vm.Eval(ctx, "eval", vm.EvalOpts{
 		Metrics:                ectx.Metrics(),
 		Input:                  input,
 		Time:                   ectx.Time(),
-		Seed:                   ectx.Seed(),
+		Seed:                   seed,
 		Runtime:                runtime(rt),
 		InterQueryBuiltinCache: ectx.InterQueryBuiltinCache(),
 		PrintHook:              ectx.PrintHook(),
