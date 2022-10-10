@@ -1,14 +1,11 @@
 package vm
 
 import (
-	gojson "encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/topdown"
-	"github.com/open-policy-agent/opa/topdown/builtins"
 )
 
 func (p plan) Execute(state *State) error {
@@ -87,10 +84,10 @@ func (builtin builtin) Execute(state *State, args []*Value) error {
 		Context: state.Globals.Ctx,
 		Metrics: state.Globals.Metrics,
 		Seed:    state.Globals.Seed,
-		Time:    ast.NumberTerm(gojson.Number(strconv.FormatInt(state.Globals.Time.UnixNano(), 10))),
+		Time:    ast.UIntNumberTerm(uint64(state.Globals.Time.UnixNano())),
 		// Cancel:                 e.cancel,
 		Runtime: ast.NewTerm(state.Globals.Runtime.AST()),
-		Cache:   builtins.Cache{}, // TODO
+		Cache:   state.Globals.Cache,
 		// InterQueryBuiltinCache: e.interQueryBuiltinCache,
 		// Location:               e.query[e.index].Location,
 		// QueryTracers:           e.tracers,

@@ -15,6 +15,7 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
+	"github.com/open-policy-agent/opa/topdown/builtins"
 )
 
 const Name = "rego_target_vm"
@@ -86,6 +87,7 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		Time:                   ectx.Time(),
 		Seed:                   seed,
 		Runtime:                runtime(rt),
+		Cache:                  builtins.Cache{},
 		InterQueryBuiltinCache: ectx.InterQueryBuiltinCache(),
 		PrintHook:              ectx.PrintHook(),
 		StrictBuiltinErrors:    ectx.StrictBuiltinErrors(),

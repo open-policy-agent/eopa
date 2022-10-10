@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/opa/metrics"
+	"github.com/open-policy-agent/opa/topdown/builtins"
 	"github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/open-policy-agent/opa/topdown/print"
 
@@ -44,6 +45,7 @@ type (
 		PrintHook              print.Hook
 		StrictBuiltinErrors    bool
 		Limits                 *Limits
+		Cache                  builtins.Cache
 	}
 
 	// State holds all the evaluation state and is passed along the statements as the evaluation progresses.
@@ -65,6 +67,7 @@ type (
 		Time                   time.Time
 		Seed                   io.Reader
 		Runtime                bjson.Object
+		Cache                  builtins.Cache
 		InterQueryBuiltinCache cache.InterQueryCache
 		PrintHook              print.Hook
 		StrictBuiltinErrors    bool
@@ -180,6 +183,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (Value, erro
 				Time:                opts.Time,
 				Seed:                opts.Seed,
 				Runtime:             opts.Runtime,
+				Cache:               opts.Cache,
 				PrintHook:           opts.PrintHook,
 				StrictBuiltinErrors: opts.StrictBuiltinErrors,
 			}
