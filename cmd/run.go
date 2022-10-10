@@ -11,11 +11,11 @@ import (
 
 	inmem "github.com/StyraInc/load/pkg/store"
 
+	"github.com/StyraInc/load/pkg/plugins/discovery"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/keys"
 	"github.com/open-policy-agent/opa/runtime"
 	"github.com/open-policy-agent/opa/server"
 )
@@ -176,7 +176,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 		if err != nil {
 			return nil, err
 		}
-		f.param = &s
+		*f.param = s
 	}
 
 	// misc
@@ -261,17 +261,9 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 
 	params.rt.SkipBundleVerification = params.skipBundleVerify
 
-	bvc, err := buildVerificationConfig(params.pubKey, params.pubKeyID, params.algorithm, params.scope, params.excludeVerifyFiles)
-	if err != nil {
-		return nil, err
-	}
-	params.rt.BundleVerificationConfig = bvc
-
-	if params.rt.BundleVerificationConfig != nil && !params.rt.BundleMode {
-		return nil, fmt.Errorf("enable bundle mode (ie. --bundle) to verify bundle files or directories")
-	}
-
 	params.rt.Store = inmem.New()
+
+	params.rt.SkipPluginRegistration = true
 
 	rt, err := runtime.NewRuntime(ctx, params.rt)
 	if err != nil {
@@ -279,6 +271,14 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	}
 
 	rt.SetDistributedTracingLogging()
+
+	// register the discovery plugin
+	disco, err := discovery.New(rt.Manager, discovery.Metrics(rt.Metrics()))
+	if err != nil {
+		return nil, fmt.Errorf("config error: %w", err)
+	}
+
+	rt.Manager.Register(discovery.Name, disco)
 
 	return rt, nil
 }
@@ -316,16 +316,4 @@ func loadCertPool(tlsCACertFile string) (*x509.CertPool, error) {
 		return nil, fmt.Errorf("failed to parse CA cert %q", tlsCACertFile)
 	}
 	return pool, nil
-}
-
-func buildVerificationConfig(pubKey, pubKeyID, alg, scope string, excludeFiles []string) (*bundle.VerificationConfig, error) {
-	if pubKey == "" {
-		return nil, nil
-	}
-
-	keyConfig, err := keys.NewKeyConfig(pubKey, alg, scope)
-	if err != nil {
-		return nil, err
-	}
-	return bundle.NewVerificationConfig(map[string]*keys.Config{pubKeyID: keyConfig}, pubKeyID, scope, excludeFiles), nil
 }

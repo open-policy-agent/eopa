@@ -64,18 +64,22 @@ jobs:
           name: image
       - name: Load image
         id: load
-        run: echo "::set-output name=image::$(docker load --quiet --input local.tar | awk '{print $3}')"
+        run: |
+          echo "::set-output name=image::$(docker load --quiet --input local.tar | awk '{print $3}')"
+          echo "::set-output name=bundles::$(pwd)/e2e"
       - name: checkout opa-testing-e2e
         uses: actions/checkout@v3
         with:
           repository: StyraInc/opa-testing-e2e
-          path: e2e
+          path: _e2e
           token: ${{ secrets.GH_API_TOKEN }}
           persist-credentials: false
-      - run: make test
-        working-directory: e2e
+      - run: make test-decision-log
+        working-directory: _e2e
         env:
           IMAGE: ${{ steps.load.outputs.image }}
+          BUNDLES: ${{ steps.load.outputs.bundles }}
+          NUM_INPUT_BUNDLES: 1
           BUNDLE_HOST: 172.17.0.1
 
   build:

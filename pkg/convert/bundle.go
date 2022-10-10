@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	dataFile  = "data.bjson"
+	dataFile  = "data.json"
 	patchFile = "patch.json" // TODO(sr): bjson this?
 )
 
@@ -45,7 +45,7 @@ func BundleFile(in, out string) error {
 	}
 	path := "/" // TODO(sr): really?
 	tl := bundle.NewTarballLoaderWithBaseURL(bytes.NewReader(bs), path)
-	br := bundle.NewCustomReader(tl).WithSkipBundleVerification(true).IncludeManifestInData(true)
+	br := bundle.NewCustomReader(tl).WithSkipBundleVerification(true)
 	b, err := br.Read()
 	if err != nil {
 		return err

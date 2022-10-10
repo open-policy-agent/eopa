@@ -16,7 +16,6 @@
 package inmem
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -132,7 +131,7 @@ func (db *store) Truncate(ctx context.Context, txn storage.Transaction, params s
 				return err
 			}
 		} else {
-			value, err := bjson.NewDecoder(bytes.NewReader(update.Value)).Decode()
+			value, err := bjson.NewFromBinary(update.Value)
 			if err != nil {
 				return err
 			}
