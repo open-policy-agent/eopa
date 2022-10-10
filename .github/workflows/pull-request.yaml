@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: open-policy-agent/opa
-          ref: v0.44.0 # TODO(sr): make this pick up the depended-upon version via the build script
+          ref: v0.45.0 # TODO(sr): make this pick up the depended-upon version via the build script
           path: opa
       - name: pick up opa directory
         id: opa
