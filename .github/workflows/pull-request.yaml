@@ -74,7 +74,7 @@ jobs:
           path: _e2e
           token: ${{ secrets.GH_API_TOKEN }}
           persist-credentials: false
-      - run: make test-decision-log
+      - run: make test-query-eval
         working-directory: _e2e
         env:
           IMAGE: ${{ steps.load.outputs.image }}
