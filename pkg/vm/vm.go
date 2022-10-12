@@ -518,7 +518,7 @@ func (s *State) Instr() error {
 
 	instructions := s.stats.EvalInstructions
 
-	if instructions%32 == 0 && s.Globals.cancel.Done() {
+	if instructions%32 == 0 && s.Globals.cancel.Cancelled() {
 		return context.Canceled
 	}
 
@@ -565,6 +565,6 @@ func (c *cancel) Cancel() {
 	atomic.StoreInt32(&c.value, 1)
 }
 
-func (c *cancel) Done() bool {
+func (c *cancel) Cancelled() bool {
 	return atomic.LoadInt32(&c.value) != 0
 }

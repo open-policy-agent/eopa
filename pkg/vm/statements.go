@@ -81,11 +81,11 @@ func (builtin builtin) Execute(state *State, args []*Value) error {
 	}
 
 	bctx := topdown.BuiltinContext{
-		Context: state.Globals.Ctx,
-		Metrics: state.Globals.Metrics,
-		Seed:    state.Globals.Seed,
-		Time:    ast.UIntNumberTerm(uint64(state.Globals.Time.UnixNano())),
-		// Cancel:                 e.cancel,
+		Context:                state.Globals.Ctx,
+		Metrics:                state.Globals.Metrics,
+		Seed:                   state.Globals.Seed,
+		Time:                   ast.UIntNumberTerm(uint64(state.Globals.Time.UnixNano())),
+		Cancel:                 state.Globals.cancel,
 		Runtime:                ast.NewTerm(state.Globals.Runtime.AST()),
 		Cache:                  state.Globals.Cache,
 		InterQueryBuiltinCache: state.Globals.InterQueryBuiltinCache,
