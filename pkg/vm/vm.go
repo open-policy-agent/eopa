@@ -172,20 +172,21 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (Value, erro
 			result := vm.ops.MakeSet()
 
 			globals := &Globals{
-				vm:                  vm,
-				cancel:              cancel,
-				Limits:              *opts.Limits,
-				memoize:             []map[int]*Value{{}},
-				Ctx:                 ctx,
-				ResultSet:           result,
-				Input:               input,
-				Metrics:             opts.Metrics,
-				Time:                opts.Time,
-				Seed:                opts.Seed,
-				Runtime:             opts.Runtime,
-				Cache:               opts.Cache,
-				PrintHook:           opts.PrintHook,
-				StrictBuiltinErrors: opts.StrictBuiltinErrors,
+				vm:                     vm,
+				cancel:                 cancel,
+				Limits:                 *opts.Limits,
+				memoize:                []map[int]*Value{{}},
+				Ctx:                    ctx,
+				ResultSet:              result,
+				Input:                  input,
+				Metrics:                opts.Metrics,
+				Time:                   opts.Time,
+				Seed:                   opts.Seed,
+				Runtime:                opts.Runtime,
+				Cache:                  opts.Cache,
+				PrintHook:              opts.PrintHook,
+				StrictBuiltinErrors:    opts.StrictBuiltinErrors,
+				InterQueryBuiltinCache: opts.InterQueryBuiltinCache,
 			}
 
 			err := plan.Execute(newState(globals, StatisticsGet(ctx)))
