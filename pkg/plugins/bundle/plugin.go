@@ -583,14 +583,10 @@ func (p *Plugin) activate(ctx context.Context, name string, b *bundle.Bundle) er
 			Compiler: compiler,
 			Metrics:  p.status[name].Metrics,
 			Bundles:  map[string]*bundle.Bundle{name: b},
+			Plugin:   "_load",
 		}
 
 		if p.config.IsMultiBundle() {
-			a := &CustomActivator{}
-			bundle.RegisterActivator("_load", a)
-
-			opts.Plugin = "_load"
-
 			activateErr = bundle.Activate(opts)
 		} else {
 			activateErr = bundle.ActivateLegacy(opts)

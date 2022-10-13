@@ -9,13 +9,14 @@ import (
 	"os"
 	"time"
 
-	inmem "github.com/StyraInc/load/pkg/store"
-
+	"github.com/StyraInc/load/pkg/plugins/bundle"
 	"github.com/StyraInc/load/pkg/plugins/discovery"
+	inmem "github.com/StyraInc/load/pkg/store"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	bundleApi "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/runtime"
 	"github.com/open-policy-agent/opa/server"
 )
@@ -264,6 +265,12 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	params.rt.Store = inmem.New()
 
 	params.rt.SkipPluginRegistration = true
+
+	params.rt.BundleLazyLoadingMode = true
+
+	a := &bundle.CustomActivator{}
+	bundleApi.RegisterActivator("_load", a)
+	params.rt.BundleActivatorPlugin = "_load"
 
 	rt, err := runtime.NewRuntime(ctx, params.rt)
 	if err != nil {
