@@ -525,12 +525,26 @@ func (d dot) Execute(state *State) (bool, uint32, error) {
 		return true, 0, nil
 	}
 
-	src := state.Value(source) // TODO: To optimize, can skip booleans and string values directly.
+	switch source.(type) {
+	case BoolConst, StringIndexConst: // can't dot these
+		return true, 0, nil
+	}
 
-	if value, ok, err := state.ValueOps().Get(state.Globals.Ctx, src, state.Value(key)); err != nil {
+	src := source.(Local)
+	get := state.ValueOps().Get
+	data := state.IsData(src)
+	if data {
+		get = state.DataGet
+	}
+
+	if value, ok, err := get(state.Globals.Ctx, state.Value(src), state.Value(key)); err != nil {
 		return false, 0, err
 	} else if ok {
 		state.SetValue(target, value)
+		if data {
+			state.SetData(target)
+		}
+
 		return false, 0, nil
 	}
 

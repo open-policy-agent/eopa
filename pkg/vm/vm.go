@@ -3,6 +3,7 @@ package vm
 
 import (
 	"context"
+	gjson "encoding/json"
 	"errors"
 	"io"
 	"sync/atomic"
@@ -81,6 +82,7 @@ type (
 	Locals struct {
 		defined    []bool
 		registers  []Value
+		data       map[Local]struct{}
 		ret        Local // function return value
 		retDefined bool
 	}
@@ -359,8 +361,10 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 func newState(globals *Globals, stats *Statistics) *State {
 	s := State{
 		Globals: globals,
-		locals:  Locals{},
-		stats:   stats,
+		locals: Locals{
+			data: map[Local]struct{}{Data: {}},
+		},
+		stats: stats,
 	}
 
 	if globals.Input != nil {
@@ -490,10 +494,35 @@ func (s *State) SetValue(target Local, value Value) {
 	s.locals.registers[target] = value
 }
 
+func (s *State) SetData(l Local) {
+	s.locals.data[l] = struct{}{}
+}
+
+func (s *State) IsData(l Local) bool {
+	_, ok := s.locals.data[l]
+	return ok
+}
+
+func (s *State) DataGet(ctx context.Context, value, key interface{}) (interface{}, bool, error) {
+	if y, ok, err := s.ValueOps().Get(ctx, value, key); ok || err != nil {
+		return y, ok, err
+	}
+	x, err := s.ValueOps().ToInterface(ctx, key)
+	if err != nil {
+		return nil, false, err
+	}
+	switch x := x.(type) {
+	case gjson.Number:
+		return s.ValueOps().Get(ctx, value, s.ValueOps().MakeString(string(x)))
+	}
+	return nil, false, nil
+}
+
 func (s *State) Unset(target Local) {
 	s.locals.grow(target)
 	s.locals.defined[target] = false
 	s.locals.registers[target] = nil
+	delete(s.locals.data, target)
 }
 
 func (s *State) MemoizePush() {
