@@ -833,6 +833,10 @@ func (o *Object) Equal(other interface{}) bool {
 		return false
 	}
 
+	if o.Len() != ob.Len() {
+		return false
+	}
+
 	eq := true
 	o.Iter(func(k, a fjson.Json) bool {
 		b, ok := ob.Get(k)
