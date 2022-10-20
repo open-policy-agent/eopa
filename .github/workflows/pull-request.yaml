@@ -74,11 +74,19 @@ jobs:
           path: _e2e
           token: ${{ secrets.GH_API_TOKEN }}
           persist-credentials: false
-      - run: make test-query-eval
+      - run: make test-TestDecision
         working-directory: _e2e
         env:
           IMAGE: ${{ steps.load.outputs.image }}
           BUNDLES: ${{ steps.load.outputs.bundles }}
+          NUM_INPUT_BUNDLES: 1
+          BUNDLE_HOST: 172.17.0.1
+      - run: make test-TestLoadBundleFS
+        working-directory: _e2e
+        env:
+          IMAGE: ${{ steps.load.outputs.image }}
+          BUNDLES: ${{ steps.load.outputs.bundles }}
+          BUNDLE_FILE_PATH: bundles/systems/bc01d50d17d7446684c4e6c34a1ad07f
           NUM_INPUT_BUNDLES: 1
           BUNDLE_HOST: 172.17.0.1
 
