@@ -31,7 +31,13 @@ func hashImpl(value interface{}, hasher *xxhash.XXHash64) {
 
 	case fjson.Float:
 		hasher.Write([]byte{2})
-		hasher.Write([]byte(value.Value()))
+		f, err := value.Value().Float64()
+		if err != nil {
+			panic("invalid float")
+		}
+		// NOTE(sr): Picked BigEndian here because we've done it below. It shouldn't matter
+		// for the hashing here.
+		binary.Write(hasher, binary.BigEndian, f) // binary.Write won't error if hasher.Write doesn't
 
 	case fjson.String:
 		hasher.Write([]byte{3})
