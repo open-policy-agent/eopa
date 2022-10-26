@@ -25,6 +25,7 @@ import (
 	"sync/atomic"
 
 	bjson "github.com/StyraInc/load/pkg/json"
+	"github.com/StyraInc/load/pkg/plugins/bundle"
 	"github.com/StyraInc/load/pkg/store/internal/merge"
 
 	"github.com/open-policy-agent/opa/storage"
@@ -131,7 +132,7 @@ func (db *store) Truncate(ctx context.Context, txn storage.Transaction, params s
 				return err
 			}
 		} else {
-			value, err := bjson.NewFromBinary(update.Value)
+			value, err := bundle.BjsonFromBinary(update.Value)
 			if err != nil {
 				return err
 			}

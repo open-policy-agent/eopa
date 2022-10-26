@@ -368,7 +368,7 @@ func activateBundles(opts *bundleApi.ActivateOpts) error {
 			path := filepath.ToSlash(item.Path)
 
 			if filepath.Base(path) == "data.json" {
-				val, err := bjson.NewFromBinary(item.Value)
+				val, err := BjsonFromBinary(item.Value)
 				if err != nil {
 					return err
 				}
