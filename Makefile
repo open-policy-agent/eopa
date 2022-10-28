@@ -13,10 +13,10 @@ build:
 	$(KO_BUILD) --push=false --tarball=local.tar
 
 build-local:
-	@$(KO_BUILD) --local
+	@$(KO_BUILD) --local --tags edge
 
 push:
-	$(KO_BUILD)
+	$(KO_BUILD) --tags edge
 
 test:
 	go test ./...
