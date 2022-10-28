@@ -28,6 +28,7 @@ import (
 	"github.com/StyraInc/load/pkg/plugins/bundle"
 	"github.com/StyraInc/load/pkg/store/internal/merge"
 
+	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage"
 )
 
@@ -456,4 +457,8 @@ func (db *store) NonEmpty(ctx context.Context, txn storage.Transaction) func([]s
 		}
 		return false, nil
 	}
+}
+
+func init() {
+	rego.RegisterStore(New())
 }

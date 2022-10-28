@@ -19,6 +19,7 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	bundleApi "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/metrics"
+	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/util"
 )
@@ -1020,4 +1021,8 @@ func LegacyEraseManifestFromStore(ctx context.Context, store storage.Store, txn 
 // Deprecated: Use ReadBundleRevisionFromStore and named bundles instead.
 func LegacyReadRevisionFromStore(ctx context.Context, store storage.Store, txn storage.Transaction) (string, error) {
 	return readRevisionFromStore(ctx, store, txn, legacyRevisionStoragePath)
+}
+
+func init() {
+	rego.RegisterBundleActivator(&CustomActivator{})
 }
