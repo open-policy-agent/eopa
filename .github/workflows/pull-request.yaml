@@ -22,15 +22,20 @@ jobs:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
       - uses: actions/setup-go@v3
+      - uses: open-policy-agent/setup-opa@v2
       - name: checkout Load
         uses: actions/checkout@v3
         with:
           path: load
+      - name: pick up opa version
+        id: load
+        run: echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
+        working-directory: load
       - name: checkout OPA
         uses: actions/checkout@v3
         with:
           repository: open-policy-agent/opa
-          ref: v0.45.0 # TODO(sr): make this pick up the depended-upon version via the build script
+          ref: ${{ steps.load.outputs.opa_version }}
           path: opa
       - name: pick up opa directory
         id: opa
@@ -52,6 +57,7 @@ jobs:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
       - uses: actions/setup-go@v3
+      - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v3
         with:
@@ -91,6 +97,7 @@ jobs:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
       - uses: actions/setup-go@v3
+      - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v3
         with:
@@ -137,6 +144,7 @@ jobs:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
       - uses: actions/setup-go@v3
+      - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v3
         with:
