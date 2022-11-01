@@ -502,7 +502,14 @@ func activateDeltaBundles(opts *bundleApi.ActivateOpts, bundles map[string]*bund
 			return err
 		}
 
-		bs, err := json.Marshal(value.(bjson.Json).JSON())
+		var val interface{}
+		switch v := value.(type) {
+		case bjson.Json:
+			val = v.JSON()
+		default:
+			val = v
+		}
+		bs, err := json.Marshal(val)
 		if err != nil {
 			return fmt.Errorf("corrupt manifest data: %w", err)
 		}
