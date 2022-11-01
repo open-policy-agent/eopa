@@ -14,8 +14,8 @@ import (
 
 	cfg "github.com/StyraInc/load/pkg/internal/config"
 	"github.com/StyraInc/load/pkg/plugins/bundle"
-	"github.com/StyraInc/load/pkg/plugins/status"
 	inmem "github.com/StyraInc/load/pkg/store"
+
 	"github.com/open-policy-agent/opa/ast"
 	bundleApi "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/config"
@@ -23,7 +23,10 @@ import (
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/plugins"
+	opa_bundle "github.com/open-policy-agent/opa/plugins/bundle"
 	"github.com/open-policy-agent/opa/plugins/logs"
+	"github.com/open-policy-agent/opa/plugins/status"
+	opa_status "github.com/open-policy-agent/opa/plugins/status"
 	"github.com/open-policy-agent/opa/rego"
 )
 
@@ -37,11 +40,11 @@ type Discovery struct {
 	manager      *plugins.Manager
 	config       *Config
 	factories    map[string]plugins.Factory
-	downloader   bundle.Loader                       // discovery bundle downloader
-	status       *bundle.Status                      // discovery status
-	listenersMtx sync.Mutex                          // lock for listener map
-	listeners    map[interface{}]func(bundle.Status) // listeners for discovery update events
-	etag         string                              // discovery bundle etag for caching purposes
+	downloader   bundle.Loader                           // discovery bundle downloader
+	status       *opa_bundle.Status                      // discovery status
+	listenersMtx sync.Mutex                              // lock for listener map
+	listeners    map[interface{}]func(opa_bundle.Status) // listeners for discovery update events
+	etag         string                                  // discovery bundle etag for caching purposes
 	metrics      metrics.Metrics
 	readyOnce    sync.Once
 	logger       logging.Logger
@@ -92,7 +95,7 @@ func New(manager *plugins.Manager, opts ...func(*Discovery)) (*Discovery, error)
 	restClient := manager.Client(config.service)
 	result.downloader = download.New(config.Config, restClient, config.path).WithCallback(result.oneShot)
 
-	result.status = &bundle.Status{
+	result.status = &opa_bundle.Status{
 		Name: Name,
 	}
 
@@ -148,12 +151,12 @@ func (c *Discovery) Trigger(ctx context.Context) error {
 	return c.downloader.Trigger(ctx)
 }
 
-func (c *Discovery) RegisterListener(name interface{}, f func(bundle.Status)) {
+func (c *Discovery) RegisterListener(name interface{}, f func(opa_bundle.Status)) {
 	c.listenersMtx.Lock()
 	defer c.listenersMtx.Unlock()
 
 	if c.listeners == nil {
-		c.listeners = map[interface{}]func(bundle.Status){}
+		c.listeners = map[interface{}]func(opa_bundle.Status){}
 	}
 
 	c.listeners[name] = f
@@ -361,12 +364,12 @@ func getPluginSet(factories map[string]plugins.Factory, manager *plugins.Manager
 	// Parse and validate bundle/logs/status configurations.
 
 	// If `bundle` was configured use that, otherwise try the new `bundles` option
-	bundleConfig, err := bundle.ParseConfig(config.Bundle, manager.Services())
+	bundleConfig, err := opa_bundle.ParseConfig(config.Bundle, manager.Services())
 	if err != nil {
 		return nil, err
 	}
 	if bundleConfig == nil {
-		bundleConfig, err = bundle.NewConfigBuilder().WithBytes(config.Bundles).WithServices(manager.Services()).
+		bundleConfig, err = opa_bundle.NewConfigBuilder().WithBytes(config.Bundles).WithServices(manager.Services()).
 			WithKeyConfigs(manager.PublicKeys()).WithTriggerMode(trigger).Parse()
 		if err != nil {
 			return nil, err
@@ -425,7 +428,7 @@ func getPluginSet(factories map[string]plugins.Factory, manager *plugins.Manager
 	return result, nil
 }
 
-func getBundlePlugin(m *plugins.Manager, config *bundle.Config) (plugin *bundle.Plugin, created bool) {
+func getBundlePlugin(m *plugins.Manager, config *opa_bundle.Config) (plugin *bundle.Plugin, created bool) {
 	plugin = bundle.Lookup(m)
 	if plugin == nil {
 		plugin = bundle.New(config, m)
@@ -446,10 +449,9 @@ func getDecisionLogsPlugin(m *plugins.Manager, config *logs.Config, metrics metr
 	return plugin, created
 }
 
-func getStatusPlugin(m *plugins.Manager, config *status.Config, metrics metrics.Metrics) (plugin *status.Plugin, created bool) {
-
-	plugin = status.Lookup(m)
-
+func getStatusPlugin(m *plugins.Manager, config *status.Config, metrics metrics.Metrics) (*opa_status.Plugin, bool) {
+	var created bool
+	plugin := status.Lookup(m)
 	if plugin == nil {
 		plugin = status.New(config, m).WithMetrics(metrics)
 		m.Register(status.Name, plugin)

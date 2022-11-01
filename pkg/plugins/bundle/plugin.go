@@ -18,12 +18,14 @@ import (
 	"time"
 
 	bundleUtils "github.com/StyraInc/load/pkg/internal/bundle"
+
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/download"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/plugins"
+	opa_bundle "github.com/open-policy-agent/opa/plugins/bundle"
 	"github.com/open-policy-agent/opa/storage"
 )
 
@@ -51,12 +53,12 @@ type Loader interface {
 
 // Plugin implements bundle activation.
 type Plugin struct {
-	config            Config
-	manager           *plugins.Manager                         // plugin manager for storage and service clients
-	status            map[string]*Status                       // current status for each bundle
-	etags             map[string]string                        // etag on last successful activation
-	listeners         map[interface{}]func(Status)             // listeners to send status updates to
-	bulkListeners     map[interface{}]func(map[string]*Status) // listeners to send aggregated status updates to
+	config            opa_bundle.Config
+	manager           *plugins.Manager                                    // plugin manager for storage and service clients
+	status            map[string]*opa_bundle.Status                       // current status for each bundle
+	etags             map[string]string                                   // etag on last successful activation
+	listeners         map[interface{}]func(opa_bundle.Status)             // listeners to send status updates to
+	bulkListeners     map[interface{}]func(map[string]*opa_bundle.Status) // listeners to send aggregated status updates to
 	downloaders       map[string]Loader
 	logger            logging.Logger
 	mtx               sync.Mutex
@@ -67,10 +69,10 @@ type Plugin struct {
 }
 
 // New returns a new Plugin with the given config.
-func New(parsedConfig *Config, manager *plugins.Manager) *Plugin {
-	initialStatus := map[string]*Status{}
+func New(parsedConfig *opa_bundle.Config, manager *plugins.Manager) *Plugin {
+	initialStatus := map[string]*opa_bundle.Status{}
 	for name := range parsedConfig.Bundles {
-		initialStatus[name] = &Status{
+		initialStatus[name] = &opa_bundle.Status{
 			Name: name,
 		}
 	}
@@ -153,7 +155,7 @@ func (p *Plugin) Reconfigure(ctx context.Context, config interface{}) {
 	defer p.cfgMtx.Unlock()
 
 	// Look for any bundles that have had their config changed, are new, or have been removed
-	newConfig := config.(*Config)
+	newConfig := config.(*opa_bundle.Config)
 	newBundles, updatedBundles, deletedBundles := p.configDelta(newConfig)
 	p.config = *newConfig
 
@@ -217,7 +219,7 @@ func (p *Plugin) Reconfigure(ctx context.Context, config interface{}) {
 
 		if isNew || updated {
 			if isNew {
-				p.status[name] = &Status{Name: name}
+				p.status[name] = &opa_bundle.Status{Name: name}
 				p.log(name).Info("New bundle loader configuration added. Starting bundle loader.")
 			} else {
 				p.log(name).Info("Bundle loader configuration changed. Restarting bundle loader.")
@@ -267,12 +269,12 @@ func (p *Plugin) Trigger(ctx context.Context) error {
 // Register a listener to receive status updates. The name must be comparable.
 // The listener will receive a status update for each bundle configured, they are
 // not going to be aggregated. For all status updates use `RegisterBulkListener`.
-func (p *Plugin) Register(name interface{}, listener func(Status)) {
+func (p *Plugin) Register(name interface{}, listener func(opa_bundle.Status)) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
 	if p.listeners == nil {
-		p.listeners = map[interface{}]func(Status){}
+		p.listeners = map[interface{}]func(opa_bundle.Status){}
 	}
 
 	p.listeners[name] = listener
@@ -287,12 +289,12 @@ func (p *Plugin) Unregister(name interface{}) {
 }
 
 // RegisterBulkListener registers a listener to receive bulk (aggregated) status updates. The name must be comparable.
-func (p *Plugin) RegisterBulkListener(name interface{}, listener func(map[string]*Status)) {
+func (p *Plugin) RegisterBulkListener(name interface{}, listener func(map[string]*opa_bundle.Status)) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
 	if p.bulkListeners == nil {
-		p.bulkListeners = map[interface{}]func(map[string]*Status){}
+		p.bulkListeners = map[interface{}]func(map[string]*opa_bundle.Status){}
 	}
 
 	p.bulkListeners[name] = listener
@@ -307,7 +309,7 @@ func (p *Plugin) UnregisterBulkListener(name interface{}) {
 }
 
 // Config returns the plugins current configuration
-func (p *Plugin) Config() *Config {
+func (p *Plugin) Config() *opa_bundle.Config {
 	return &p.config
 }
 
@@ -399,7 +401,7 @@ func (p *Plugin) loadAndActivateBundlesFromDisk(ctx context.Context) {
 	}
 }
 
-func (p *Plugin) newDownloader(name string, source *Source) Loader {
+func (p *Plugin) newDownloader(name string, source *opa_bundle.Source) Loader {
 
 	if u, err := url.Parse(source.Resource); err == nil {
 		switch u.Scheme {
@@ -443,7 +445,7 @@ func (p *Plugin) oneShot(ctx context.Context, name string, u download.Update) {
 		// They shouldn't have access to the original underlying
 		// map, primarily for thread safety issues with modifications
 		// made to it.
-		statusCpy := map[string]*Status{}
+		statusCpy := map[string]*opa_bundle.Status{}
 		for k, v := range p.status {
 			v := *v
 			statusCpy[k] = &v
@@ -617,13 +619,13 @@ func (p *Plugin) persistBundle(name string) bool {
 }
 
 // configDelta will return a map of new bundle sources, updated bundle sources, and a set of deleted bundle names
-func (p *Plugin) configDelta(newConfig *Config) (map[string]*Source, map[string]*Source, map[string]struct{}) {
+func (p *Plugin) configDelta(newConfig *opa_bundle.Config) (map[string]*opa_bundle.Source, map[string]*opa_bundle.Source, map[string]struct{}) {
 	deletedBundles := map[string]struct{}{}
 	for name := range p.config.Bundles {
 		deletedBundles[name] = struct{}{}
 	}
-	newBundles := map[string]*Source{}
-	updatedBundles := map[string]*Source{}
+	newBundles := map[string]*opa_bundle.Source{}
+	updatedBundles := map[string]*opa_bundle.Source{}
 	for name, source := range newConfig.Bundles {
 		oldSource, found := p.config.Bundles[name]
 		if !found {
@@ -684,7 +686,7 @@ func saveCurrentBundleToDisk(path string, raw io.Reader) (string, error) {
 	return dest.Name(), err
 }
 
-func loadBundleFromDisk(path, name string, src *Source) (*bundle.Bundle, error) {
+func loadBundleFromDisk(path, name string, src *opa_bundle.Source) (*bundle.Bundle, error) {
 	bundlePath := filepath.Join(path, name, "bundle.tar.gz")
 
 	if _, err := os.Stat(bundlePath); err == nil {
