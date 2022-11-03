@@ -25,7 +25,7 @@ run:
 	docker run -p 8181:8181 -v $$(pwd):/cwd -w /cwd $$($(KO_BUILD) --local) run --server --log-level debug
 
 update:
-	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@load
+	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@load-0.46
 	go mod tidy
 
 docker-login:

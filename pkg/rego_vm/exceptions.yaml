@@ -1,3 +1,5 @@
 "baseandvirtualdocs/enumerate virtual errors": test case has both expected error and result
 "baseandvirtualdocs/base/virtual: conflicts": compile error in PrepareForEval
 "functions/default": unsupported in topdown
+"withkeyword/function: indirect call, arity 1, replacement is value that needs eval (array comprehension)": "https://github.com/open-policy-agent/opa/issues/5311"
+"withkeyword/builtin: indirect call, arity 1, replacement is value that needs eval (array comprehension)": "https://github.com/open-policy-agent/opa/issues/5311"

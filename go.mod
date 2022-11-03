@@ -6,9 +6,7 @@ require (
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/ghodss/yaml v1.0.0
 	github.com/json-iterator/go v1.1.12
-	github.com/open-policy-agent/opa v0.45.0
-	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.13.0
+	github.com/open-policy-agent/opa v0.46.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 )
@@ -59,6 +57,8 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.3-0.20211202183452-c5a74bcca799 // indirect
 	github.com/peterh/liner v0.0.0-20170211195444-bf27d3ba8e1d // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/prometheus/client_golang v1.13.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
@@ -91,4 +91,4 @@ require (
 	oras.land/oras-go v1.2.1 // indirect
 )
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.26.1-0.20221101084211-eb2d6bcc95da
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.26.1-0.20221103102325-55e3a5161cca
