@@ -155,7 +155,7 @@ func (h header) PlansOffset() uint32 {
 }
 
 func (Executable) Write(strings []byte, functions []byte, plans []byte) []byte {
-	var binary []byte
+	binary := make([]byte, 0, len(strings)+len(functions)+len(plans))
 
 	stringsOffset := uint32(len(binary))
 	binary = append(binary, strings...)
@@ -1421,7 +1421,7 @@ func newInt64(value int64) []byte {
 func getInt32Array(data []byte, offset uint32) []int32 {
 	n := getUint32(data, offset)
 
-	var a []int32
+	a := make([]int32, 0, n)
 	for i := uint32(0); i < n; i++ {
 		a = append(a, getInt32(data, offset+4+i*4))
 	}
@@ -1477,7 +1477,7 @@ func getStringArray(data []byte, offset uint32) []string {
 
 	n := getUint32(data, 0)
 
-	var a []string
+	a := make([]string, 0, n)
 	for i := uint32(0); i < n; i++ {
 		stringOffset := getOffsetIndex(data, 4, int(i))
 		a = append(a, getString(data, stringOffset))
@@ -1584,7 +1584,7 @@ func getLocalOrConst(data []byte, offset uint32) LocalOrConst {
 func getLocalOrConstArray(data []byte, offset uint32) []LocalOrConst {
 	n := getUint32(data, offset)
 
-	var l []LocalOrConst
+	l := make([]LocalOrConst, 0, n)
 	for i := uint32(0); i < n; i++ {
 		l = append(l, getLocalOrConst(data, offset+4+i*5))
 	}
@@ -1611,7 +1611,11 @@ func newLocalOrConstArray(l []LocalOrConst) []byte {
 }
 
 func concat(fields ...[]byte) []byte {
-	var result []byte
+	l := 0
+	for _, field := range fields {
+		l += len(field)
+	}
+	result := make([]byte, 0, l)
 
 	for _, field := range fields {
 		result = append(result, field...)
