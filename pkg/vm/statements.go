@@ -80,6 +80,13 @@ func (builtin builtin) Execute(state *State, args []*Value) error {
 		return err
 	}
 
+	switch builtin.Name() {
+	case ast.Member.Name:
+		return memberBuiltin(state, args)
+	case ast.MemberWithKey.Name:
+		return memberWithKeyBuiltin(state, args)
+	}
+
 	bctx := topdown.BuiltinContext{
 		Context:                state.Globals.Ctx,
 		Metrics:                state.Globals.Metrics,
@@ -146,6 +153,46 @@ func (builtin builtin) Execute(state *State, args []*Value) error {
 		}
 	}
 
+	return nil
+}
+
+func memberBuiltin(state *State, args []*Value) error {
+	if args[0] == nil || args[1] == nil {
+		return nil
+	}
+	var found bool
+	err := state.ValueOps().Iter(state.Globals.Ctx, *args[1], func(_, v interface{}) bool {
+		found, _ = state.ValueOps().Equal(state.Globals.Ctx, *args[0], v)
+		return found
+	})
+	if err != nil {
+		return err
+	}
+	state.SetValue(Unused, state.ValueOps().MakeBoolean(found))
+	state.SetReturn(Unused)
+	return nil
+}
+
+func memberWithKeyBuiltin(state *State, args []*Value) error {
+	if args[0] == nil || args[1] == nil || args[2] == nil {
+		return nil
+	}
+
+	var eq bool
+	v, ok, err := state.ValueOps().Get(state.Globals.Ctx, *args[2], *args[0])
+	if err != nil {
+		return err
+	}
+	if ok {
+		var err error
+		eq, err = state.ValueOps().Equal(state.Globals.Ctx, *args[1], v)
+		if err != nil {
+			return err
+		}
+	}
+
+	state.SetValue(Unused, state.ValueOps().MakeBoolean(eq))
+	state.SetReturn(Unused)
 	return nil
 }
 
