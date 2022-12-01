@@ -93,7 +93,7 @@ func (builtin builtin) Execute(state *State, args []*Value) error {
 		Seed:                   state.Globals.Seed,
 		Time:                   ast.UIntNumberTerm(uint64(state.Globals.Time.UnixNano())),
 		Cancel:                 state.Globals.cancel,
-		Runtime:                ast.NewTerm(state.Globals.Runtime.AST()),
+		Runtime:                state.Globals.Runtime,
 		Cache:                  state.Globals.Cache,
 		InterQueryBuiltinCache: state.Globals.InterQueryBuiltinCache,
 		// Location:               e.query[e.index].Location,

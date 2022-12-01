@@ -9,12 +9,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/topdown/builtins"
 	"github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/open-policy-agent/opa/topdown/print"
-
-	bjson "github.com/StyraInc/load/pkg/json"
 )
 
 var (
@@ -41,7 +40,7 @@ type (
 		Metrics                metrics.Metrics
 		Time                   time.Time
 		Seed                   io.Reader
-		Runtime                bjson.Object
+		Runtime                interface{}
 		InterQueryBuiltinCache cache.InterQueryCache
 		PrintHook              print.Hook
 		StrictBuiltinErrors    bool
@@ -67,7 +66,7 @@ type (
 		Metrics                metrics.Metrics
 		Time                   time.Time
 		Seed                   io.Reader
-		Runtime                bjson.Object
+		Runtime                *ast.Term
 		Cache                  builtins.Cache
 		InterQueryBuiltinCache cache.InterQueryCache
 		PrintHook              print.Hook
@@ -171,6 +170,11 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (Value, erro
 				opts.Limits = &DefaultLimits
 			}
 
+			runtime, err := vm.runtime(ctx, opts.Runtime)
+			if err != nil {
+				return nil, err
+			}
+
 			result := vm.ops.MakeSet()
 
 			globals := &Globals{
@@ -184,15 +188,14 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (Value, erro
 				Metrics:                opts.Metrics,
 				Time:                   opts.Time,
 				Seed:                   opts.Seed,
-				Runtime:                opts.Runtime,
+				Runtime:                runtime,
 				Cache:                  opts.Cache,
 				PrintHook:              opts.PrintHook,
 				StrictBuiltinErrors:    opts.StrictBuiltinErrors,
 				InterQueryBuiltinCache: opts.InterQueryBuiltinCache,
 			}
 
-			err := plan.Execute(newState(globals, StatisticsGet(ctx)))
-			if err != nil {
+			if err := plan.Execute(newState(globals, StatisticsGet(ctx))); err != nil {
 				return nil, err
 			}
 
@@ -245,6 +248,11 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				opts.Limits = &DefaultLimits
 			}
 
+			runtime, err := vm.runtime(ctx, opts.Runtime)
+			if err != nil {
+				return nil, false, false, err
+			}
+
 			globals := &Globals{
 				vm:                  vm,
 				Limits:              *opts.Limits,
@@ -255,6 +263,7 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				Metrics:             opts.Metrics,
 				Time:                opts.Time,
 				Seed:                opts.Seed,
+				Runtime:             runtime,
 				PrintHook:           opts.PrintHook,
 				StrictBuiltinErrors: opts.StrictBuiltinErrors,
 			}
@@ -271,8 +280,7 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 			}
 
 			state := newState(globals, StatisticsGet(ctx))
-			err := f.Execute(state, args)
-			if err != nil {
+			if err := f.Execute(state, args); err != nil {
 				return nil, false, false, err
 			}
 
@@ -314,6 +322,11 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				opts.Limits = &DefaultLimits
 			}
 
+			runtime, err := vm.runtime(ctx, opts.Runtime)
+			if err != nil {
+				return nil, false, false, err
+			}
+
 			result := vm.ops.MakeSet()
 
 			globals := &Globals{
@@ -327,12 +340,12 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				Metrics:             opts.Metrics,
 				Time:                opts.Time,
 				Seed:                opts.Seed,
+				Runtime:             runtime,
 				PrintHook:           opts.PrintHook,
 				StrictBuiltinErrors: opts.StrictBuiltinErrors,
 			}
 
-			err := plan.Execute(newState(globals, StatisticsGet(ctx)))
-			if err != nil {
+			if err := plan.Execute(newState(globals, StatisticsGet(ctx))); err != nil {
 				return nil, false, false, err
 			}
 
@@ -356,6 +369,29 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 	}
 
 	return nil, false, false, nil
+}
+
+func (vm *VM) runtime(ctx context.Context, v interface{}) (*ast.Term, error) {
+	var runtime ast.Value
+	if v != nil {
+		var ok bool
+		runtime, ok = v.(ast.Value)
+		if !ok {
+			ok, err := vm.ops.IsObject(ctx, v)
+			if !ok {
+				v = vm.ops.FromInterface(v)
+			}
+
+			runtime, err = vm.ops.ToAST(ctx, v)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		runtime = ast.NewObject()
+	}
+
+	return ast.NewTerm(runtime), nil
 }
 
 func newState(globals *Globals, stats *Statistics) *State {

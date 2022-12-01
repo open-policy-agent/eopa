@@ -107,13 +107,9 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 	return result.(ast.Value), nil
 }
 
-func runtime(rt ast.Value) bjson.Object {
+func runtime(rt ast.Value) ast.Value {
 	if rt == nil {
-		return bjson.NewObject(nil)
+		return ast.NewObject()
 	}
-	ri, err := ast.ValueToInterface(rt, nil)
-	if err != nil {
-		panic(err)
-	}
-	return bjson.MustNew(ri).(bjson.Object)
+	return rt
 }
