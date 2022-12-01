@@ -11,17 +11,7 @@ const evalTimer = "regovm_eval"
 
 func statsToMetrics(m metrics.Metrics, s *vm.Statistics) {
 	for key, count := range map[string]int64{
-		"bundle_read_bytes":               s.BundleReadBytes,
-		"bundle_read_ops":                 s.BundleReadOps,
-		"config_read_bytes":               s.ConfigReadBytes,
-		"config_read_cache_misses":        s.ConfigReadCacheMisses,
-		"config_read_decode_cache_misses": s.ConfigReadDecodeCacheMisses,
-		"config_read_ops":                 s.ConfigReadOps,
-		"data_read_bytes":                 s.DataReadBytes,
-		"data_read_cache_misses":          s.DataReadCacheMisses,
-		"data_read_ops":                   s.DataReadOps,
-		"eval_instructions":               s.EvalInstructions,
-		"eval_ops":                        s.EvalOps,
+		"eval_instructions": s.EvalInstructions,
 	} {
 		if count == 0 {
 			continue
