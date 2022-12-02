@@ -133,17 +133,20 @@ func (builtin builtin) Execute(state *State, args []*Value) error {
 	}
 
 	if err := impl(bctx, a, func(value *ast.Term) error {
-		switch {
-		case relation:
+		if relation {
 			arr, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(Unused), state.ValueOps().FromInterface(value.Value))
 			if err != nil {
 				return err
 			}
 
 			state.SetValue(Unused, arr)
-		case value == nil: // do nothing
-		default:
-			state.SetValue(Unused, state.ValueOps().FromInterface(value.Value))
+		} else {
+			// topdown print returns iter(nil)
+			if value != nil {
+				state.SetValue(Unused, state.ValueOps().FromInterface(value.Value))
+			} else {
+				state.SetValue(Unused, state.ValueOps().MakeArray(0))
+			}
 			state.SetReturn(Unused)
 		}
 		return nil
