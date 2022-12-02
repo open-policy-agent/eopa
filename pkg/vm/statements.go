@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/topdown"
+	"github.com/open-policy-agent/opa/topdown/builtins"
 )
 
 func (p plan) Execute(state *State) error {
@@ -85,6 +86,8 @@ func (builtin builtin) Execute(state *State, args []*Value) error {
 		return memberBuiltin(state, args)
 	case ast.MemberWithKey.Name:
 		return memberWithKeyBuiltin(state, args)
+	case ast.ObjectGet.Name:
+		return objectGetBuiltin(state, args)
 	}
 
 	bctx := topdown.BuiltinContext{
@@ -148,9 +151,8 @@ func (builtin builtin) Execute(state *State, args []*Value) error {
 		var t topdown.Halt
 		if errors.As(err, &t) {
 			return err
-		} else {
-			state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, err)
 		}
+		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, err)
 	}
 
 	return nil
@@ -192,6 +194,76 @@ func memberWithKeyBuiltin(state *State, args []*Value) error {
 	}
 
 	state.SetValue(Unused, state.ValueOps().MakeBoolean(eq))
+	state.SetReturn(Unused)
+	return nil
+}
+
+func objectGetBuiltin(state *State, args []*Value) error {
+	if args[0] == nil || args[1] == nil || args[2] == nil {
+		return nil
+	}
+	obj, path, def := *args[0], *args[1], *args[2]
+
+	if isObj, err := state.ValueOps().IsObject(state.Globals.Ctx, obj); err != nil {
+		return err
+	} else if !isObj {
+		x, err := state.ValueOps().ToAST(state.Globals.Ctx, obj)
+		if err != nil {
+			return err
+		}
+		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+			Code:    topdown.TypeErr,
+			Message: builtins.NewOperandTypeErr(1, x, "object").Error(),
+		})
+		return nil
+	}
+
+	if isPath, err := state.ValueOps().IsArray(state.Globals.Ctx, path); err != nil {
+		return err
+	} else if !isPath {
+		return objectGetBuiltinKey(state, obj, path, def)
+	}
+
+	len, err := state.ValueOps().Len(state.Globals.Ctx, path)
+	if err != nil {
+		return err
+	}
+	eq, err := state.ValueOps().Equal(state.Globals.Ctx, len, state.ValueOps().MakeNumberInt(0))
+	if err != nil {
+		return err
+	}
+	if eq {
+		state.SetValue(Unused, obj)
+		state.SetReturn(Unused)
+		return nil
+	}
+
+	var found bool
+	if err := state.ValueOps().Iter(state.Globals.Ctx, path, func(_, v interface{}) bool { // path array values are our object keys
+		obj, found, _ = state.ValueOps().Get(state.Globals.Ctx, obj, v)
+		return !found // always iterate path array to the end if found
+	}); err != nil {
+		return err
+	}
+	if found {
+		state.SetValue(Unused, obj)
+	} else {
+		state.SetValue(Unused, def)
+	}
+	state.SetReturn(Unused)
+	return nil
+}
+
+func objectGetBuiltinKey(state *State, obj, key, def Value) error {
+	val, found, err := state.ValueOps().ObjectGet(state.Globals.Ctx, obj, key)
+	if err != nil {
+		return err
+	}
+	if found {
+		state.SetValue(Unused, val)
+	} else {
+		state.SetValue(Unused, def)
+	}
 	state.SetReturn(Unused)
 	return nil
 }
