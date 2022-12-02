@@ -1,7 +1,7 @@
 package rego_vm
 
 import (
-	"github.com/StyraInc/load/pkg/vm"
+	"github.com/styrainc/load/pkg/vm"
 
 	"github.com/open-policy-agent/opa/metrics"
 )

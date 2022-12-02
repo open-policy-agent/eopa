@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	internal "github.com/StyraInc/load/pkg/json/internal/json"
+	internal "github.com/styrainc/load/pkg/json/internal/json"
 )
 
 var zeroValue = reflect.Value{}

@@ -1,4 +1,4 @@
-module github.com/StyraInc/load
+module github.com/styrainc/load
 
 go 1.19
 

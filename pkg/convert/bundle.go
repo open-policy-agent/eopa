@@ -13,7 +13,7 @@ import (
 
 	"github.com/open-policy-agent/opa/bundle"
 
-	bjson "github.com/StyraInc/load/pkg/json"
+	bjson "github.com/styrainc/load/pkg/json"
 )
 
 const (

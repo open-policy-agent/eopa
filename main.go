@@ -4,8 +4,8 @@ import (
 	"os"
 	"path"
 
-	loadCmd "github.com/StyraInc/load/cmd"
-	_ "github.com/StyraInc/load/pkg/rego_vm"
+	loadCmd "github.com/styrainc/load/cmd"
+	_ "github.com/styrainc/load/pkg/rego_vm"
 
 	"github.com/open-policy-agent/opa/cmd"
 	"github.com/spf13/cobra"

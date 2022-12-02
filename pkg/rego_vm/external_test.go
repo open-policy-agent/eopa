@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	inmem "github.com/StyraInc/load/pkg/store"
+	inmem "github.com/styrainc/load/pkg/store"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"

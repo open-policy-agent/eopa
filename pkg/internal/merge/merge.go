@@ -6,7 +6,7 @@
 // frequently encountered in OPA.
 package merge
 
-import bjson "github.com/StyraInc/load/pkg/json"
+import bjson "github.com/styrainc/load/pkg/json"
 
 // InterfaceMaps returns the result of merging a and b. If a and b cannot be
 // merged because of conflicting key-value pairs, ok is false.

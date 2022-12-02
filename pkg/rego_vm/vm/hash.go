@@ -5,7 +5,7 @@ import (
 
 	"github.com/OneOfOne/xxhash"
 
-	fjson "github.com/StyraInc/load/pkg/json"
+	fjson "github.com/styrainc/load/pkg/json"
 )
 
 func hash(value interface{}) uint64 {

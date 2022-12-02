@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	internal "github.com/StyraInc/load/pkg/json/internal/json"
-	"github.com/StyraInc/load/pkg/json/internal/utils"
+	internal "github.com/styrainc/load/pkg/json/internal/json"
+	"github.com/styrainc/load/pkg/json/internal/utils"
 
 	"github.com/open-policy-agent/opa/ast"
 )

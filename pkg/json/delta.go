@@ -7,7 +7,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/StyraInc/load/pkg/json/internal/utils"
+	"github.com/styrainc/load/pkg/json/internal/utils"
 )
 
 const (

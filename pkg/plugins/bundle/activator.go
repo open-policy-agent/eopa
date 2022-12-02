@@ -13,9 +13,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	bjson "github.com/StyraInc/load/pkg/json"
+	bjson "github.com/styrainc/load/pkg/json"
 
-	"github.com/StyraInc/load/pkg/internal/json/patch"
+	"github.com/styrainc/load/pkg/internal/json/patch"
 	"github.com/open-policy-agent/opa/ast"
 	bundleApi "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/metrics"

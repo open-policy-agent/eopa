@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	storedversion "github.com/StyraInc/load/pkg/internal/version"
+	storedversion "github.com/styrainc/load/pkg/internal/version"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/loader"
