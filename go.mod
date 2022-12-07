@@ -91,4 +91,4 @@ require (
 	oras.land/oras-go v1.2.1 // indirect
 )
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.26.1-0.20221205105143-4c67207ea7b5
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.26.1-0.20221207140041-e477be265590
