@@ -6,6 +6,7 @@ import (
 	gjson "encoding/json"
 	"errors"
 	"io"
+	gstrings "strings"
 	"sync/atomic"
 	"time"
 
@@ -219,17 +220,8 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 	defer exit()
 
 	fname := "g0.data"
-	pname := ""
-
-	for i, s := range path {
-		fname += "."
-
-		if i > 0 {
-			pname += "/"
-		}
-
-		fname += s
-		pname += s
+	if len(path) > 0 {
+		fname += "." + gstrings.Join(path, ".")
 	}
 
 	// Try finding a function first, since their execution is a
@@ -298,6 +290,7 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 		}
 	}
 
+	pname := gstrings.Join(path, "/")
 	plans := vm.executable.Plans()
 	n = plans.Len()
 
