@@ -517,7 +517,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 		}
 	}
 
-	var path []string
+	path := make([]string, len(cpath))
 	for i := range cpath {
 		if !state.IsDefined(cpath[i]) {
 			panic("undefined call dynamic path")
@@ -528,7 +528,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 			return false, 0, err
 		}
 
-		path = append(path, string(s.(ast.String)))
+		path[i] = string(s.(ast.String))
 	}
 
 	f, _ := state.FindByPath(path)
