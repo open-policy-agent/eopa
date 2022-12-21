@@ -5,11 +5,80 @@ import (
 	"testing"
 )
 
-func TestExecutable(t *testing.T) {
+func test(t testing.TB) {
+	// Executable
+
+	{
+		s, f, p := []byte("strings"), []byte("functions"), []byte("plans")
+		e := Executable(Executable{}.Write(s, f, p))
+
+		check(t, "valid", e.IsValid(), true)
+	}
+
+
+	// Header
+
+	{
+		version, totalLength, stringsOffset, functionsOffset, plansOffset := uint32(1), uint32(1), uint32(1), uint32(1), uint32(1)
+		h := header(header{}.Write(version, totalLength, stringsOffset, functionsOffset, plansOffset))
+
+		check(t, "valid", h.IsValid(), true)
+	}
+
+	// Strings
+
+	{
+		s := []string{"abc", "def"}
+		strings{}.Write(s)
+	}
+
+	// builtin
+
+	{
+		b := builtin(builtin{}.Write("builtin", false))
+
+		check(t, "name", b.Name(), "builtin")
+		check(t, "relation", b.Relation(), false)
+	}
+
+	// Plans
+
+	{
+		d := [][]byte{[]byte("plan1"), []byte("plan2")}
+		p := plans(plans{}.Write(d))
+
+		check(t, "len", p.Len(), 2)
+	}
+
+	// Plan
+
+	{
+		d := []byte("plan data")
+		p := plan(plan{}.Write("plan1", d))
+
+		check(t, "name", p.Name(), "plan1")
+	}
+
+	// Blocks
+
+	{
+		d := [][]byte{[]byte("block1"), []byte("block2")}
+		b := blocks(blocks{}.Write(d))
+
+		check(t, "len", b.Len(), 2)
+	}
+
+	// Block
+
+	{
+		d := [][]byte{[]byte("statement1"), []byte("statement2")}
+		block{}.Write(d)
+	}
+
 	// Function
 
 	{
-		// func (function) Write(name string, index int, params []Local, ret Local, blocks []byte, path []string) []byte {
+		// func (function) Write(name string, index int, params []Local, ret Local, blocks []byte, path []string) []byte
 		name, index, params, ret, blocks, path := "name", 1, []Local{Local(2)}, Local(3), blocks("blocks"), []string{"path1", "path2"}
 		f := function(function{}.Write(name, index, params, ret, blocks, path))
 
@@ -423,7 +492,17 @@ func TestExecutable(t *testing.T) {
 	}
 }
 
-func check(t *testing.T, field string, a, b interface{}) {
+func TestExecutable(t *testing.T) {
+	test(t)
+}
+
+func BenchmarkExecutable(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		test(b)
+	}
+}
+
+func check(t testing.TB, field string, a, b interface{}) {
 	if !reflect.DeepEqual(a, b) {
 		t.Errorf("field not equal %v: %v %v", field, a, b)
 	}
