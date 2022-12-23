@@ -67,7 +67,7 @@ type runCmdParams struct {
 }
 
 func newRunParams(c *cobra.Command) (*runCmdParams, error) {
-	// NOTE(sr): We're iterating all the command line paramaters that `opa run` accepts,
+	// NOTE(sr): We're iterating all the command line parameters that `opa run` accepts,
 	// read them out into the runCmdParams struct, to later drive the runtime initialization.
 	// This seems somewhat redundant and annoying, but it seems like a good compromise:
 	// The parameters in the OPA run command are private, so we cannot access them. However,

@@ -81,10 +81,11 @@ func (c *Compiler) compilePlan(p *ir.Plan) ([]byte, error) {
 
 func (c *Compiler) compileFuncs() ([]byte, error) {
 	n := len(c.policy.Static.BuiltinFuncs) + len(c.policy.Funcs.Funcs)
-	functions := newUint32(uint32(n))
+	functions := make([]byte, 0, 4+n*4)
+	functions = appendUint32(functions, uint32(n))
 
 	foffsets := uint32(len(functions))
-	functions = append(functions, newOffsetIndex(n)...)
+	functions = appendOffsetIndex(functions, n)
 
 	for i, decl := range c.policy.Static.BuiltinFuncs {
 		builtinImpl := topdown.GetBuiltin(decl.Name)

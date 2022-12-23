@@ -3,6 +3,7 @@ package vm
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 )
 
 const (
@@ -111,15 +112,21 @@ const (
 	headerLength                = headerPlansOffsetOffset + 4
 )
 
-func (h header) Write(version uint32, totalLength uint32, stringsOffset uint32, functionsOffset uint32, plansOffset uint32) []byte {
-	return concat(
-		[]byte(magic),
-		newUint32(version),
-		newUint32(totalLength),
-		newUint32(stringsOffset),
-		newUint32(functionsOffset),
-		newUint32(plansOffset),
-	)
+func (header) Write(version uint32, totalLength uint32, stringsOffset uint32, functionsOffset uint32, plansOffset uint32) []byte {
+
+	l := 4 + 4 + 4 + 4 + 4 + 4
+	d := make([]byte, 0, l)
+	d = append(d, []byte(magic)...)
+	d = appendUint32(d, version)
+	d = appendUint32(d, totalLength)
+	d = appendUint32(d, stringsOffset)
+	d = appendUint32(d, functionsOffset)
+	d = appendUint32(d, plansOffset)
+
+	if len(d) != l {
+		panic(fmt.Sprint("header", l, len(d)))
+	}
+	return d
 }
 
 func (h header) IsValid() bool {
@@ -155,18 +162,23 @@ func (h header) PlansOffset() uint32 {
 }
 
 func (Executable) Write(strings []byte, functions []byte, plans []byte) []byte {
-	binary := make([]byte, 0, len(strings)+len(functions)+len(plans))
+	l := len(strings) + len(functions) + len(plans)
+	d := make([]byte, 0, l)
 
-	stringsOffset := uint32(len(binary))
-	binary = append(binary, strings...)
+	stringsOffset := uint32(len(d))
+	d = append(d, strings...)
 
-	functionsOffset := uint32(len(binary))
-	binary = append(binary, functions...)
+	functionsOffset := uint32(len(d))
+	d = append(d, functions...)
 
-	plansOffset := uint32(len(binary))
-	binary = append(binary, plans...)
+	plansOffset := uint32(len(d))
+	d = append(d, plans...)
 
-	return append(header{}.Write(version, headerLength+uint32(len(binary)), stringsOffset, functionsOffset, plansOffset), binary...)
+	if len(d) != l {
+		panic(fmt.Sprint("executable", l, len(d)))
+	}
+
+	return append(header{}.Write(version, headerLength+uint32(len(d)), stringsOffset, functionsOffset, plansOffset), d...)
 }
 
 func (e Executable) IsValid() bool {
@@ -201,20 +213,26 @@ func (e Executable) Plans() plans {
 	return plans(e[headerLength+offset:])
 }
 
-func (s strings) Write(strings []string) []byte {
+func (strings) Write(strings []string) []byte {
 	n := len(strings)
-	offsets := uint32(4)
-	b := concat(
-		newUint32(uint32(n)),
-		newOffsetIndex(n),
-	)
+	l := 4 + appendOffsetSize(n)
+	for _, s := range strings {
+		l += appendStringSize(s)
+	}
+	d := make([]byte, 0, l)
+
+	offset := uint32(4)
+	d = appendUint32(d, uint32(n))
+	d = appendOffsetIndex(d, n)
 
 	for i, s := range strings {
-		putOffsetIndex(b, offsets, i, uint32(len(b)))
-		b = append(b, newString(s)...)
+		putOffsetIndex(d, offset, i, uint32(len(d)))
+		d = appendString(d, s)
 	}
-
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("strings", l, len(d)))
+	}
+	return d
 }
 
 func (s strings) String(ops DataOperations, i StringIndexConst) Value {
@@ -238,34 +256,39 @@ func (f functions) Function(i int) function {
 }
 
 func (function) Write(name string, index int, params []Local, ret Local, blocks []byte, path []string) []byte {
+	l := 4 + 4 + appendOffsetSize(6) + appendStringSize(name) + 4 + appendLocalArraySize(params) + 4 + appendStringArraySize(path) + len(blocks)
+	d := make([]byte, 0, l)
+
+	offset := uint32(8)
 	lengthOffset := uint32(0)
-	offsets := uint32(8)
-	b := concat(
-		newUint32(0), // Length
-		newUint32(typeFunction),
-		newOffsetIndex(6),
-	)
+	d = appendUint32(d, 0) // Length
+	d = appendUint32(d, typeFunction)
+	d = appendOffsetIndex(d, 6)
 
-	putOffsetIndex(b, offsets, 0, uint32(len(b)))
-	b = append(b, newString(name)...)
+	putOffsetIndex(d, offset, 0, uint32(len(d)))
+	d = appendString(d, name)
 
-	putOffsetIndex(b, offsets, 1, uint32(len(b)))
-	b = append(b, newInt32(int32(index))...)
+	putOffsetIndex(d, offset, 1, uint32(len(d)))
+	d = appendInt32(d, int32(index))
 
-	putOffsetIndex(b, offsets, 2, uint32(len(b)))
-	b = append(b, newLocalArray(params)...)
+	putOffsetIndex(d, offset, 2, uint32(len(d)))
+	d = appendLocalArray(d, params)
 
-	putOffsetIndex(b, offsets, 3, uint32(len(b)))
-	b = append(b, newLocal(ret)...)
-	putOffsetIndex(b, offsets, 4, uint32(len(b)))
-	b = append(b, newStringArray(path)...)
+	putOffsetIndex(d, offset, 3, uint32(len(d)))
+	d = appendLocal(d, ret)
 
-	putOffsetIndex(b, offsets, 5, uint32(len(b)))
-	b = append(b, blocks...)
+	putOffsetIndex(d, offset, 4, uint32(len(d)))
+	d = appendStringArray(d, path)
 
-	putUint32(b, lengthOffset, uint32(len(b))) // Update the length
+	putOffsetIndex(d, offset, 5, uint32(len(d)))
+	d = append(d, blocks...)
 
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("function", l, len(d)))
+	}
+
+	putUint32(d, lengthOffset, uint32(len(d))) // Update the length
+	return d
 }
 
 func (f function) IsBuiltin() bool {
@@ -303,15 +326,19 @@ func (f function) Blocks() blocks {
 }
 
 func (builtin) Write(name string, relation bool) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeBuiltin),
-		newBool(relation),
-		newString(name),
-	)
+	l := 4 + 4 + 1 + appendStringSize(name)
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // length
+	d = appendUint32(d, typeBuiltin)
+	d = appendBool(d, relation)
+	d = appendString(d, name)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("builtin", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (b builtin) Name() string {
@@ -325,18 +352,25 @@ func (b builtin) Relation() bool {
 func (plans) Write(plans [][]byte) []byte {
 	n := len(plans)
 
-	offsets := uint32(4)
-	b := concat(
-		newUint32(uint32(n)),
-		newOffsetIndex(n),
-	)
+	l := 4 + appendOffsetSize(n)
+	for _, plan := range plans {
+		l += len(plan)
+	}
+	d := make([]byte, 0, l)
+
+	offset := uint32(4)
+	d = appendUint32(d, uint32(n))
+	d = appendOffsetIndex(d, n)
 
 	for i, plan := range plans {
-		putOffsetIndex(b, offsets, i, uint32(len(b)))
-		b = append(b, plan...)
+		putOffsetIndex(d, offset, i, uint32(len(d)))
+		d = append(d, plan...)
+	}
+	if l != len(d) {
+		panic(fmt.Sprint("plans", l, len(d)))
 	}
 
-	return b
+	return d
 }
 
 func (p plans) Len() int {
@@ -351,20 +385,24 @@ func (p plans) Plan(i int) plan {
 }
 
 func (plan) Write(name string, blocks []byte) []byte {
+	l := 4 + appendOffsetSize(2) + appendStringSize(name) + len(blocks)
+	d := make([]byte, 0, l)
+
 	offset := uint32(4)
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newOffsetIndex(2),
-	)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendOffsetIndex(d, 2)
 
-	putOffsetIndex(b, offset, 0, uint32(len(b)))
-	b = append(b, newString(name)...)
+	putOffsetIndex(d, offset, 0, uint32(len(d)))
+	d = appendString(d, name)
 
-	putOffsetIndex(b, offset, 1, uint32(len(b)))
-	b = append(b, blocks...)
+	putOffsetIndex(d, offset, 1, uint32(len(d)))
+	d = append(d, blocks...)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("plan", l, len(d)))
+	}
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (p plan) Name() string {
@@ -378,21 +416,32 @@ func (p plan) Blocks() blocks {
 }
 
 func (blocks) Write(blocks [][]byte) []byte {
+	n := len(blocks)
+
 	lengthOffset := uint32(0)
-	offsets := uint32(8)
 
-	data := concat(
-		newUint32(0),                   // 0: Length placeholder.
-		newUint32(uint32(len(blocks))), // 4: # of blocks
-		newOffsetIndex(len(blocks)))    // 8: offsets
-
-	for i := range blocks {
-		putOffsetIndex(data, offsets, i, uint32(len(data)))
-		data = append(data, blocks[i]...)
+	l := 4 + 4 + appendOffsetSize(n)
+	for _, v := range blocks {
+		l += len(v)
 	}
 
-	putUint32(data, lengthOffset, uint32(len(data))) // Update the length
-	return data
+	d := make([]byte, 0, l)
+
+	offset := uint32(8)
+	d = appendUint32(d, 0)         // 0: Length placeholder.
+	d = appendUint32(d, uint32(n)) // 4: # of blocks
+	d = appendOffsetIndex(d, n)    // 8: offsets
+
+	for i := range blocks {
+		putOffsetIndex(d, offset, i, uint32(len(d)))
+		d = append(d, blocks[i]...)
+	}
+	if l != len(d) {
+		panic(fmt.Sprint("blocks", l, len(d)))
+	}
+
+	putUint32(d, lengthOffset, uint32(len(d))) // Update the length
+	return d
 }
 
 func (b blocks) Len() int {
@@ -407,21 +456,31 @@ func (b blocks) Block(i int) block {
 
 func (block) Write(stmts [][]byte) []byte {
 	lengthOffset := uint32(0)
-	offsets := uint32(8)
 
-	b := concat(
-		newUint32(0),                  // Length placeholder.
-		newUint32(uint32(len(stmts))), // # of statements
-		newOffsetIndex(len(stmts)),
-	)
+	n := len(stmts)
 
-	for i, data := range stmts {
-		putOffsetIndex(b, offsets, i, uint32(len(b)))
-		b = append(b, data...)
+	l := 4 + 4 + appendOffsetSize(n)
+	for _, data := range stmts {
+		l += len(data)
 	}
 
-	putUint32(b, lengthOffset, uint32(len(b))) // Update the length
-	return b
+	d := make([]byte, 0, l)
+
+	offset := uint32(8)
+	d = appendUint32(d, 0)         // Length placeholder.
+	d = appendUint32(d, uint32(n)) // # of statements
+	d = appendOffsetIndex(d, n)
+
+	for i, data := range stmts {
+		putOffsetIndex(d, offset, i, uint32(len(d)))
+		d = append(d, data...)
+	}
+	if l != len(d) {
+		panic(fmt.Sprint("block", l, len(d)))
+	}
+
+	putUint32(d, lengthOffset, uint32(len(d))) // Update the length
+	return d
 }
 
 func (b block) Statements() statements {
@@ -445,15 +504,18 @@ func (s statement) Type() uint32 {
 // Statements
 
 func (assignInt) Write(value int64, target Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementAssignInt),
-		newInt64(value),
-		newLocal(target),
-	)
+	l := 4 + 4 + 8 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementAssignInt)
+	d = appendInt64(d, value)
+	d = appendLocal(d, target)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("asignInt", l, len(d)))
+	}
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (a assignInt) Len() uint32 {
@@ -473,15 +535,18 @@ func (a assignInt) Target() Local {
 }
 
 func (assignVar) Write(source LocalOrConst, target Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementAssignVar),
-		newLocal(target),
-		newLocalOrConst(source),
-	)
+	l := 4 + 4 + 4 + 5
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementAssignVar)
+	d = appendLocal(d, target)
+	d = appendLocalOrConst(d, source)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("assignVar", l, len(d)))
+	}
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (a assignVar) Len() uint32 {
@@ -501,15 +566,19 @@ func (a assignVar) Target() Local {
 }
 
 func (assignVarOnce) Write(source LocalOrConst, target Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementAssignVarOnce),
-		newLocal(target),
-		newLocalOrConst(source),
-	)
+	l := 4 + 4 + 4 + 5
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementAssignVarOnce)
+	d = appendLocal(d, target)
+	d = appendLocalOrConst(d, source)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("assignVarOnce", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (a assignVarOnce) Len() uint32 {
@@ -529,14 +598,18 @@ func (a assignVarOnce) Target() Local {
 }
 
 func (blockStmt) Write(blocks []byte) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementBlockStmt),
-		blocks,
-	)
+	l := 4 + 4 + len(blocks)
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementBlockStmt)
+	d = append(d, blocks...)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("blockStmt", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (b blockStmt) Len() uint32 {
@@ -552,14 +625,18 @@ func (b blockStmt) Blocks() blocks {
 }
 
 func (breakStmt) Write(index uint32) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementBreakStmt),
-		newUint32(index),
-	)
+	l := 4 + 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementBreakStmt)
+	d = appendUint32(d, index)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("block", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (b breakStmt) Len() uint32 {
@@ -574,17 +651,23 @@ func (b breakStmt) Index() uint32 {
 	return getUint32(b, 8)
 }
 
-func (c callDynamic) Write(args []Local, result Local, path []LocalOrConst) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementCallDynamic),
-		newLocal(result),
-		newLocalArray(args),
-		newLocalOrConstArray(path),
-	)
+func (callDynamic) Write(args []Local, result Local, path []LocalOrConst) []byte {
+	l := 4 + 4 + 4 + appendLocalArraySize(args) + appendLocalOrConstArraySize(path)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	d := make([]byte, 0, l)
+
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementCallDynamic)
+	d = appendLocal(d, result)
+	d = appendLocalArray(d, args)
+	d = appendLocalOrConstArray(d, path)
+
+	if l != len(d) {
+		panic(fmt.Sprint("callDynamic", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (c callDynamic) Len() uint32 {
@@ -608,17 +691,22 @@ func (c callDynamic) Path() []LocalOrConst {
 	return getLocalOrConstArray(c, 12+uint32(n))
 }
 
-func (c call) Write(index int, args []LocalOrConst, result Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementCall),
-		newLocal(result),
-		newLocalOrConstArray(args),
-		newUint32(uint32(index)),
-	)
+func (call) Write(index int, args []LocalOrConst, result Local) []byte {
+	l := 4 + 4 + 4 + appendLocalOrConstArraySize(args) + 4
+	d := make([]byte, 0, l)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementCall)
+	d = appendLocal(d, result)
+	d = appendLocalOrConstArray(d, args)
+	d = appendUint32(d, uint32(index))
+
+	if l != len(d) {
+		panic(fmt.Sprint("call", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (c call) Len() uint32 {
@@ -642,17 +730,22 @@ func (c call) Result() Local {
 	return getLocal(c, 8)
 }
 
-func (d dot) Write(source LocalOrConst, key LocalOrConst, target Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementDot),
-		newLocal(target),
-		newLocalOrConst(source),
-		newLocalOrConst(key),
-	)
+func (dot) Write(source LocalOrConst, key LocalOrConst, target Local) []byte {
+	l := 4 + 4 + 4 + 5 + 5
+	d := make([]byte, 0, l)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementDot)
+	d = appendLocal(d, target)
+	d = appendLocalOrConst(d, source)
+	d = appendLocalOrConst(d, key)
+
+	if l != len(d) {
+		panic(fmt.Sprint("dot", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (d dot) Len() uint32 {
@@ -675,16 +768,21 @@ func (d dot) Target() Local {
 	return getLocal(d, 8)
 }
 
-func (e equal) Write(aa LocalOrConst, bb LocalOrConst) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementEqual),
-		newLocalOrConst(aa),
-		newLocalOrConst(bb),
-	)
+func (equal) Write(aa LocalOrConst, bb LocalOrConst) []byte {
+	l := 4 + 4 + 5 + 5
+	d := make([]byte, 0, l)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementEqual)
+	d = appendLocalOrConst(d, aa)
+	d = appendLocalOrConst(d, bb)
+
+	if l != len(d) {
+		panic(fmt.Sprint("equal", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (e equal) Len() uint32 {
@@ -703,15 +801,20 @@ func (e equal) B() LocalOrConst {
 	return getLocalOrConst(e, 8+5)
 }
 
-func (i isArray) Write(source LocalOrConst) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementIsArray),
-		newLocalOrConst(source),
-	)
+func (isArray) Write(source LocalOrConst) []byte {
+	l := 4 + 4 + 5
+	d := make([]byte, 0, l)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementIsArray)
+	d = appendLocalOrConst(d, source)
+
+	if l != len(d) {
+		panic(fmt.Sprint("isArray", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (i isArray) Len() uint32 {
@@ -726,15 +829,20 @@ func (i isArray) Source() LocalOrConst {
 	return getLocalOrConst(i, 8)
 }
 
-func (i isObject) Write(source LocalOrConst) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementIsObject),
-		newLocalOrConst(source),
-	)
+func (isObject) Write(source LocalOrConst) []byte {
+	l := 4 + 4 + 5
+	d := make([]byte, 0, l)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementIsObject)
+	d = appendLocalOrConst(d, source)
+
+	if l != len(d) {
+		panic(fmt.Sprint("isObject", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (i isObject) Len() uint32 {
@@ -749,15 +857,20 @@ func (i isObject) Source() LocalOrConst {
 	return getLocalOrConst(i, 8)
 }
 
-func (i isDefined) Write(source Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementIsDefined),
-		newLocal(source),
-	)
+func (isDefined) Write(source Local) []byte {
+	l := 4 + 4 + 4
+	d := make([]byte, 0, l)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementIsDefined)
+	d = appendLocal(d, source)
+
+	if l != len(d) {
+		panic(fmt.Sprint("isDefined", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (i isDefined) Len() uint32 {
@@ -772,15 +885,19 @@ func (i isDefined) Source() Local {
 	return getLocal(i, 8)
 }
 
-func (i isUndefined) Write(source Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementIsUndefined),
-		newLocal(source),
-	)
+func (isUndefined) Write(source Local) []byte {
+	l := 4 + 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementIsUndefined)
+	d = appendLocal(d, source)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("isUndefined", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (i isUndefined) Len() uint32 {
@@ -795,15 +912,19 @@ func (i isUndefined) Source() Local {
 	return getLocal(i, 8)
 }
 
-func (m makeNull) Write(target Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementMakeNull),
-		newLocal(target),
-	)
+func (makeNull) Write(target Local) []byte {
+	l := 4 + 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementMakeNull)
+	d = appendLocal(d, target)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("makeNull", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (m makeNull) Len() uint32 {
@@ -818,16 +939,20 @@ func (m makeNull) Target() Local {
 	return getLocal(m, 8)
 }
 
-func (m makeNumberInt) Write(value int64, target Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementMakeNumberInt),
-		newInt64(value),
-		newLocal(target),
-	)
+func (makeNumberInt) Write(value int64, target Local) []byte {
+	l := 4 + 4 + 8 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementMakeNumberInt)
+	d = appendInt64(d, value)
+	d = appendLocal(d, target)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("makeNumberInt", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (m makeNumberInt) Len() uint32 {
@@ -846,16 +971,20 @@ func (m makeNumberInt) Target() Local {
 	return getLocal(m, 16)
 }
 
-func (m makeNumberRef) Write(index int, target Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementMakeNumberRef),
-		newUint32(uint32(index)),
-		newLocal(target),
-	)
+func (makeNumberRef) Write(index int, target Local) []byte {
+	l := 4 + 4 + 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementMakeNumberRef)
+	d = appendUint32(d, uint32(index))
+	d = appendLocal(d, target)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("makeNumberRef", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (m makeNumberRef) Len() uint32 {
@@ -874,16 +1003,20 @@ func (m makeNumberRef) Target() Local {
 	return getLocal(m, 12)
 }
 
-func (m makeArray) Write(capacity int32, target Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementMakeArray),
-		newInt32(capacity),
-		newLocal(target),
-	)
+func (makeArray) Write(capacity int32, target Local) []byte {
+	l := 4 + 4 + 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementMakeArray)
+	d = appendInt32(d, capacity)
+	d = appendLocal(d, target)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("makeArray", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (m makeArray) Len() uint32 {
@@ -902,15 +1035,19 @@ func (m makeArray) Target() Local {
 	return getLocal(m, 12)
 }
 
-func (m makeObject) Write(target Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementMakeObject),
-		newLocal(target),
-	)
+func (makeObject) Write(target Local) []byte {
+	l := 4 + 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementMakeObject)
+	d = appendLocal(d, target)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("makeObject", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (m makeObject) Len() uint32 {
@@ -925,15 +1062,19 @@ func (m makeObject) Target() Local {
 	return getLocal(m, 8)
 }
 
-func (m makeSet) Write(target Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementMakeSet),
-		newLocal(target),
-	)
+func (makeSet) Write(target Local) []byte {
+	l := 4 + 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementMakeSet)
+	d = appendLocal(d, target)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("makeSet", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (m makeSet) Len() uint32 {
@@ -949,15 +1090,19 @@ func (m makeSet) Target() Local {
 }
 
 func (notEqual) Write(aa LocalOrConst, bb LocalOrConst) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementNotEqual),
-		newLocalOrConst(aa),
-		newLocalOrConst(bb),
-	)
+	l := 4 + 4 + 5 + 5
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementNotEqual)
+	d = appendLocalOrConst(d, aa)
+	d = appendLocalOrConst(d, bb)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("notEqual", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (n notEqual) Len() uint32 {
@@ -976,16 +1121,20 @@ func (n notEqual) B() LocalOrConst {
 	return getLocalOrConst(n, 8+5)
 }
 
-func (l lenStmt) Write(source LocalOrConst, target Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementLen),
-		newLocal(target),
-		newLocalOrConst(source),
-	)
+func (lenStmt) Write(source LocalOrConst, target Local) []byte {
+	l := 4 + 4 + 4 + 5
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementLen)
+	d = appendLocal(d, target)
+	d = appendLocalOrConst(d, source)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("lenStmt", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (l lenStmt) Len() uint32 {
@@ -1004,16 +1153,21 @@ func (l lenStmt) Target() Local {
 	return getLocal(l, 8)
 }
 
-func (a arrayAppend) Write(value LocalOrConst, array Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementArrayAppend),
-		newLocal(array),
-		newLocalOrConst(value),
-	)
+func (arrayAppend) Write(value LocalOrConst, array Local) []byte {
+	l := 4 + 4 + 4 + 5
+	d := make([]byte, 0, l)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementArrayAppend)
+	d = appendLocal(d, array)
+	d = appendLocalOrConst(d, value)
+
+	if l != len(d) {
+		panic(fmt.Sprint("arrayAppend", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (a arrayAppend) Len() uint32 {
@@ -1032,16 +1186,20 @@ func (a arrayAppend) Array() Local {
 	return getLocal(a, 8)
 }
 
-func (s setAdd) Write(value LocalOrConst, set Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementSetAdd),
-		newLocal(set),
-		newLocalOrConst(value),
-	)
+func (setAdd) Write(value LocalOrConst, set Local) []byte {
+	l := 4 + 4 + 4 + 5
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementSetAdd)
+	d = appendLocal(d, set)
+	d = appendLocalOrConst(d, value)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("setAdd", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (s setAdd) Len() uint32 {
@@ -1060,17 +1218,21 @@ func (s setAdd) Set() Local {
 	return getLocal(s, 8)
 }
 
-func (o objectInsertOnce) Write(key, value LocalOrConst, obj Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementObjectInsertOnce),
-		newLocal(obj),
-		newLocalOrConst(key),
-		newLocalOrConst(value),
-	)
+func (objectInsertOnce) Write(key, value LocalOrConst, obj Local) []byte {
+	l := 4 + 4 + 4 + 5 + 5
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementObjectInsertOnce)
+	d = appendLocal(d, obj)
+	d = appendLocalOrConst(d, key)
+	d = appendLocalOrConst(d, value)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("objectInsertOnce", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (o objectInsertOnce) Len() uint32 {
@@ -1093,17 +1255,21 @@ func (o objectInsertOnce) Object() Local {
 	return getLocal(o, 8)
 }
 
-func (o objectInsert) Write(key, value LocalOrConst, obj Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementObjectInsert),
-		newLocal(obj),
-		newLocalOrConst(key),
-		newLocalOrConst(value),
-	)
+func (objectInsert) Write(key, value LocalOrConst, obj Local) []byte {
+	l := 4 + 4 + 4 + 5 + 5
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementObjectInsert)
+	d = appendLocal(d, obj)
+	d = appendLocalOrConst(d, key)
+	d = appendLocalOrConst(d, value)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("objectInsert", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (o objectInsert) Len() uint32 {
@@ -1126,17 +1292,21 @@ func (o objectInsert) Object() Local {
 	return getLocal(o, 8)
 }
 
-func (o objectMerge) Write(a, b, target Local) []byte {
-	r := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementObjectMerge),
-		newLocal(a),
-		newLocal(b),
-		newLocal(target),
-	)
+func (objectMerge) Write(a, b, target Local) []byte {
+	l := 4 + 4 + 4 + 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementObjectMerge)
+	d = appendLocal(d, a)
+	d = appendLocal(d, b)
+	d = appendLocal(d, target)
 
-	putUint32(r, 0, uint32(len(r))) // Update the length
-	return r
+	if l != len(d) {
+		panic(fmt.Sprint("objectMerge", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (o objectMerge) Len() uint32 {
@@ -1160,12 +1330,17 @@ func (o objectMerge) Target() Local {
 }
 
 func (nop) Write() []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementNop),
-	)
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	l := 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementNop)
+
+	if l != len(d) {
+		panic(fmt.Sprint("nop", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (n nop) Len() uint32 {
@@ -1177,13 +1352,18 @@ func (n nop) Type() uint32 {
 }
 
 func (not) Write(block []byte) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementNot),
-		block,
-	)
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	l := 4 + 4 + len(block)
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementNot)
+	d = append(d, block...)
+
+	if l != len(d) {
+		panic(fmt.Sprint("not", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (n not) Len() uint32 {
@@ -1199,14 +1379,18 @@ func (n not) Block() block {
 }
 
 func (resetLocal) Write(target Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementResetLocal),
-		newLocal(target),
-	)
+	l := 4 + 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementResetLocal)
+	d = appendLocal(d, target)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("resetLocal", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (r resetLocal) Len() uint32 {
@@ -1222,14 +1406,17 @@ func (r resetLocal) Target() Local {
 }
 
 func (resultSetAdd) Write(value Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementResultSetAdd),
-		newLocal(value),
-	)
+	l := 4 + 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementResultSetAdd)
+	d = appendLocal(d, value)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("resultsSetAdd", l, len(d)))
+	}
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (r resultSetAdd) Len() uint32 {
@@ -1245,14 +1432,18 @@ func (r resultSetAdd) Value() Local {
 }
 
 func (returnLocal) Write(source Local) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementReturnLocal),
-		newLocal(source),
-	)
+	l := 4 + 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementReturnLocal)
+	d = appendLocal(d, source)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("returnLocal", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (r returnLocal) Len() uint32 {
@@ -1268,17 +1459,21 @@ func (r returnLocal) Source() Local {
 }
 
 func (scan) Write(source, key, value Local, block []byte) []byte {
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementScan),
-		newLocal(source),
-		newLocal(key),
-		newLocal(value),
-		block,
-	)
+	l := 4 + 4 + 4 + 4 + 4 + len(block)
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementScan)
+	d = appendLocal(d, source)
+	d = appendLocal(d, key)
+	d = appendLocal(d, value)
+	d = append(d, block...)
 
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	if l != len(d) {
+		panic(fmt.Sprint("scan", l, len(d)))
+	}
+
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (s scan) Len() uint32 {
@@ -1306,22 +1501,21 @@ func (s scan) Block() block {
 }
 
 func (with) Write(local Local, path []int, value LocalOrConst, block []byte) []byte {
-	a := make([]int32, len(path))
-	for i, v := range path {
-		a[i] = int32(v)
+	l := 4 + 4 + 4 + appendIntArraySize(path) + 5 + len(block)
+	d := make([]byte, 0, l)
+	d = appendUint32(d, 0) // Length placeholder.
+	d = appendUint32(d, typeStatementWith)
+	d = appendLocal(d, local)
+	d = appendIntArray(d, path)
+	d = appendLocalOrConst(d, value)
+	d = append(d, block...)
+
+	if l != len(d) {
+		panic(fmt.Sprint("with", l, len(d)))
 	}
 
-	b := concat(
-		newUint32(0), // Length placeholder.
-		newUint32(typeStatementWith),
-		newLocal(local),
-		newInt32Array(a),
-		newLocalOrConst(value),
-		block,
-	)
-
-	putUint32(b, 0, uint32(len(b))) // Update the length
-	return b
+	putUint32(d, 0, uint32(len(d))) // Update the length
+	return d
 }
 
 func (w with) Len() uint32 {
@@ -1337,14 +1531,16 @@ func (w with) Local() Local {
 }
 
 func (w with) Path() []int {
-	a := getInt32Array(w, 12)
+	offset := uint32(12)
+	n := getUint32(w, offset)
 
-	paths := make([]int, len(a))
-	for i, p := range a {
-		paths[i] = int(p)
+	a := make([]int, 0, n)
+	for i := uint32(0); i < n; i++ {
+		v := getInt32(w, offset+4+i*4)
+		a = append(a, int(v))
 	}
 
-	return paths
+	return a
 }
 
 func (w with) Value() LocalOrConst {
@@ -1359,12 +1555,12 @@ func (w with) Block() block {
 
 // Primitive types
 
-func newBool(value bool) []byte {
+func appendBool(d []byte, value bool) []byte {
 	if value {
-		return []byte{1}
+		return append(d, byte(1))
 	}
 
-	return []byte{0}
+	return append(d, byte(0))
 }
 
 func getBool(data []byte, offset uint32) bool {
@@ -1375,8 +1571,16 @@ func getOffsetIndex(data []byte, offset uint32, i int) uint32 {
 	return getUint32(data, offset+uint32(i)*4)
 }
 
-func newOffsetIndex(n int) []byte {
-	return make([]byte, n*4)
+func appendOffsetSize(n int) int {
+	return n * 4
+}
+
+func appendOffsetIndex(d []byte, n int) []byte {
+	l := make([]byte, 4)
+	for i := 0; i < n; i++ {
+		d = append(d, l...)
+	}
+	return d
 }
 
 func putOffsetIndex(data []byte, offset uint32, i int, value uint32) {
@@ -1387,10 +1591,10 @@ func getUint32(data []byte, offset uint32) uint32 {
 	return binary.BigEndian.Uint32(data[offset:])
 }
 
-func newUint32(value uint32) []byte {
+func appendUint32(d []byte, value uint32) []byte {
 	data := make([]byte, 4)
 	binary.BigEndian.PutUint32(data, value)
-	return data
+	return append(d, data...)
 }
 
 func putUint32(data []byte, offset uint32, value uint32) uint32 {
@@ -1402,40 +1606,20 @@ func getInt32(data []byte, offset uint32) int32 {
 	return int32(binary.BigEndian.Uint32(data[offset:]))
 }
 
-func newInt32(value int32) []byte {
+func appendInt32(d []byte, value int32) []byte {
 	data := make([]byte, 4)
 	binary.BigEndian.PutUint32(data, uint32(value))
-	return data
+	return append(d, data...)
 }
 
 func getInt64(data []byte, offset uint32) int64 {
 	return int64(binary.BigEndian.Uint64(data[offset:]))
 }
 
-func newInt64(value int64) []byte {
+func appendInt64(d []byte, value int64) []byte {
 	data := make([]byte, 8)
 	binary.BigEndian.PutUint64(data, uint64(value))
-	return data
-}
-
-func getInt32Array(data []byte, offset uint32) []int32 {
-	n := getUint32(data, offset)
-
-	a := make([]int32, 0, n)
-	for i := uint32(0); i < n; i++ {
-		a = append(a, getInt32(data, offset+4+i*4))
-	}
-
-	return a
-}
-
-func newInt32Array(value []int32) []byte {
-	data := newUint32(uint32(len(value)))
-	for _, v := range value {
-		data = append(data, newInt32(v)...)
-	}
-
-	return data
+	return append(d, data...)
 }
 
 func getInt32ArrayLen(data []byte, offset uint32) int {
@@ -1453,23 +1637,39 @@ func getString(data []byte, offset uint32) string {
 	return string(data[offset : offset+l])
 }
 
-func newString(value string) []byte {
-	data := []byte(value)
-	return append(newUint32(uint32(len(data))), data...)
+func appendStringSize(value string) int {
+	pad := 4 + len(value)
+	return pad
 }
 
-func newStringArray(value []string) []byte {
-	data := newUint32(uint32(len(value)))
+func appendString(d []byte, value string) []byte {
+	data := []byte(value)
+	d = appendUint32(d, uint32(len(data)))
+	return append(d, data...)
+}
 
-	offsets := uint32(len(data))
-	data = append(data, newOffsetIndex(len(value))...)
+func appendStringArraySize(value []string) int {
+	n := len(value)
+	pad := 4 + appendOffsetSize(n)
+	for _, s := range value {
+		pad += appendStringSize(s)
+	}
+	return pad
+}
+
+func appendStringArray(d []byte, value []string) []byte {
+	base := len(d)
+	n := len(value)
+	offsets := uint32(base + 4)
+
+	d = appendUint32(d, uint32(n))
+	d = appendOffsetIndex(d, n)
 
 	for i, s := range value {
-		putOffsetIndex(data, offsets, i, uint32(len(data)))
-		data = append(data, newString(s)...)
+		putOffsetIndex(d, offsets, i, uint32(len(d)-base))
+		d = appendString(d, s)
 	}
-
-	return data
+	return d
 }
 
 func getStringArray(data []byte, offset uint32) []string {
@@ -1494,8 +1694,8 @@ func getType(data []byte) uint32 {
 	return getUint32(data, 4)
 }
 
-func newLocal(local Local) []byte {
-	return newUint32(uint32(local))
+func appendLocal(d []byte, local Local) []byte {
+	return appendUint32(d, uint32(local))
 }
 
 func getLocal(data []byte, offset uint32) Local {
@@ -1503,27 +1703,42 @@ func getLocal(data []byte, offset uint32) Local {
 }
 
 func getLocalArray(data []byte, offset uint32) []Local {
-	a := getInt32Array(data, offset)
-	r := make([]Local, len(a))
+	n := getUint32(data, offset)
 
-	for i := range a {
-		r[i] = Local(a[i])
+	a := make([]Local, 0, n)
+	for i := uint32(0); i < n; i++ {
+		a = append(a, getLocal(data, offset+4+i*4))
 	}
 
-	return r
+	return a
 }
 
 func getLocalArraySize(data []byte, offset uint32) int {
 	return getInt32ArraySize(data, offset)
 }
 
-func newLocalArray(local []Local) []byte {
-	a := make([]int32, len(local))
-	for i := range local {
-		a[i] = int32(local[i])
-	}
+func appendIntArraySize(local []int) int {
+	return 4 + len(local)*4
+}
 
-	return newInt32Array(a)
+func appendIntArray(d []byte, local []int) []byte {
+	d = appendUint32(d, uint32(len(local)))
+	for _, v := range local {
+		d = appendInt32(d, int32(v))
+	}
+	return d
+}
+
+func appendLocalArraySize(local []Local) int {
+	return 4 + len(local)*4
+}
+
+func appendLocalArray(d []byte, local []Local) []byte {
+	d = appendUint32(d, uint32(len(local)))
+	for _, v := range local {
+		d = appendInt32(d, int32(v))
+	}
+	return d
 }
 
 const (
@@ -1532,29 +1747,23 @@ const (
 	stringIndexConstType = 2
 )
 
-func newLocalOrConst(lc LocalOrConst) []byte {
+func appendLocalOrConst(d []byte, lc LocalOrConst) []byte {
 	switch v := lc.(type) {
 	case Local:
-		return concat(
-			[]byte{localType},
-			newUint32(uint32(v)),
-		)
+		d = append(d, localType)
+		return appendUint32(d, uint32(v))
 
 	case BoolConst:
 		var t uint32
 		if v {
 			t = 1
 		}
-		return concat(
-			[]byte{boolConstType},
-			newUint32(t),
-		)
+		d = append(d, boolConstType)
+		return appendUint32(d, uint32(t))
 
 	case StringIndexConst:
-		return concat(
-			[]byte{stringIndexConstType},
-			newUint32(uint32(v)),
-		)
+		d = append(d, stringIndexConstType)
+		return appendUint32(d, uint32(v))
 
 	default:
 		panic("unsupported local or const")
@@ -1601,25 +1810,15 @@ func getLocalOrConstArraySize(data []byte, offset uint32) int {
 	return 4 + 5*getLocalOrConstArrayLen(data, offset)
 }
 
-func newLocalOrConstArray(l []LocalOrConst) []byte {
-	data := newUint32(uint32(len(l)))
-	for _, l := range l {
-		data = append(data, newLocalOrConst(l)...)
-	}
-
-	return data
+func appendLocalOrConstArraySize(l []LocalOrConst) int {
+	return 4 + 5*len(l)
 }
 
-func concat(fields ...[]byte) []byte {
-	l := 0
-	for _, field := range fields {
-		l += len(field)
-	}
-	result := make([]byte, 0, l)
-
-	for _, field := range fields {
-		result = append(result, field...)
+func appendLocalOrConstArray(d []byte, l []LocalOrConst) []byte {
+	d = appendUint32(d, uint32(len(l)))
+	for _, l := range l {
+		d = appendLocalOrConst(d, l)
 	}
 
-	return result
+	return d
 }

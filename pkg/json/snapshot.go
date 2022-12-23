@@ -25,7 +25,7 @@ func Debug(c Collections) Object {
 }
 
 // snapshot implements the Collections interface. It provides an interface to access the snapshots of collections stored within.
-// Internally, it is a hierachical namespace of resources, organized around nested maps. A leaf map represents a resource and holds the meta data for the particular resource.
+// Internally, it is a hierarchical namespace of resources, organized around nested maps. A leaf map represents a resource and holds the meta data for the particular resource.
 type snapshot struct {
 	ObjectBinary
 	slen    int64

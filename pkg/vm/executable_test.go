@@ -15,7 +15,6 @@ func test(t testing.TB) {
 		check(t, "valid", e.IsValid(), true)
 	}
 
-
 	// Header
 
 	{
@@ -88,7 +87,7 @@ func test(t testing.TB) {
 		check(t, "return", f.Return(), ret)
 		check(t, "blocks", f.Blocks(), blocks)
 		check(t, "path", f.Path(), path)
-
+		check(t, "builtin", f.IsBuiltin(), false)
 	}
 
 	// ArrayAppend

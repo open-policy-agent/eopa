@@ -15,13 +15,13 @@ import (
 
 	bjson "github.com/styrainc/load/pkg/json"
 
-	"github.com/styrainc/load/pkg/internal/json/patch"
 	"github.com/open-policy-agent/opa/ast"
 	bundleApi "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/util"
+	"github.com/styrainc/load/pkg/internal/json/patch"
 )
 
 // BundlesBasePath is the storage path used for storing bundle metadata

@@ -21,6 +21,12 @@ push:
 test:
 	go test ./...
 
+fmt:
+	golangci-lint run -v --fix
+
+check:
+	golangci-lint run -v
+
 run:
 	docker run -p 8181:8181 -v $$(pwd):/cwd -w /cwd $$($(KO_BUILD) --local) run --server --log-level debug
 

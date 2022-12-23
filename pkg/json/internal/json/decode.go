@@ -337,7 +337,7 @@ Switch:
 	case 't': // true
 		i += len("rue")
 	case 'f': // false
-		i += len("alse")
+		i += len("alse") //nolint:all
 	case 'n': // null
 		i += len("ull")
 	}
