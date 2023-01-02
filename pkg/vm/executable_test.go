@@ -18,7 +18,7 @@ func test(t testing.TB) {
 	// Header
 
 	{
-		version, totalLength, stringsOffset, functionsOffset, plansOffset := uint32(1), uint32(1), uint32(1), uint32(1), uint32(1)
+		version, totalLength, stringsOffset, functionsOffset, plansOffset := uint32(1), uint32(headerLength), uint32(0), uint32(0), uint32(0)
 		h := header(header{}.Write(version, totalLength, stringsOffset, functionsOffset, plansOffset))
 
 		check(t, "valid", h.IsValid(), true)

@@ -114,8 +114,11 @@ const (
 
 func (header) Write(version uint32, totalLength uint32, stringsOffset uint32, functionsOffset uint32, plansOffset uint32) []byte {
 
-	l := 4 + 4 + 4 + 4 + 4 + 4
-	d := make([]byte, 0, l)
+	if totalLength < headerLength {
+		panic(fmt.Sprintf("headerLength %d %d", totalLength, headerLength))
+	}
+
+	d := make([]byte, 0, totalLength)
 	d = append(d, []byte(magic)...)
 	d = appendUint32(d, version)
 	d = appendUint32(d, totalLength)
@@ -123,8 +126,8 @@ func (header) Write(version uint32, totalLength uint32, stringsOffset uint32, fu
 	d = appendUint32(d, functionsOffset)
 	d = appendUint32(d, plansOffset)
 
-	if len(d) != l {
-		panic(fmt.Sprint("header", l, len(d)))
+	if len(d) != headerLength {
+		panic(fmt.Sprintf("header %d %d", headerLength, len(d)))
 	}
 	return d
 }
@@ -162,23 +165,22 @@ func (h header) PlansOffset() uint32 {
 }
 
 func (Executable) Write(strings []byte, functions []byte, plans []byte) []byte {
-	l := len(strings) + len(functions) + len(plans)
-	d := make([]byte, 0, l)
+	stringsLen := len(strings)
+	functionsLen := len(functions)
+	plansLen := len(plans)
 
-	stringsOffset := uint32(len(d))
+	l := headerLength + stringsLen + functionsLen + plansLen
+
+	d := header{}.Write(version, uint32(l), uint32(0), uint32(stringsLen), uint32(stringsLen+functionsLen))
+
 	d = append(d, strings...)
-
-	functionsOffset := uint32(len(d))
 	d = append(d, functions...)
-
-	plansOffset := uint32(len(d))
 	d = append(d, plans...)
 
 	if len(d) != l {
-		panic(fmt.Sprint("executable", l, len(d)))
+		panic(fmt.Sprintf("executable %d %d", l, len(d)))
 	}
-
-	return append(header{}.Write(version, headerLength+uint32(len(d)), stringsOffset, functionsOffset, plansOffset), d...)
+	return d
 }
 
 func (e Executable) IsValid() bool {
@@ -230,7 +232,7 @@ func (strings) Write(strings []string) []byte {
 		d = appendString(d, s)
 	}
 	if l != len(d) {
-		panic(fmt.Sprint("strings", l, len(d)))
+		panic(fmt.Sprintf("strings %d %d", l, len(d)))
 	}
 	return d
 }
@@ -284,7 +286,7 @@ func (function) Write(name string, index int, params []Local, ret Local, blocks 
 	d = append(d, blocks...)
 
 	if l != len(d) {
-		panic(fmt.Sprint("function", l, len(d)))
+		panic(fmt.Sprintf("function %d %d", l, len(d)))
 	}
 
 	putUint32(d, lengthOffset, uint32(len(d))) // Update the length
@@ -334,7 +336,7 @@ func (builtin) Write(name string, relation bool) []byte {
 	d = appendString(d, name)
 
 	if l != len(d) {
-		panic(fmt.Sprint("builtin", l, len(d)))
+		panic(fmt.Sprintf("builtin %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -367,7 +369,7 @@ func (plans) Write(plans [][]byte) []byte {
 		d = append(d, plan...)
 	}
 	if l != len(d) {
-		panic(fmt.Sprint("plans", l, len(d)))
+		panic(fmt.Sprintf("plans %d %d", l, len(d)))
 	}
 
 	return d
@@ -399,7 +401,7 @@ func (plan) Write(name string, blocks []byte) []byte {
 	d = append(d, blocks...)
 
 	if l != len(d) {
-		panic(fmt.Sprint("plan", l, len(d)))
+		panic(fmt.Sprintf("plan %d %d", l, len(d)))
 	}
 	putUint32(d, 0, uint32(len(d))) // Update the length
 	return d
@@ -437,7 +439,7 @@ func (blocks) Write(blocks [][]byte) []byte {
 		d = append(d, blocks[i]...)
 	}
 	if l != len(d) {
-		panic(fmt.Sprint("blocks", l, len(d)))
+		panic(fmt.Sprintf("blocks %d %d", l, len(d)))
 	}
 
 	putUint32(d, lengthOffset, uint32(len(d))) // Update the length
@@ -476,7 +478,7 @@ func (block) Write(stmts [][]byte) []byte {
 		d = append(d, data...)
 	}
 	if l != len(d) {
-		panic(fmt.Sprint("block", l, len(d)))
+		panic(fmt.Sprintf("block %d %d", l, len(d)))
 	}
 
 	putUint32(d, lengthOffset, uint32(len(d))) // Update the length
@@ -512,7 +514,7 @@ func (assignInt) Write(value int64, target Local) []byte {
 	d = appendLocal(d, target)
 
 	if l != len(d) {
-		panic(fmt.Sprint("asignInt", l, len(d)))
+		panic(fmt.Sprintf("asignInt %d %d", l, len(d)))
 	}
 	putUint32(d, 0, uint32(len(d))) // Update the length
 	return d
@@ -543,7 +545,7 @@ func (assignVar) Write(source LocalOrConst, target Local) []byte {
 	d = appendLocalOrConst(d, source)
 
 	if l != len(d) {
-		panic(fmt.Sprint("assignVar", l, len(d)))
+		panic(fmt.Sprintf("assignVar %d %d", l, len(d)))
 	}
 	putUint32(d, 0, uint32(len(d))) // Update the length
 	return d
@@ -574,7 +576,7 @@ func (assignVarOnce) Write(source LocalOrConst, target Local) []byte {
 	d = appendLocalOrConst(d, source)
 
 	if l != len(d) {
-		panic(fmt.Sprint("assignVarOnce", l, len(d)))
+		panic(fmt.Sprintf("assignVarOnce %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -605,7 +607,7 @@ func (blockStmt) Write(blocks []byte) []byte {
 	d = append(d, blocks...)
 
 	if l != len(d) {
-		panic(fmt.Sprint("blockStmt", l, len(d)))
+		panic(fmt.Sprintf("blockStmt %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -632,7 +634,7 @@ func (breakStmt) Write(index uint32) []byte {
 	d = appendUint32(d, index)
 
 	if l != len(d) {
-		panic(fmt.Sprint("block", l, len(d)))
+		panic(fmt.Sprintf("block %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -663,7 +665,7 @@ func (callDynamic) Write(args []Local, result Local, path []LocalOrConst) []byte
 	d = appendLocalOrConstArray(d, path)
 
 	if l != len(d) {
-		panic(fmt.Sprint("callDynamic", l, len(d)))
+		panic(fmt.Sprintf("callDynamic %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -702,7 +704,7 @@ func (call) Write(index int, args []LocalOrConst, result Local) []byte {
 	d = appendUint32(d, uint32(index))
 
 	if l != len(d) {
-		panic(fmt.Sprint("call", l, len(d)))
+		panic(fmt.Sprintf("call %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -741,7 +743,7 @@ func (dot) Write(source LocalOrConst, key LocalOrConst, target Local) []byte {
 	d = appendLocalOrConst(d, key)
 
 	if l != len(d) {
-		panic(fmt.Sprint("dot", l, len(d)))
+		panic(fmt.Sprintf("dot %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -778,7 +780,7 @@ func (equal) Write(aa LocalOrConst, bb LocalOrConst) []byte {
 	d = appendLocalOrConst(d, bb)
 
 	if l != len(d) {
-		panic(fmt.Sprint("equal", l, len(d)))
+		panic(fmt.Sprintf("equal %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -810,7 +812,7 @@ func (isArray) Write(source LocalOrConst) []byte {
 	d = appendLocalOrConst(d, source)
 
 	if l != len(d) {
-		panic(fmt.Sprint("isArray", l, len(d)))
+		panic(fmt.Sprintf("isArray %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -838,7 +840,7 @@ func (isObject) Write(source LocalOrConst) []byte {
 	d = appendLocalOrConst(d, source)
 
 	if l != len(d) {
-		panic(fmt.Sprint("isObject", l, len(d)))
+		panic(fmt.Sprintf("isObject %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -866,7 +868,7 @@ func (isDefined) Write(source Local) []byte {
 	d = appendLocal(d, source)
 
 	if l != len(d) {
-		panic(fmt.Sprint("isDefined", l, len(d)))
+		panic(fmt.Sprintf("isDefined %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -893,7 +895,7 @@ func (isUndefined) Write(source Local) []byte {
 	d = appendLocal(d, source)
 
 	if l != len(d) {
-		panic(fmt.Sprint("isUndefined", l, len(d)))
+		panic(fmt.Sprintf("isUndefined %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -920,7 +922,7 @@ func (makeNull) Write(target Local) []byte {
 	d = appendLocal(d, target)
 
 	if l != len(d) {
-		panic(fmt.Sprint("makeNull", l, len(d)))
+		panic(fmt.Sprintf("makeNull %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -948,7 +950,7 @@ func (makeNumberInt) Write(value int64, target Local) []byte {
 	d = appendLocal(d, target)
 
 	if l != len(d) {
-		panic(fmt.Sprint("makeNumberInt", l, len(d)))
+		panic(fmt.Sprintf("makeNumberInt %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -980,7 +982,7 @@ func (makeNumberRef) Write(index int, target Local) []byte {
 	d = appendLocal(d, target)
 
 	if l != len(d) {
-		panic(fmt.Sprint("makeNumberRef", l, len(d)))
+		panic(fmt.Sprintf("makeNumberRef %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1012,7 +1014,7 @@ func (makeArray) Write(capacity int32, target Local) []byte {
 	d = appendLocal(d, target)
 
 	if l != len(d) {
-		panic(fmt.Sprint("makeArray", l, len(d)))
+		panic(fmt.Sprintf("makeArray %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1043,7 +1045,7 @@ func (makeObject) Write(target Local) []byte {
 	d = appendLocal(d, target)
 
 	if l != len(d) {
-		panic(fmt.Sprint("makeObject", l, len(d)))
+		panic(fmt.Sprintf("makeObject %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1070,7 +1072,7 @@ func (makeSet) Write(target Local) []byte {
 	d = appendLocal(d, target)
 
 	if l != len(d) {
-		panic(fmt.Sprint("makeSet", l, len(d)))
+		panic(fmt.Sprintf("makeSet %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1098,7 +1100,7 @@ func (notEqual) Write(aa LocalOrConst, bb LocalOrConst) []byte {
 	d = appendLocalOrConst(d, bb)
 
 	if l != len(d) {
-		panic(fmt.Sprint("notEqual", l, len(d)))
+		panic(fmt.Sprintf("notEqual %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1130,7 +1132,7 @@ func (lenStmt) Write(source LocalOrConst, target Local) []byte {
 	d = appendLocalOrConst(d, source)
 
 	if l != len(d) {
-		panic(fmt.Sprint("lenStmt", l, len(d)))
+		panic(fmt.Sprintf("lenStmt %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1163,7 +1165,7 @@ func (arrayAppend) Write(value LocalOrConst, array Local) []byte {
 	d = appendLocalOrConst(d, value)
 
 	if l != len(d) {
-		panic(fmt.Sprint("arrayAppend", l, len(d)))
+		panic(fmt.Sprintf("arrayAppend %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1195,7 +1197,7 @@ func (setAdd) Write(value LocalOrConst, set Local) []byte {
 	d = appendLocalOrConst(d, value)
 
 	if l != len(d) {
-		panic(fmt.Sprint("setAdd", l, len(d)))
+		panic(fmt.Sprintf("setAdd %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1228,7 +1230,7 @@ func (objectInsertOnce) Write(key, value LocalOrConst, obj Local) []byte {
 	d = appendLocalOrConst(d, value)
 
 	if l != len(d) {
-		panic(fmt.Sprint("objectInsertOnce", l, len(d)))
+		panic(fmt.Sprintf("objectInsertOnce %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1265,7 +1267,7 @@ func (objectInsert) Write(key, value LocalOrConst, obj Local) []byte {
 	d = appendLocalOrConst(d, value)
 
 	if l != len(d) {
-		panic(fmt.Sprint("objectInsert", l, len(d)))
+		panic(fmt.Sprintf("objectInsert %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1302,7 +1304,7 @@ func (objectMerge) Write(a, b, target Local) []byte {
 	d = appendLocal(d, target)
 
 	if l != len(d) {
-		panic(fmt.Sprint("objectMerge", l, len(d)))
+		panic(fmt.Sprintf("objectMerge %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1336,7 +1338,7 @@ func (nop) Write() []byte {
 	d = appendUint32(d, typeStatementNop)
 
 	if l != len(d) {
-		panic(fmt.Sprint("nop", l, len(d)))
+		panic(fmt.Sprintf("nop %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1359,7 +1361,7 @@ func (not) Write(block []byte) []byte {
 	d = append(d, block...)
 
 	if l != len(d) {
-		panic(fmt.Sprint("not", l, len(d)))
+		panic(fmt.Sprintf("not %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1386,7 +1388,7 @@ func (resetLocal) Write(target Local) []byte {
 	d = appendLocal(d, target)
 
 	if l != len(d) {
-		panic(fmt.Sprint("resetLocal", l, len(d)))
+		panic(fmt.Sprintf("resetLocal %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1413,7 +1415,7 @@ func (resultSetAdd) Write(value Local) []byte {
 	d = appendLocal(d, value)
 
 	if l != len(d) {
-		panic(fmt.Sprint("resultsSetAdd", l, len(d)))
+		panic(fmt.Sprintf("resultsSetAdd %d %d", l, len(d)))
 	}
 	putUint32(d, 0, uint32(len(d))) // Update the length
 	return d
@@ -1439,7 +1441,7 @@ func (returnLocal) Write(source Local) []byte {
 	d = appendLocal(d, source)
 
 	if l != len(d) {
-		panic(fmt.Sprint("returnLocal", l, len(d)))
+		panic(fmt.Sprintf("returnLocal %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1469,7 +1471,7 @@ func (scan) Write(source, key, value Local, block []byte) []byte {
 	d = append(d, block...)
 
 	if l != len(d) {
-		panic(fmt.Sprint("scan", l, len(d)))
+		panic(fmt.Sprintf("scan %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
@@ -1511,7 +1513,7 @@ func (with) Write(local Local, path []int, value LocalOrConst, block []byte) []b
 	d = append(d, block...)
 
 	if l != len(d) {
-		panic(fmt.Sprint("with", l, len(d)))
+		panic(fmt.Sprintf("with %d %d", l, len(d)))
 	}
 
 	putUint32(d, 0, uint32(len(d))) // Update the length
