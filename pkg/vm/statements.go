@@ -3,6 +3,7 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"unsafe"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/topdown"
@@ -165,14 +166,18 @@ func memberBuiltin(state *State, args []*Value) error {
 	if args[0] == nil || args[1] == nil {
 		return nil
 	}
+
 	var found bool
-	err := state.ValueOps().Iter(state.Globals.Ctx, *args[1], func(_, v interface{}) bool {
+
+	if err := func(f func(key, value interface{}) bool) error {
+		return state.ValueOps().Iter(state.Globals.Ctx, *args[1], *(*(func(key, value interface{}) bool))(noescape(unsafe.Pointer(&f))))
+	}(func(_, v interface{}) bool {
 		found, _ = state.ValueOps().Equal(state.Globals.Ctx, *args[0], v)
 		return found
-	})
-	if err != nil {
+	}); err != nil {
 		return err
 	}
+
 	state.SetValue(Unused, state.ValueOps().MakeBoolean(found))
 	state.SetReturn(Unused)
 	return nil
@@ -242,12 +247,16 @@ func objectGetBuiltin(state *State, args []*Value) error {
 	}
 
 	var found bool
-	if err := state.ValueOps().Iter(state.Globals.Ctx, path, func(_, v interface{}) bool { // path array values are our object keys
+
+	if err := func(f func(key, value interface{}) bool) error {
+		return state.ValueOps().Iter(state.Globals.Ctx, path, *(*(func(key, value interface{}) bool))(noescape(unsafe.Pointer(&f))))
+	}(func(_, v interface{}) bool { // path array values are our object keys
 		obj, found, _ = state.ValueOps().Get(state.Globals.Ctx, obj, v)
 		return !found // always iterate path array to the end if found
 	}); err != nil {
 		return err
 	}
+
 	if found {
 		state.SetValue(Unused, obj)
 	} else {
@@ -424,7 +433,9 @@ func (s scan) Execute(state *State) (bool, uint32, error) {
 
 	source, skey, svalue := s.Source(), s.Key(), s.Value()
 
-	err2 := state.ValueOps().Iter(state.Globals.Ctx, state.Value(source), func(key, value interface{}) bool {
+	if err2 := func(f func(key, value interface{}) bool) error {
+		return state.ValueOps().Iter(state.Globals.Ctx, state.Value(source), *(*(func(key, value interface{}) bool))(noescape(unsafe.Pointer(&f))))
+	}(func(key, value interface{}) bool {
 		state.SetValue(skey, key)
 		state.SetValue(svalue, value)
 
@@ -434,8 +445,7 @@ func (s scan) Execute(state *State) (bool, uint32, error) {
 		}
 
 		return false
-	})
-	if err2 != nil {
+	}); err2 != nil {
 		return false, 0, err2
 	} else if err != nil {
 		return false, 0, err
@@ -1000,4 +1010,10 @@ func (w with) upsert(state *State, original Local, path []int, value LocalOrCons
 
 	err := ops.ObjectInsert(state.Globals.Ctx, nested, state.Value(StringIndexConst(path[len(path)-1])), state.Value(value))
 	return result, err
+}
+
+// noescape hides a pointer from escape analysis.
+func noescape(p unsafe.Pointer) unsafe.Pointer {
+	x := uintptr(p)
+	return unsafe.Pointer(x ^ 0)
 }
