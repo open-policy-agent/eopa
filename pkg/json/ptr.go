@@ -104,9 +104,8 @@ func extract(value reflect.Value, ptr []string) (reflect.Value, error) {
 		if len(ptr) == 0 {
 			if !value.IsNil() {
 				return extract(value.Elem(), ptr)
-			} else {
-				return value, nil
 			}
+			return value, nil
 		}
 
 		value = value.Elem()

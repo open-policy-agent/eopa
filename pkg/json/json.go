@@ -408,9 +408,8 @@ func Min(a, b Float) Float {
 	if oka == nil && okb == nil {
 		if ia < ib {
 			return NewFloat(gojson.Number(fmt.Sprintf("%d", ia)))
-		} else {
-			return NewFloat(gojson.Number(fmt.Sprintf("%d", ib)))
 		}
+		return NewFloat(gojson.Number(fmt.Sprintf("%d", ib)))
 	}
 
 	fa, oka := a.value.Float64()
@@ -422,9 +421,8 @@ func Min(a, b Float) Float {
 
 	if fa < fb {
 		return NewFloat(gojson.Number(fmt.Sprintf("%g", fa)))
-	} else {
-		return NewFloat(gojson.Number(fmt.Sprintf("%g", fb)))
 	}
+	return NewFloat(gojson.Number(fmt.Sprintf("%g", fb)))
 }
 
 func Max(a, b Float) Float {
@@ -434,9 +432,8 @@ func Max(a, b Float) Float {
 	if oka == nil && okb == nil {
 		if ia > ib {
 			return NewFloat(gojson.Number(fmt.Sprintf("%d", ia)))
-		} else {
-			return NewFloat(gojson.Number(fmt.Sprintf("%d", ib)))
 		}
+		return NewFloat(gojson.Number(fmt.Sprintf("%d", ib)))
 	}
 
 	fa, oka := a.value.Float64()
@@ -448,9 +445,8 @@ func Max(a, b Float) Float {
 
 	if fa > fb {
 		return NewFloat(gojson.Number(fmt.Sprintf("%g", fa)))
-	} else {
-		return NewFloat(gojson.Number(fmt.Sprintf("%g", fb)))
 	}
+	return NewFloat(gojson.Number(fmt.Sprintf("%g", fb)))
 }
 
 // String represents a JSON string.
@@ -583,9 +579,8 @@ func (a ArrayBinary) Value(i int) Json {
 	j := a.valueImpl(i)
 	if v, ok := j.(Json); ok {
 		return v
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (a ArrayBinary) valueImpl(i int) File {
@@ -721,9 +716,8 @@ func (a *ArraySlice) Value(i int) Json {
 
 	if v, ok := a.elements[i].(Json); ok {
 		return v
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (a *ArraySlice) WriteI(w io.Writer, i int, written *int64) error {
@@ -926,9 +920,8 @@ func (o ObjectBinary) Value(name string) Json {
 
 	if _, ok := j.(Json); ok {
 		return j.(Json)
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (o ObjectBinary) valueImpl(name string) File {
@@ -1626,9 +1619,8 @@ func unmarshal(value reflect.Value, typ reflect.Type) (Json, error) {
 	case reflect.Interface:
 		if v := value.Elem(); v.IsValid() {
 			return unmarshal(value.Elem(), value.Elem().Type())
-		} else {
-			return unmarshal(value.Elem(), nil)
 		}
+		return unmarshal(value.Elem(), nil)
 	case reflect.Ptr:
 		return unmarshal(value.Elem(), typ.Elem())
 	case reflect.Array, reflect.Slice:
@@ -1806,9 +1798,8 @@ func marshalStringJSON(s string, quotes bool) ([]byte, error) {
 	if i == l {
 		if quotes {
 			return append(buf, '"'), nil
-		} else {
-			return buf, nil
 		}
+		return buf, nil
 	}
 
 	// Revert to full serialization.

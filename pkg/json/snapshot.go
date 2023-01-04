@@ -33,15 +33,15 @@ type snapshot struct {
 	objects []interface{} // Storage objects used to construct the collection, if any.
 }
 
-func NewCollectionsFromReaders(snapshot_reader *utils.MultiReader, slen int64, delta_reader *utils.MultiReader, dlen int64, objects ...interface{}) (collections Collections, err error) {
-	if delta_reader != nil {
+func NewCollectionsFromReaders(snapshotReader *utils.MultiReader, slen int64, dr *utils.MultiReader, dlen int64, objects ...interface{}) (collections Collections, err error) {
+	if dr != nil {
 		var impl *deltaReader
-		impl, err = newDeltaReader(snapshot_reader, slen, delta_reader)
+		impl, err = newDeltaReader(snapshotReader, slen, dr)
 		if err == nil {
 			collections = &snapshot{ObjectBinary: newObject(impl, 0), slen: slen, blen: slen + dlen, objects: objects}
 		}
 	} else {
-		collections = &snapshot{ObjectBinary: newObject(newSnapshotReader(snapshot_reader), 0), slen: slen, blen: slen, objects: objects}
+		collections = &snapshot{ObjectBinary: newObject(newSnapshotReader(snapshotReader), 0), slen: slen, blen: slen, objects: objects}
 	}
 
 	return collections, err
@@ -190,11 +190,11 @@ func findImpl2(obj Object, segs []string, i int) Resource {
 		return nil
 	}
 
-	if cobj, ok := child.(Object); !ok {
+	cobj, ok := child.(Object)
+	if !ok {
 		return &resourceImpl{strings.Join(segs[:i+1], "/"), obj}
-	} else {
-		return findImpl2(cobj, segs, i+1)
 	}
+	return findImpl2(cobj, segs, i+1)
 }
 
 func kindImpl(obj Object) Kind {
@@ -322,9 +322,8 @@ func (r *resourceImpl) Blob() Blob {
 
 	if blob, ok := value.(Blob); ok {
 		return blob
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (r *resourceImpl) setBlob(blob Blob) {
@@ -469,10 +468,9 @@ func (s *writableSnapshot) WriteMeta(name string, key string, value string) bool
 	r := s.find(name)
 	if r == nil {
 		return false
-	} else {
-		r.(*resourceImpl).setMeta(key, value)
-		return true
 	}
+	r.(*resourceImpl).setMeta(key, value)
+	return true
 }
 
 func (s *writableSnapshot) Prepare(timestamp time.Time) Collections {
@@ -1311,40 +1309,40 @@ func newBinaryReader(source *utils.MultiReader, offset int64) *binaryReader {
 	return &binaryReader{source: source, offset: offset}
 }
 
-func (b *binaryReader) Read(p []byte) (int, error) {
-	n, err := b.source.ReadAt(p, b.offset)
-	b.offset += int64(n)
+func (br *binaryReader) Read(p []byte) (int, error) {
+	n, err := br.source.ReadAt(p, br.offset)
+	br.offset += int64(n)
 	return n, err
 }
 
-func (b *binaryReader) ReadByte() (byte, error) {
-	p, err := b.source.Bytes(b.offset, 1)
+func (br *binaryReader) ReadByte() (byte, error) {
+	p, err := br.source.Bytes(br.offset, 1)
 	if len(p) < 1 {
 		return 0, err
 	}
 
-	b.offset += int64(len(p))
+	br.offset += int64(len(p))
 	return p[0], nil
 }
 
-func (b *binaryReader) Offset() int64 {
-	return b.offset
+func (br *binaryReader) Offset() int64 {
+	return br.offset
 }
 
-var overflow = errors.New("binary: varint overflows a 64-bit integer")
+var errOverflow = errors.New("binary: varint overflows a 64-bit integer")
 
 // ReadUvarint reads an encoded unsigned integer from r and returns it as a uint64.
-func (r *binaryReader) ReadUvarint() (uint64, error) {
+func (br *binaryReader) ReadUvarint() (uint64, error) {
 	var x uint64
 	var s uint
 	for i := 0; ; i++ {
-		b, err := r.ReadByte()
+		b, err := br.ReadByte()
 		if err != nil {
 			return x, err
 		}
 		if b < 0x80 {
 			if i > 9 || i == 9 && b > 1 {
-				return x, overflow
+				return x, errOverflow
 			}
 			return x | uint64(b)<<s, nil
 		}
@@ -1354,8 +1352,8 @@ func (r *binaryReader) ReadUvarint() (uint64, error) {
 }
 
 // ReadVarint reads an encoded signed integer from r and returns it as an int64.
-func (r *binaryReader) ReadVarint() (int64, error) {
-	ux, err := r.ReadUvarint() // ok to continue in presence of error
+func (br *binaryReader) ReadVarint() (int64, error) {
+	ux, err := br.ReadUvarint() // ok to continue in presence of error
 	x := int64(ux >> 1)
 	if ux&1 != 0 {
 		x = ^x

@@ -60,7 +60,7 @@ func TestInMemoryRead(t *testing.T) {
 			if err != nil {
 				t.Errorf("Test case %d: expected success for %v but got %v", idx+1, tc.path, err)
 			}
-			if bjson.MustNew(tc.expected).Compare(result.(bjson.Json)) != 0 {
+			if bjson.MustNew(tc.expected).Compare(result) != 0 {
 				t.Errorf("Test case %d: expected %f but got %f", idx+1, tc.expected, result)
 			}
 		}
@@ -188,7 +188,7 @@ func TestInMemoryWrite(t *testing.T) {
 
 			e := loadExpectedResult(expected)
 
-			if bjson.MustNew(e).Compare(result.(bjson.Json)) != 0 {
+			if bjson.MustNew(e).Compare(result) != 0 {
 				t.Errorf("Test case %d (%v): expected get result %v but got: %v", i+1, tc.note, e, result)
 			}
 		}
@@ -235,7 +235,7 @@ func TestInMemoryWriteOfStruct(t *testing.T) {
 			}
 
 			expected := loadExpectedSortedResult(tc.expected)
-			if bjson.MustNew(expected).Compare(actual.(bjson.Json)) != 0 {
+			if bjson.MustNew(expected).Compare(actual) != 0 {
 				t.Errorf("expected %v, got %v", tc.expected, actual)
 			}
 		})
@@ -304,7 +304,7 @@ func TestInMemoryTxnMultipleWrites(t *testing.T) {
 	for _, r := range reads {
 		jsn := util.MustUnmarshalJSON([]byte(r.expected))
 		result, err := store.(BJSONReader).ReadBJSON(ctx, txn, storage.MustParsePath(r.path))
-		if err != nil || bjson.MustNew(jsn).Compare(result.(bjson.Json)) != 0 {
+		if err != nil || bjson.MustNew(jsn).Compare(result) != 0 {
 			t.Fatalf("Expected writer's read %v to be %v but got: %v (err: %v)", r.path, jsn, result, err)
 		}
 	}
@@ -318,7 +318,7 @@ func TestInMemoryTxnMultipleWrites(t *testing.T) {
 	for _, r := range reads {
 		jsn := util.MustUnmarshalJSON([]byte(r.expected))
 		result, err := store.(BJSONReader).ReadBJSON(ctx, txn, storage.MustParsePath(r.path))
-		if err != nil || bjson.MustNew(jsn).Compare(result.(bjson.Json)) != 0 {
+		if err != nil || bjson.MustNew(jsn).Compare(result) != 0 {
 			t.Fatalf("Expected reader's read %v to be %v but got: %v (err: %v)", r.path, jsn, result, err)
 		}
 	}
@@ -509,7 +509,7 @@ func TestInMemoryTriggers(t *testing.T) {
 	_, err = store.Register(ctx, writeTxn, storage.TriggerConfig{
 		OnCommit: func(ctx context.Context, txn storage.Transaction, evt storage.TriggerEvent) {
 			result, err := store.(BJSONReader).ReadBJSON(ctx, txn, modifiedPath)
-			if err != nil || bjson.MustNew(expectedValue).Compare(result.(bjson.Json)) != 0 {
+			if err != nil || bjson.MustNew(expectedValue).Compare(result) != 0 {
 				t.Fatalf("Expected result to be hello for trigger read but got: %v (err: %v)", result, err)
 			}
 			event = evt

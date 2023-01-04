@@ -371,6 +371,9 @@ func (vm *VM) runtime(ctx context.Context, v interface{}) (*ast.Term, error) {
 		runtime, ok = v.(ast.Value)
 		if !ok {
 			ok, err := vm.ops.IsObject(ctx, v)
+			if err != nil {
+				return nil, err
+			}
 			if !ok {
 				v = vm.ops.FromInterface(v)
 			}

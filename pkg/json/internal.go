@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	typeInvalid = iota // nolint:deadcode // required
+	typeInvalid = iota //nolint // required
 	typeNil
 	typeFalse
 	typeTrue
@@ -162,8 +162,7 @@ func (c *encodingCache) CacheString(str string, offset int32) int32 {
 func (c *encodingCache) CacheNumber(n string, offset int32) int32 {
 	if o, ok := c.numbers[n]; ok {
 		return o
-	} else {
-		c.numbers[n] = offset
-		return offset
 	}
+	c.numbers[n] = offset
+	return offset
 }

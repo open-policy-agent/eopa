@@ -201,7 +201,7 @@ func (*operations) CopyShallow(value interface{}) interface{} {
 	case GetNamespace, IterNamespace:
 		return v // TODO: return a copy?
 	default:
-		not_implemented()
+		notImplemented()
 	}
 
 	return nil
@@ -239,7 +239,7 @@ func (o *operations) FromInterface(x interface{}) interface{} {
 	case int64:
 		return o.MakeNumberInt(x)
 	case uint64:
-		not_implemented()
+		notImplemented()
 	case float64:
 		return o.MakeNumberFloat(x)
 	case int:
@@ -281,7 +281,7 @@ func (o *operations) FromInterface(x interface{}) interface{} {
 		})
 		return obj
 	case ast.Ref:
-		not_implemented()
+		notImplemented()
 	case ast.Set:
 		set := NewSet()
 		x.Iter(func(v *ast.Term) error {
@@ -292,7 +292,7 @@ func (o *operations) FromInterface(x interface{}) interface{} {
 	case *ast.Term:
 		return o.FromInterface(x.Value)
 	default:
-		not_implemented()
+		notImplemented()
 	}
 
 	return nil
@@ -699,7 +699,7 @@ func (o *operations) ToAST(ctx context.Context, v interface{}) (ast.Value, error
 		return nil, ErrIllegalIter
 	}
 
-	not_implemented()
+	notImplemented()
 	return nil, nil
 }
 
@@ -1009,6 +1009,6 @@ func compare(x, y fjson.Float) int {
 	return bigA.Cmp(bigB)
 }
 
-func not_implemented() {
+func notImplemented() {
 	panic("not implemented")
 }

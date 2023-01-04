@@ -1780,9 +1780,8 @@ func getLocalOrConst(data []byte, offset uint32) LocalOrConst {
 	case boolConstType:
 		if v := getUint32(data[offset:], 1); v == 0 {
 			return BoolConst(false)
-		} else {
-			return BoolConst(true)
 		}
+		return BoolConst(true)
 
 	case stringIndexConstType:
 		return StringIndexConst(getUint32(data[offset:], 1))

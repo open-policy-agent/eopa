@@ -760,59 +760,6 @@ func compileModules(compiler *ast.Compiler, m metrics.Metrics, bundles map[strin
 	return nil
 }
 
-func writeModules(ctx context.Context, store storage.Store, txn storage.Transaction, compiler *ast.Compiler, m metrics.Metrics, bundles map[string]*bundleApi.Bundle, extraModules map[string]*ast.Module, legacy bool) error {
-
-	m.Timer(metrics.RegoModuleCompile).Start()
-	defer m.Timer(metrics.RegoModuleCompile).Stop()
-
-	modules := map[string]*ast.Module{}
-
-	// preserve any modules already on the compiler
-	for name, module := range compiler.Modules {
-		modules[name] = module
-	}
-
-	// preserve any modules passed in from the store
-	for name, module := range extraModules {
-		modules[name] = module
-	}
-
-	// include all the new bundle modules
-	for bundleName, b := range bundles {
-		if legacy {
-			for _, mf := range b.Modules {
-				modules[mf.Path] = mf.Parsed
-			}
-		} else {
-			for name, module := range b.ParsedModules(bundleName) {
-				modules[name] = module
-			}
-		}
-	}
-
-	if compiler.Compile(modules); compiler.Failed() {
-		return compiler.Errors
-	}
-	for bundleName, b := range bundles {
-		for _, mf := range b.Modules {
-			var path string
-
-			// For backwards compatibility, in legacy mode, upsert policies to
-			// the unprefixed path.
-			if legacy {
-				path = mf.Path
-			} else {
-				path = modulePathWithPrefix(bundleName, mf.Path)
-			}
-
-			if err := store.UpsertPolicy(ctx, txn, path, mf.Raw); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 func lookup(path storage.Path, data bjson.Object) (interface{}, bool) {
 	if len(path) == 0 {
 		return data, true

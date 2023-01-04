@@ -960,7 +960,7 @@ func (with with) Execute(state *State) (bool, uint32, error) {
 	return false, 0, nil
 }
 
-func (w with) upsert(state *State, original Local, path []int, value LocalOrConst) (Value, error) {
+func (with) upsert(state *State, original Local, path []int, value LocalOrConst) (Value, error) {
 	ops := state.ValueOps()
 
 	var ok bool
@@ -1015,5 +1015,5 @@ func (w with) upsert(state *State, original Local, path []int, value LocalOrCons
 // noescape hides a pointer from escape analysis.
 func noescape(p unsafe.Pointer) unsafe.Pointer {
 	x := uintptr(p)
-	return unsafe.Pointer(x ^ 0)
+	return unsafe.Pointer(x ^ 0) //nolint:staticcheck
 }

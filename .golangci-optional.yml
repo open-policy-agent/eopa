@@ -1,0 +1,30 @@
+run:
+  go: "1.19"
+  modules-download-mode: vendor
+  timeout: 15m
+  issues-exit-code: 0
+  skip-dirs-use-default: true
+  skip-dirs:
+  skip-files:
+
+output:
+  sort-results: true
+
+linters:
+  disable-all: true # needed to disable all default linters
+  enable: # The full list of the linters can be found here: https://golangci-lint.run/usage/linters/
+    # keep in ascending order
+    - errcheck
+
+linters-settings:
+  errcheck:
+    exclude-functions:
+      - (io.Closer).Close
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-use-default: false
+
+severity:
+  default-severity: error

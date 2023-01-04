@@ -1,12 +1,9 @@
 package rego_vm
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -38,7 +35,7 @@ var replacements = map[string]string{
 }
 
 func TestMain(m *testing.M) {
-	bs, err := ioutil.ReadFile(*exceptionsFile)
+	bs, err := os.ReadFile(*exceptionsFile)
 	if err != nil {
 		fmt.Println("Unable to load exceptions file: " + err.Error())
 		os.Exit(1)
@@ -143,30 +140,6 @@ func assert(t *testing.T, tc cases.TestCase, result rego.ResultSet, err error) {
 	}
 }
 
-type defined bool
-
-func (x defined) String() string {
-	if x {
-		return "defined"
-	}
-	return "undefined"
-}
-
-func assertDefined(t *testing.T, want defined, result rego.ResultSet) {
-	t.Helper()
-
-	got := defined(len(result) > 0)
-	if got != want {
-		t.Fatalf("expected %v but got %v", want, got)
-	}
-}
-
-func assertEmptyResultSet(t *testing.T, result rego.ResultSet) {
-	if result != nil {
-		t.Fatalf("unexpected non-nil result: %v", result)
-	}
-}
-
 func assertResultSet(t *testing.T, want []map[string]interface{}, sortBindings bool, result rego.ResultSet) {
 	exp := ast.NewSet()
 
@@ -226,28 +199,6 @@ func assertErrorText(t *testing.T, wantText string, err error) {
 	if !strings.Contains(err.Error(), wantText) {
 		t.Fatalf("expected topdown error text %q but got: %q", wantText, err.Error())
 	}
-}
-
-func toAST(a interface{}) *ast.Term {
-
-	if bs, ok := a.([]byte); ok {
-		return ast.MustParseTerm(string(bs))
-	}
-
-	buf := bytes.NewBuffer(nil)
-	if err := json.NewEncoder(buf).Encode(a); err != nil {
-		panic(err)
-	}
-
-	return ast.MustParseTerm(buf.String())
-}
-
-func roundTripAstToJSON(b []byte, sortBindings bool) *ast.Term {
-	j, err := ast.JSONWithOpt(ast.MustParseTerm(string(b)).Value, ast.JSONOpt{SortSets: sortBindings})
-	if err != nil {
-		panic(err)
-	}
-	return toAST(j)
 }
 
 func addTestSleepBuiltin() {

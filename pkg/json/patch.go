@@ -231,9 +231,8 @@ func (o Op) applyTo(file File) (File, error) {
 		}
 		if o.From != o.Path {
 			return Op{Op: PatchOpRemove, Path: o.From}.applyTo(value)
-		} else {
-			return value, nil
 		}
+		return value, nil
 
 	case PatchOpAdd, PatchOpRemove, PatchOpReplace, PatchOpTest, PatchOpCreate:
 		p, err := preparePointer(o.Path)
@@ -330,26 +329,25 @@ func apply(json File, ptr []string, value File, op PatchOp) (File, error) {
 				return nil, fmt.Errorf("json patch: invalid operation %s", op)
 			}
 			return v, nil
-		} else {
-			child := v.Value(field)
-			if child == nil {
-				if op == PatchOpCreate {
-					child = NewObject(nil)
-
-					v = v.Clone(false).(Object)
-					v.setImpl(field, child)
-				} else {
-					return nil, fmt.Errorf("json patch: key %s is not found", field)
-				}
-			}
-			sv, err := apply(child, ptr[1:], value, op)
-			if err != nil {
-				return nil, err
-			}
-			v = v.Clone(false).(Object)
-			v.setImpl(field, sv)
-			return v, nil
 		}
+		child := v.Value(field)
+		if child == nil {
+			if op == PatchOpCreate {
+				child = NewObject(nil)
+
+				v = v.Clone(false).(Object)
+				v.setImpl(field, child)
+			} else {
+				return nil, fmt.Errorf("json patch: key %s is not found", field)
+			}
+		}
+		sv, err := apply(child, ptr[1:], value, op)
+		if err != nil {
+			return nil, err
+		}
+		v = v.Clone(false).(Object)
+		v.setImpl(field, sv)
+		return v, nil
 
 	case Array:
 		var err error
@@ -403,15 +401,14 @@ func apply(json File, ptr []string, value File, op PatchOp) (File, error) {
 			}
 
 			return v, nil
-		} else {
-			sv, err := apply(v.Value(index), ptr[1:], value, op)
-			if err != nil {
-				return nil, err
-			}
-			v = v.Clone(false).(Array)
-			v.SetIdx(index, sv)
-			return v, nil
 		}
+		sv, err := apply(v.Value(index), ptr[1:], value, op)
+		if err != nil {
+			return nil, err
+		}
+		v = v.Clone(false).(Array)
+		v.SetIdx(index, sv)
+		return v, nil
 	}
 
 	return nil, fmt.Errorf("json patch: unsupported type '%T'", json)

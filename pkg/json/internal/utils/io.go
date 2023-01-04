@@ -105,15 +105,15 @@ func (r *MultiReader) Bytes(offset int64, n int) ([]byte, error) {
 		}
 	}
 
-	base_offset := r.base + offset
+	baseOffset := r.base + offset
 
 	switch {
-	case base_offset < r.n && base_offset+int64(n) <= r.n:
-		return r.am.Bytes(base_offset, n)
+	case baseOffset < r.n && baseOffset+int64(n) <= r.n:
+		return r.am.Bytes(baseOffset, n)
 
-	case base_offset < r.n:
-		m, err := r.am.Bytes(base_offset, int(r.n-base_offset))
-		if int64(len(m)) < r.n-base_offset {
+	case baseOffset < r.n:
+		m, err := r.am.Bytes(baseOffset, int(r.n-baseOffset))
+		if int64(len(m)) < r.n-baseOffset {
 			// Both reading too little as well as error are sufficient reasons to exit.
 			return m, err
 		}
@@ -128,9 +128,9 @@ func (r *MultiReader) Bytes(offset int64, n int) ([]byte, error) {
 		k, err := r.bm.Bytes(0, n-len(m))
 		return append(result, k...), err
 
-	default: // base_offset >= r.n:
+	default: // baseOffset >= r.n:
 		if r.bm != nil {
-			return r.bm.Bytes(base_offset-r.n, n)
+			return r.bm.Bytes(baseOffset-r.n, n)
 		}
 
 		return nil, io.EOF
@@ -158,15 +158,15 @@ func (r *MultiReader) ReadAt(p []byte, offset int64) (n int, err error) {
 		}
 	}
 
-	base_offset := r.base + offset
+	baseOffset := r.base + offset
 
 	switch {
-	case base_offset < r.n && base_offset+int64(len(p)) < r.n:
-		return r.am.ReadAt(p, base_offset)
+	case baseOffset < r.n && baseOffset+int64(len(p)) < r.n:
+		return r.am.ReadAt(p, baseOffset)
 
-	case base_offset < r.n:
-		m, err := r.am.ReadAt(p[:r.n-base_offset], base_offset)
-		if int64(m) < r.n-base_offset {
+	case baseOffset < r.n:
+		m, err := r.am.ReadAt(p[:r.n-baseOffset], baseOffset)
+		if int64(m) < r.n-baseOffset {
 			// Both reading too little as well as error are sufficient reasons to exit.
 			return m, err
 		}
@@ -178,9 +178,9 @@ func (r *MultiReader) ReadAt(p []byte, offset int64) (n int, err error) {
 		k, err := r.bm.ReadAt(p[m:], 0)
 		return m + k, err
 
-	default: // base_offset >= r.n:
+	default: // baseOffset >= r.n:
 		if r.bm != nil {
-			return r.bm.ReadAt(p, base_offset-r.n)
+			return r.bm.ReadAt(p, baseOffset-r.n)
 		}
 
 		return 0, io.EOF

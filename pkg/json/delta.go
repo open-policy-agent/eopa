@@ -1086,21 +1086,21 @@ func writeInt32(buffer *bytes.Buffer, value int32) {
 }
 
 func writeCachedString(v string, offset int64, buffer *bytes.Buffer, cache *encodingCache) int64 {
-	if existing := cache.CacheString(v, int32(offset)); existing == int32(offset) {
+	existing := cache.CacheString(v, int32(offset))
+	if existing == int32(offset) {
 		buffer.WriteByte(typeString)
 		writeString(v, buffer)
 		return offset
-	} else {
-		return int64(existing)
 	}
+	return int64(existing)
 }
 
 func writeCachedNumber(v string, offset int64, buffer *bytes.Buffer, cache *encodingCache) int64 {
-	if existing := cache.CacheNumber(v, int32(offset)); existing == int32(offset) {
+	existing := cache.CacheNumber(v, int32(offset))
+	if existing == int32(offset) {
 		buffer.WriteByte(typeNumber)
 		writeString(v, buffer)
 		return offset
-	} else {
-		return int64(existing)
 	}
+	return int64(existing)
 }

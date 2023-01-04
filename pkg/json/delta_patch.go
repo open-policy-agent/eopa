@@ -260,9 +260,8 @@ func (d *deltaPatch) offset(offset int64) int64 {
 	v, ok := d.patches[offset]
 	if ok {
 		return v
-	} else {
-		return offset
 	}
+	return offset
 }
 
 // check checks the resource is there.

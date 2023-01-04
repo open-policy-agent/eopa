@@ -11,7 +11,6 @@ linter-settings:
 linters:
   disable-all: true
   enable:
-    - errcheck
     - govet
     - ineffassign
     - revive # replacement for golint
@@ -26,3 +25,9 @@ linters:
     - staticcheck
     - gosimple
     # - gosec # too many false positives
+
+issues:
+  exclude:
+    - "var-naming:"
+    - "unexported-return:"
+    - "exported: type name"

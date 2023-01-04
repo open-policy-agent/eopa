@@ -291,9 +291,8 @@ func (j *PathArrayElementRef) Property() string {
 func (j *PathArrayElementRef) String() string {
 	if j.index >= 0 {
 		return fmt.Sprintf("[%d]", j.index)
-	} else {
-		return "[*]"
 	}
+	return "[*]"
 }
 
 func (j *PathArrayElementRef) Singular() bool {
@@ -331,9 +330,8 @@ func (j *PathObjectPropertyRef) Property() string {
 func (j *PathObjectPropertyRef) String() string {
 	if j.brackets {
 		return fmt.Sprintf("['%s']", strings.Replace(j.property, "'", "\\'", -1))
-	} else {
-		return fmt.Sprintf(".%s", j.property)
 	}
+	return fmt.Sprintf(".%s", j.property)
 }
 
 func (j *PathObjectPropertyRef) Singular() bool {
@@ -371,9 +369,8 @@ func (j *PathRecursiveRef) Property() string {
 func (j *PathRecursiveRef) String() string {
 	if j.double {
 		return ".."
-	} else {
-		return "."
 	}
+	return "."
 }
 
 func (j *PathRecursiveRef) Singular() bool {
