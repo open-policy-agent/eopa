@@ -28,6 +28,8 @@ linters:
 
 issues:
   exclude:
-    - "var-naming:"
-    - "unexported-return:"
-    - "exported: type name"
+    - "var-naming: don't use an underscore in package name"
+    - "var-naming: var (.*Json.*) should be "
+    - "var-naming: type (.*Json.*) should be "
+    - "unexported-return: exported method (.*) returns unexported type"
+    - "exported: type name will be used (.*) by other packages, and that stutters"
