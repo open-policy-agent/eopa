@@ -7,7 +7,12 @@ ECR_PASSWORD := $(shell aws ecr get-login-password --region us-east-1)
 
 KO_BUILD := ko build --sbom=none --base-import-paths --platform=linux/amd64 --tags $(VERSION)
 
-.PHONY: build build-local push run update docker-login deploy-ci
+BUILD_DIR := $(shell echo `pwd`)
+
+.PHONY: load build build-local push test fmt check run update docker-login deploy-ci
+
+load:
+	go build -o $(BUILD_DIR)/bin/load .
 
 build:
 	$(KO_BUILD) --push=false --tarball=local.tar
