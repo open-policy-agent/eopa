@@ -51,7 +51,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestRegoE2E(t *testing.T) {
-
 	ctx := context.Background()
 
 	for _, tc := range cases.MustLoad(*caseDir).Sorted().Cases {
@@ -108,7 +107,77 @@ func TestRegoE2E(t *testing.T) {
 	}
 }
 
-func shouldSkip(t *testing.T, tc cases.TestCase) bool {
+// Benchmark  E2E tests
+// to run all benchmark tests
+//
+//	go test -bench= -test.benchmem -timeout 6000s -run=^#
+//
+// to run single benchmark test:
+//
+//	go test -bench=BenchmarkRegoE2E//test/cases/testdata/withkeyword/test-withkeyword-1016.yaml/withkeyword -test.benchmem -timeout 6000s -run=^#
+func BenchmarkRegoE2E(b *testing.B) {
+	ctx := context.Background()
+
+	for _, tc := range cases.MustLoad(*caseDir).Sorted().Cases {
+		name := fmt.Sprintf("%s/%s", strings.TrimPrefix(tc.Filename, opaRootDir), tc.Note)
+		b.Run(name, func(b *testing.B) {
+
+			if shouldSkip(b, tc) {
+				b.SkipNow()
+			}
+
+			var store storage.Store
+			if tc.Data != nil {
+				store = inmem.NewFromObject(*tc.Data)
+			} else {
+				store = inmem.New()
+			}
+
+			opts := []func(*rego.Rego){
+				rego.Query(tc.Query),
+				rego.StrictBuiltinErrors(tc.StrictError),
+				rego.Store(store),
+			}
+			for i := range tc.Modules {
+				opts = append(opts, rego.Module(fmt.Sprintf("test-%d.rego", i), tc.Modules[i]))
+			}
+			if testing.Verbose() {
+				opts = append(opts, rego.Dump(os.Stderr))
+			}
+
+			var input *ast.Term
+			switch {
+			case tc.InputTerm != nil:
+				input = ast.MustParseTerm(*tc.InputTerm)
+			case tc.Input != nil:
+				input = ast.NewTerm(ast.MustInterfaceToValue(*tc.Input))
+			}
+
+			pq, err := rego.New(opts...).PrepareForEval(ctx)
+			if err != nil {
+				if tc.WantError != nil || tc.WantErrorCode != nil {
+					assert(b, tc, nil, err)
+				} else {
+					b.Fatalf("tc: %v, err: %v", tc, err)
+				}
+			}
+
+			var evalOpts []rego.EvalOption
+			if input != nil {
+				evalOpts = append(evalOpts, rego.EvalParsedInput(input.Value))
+			}
+			b.ResetTimer()
+
+			// benchmark Evaluation phase
+			for i := 0; i < b.N; i++ {
+				res, err := pq.Eval(ctx, evalOpts...)
+				assert(b, tc, res, err)
+			}
+		})
+	}
+}
+
+func shouldSkip(t testing.TB, tc cases.TestCase) bool {
 	if reason, ok := exceptions[tc.Note]; ok {
 		t.Log("Skipping test case: " + reason)
 		return true
@@ -117,7 +186,7 @@ func shouldSkip(t *testing.T, tc cases.TestCase) bool {
 	return false
 }
 
-func assert(t *testing.T, tc cases.TestCase, result rego.ResultSet, err error) {
+func assert(t testing.TB, tc cases.TestCase, result rego.ResultSet, err error) {
 
 	if tc.WantError != nil {
 		assertErrorText(t, *tc.WantError, err)
@@ -140,7 +209,7 @@ func assert(t *testing.T, tc cases.TestCase, result rego.ResultSet, err error) {
 	}
 }
 
-func assertResultSet(t *testing.T, want []map[string]interface{}, sortBindings bool, result rego.ResultSet) {
+func assertResultSet(t testing.TB, want []map[string]interface{}, sortBindings bool, result rego.ResultSet) {
 	exp := ast.NewSet()
 
 	for _, b := range want {
@@ -169,7 +238,7 @@ func assertResultSet(t *testing.T, want []map[string]interface{}, sortBindings b
 	}
 }
 
-func assertErrorCode(t *testing.T, wantErrorCode string, err error) {
+func assertErrorCode(t testing.TB, wantErrorCode string, err error) {
 	e, ok := err.(*topdown.Error)
 	if !ok {
 		// Try known exception
@@ -184,7 +253,7 @@ func assertErrorCode(t *testing.T, wantErrorCode string, err error) {
 	}
 }
 
-func assertErrorText(t *testing.T, wantText string, err error) {
+func assertErrorText(t testing.TB, wantText string, err error) {
 	if err == nil {
 		t.Fatal("expected error but got success")
 	}

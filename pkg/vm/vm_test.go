@@ -54,7 +54,7 @@ func TestCompiler(t *testing.T) {
 	testCompiler(t, policy)
 }
 
-func BenchmarkVm(b *testing.B) {
+func BenchmarkCompiler(b *testing.B) {
 	policy := setup(b)
 	b.ResetTimer()
 
