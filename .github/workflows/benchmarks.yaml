@@ -33,9 +33,25 @@ jobs:
           fetch-depth: 0
           ref: benchmarks
           path: benchmarks
+      - name: pick up OPA version
+        id: load
+        run: echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
+        working-directory: load
+      - name: checkout OPA
+        uses: actions/checkout@v3
+        with:
+          repository: open-policy-agent/opa
+          ref: ${{ steps.load.outputs.opa_version }}
+          path: opa
+      - name: pick up OPA directory
+        id: opa
+        working-directory: opa
+        run: echo "dir=$(pwd)" >> $GITHUB_OUTPUT
       - name: Run benchmarks
         run: go test -run=^$ -bench=. -benchmem ./... | tee bench.out
         working-directory: load
+        env:
+          OPA_ROOT: ${{ steps.opa.outputs.dir }}
       - name: Merge results into "benchmarks" branch
         uses: benchmark-action/github-action-benchmark@v1
         with:
@@ -43,7 +59,6 @@ jobs:
           tool: go
           output-file-path: load/bench.out
           github-token: ${{ secrets.GH_API_TOKEN }}
-          auto-push: true
           alert-threshold: '150%' # Show alert with commit comment on detecting possible performance regression
           comment-on-alert: true
           fail-on-alert: true
