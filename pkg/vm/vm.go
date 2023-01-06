@@ -18,14 +18,15 @@ import (
 )
 
 var (
-	ErrVarAssignConflict    = errors.New("var assignment conflict")
-	ErrObjectInsertConflict = errors.New("object insert conflict")
-	ErrFunctionCallToData   = errors.New("function call to data")
-	ErrInvalidExecutable    = errors.New("invalid executable")
-	ErrQueryNotFound        = errors.New("query not found")
+	ErrVarAssignConflict         = errors.New("var assignment conflict")
+	ErrObjectInsertConflict      = errors.New("object insert conflict")
+	ErrFunctionCallToData        = errors.New("function call to data")
+	ErrInvalidExecutable         = errors.New("invalid executable")
+	ErrQueryNotFound             = errors.New("query not found")
+	ErrInstructionsLimitExceeded = errors.New("instructions limit exceeded")
 
 	DefaultLimits = Limits{
-		Instructions: 1000000,
+		Instructions: 10000000,
 	}
 )
 
@@ -584,7 +585,7 @@ func (s *State) Instr() error {
 	}
 
 	if instructions > s.Globals.Limits.Instructions {
-		return context.Canceled
+		return ErrInstructionsLimitExceeded
 	}
 
 	return nil
