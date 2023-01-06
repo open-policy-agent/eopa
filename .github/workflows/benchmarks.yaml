@@ -51,6 +51,7 @@ jobs:
       - name: gobenchdata publish
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
+          INPUT_GO_TEST_FLAGS: -timeout=30m
           INPUT_SUBDIRECTORY: load
           INPUT_PUBLISH: true
           INPUT_PUBLISH_BRANCH: benchmarks
