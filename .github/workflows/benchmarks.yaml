@@ -48,28 +48,12 @@ jobs:
         id: opa
         working-directory: opa
         run: echo "dir=$(pwd)" >> $GITHUB_OUTPUT
-      - name: Run benchmarks
-        run: go test -run=^$ -bench=. -benchmem ./... | tee bench.out
-        working-directory: load
+      - name: gobenchdata publish
+        run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
+          SUBDIRECTORY: load
+          PUBLISH: true
+          PUBLISH_BRANCH: benchmarks
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           OPA_ROOT: ${{ steps.opa.outputs.dir }}
-      - name: Merge results into "benchmarks" branch
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Go Benchmarks
-          tool: go
-          output-file-path: load/bench.out
-          github-token: ${{ secrets.GH_API_TOKEN }}
-          alert-threshold: '150%' # Show alert with commit comment on detecting possible performance regression
-          comment-on-alert: true
-          fail-on-alert: true
-          external-data-json-path: benchmarks/benchmark-data.json
-          alert-comment-cc-users: '@srenatus'
-      - name: Push benchmark result
-        run: |
-          git config user.name benchmarks-updater
-          git config user.email benchmarks-updater@styra.com
-          git add benchmark-data.json
-          git commit -sm "benchmark-data.json: update"
-          git push benchmarks:benchmarks
-        working-directory: benchmarks
+        timeout-minutes: 30
