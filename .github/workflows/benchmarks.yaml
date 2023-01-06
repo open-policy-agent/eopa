@@ -51,9 +51,9 @@ jobs:
       - name: gobenchdata publish
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
-          SUBDIRECTORY: load
-          PUBLISH: true
-          PUBLISH_BRANCH: benchmarks
+          INPUT_SUBDIRECTORY: load
+          INPUT_PUBLISH: true
+          INPUT_PUBLISH_BRANCH: benchmarks
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           OPA_ROOT: ${{ steps.opa.outputs.dir }}
         timeout-minutes: 30
