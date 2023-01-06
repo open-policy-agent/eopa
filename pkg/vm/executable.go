@@ -312,6 +312,23 @@ func (f function) Params() []Local {
 	return getLocalArray(f, offset)
 }
 
+func (f function) ParamsLen() uint32 {
+	offset := getOffsetIndex(f, 8, 2)
+	return getUint32(f, offset)
+}
+
+func (f function) ParamsIter(fcn func(i uint32, arg Local) error) error {
+	offset := getOffsetIndex(f, 8, 2)
+	n := getUint32(f, offset)
+
+	for i := uint32(0); i < n; i++ {
+		if err := fcn(i, getLocal(f, offset+4+i*4)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (f function) Return() Local {
 	offset := getOffsetIndex(f, 8, 3)
 	return getLocal(f, offset)
@@ -320,6 +337,25 @@ func (f function) Return() Local {
 func (f function) Path() []string {
 	offset := getOffsetIndex(f, 8, 4)
 	return getStringArray(f, offset)
+}
+
+func (f function) PathLen() uint32 {
+	offset := getOffsetIndex(f, 8, 4)
+	return getUint32(f, offset)
+}
+
+func (f function) PathIter(fcn func(i uint32, arg string) error) error {
+	offset := getOffsetIndex(f, 8, 4)
+	data := f[offset:]
+
+	n := getUint32(data, 0)
+	for i := uint32(0); i < n; i++ {
+		stringOffset := getOffsetIndex(data, 4, int(i))
+		if err := fcn(i, getString(data, stringOffset)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (f function) Blocks() blocks {
@@ -684,13 +720,46 @@ func (c callDynamic) Args() []Local {
 	return getLocalArray(c, 12)
 }
 
+func (c callDynamic) ArgsLen() uint32 {
+	return getUint32(c, 12)
+}
+
+func (c callDynamic) ArgsIter(fcn func(i uint32, arg Local) error) error {
+	offset := uint32(12)
+	n := getUint32(c, offset)
+
+	for i := uint32(0); i < n; i++ {
+		if err := fcn(i, getLocal(c, offset+4+i*5)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c callDynamic) Result() Local {
 	return getLocal(c, 8)
 }
 
 func (c callDynamic) Path() []LocalOrConst {
-	n := getLocalArraySize(c, 12)
-	return getLocalOrConstArray(c, 12+uint32(n))
+	offset := uint32(getLocalArraySize(c, 12))
+	return getLocalOrConstArray(c, 12+offset)
+}
+
+func (c callDynamic) PathLen() uint32 {
+	offset := uint32(getLocalArraySize(c, 12))
+	return getUint32(c, 12+offset)
+}
+
+func (c callDynamic) PathIter(fcn func(i uint32, arg LocalOrConst) error) error {
+	offset := uint32(getLocalArraySize(c, 12)) + 12
+	n := getUint32(c, offset)
+
+	for i := uint32(0); i < n; i++ {
+		if err := fcn(i, getLocalOrConst(c, offset+4+i*5)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (call) Write(index int, args []LocalOrConst, result Local) []byte {
@@ -726,6 +795,22 @@ func (c call) Func() int {
 
 func (c call) Args() []LocalOrConst {
 	return getLocalOrConstArray(c, 12)
+}
+
+func (c call) ArgsLen() uint32 {
+	return getUint32(c, 12)
+}
+
+func (c call) ArgsIter(fcn func(i uint32, arg LocalOrConst) error) error {
+	offset := uint32(12)
+	n := getUint32(c, offset)
+
+	for i := uint32(0); i < n; i++ {
+		if err := fcn(i, getLocalOrConst(c, offset+4+i*5)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c call) Result() Local {
@@ -1541,8 +1626,24 @@ func (w with) Path() []int {
 		v := getInt32(w, offset+4+i*4)
 		a = append(a, int(v))
 	}
-
 	return a
+}
+
+func (w with) PathLen() uint32 {
+	offset := uint32(12)
+	return getUint32(w, offset)
+}
+
+func (w with) PathIter(fcn func(i uint32, arg Local) error) error {
+	offset := uint32(12)
+	n := getUint32(w, offset)
+
+	for i := uint32(0); i < n; i++ {
+		if err := fcn(i, getLocal(w, offset+4+i*4)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (w with) Value() LocalOrConst {

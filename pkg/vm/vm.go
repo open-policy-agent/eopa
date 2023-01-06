@@ -26,7 +26,7 @@ var (
 	ErrInstructionsLimitExceeded = errors.New("instructions limit exceeded")
 
 	DefaultLimits = Limits{
-		Instructions: 10000000,
+		Instructions: 100000000,
 	}
 )
 
@@ -261,15 +261,19 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				StrictBuiltinErrors: opts.StrictBuiltinErrors,
 			}
 
-			args := make([]*Value, 2)
+			args := make([]Value, 2)
 			if opts.Input != nil {
 				var v Value = *opts.Input
-				args[0] = &v
+				args[0] = v
+			} else {
+				args[0] = unset{}
 			}
 
 			if vm.data != nil {
 				var v Value = *vm.data
-				args[1] = &v
+				args[1] = v
+			} else {
+				args[1] = unset{}
 			}
 
 			state := newState(globals, StatisticsGet(ctx))
@@ -432,13 +436,14 @@ next:
 			continue
 		}
 
-		other := function.Path()
-
-		if len(path) == len(other) {
-			for i := 0; i < len(path); i++ {
-				if path[i] != other[i] {
-					continue next
+		if len(path) == int(function.PathLen()) {
+			if err := function.PathIter(func(i uint32, arg string) error {
+				if path[i] != arg {
+					return ErrQueryNotFound // actual error is ignored
 				}
+				return nil
+			}); err != nil {
+				continue next
 			}
 
 			return function, i

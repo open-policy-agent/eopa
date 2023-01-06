@@ -10,6 +10,13 @@ import (
 	"github.com/open-policy-agent/opa/topdown/builtins"
 )
 
+type unset struct{}
+
+func isUnset(v Value) bool {
+	_, ok := v.(unset)
+	return ok
+}
+
 func (p plan) Execute(state *State) error {
 	var err error
 	blocks := p.Blocks()
@@ -21,7 +28,7 @@ func (p plan) Execute(state *State) error {
 	return err
 }
 
-func (f function) Execute(state *State, args []*Value) error {
+func (f function) Execute(state *State, args []Value) error {
 	if !f.IsBuiltin() {
 		return f.execute(state, args)
 	}
@@ -29,10 +36,10 @@ func (f function) Execute(state *State, args []*Value) error {
 	return builtin(f).Execute(state, args)
 }
 
-func (f function) execute(state *State, args []*Value) error {
-	index, params, ret := f.Index(), f.Params(), f.Return()
+func (f function) execute(state *State, args []Value) error {
+	index, ret := f.Index(), f.Return()
 
-	memoize := len(params) == 2
+	memoize := f.ParamsLen() == 2
 	if memoize {
 		if value, ok := state.MemoizeGet(index); ok {
 			if value != nil {
@@ -47,13 +54,14 @@ func (f function) execute(state *State, args []*Value) error {
 		}
 	}
 
-	for i := range args {
-		if args[i] != nil {
-			state.SetValue(params[i], *args[i])
+	f.ParamsIter(func(i uint32, arg Local) error {
+		if !isUnset(args[i]) {
+			state.SetValue(arg, args[i])
 		} else {
-			state.Unset(params[i])
+			state.Unset(arg)
 		}
-	}
+		return nil
+	})
 
 	err := state.Instr()
 	blocks := f.Blocks()
@@ -77,7 +85,7 @@ func (f function) execute(state *State, args []*Value) error {
 	return err
 }
 
-func (builtin builtin) Execute(state *State, args []*Value) error {
+func (builtin builtin) Execute(state *State, args []Value) error {
 	if err := state.Instr(); err != nil {
 		return err
 	}
@@ -110,11 +118,11 @@ func (builtin builtin) Execute(state *State, args []*Value) error {
 
 	a := make([]*ast.Term, len(args))
 	for i := range args {
-		if args[i] == nil {
+		if isUnset(args[i]) {
 			return nil
 		}
 
-		v, err := state.ValueOps().ToAST(state.Globals.Ctx, *args[i])
+		v, err := state.ValueOps().ToAST(state.Globals.Ctx, args[i])
 		if err != nil {
 			return err
 		}
@@ -162,17 +170,17 @@ func (builtin builtin) Execute(state *State, args []*Value) error {
 	return nil
 }
 
-func memberBuiltin(state *State, args []*Value) error {
-	if args[0] == nil || args[1] == nil {
+func memberBuiltin(state *State, args []Value) error {
+	if isUnset(args[0]) || isUnset(args[1]) {
 		return nil
 	}
 
 	var found bool
 
 	if err := func(f func(key, value interface{}) bool) error {
-		return state.ValueOps().Iter(state.Globals.Ctx, *args[1], *(*(func(key, value interface{}) bool))(noescape(unsafe.Pointer(&f))))
+		return state.ValueOps().Iter(state.Globals.Ctx, args[1], *(*(func(key, value interface{}) bool))(noescape(unsafe.Pointer(&f))))
 	}(func(_, v interface{}) bool {
-		found, _ = state.ValueOps().Equal(state.Globals.Ctx, *args[0], v)
+		found, _ = state.ValueOps().Equal(state.Globals.Ctx, args[0], v)
 		return found
 	}); err != nil {
 		return err
@@ -183,19 +191,19 @@ func memberBuiltin(state *State, args []*Value) error {
 	return nil
 }
 
-func memberWithKeyBuiltin(state *State, args []*Value) error {
-	if args[0] == nil || args[1] == nil || args[2] == nil {
+func memberWithKeyBuiltin(state *State, args []Value) error {
+	if isUnset(args[0]) || isUnset(args[1]) || isUnset(args[2]) {
 		return nil
 	}
 
 	var eq bool
-	v, ok, err := state.ValueOps().Get(state.Globals.Ctx, *args[2], *args[0])
+	v, ok, err := state.ValueOps().Get(state.Globals.Ctx, args[2], args[0])
 	if err != nil {
 		return err
 	}
 	if ok {
 		var err error
-		eq, err = state.ValueOps().Equal(state.Globals.Ctx, *args[1], v)
+		eq, err = state.ValueOps().Equal(state.Globals.Ctx, args[1], v)
 		if err != nil {
 			return err
 		}
@@ -206,11 +214,11 @@ func memberWithKeyBuiltin(state *State, args []*Value) error {
 	return nil
 }
 
-func objectGetBuiltin(state *State, args []*Value) error {
-	if args[0] == nil || args[1] == nil || args[2] == nil {
+func objectGetBuiltin(state *State, args []Value) error {
+	if isUnset(args[0]) || isUnset(args[1]) || isUnset(args[2]) {
 		return nil
 	}
-	obj, path, def := *args[0], *args[1], *args[2]
+	obj, path, def := args[0], args[1], args[2]
 
 	if isObj, err := state.ValueOps().IsObject(state.Globals.Ctx, obj); err != nil {
 		return err
@@ -517,28 +525,32 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 
 	inner := state.New()
 
-	cargs, cpath := call.Args(), call.Path()
-
-	args := make([]*Value, len(cargs))
-	for i := range cargs {
-		if state.IsDefined(cargs[i]) {
-			v := state.Value(cargs[i])
+	args := make([]Value, call.ArgsLen())
+	call.ArgsIter(func(i uint32, arg Local) error {
+		if state.IsDefined(arg) {
+			v := state.Value(arg)
 			args[i] = &v
+		} else {
+			args[i] = unset{}
 		}
-	}
+		return nil
+	})
 
-	path := make([]string, len(cpath))
-	for i := range cpath {
-		if !state.IsDefined(cpath[i]) {
+	path := make([]string, call.PathLen())
+	if err := call.PathIter(func(i uint32, arg LocalOrConst) error {
+		if !state.IsDefined(arg) {
 			panic("undefined call dynamic path")
 		}
 
-		s, err := state.ValueOps().ToAST(state.Globals.Ctx, state.Value(cpath[i]))
+		s, err := state.ValueOps().ToAST(state.Globals.Ctx, state.Value(arg))
 		if err != nil {
-			return false, 0, err
+			return err
 		}
 
 		path[i] = string(s.(ast.String))
+		return nil
+	}); err != nil {
+		return false, 0, err
 	}
 
 	f, _ := state.FindByPath(path)
@@ -572,7 +584,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 	return false, 0, nil
 }
 
-func externalCall(state *State, path []string, args []*Value) (interface{}, bool, bool, error) {
+func externalCall(state *State, path []string, args []Value) (interface{}, bool, bool, error) {
 	if len(path) > 0 {
 		path = path[1:]
 	}
@@ -584,8 +596,9 @@ func externalCall(state *State, path []string, args []*Value) (interface{}, bool
 	data := state.Value(Data)
 	a := make([]*interface{}, len(args))
 	for i := range a {
-		if args[i] != nil {
-			a[i] = (*interface{})(args[i])
+		if !isUnset(args[i]) {
+			var v interface{} = args[i]
+			a[i] = &v
 		}
 	}
 
@@ -620,15 +633,16 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 		return false, 0, err
 	}
 
-	cargs := call.Args()
-
-	args := make([]*Value, len(cargs))
-	for i := range cargs {
-		if state.IsDefined(cargs[i]) {
-			v := state.Value(cargs[i])
-			args[i] = &v
+	args := make([]Value, call.ArgsLen())
+	call.ArgsIter(func(i uint32, arg LocalOrConst) error {
+		if state.IsDefined(arg) {
+			v := state.Value(arg)
+			args[i] = v
+		} else {
+			args[i] = unset{}
 		}
-	}
+		return nil
+	})
 
 	inner := state.New()
 
@@ -925,7 +939,7 @@ func (with with) Execute(state *State) (bool, uint32, error) {
 	state.MemoizePush()
 	defer state.MemoizePop()
 
-	local, path, wvalue := with.Local(), with.Path(), with.Value()
+	local, wvalue := with.Local(), with.Value()
 
 	defined, value := state.IsDefined(local), state.Value(local)
 	defer func() {
@@ -936,11 +950,12 @@ func (with with) Execute(state *State) (bool, uint32, error) {
 		}
 	}()
 
-	if len(path) == 0 {
+	pathLen := with.PathLen()
+	if pathLen == 0 {
 		state.Set(local, wvalue)
 	} else {
 
-		value, err := with.upsert(state, local, path, wvalue)
+		value, err := with.upsert(state, local, pathLen, wvalue)
 		if err != nil {
 			return false, 0, err
 		}
@@ -960,7 +975,7 @@ func (with with) Execute(state *State) (bool, uint32, error) {
 	return false, 0, nil
 }
 
-func (with) upsert(state *State, original Local, path []int, value LocalOrConst) (Value, error) {
+func (with with) upsert(state *State, original Local, pathLen uint32, value LocalOrConst) (Value, error) {
 	ops := state.ValueOps()
 
 	var ok bool
@@ -980,11 +995,18 @@ func (with) upsert(state *State, original Local, path []int, value LocalOrConst)
 	}
 
 	nested := result
-	for i := 0; i < len(path)-1; i++ {
-		key := state.Value(StringIndexConst(path[i]))
+	var last Local
+
+	pathLen-- // upto last item
+	if err := with.PathIter(func(i uint32, arg Local) error {
+		if i == pathLen {
+			last = arg
+			return nil
+		}
+		key := state.Value(StringIndexConst(arg))
 		next, ok, err := ops.Get(state.Globals.Ctx, nested, key)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		var isObject bool
@@ -1002,13 +1024,15 @@ func (with) upsert(state *State, original Local, path []int, value LocalOrConst)
 		}
 
 		if err != nil {
-			return nil, err
+			return err
 		}
-
 		nested = next
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
-	err := ops.ObjectInsert(state.Globals.Ctx, nested, state.Value(StringIndexConst(path[len(path)-1])), state.Value(value))
+	err := ops.ObjectInsert(state.Globals.Ctx, nested, state.Value(StringIndexConst(last)), state.Value(value))
 	return result, err
 }
 
