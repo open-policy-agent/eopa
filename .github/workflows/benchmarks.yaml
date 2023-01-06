@@ -33,6 +33,7 @@ jobs:
           fetch-depth: 0
           ref: benchmarks
           path: benchmarks
+      - uses: open-policy-agent/setup-opa@v2 # needed for below
       - name: pick up OPA version
         id: load
         run: echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
