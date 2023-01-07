@@ -141,7 +141,9 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return fmt.Errorf("builtin not found: %s", builtin.Name())
 	}
 
-	if err := impl(bctx, a, func(value *ast.Term) error {
+	if err := func(f func(v *ast.Term) error) error {
+		return impl(bctx, a, *(*(func(v *ast.Term) error))(noescape(unsafe.Pointer(&f))))
+	}(func(value *ast.Term) error {
 		if relation {
 			arr, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(Unused), state.ValueOps().FromInterface(value.Value))
 			if err != nil {
