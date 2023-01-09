@@ -2,7 +2,6 @@ package rego_vm
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,42 +21,49 @@ import (
 	"github.com/open-policy-agent/opa/util"
 )
 
-var opaRootDir = os.Getenv("OPA_ROOT")
-
-var caseDir = flag.String("case-dir", filepath.Join(opaRootDir, "test/cases/testdata"), "set directory to load test cases from")
-var exceptionsFile = flag.String("exceptions", "./exceptions.yaml", "set file to load a list of test names to exclude")
-var exceptions = map[string]string{}
-
 // topdown -> vm
 var replacements = map[string]string{
 	"functions must not produce multiple outputs for same inputs": "eval_conflict_error: complete rules must not produce multiple outputs",
 	"object keys must be unique":                                  "object insert conflict",
 }
 
-func TestMain(m *testing.M) {
-	bs, err := os.ReadFile(*exceptionsFile)
+func init() {
+	addTestSleepBuiltin()
+}
+
+func readCases(t testing.TB) ([]cases.TestCase, map[string]string) {
+	opaRootDir := os.Getenv("OPA_ROOT")
+	if opaRootDir == "" {
+		t.Skip("OPA_ROOT not set, skipping Rego E2E test/benchmarks")
+	}
+	opaRootDir = filepath.Clean(opaRootDir)
+	caseDir := filepath.Join(opaRootDir, "test/cases/testdata")
+	const exceptionsFile = "./exceptions.yaml"
+	exceptions := map[string]string{}
+
+	bs, err := os.ReadFile(exceptionsFile)
 	if err != nil {
-		fmt.Println("Unable to load exceptions file: " + err.Error())
-		os.Exit(1)
+		t.Fatalf("Unable to load exceptions file: %v", err)
 	}
 	if err := util.Unmarshal(bs, &exceptions); err != nil {
-		fmt.Println("Unable to parse exceptions file: " + err.Error())
-		os.Exit(1)
+		t.Fatalf("Unable to parse exceptions file: %v", err)
 	}
-
-	addTestSleepBuiltin()
-
-	os.Exit(m.Run())
+	cs := cases.MustLoad(caseDir).Sorted().Cases
+	for i := range cs {
+		cs[i].Filename = strings.TrimPrefix(cs[i].Filename, opaRootDir)
+	}
+	return cs, exceptions
 }
 
 func TestRegoE2E(t *testing.T) {
+	cases, exceptions := readCases(t)
 	ctx := context.Background()
 
-	for _, tc := range cases.MustLoad(*caseDir).Sorted().Cases {
-		name := fmt.Sprintf("%s/%s", strings.TrimPrefix(tc.Filename, opaRootDir), tc.Note)
+	for _, tc := range cases {
+		name := tc.Filename + "/" + tc.Note
 		t.Run(name, func(t *testing.T) {
 
-			if shouldSkip(t, tc) {
+			if shouldSkip(t, tc, exceptions) {
 				t.SkipNow()
 			}
 
@@ -116,13 +122,14 @@ func TestRegoE2E(t *testing.T) {
 //
 //	go test -bench=BenchmarkRegoE2E//test/cases/testdata/withkeyword/test-withkeyword-1016.yaml/withkeyword -test.benchmem -timeout 6000s -run=^#
 func BenchmarkRegoE2E(b *testing.B) {
+	cases, exceptions := readCases(b)
 	ctx := context.Background()
 
-	for _, tc := range cases.MustLoad(*caseDir).Sorted().Cases {
-		name := fmt.Sprintf("%s/%s", strings.TrimPrefix(tc.Filename, opaRootDir), tc.Note)
+	for _, tc := range cases {
+		name := tc.Filename + "/" + tc.Note
 		b.Run(name, func(b *testing.B) {
 
-			if shouldSkip(b, tc) {
+			if shouldSkip(b, tc, exceptions) {
 				b.SkipNow()
 			}
 
@@ -177,7 +184,7 @@ func BenchmarkRegoE2E(b *testing.B) {
 	}
 }
 
-func shouldSkip(t testing.TB, tc cases.TestCase) bool {
+func shouldSkip(t testing.TB, tc cases.TestCase, exceptions map[string]string) bool {
 	if reason, ok := exceptions[tc.Note]; ok {
 		t.Log("Skipping test case: " + reason)
 		return true
