@@ -997,10 +997,10 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 	}
 
 	nested := result
-	var last Local
+	var last int
 
 	pathLen-- // upto last item
-	if err := with.PathIter(func(i uint32, arg Local) error {
+	if err := with.PathIter(func(i uint32, arg int) error {
 		if i == pathLen {
 			last = arg
 			return nil

@@ -1634,12 +1634,12 @@ func (w with) PathLen() uint32 {
 	return getUint32(w, offset)
 }
 
-func (w with) PathIter(fcn func(i uint32, arg Local) error) error {
+func (w with) PathIter(fcn func(i uint32, arg int) error) error {
 	offset := uint32(12)
 	n := getUint32(w, offset)
 
 	for i := uint32(0); i < n; i++ {
-		if err := fcn(i, getLocal(w, offset+4+i*4)); err != nil {
+		if err := fcn(i, int(getInt32(w, offset+4+i*4))); err != nil {
 			return err
 		}
 	}

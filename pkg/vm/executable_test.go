@@ -88,6 +88,8 @@ func test(t testing.TB) {
 		check(t, "blocks", f.Blocks(), blocks)
 		check(t, "path", f.Path(), path)
 		check(t, "builtin", f.IsBuiltin(), false)
+		checkFunctionParams(t, f)
+		checkFunctionPath(t, f)
 	}
 
 	// ArrayAppend
@@ -181,6 +183,8 @@ func test(t testing.TB) {
 		check(t, "args", s.Args(), args)
 		check(t, "result", s.Result(), result)
 		check(t, "path", s.Path(), path)
+		checkCallDynamicPath(t, s)
+		checkCallDynamicArgs(t, s)
 	}
 
 	// Call
@@ -194,6 +198,7 @@ func test(t testing.TB) {
 		check(t, "func", s.Func(), index)
 		check(t, "args", s.Args(), args)
 		check(t, "result", s.Result(), result)
+		checkCallArgs(t, s)
 	}
 
 	// Dot
@@ -488,6 +493,7 @@ func test(t testing.TB) {
 		check(t, "path", s.Path(), path)
 		check(t, "value", s.Value(), value)
 		check(t, "block", s.Block(), block)
+		checkWithPath(t, s)
 	}
 }
 
@@ -505,4 +511,82 @@ func check(t testing.TB, field string, a, b interface{}) {
 	if !reflect.DeepEqual(a, b) {
 		t.Errorf("field not equal %v: %v %v", field, a, b)
 	}
+}
+
+func checkFunctionParams(t testing.TB, a function) {
+	p := a.Params()
+
+	if uint32(len(p)) != a.ParamsLen() {
+		t.Fatalf("invalid params len: %d, %d", len(p), a.ParamsLen())
+	}
+
+	checkIter(t, p, a.ParamsIter)
+}
+
+func checkFunctionPath(t testing.TB, a function) {
+	p := a.Path()
+
+	if uint32(len(p)) != a.PathLen() {
+		t.Fatalf("invalid params len: %d, %d", len(p), a.PathLen())
+	}
+
+	checkIter(t, p, a.PathIter)
+}
+
+func checkCallDynamicPath(t testing.TB, a callDynamic) {
+	p := a.Path()
+
+	if uint32(len(p)) != a.PathLen() {
+		t.Fatalf("invalid params len: %d, %d", len(p), a.PathLen())
+	}
+
+	checkLocalOrConstIter(t, p, a.PathIter)
+}
+
+func checkWithPath(t testing.TB, a with) {
+	p := a.Path()
+
+	if uint32(len(p)) != a.PathLen() {
+		t.Fatalf("invalid params len: %d, %d", len(p), a.PathLen())
+	}
+
+	checkIter(t, p, a.PathIter)
+}
+
+func checkCallDynamicArgs(t testing.TB, a callDynamic) {
+	p := a.Args()
+
+	if uint32(len(p)) != a.ArgsLen() {
+		t.Fatalf("invalid params len: %d, %d", len(p), a.ArgsLen())
+	}
+
+	checkIter(t, p, a.ArgsIter)
+}
+
+func checkCallArgs(t testing.TB, a call) {
+	p := a.Args()
+
+	if uint32(len(p)) != a.ArgsLen() {
+		t.Fatalf("invalid params len: %d, %d", len(p), a.ArgsLen())
+	}
+
+	checkLocalOrConstIter(t, p, a.ArgsIter)
+}
+
+func checkIter[T Local | string | int](t testing.TB, p []T, iter func(fcn func(i uint32, v T) error) error) {
+	iter(func(i uint32, v T) error {
+		if p[i] != v {
+			t.Fatalf("invalid params %v, %v", p[i], v)
+		}
+		return nil
+	})
+}
+
+func checkLocalOrConstIter(t testing.TB, p []LocalOrConst, iter func(fcn func(i uint32, v LocalOrConst) error) error) {
+	iter(func(i uint32, v LocalOrConst) error {
+		if p[i] != v {
+			t.Fatalf("invalid params %v, %v", p[i], v)
+		}
+		return nil
+	})
 }
