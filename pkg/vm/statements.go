@@ -572,7 +572,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 		return false, 0, nil
 	}
 
-	if err := f.Execute(inner, args); err != nil {
+	if err := f.Execute((*State)(noescape(unsafe.Pointer(&inner))), args); err != nil {
 		return false, 0, err
 	}
 
@@ -582,7 +582,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 		return true, 3, nil
 	}
 
-	state.SetFrom(call.Result(), inner, result)
+	state.SetFrom(call.Result(), &inner, result)
 	return false, 0, nil
 }
 
@@ -648,7 +648,7 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 
 	inner := state.New()
 
-	if err := state.Func(call.Func()).Execute(inner, args); err != nil {
+	if err := state.Func(call.Func()).Execute((*State)(noescape(unsafe.Pointer(&inner))), args); err != nil {
 		return false, 0, err
 	}
 
@@ -657,7 +657,7 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 		return true, 0, nil
 	}
 
-	state.SetFrom(call.Result(), inner, result)
+	state.SetFrom(call.Result(), &inner, result)
 	return false, 0, nil
 }
 

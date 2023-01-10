@@ -197,7 +197,8 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (Value, erro
 				InterQueryBuiltinCache: opts.InterQueryBuiltinCache,
 			}
 
-			if err := plan.Execute(newState(globals, StatisticsGet(ctx))); err != nil {
+			state := newState(globals, StatisticsGet(ctx))
+			if err := plan.Execute(&state); err != nil {
 				return nil, err
 			}
 
@@ -277,7 +278,7 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 			}
 
 			state := newState(globals, StatisticsGet(ctx))
-			if err := f.Execute(state, args); err != nil {
+			if err := f.Execute(&state, args); err != nil {
 				return nil, false, false, err
 			}
 
@@ -343,7 +344,8 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				StrictBuiltinErrors: opts.StrictBuiltinErrors,
 			}
 
-			if err := plan.Execute(newState(globals, StatisticsGet(ctx))); err != nil {
+			state := newState(globals, StatisticsGet(ctx))
+			if err := plan.Execute(&state); err != nil {
 				return nil, false, false, err
 			}
 
@@ -395,7 +397,7 @@ func (vm *VM) runtime(ctx context.Context, v interface{}) (*ast.Term, error) {
 	return ast.NewTerm(runtime), nil
 }
 
-func newState(globals *Globals, stats *Statistics) *State {
+func newState(globals *Globals, stats *Statistics) State {
 	s := State{
 		Globals: globals,
 		locals: Locals{
@@ -411,10 +413,10 @@ func newState(globals *Globals, stats *Statistics) *State {
 	if globals.vm.data != nil {
 		s.SetValue(Data, *globals.vm.data)
 	}
-	return &s
+	return s
 }
 
-func (s *State) New() *State {
+func (s *State) New() State {
 	return newState(s.Globals, s.stats)
 }
 

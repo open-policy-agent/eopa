@@ -1,0 +1,290 @@
+{
+  "A": {
+    "B": {
+      "C": "ABC"
+    }
+  },
+  "B": {
+    "B": {
+      "C": {
+        "D": {
+          "E": "e"
+        }
+      }
+    }
+  },
+  "apps": [
+    {
+      "name": "web",
+      "servers": [
+        "web-0",
+        "web-1",
+        "web-1000",
+        "web-1001",
+        "web-dev"
+      ]
+    },
+    {
+      "name": "mysql",
+      "servers": [
+        "db-0",
+        "db-1000"
+      ]
+    },
+    {
+      "name": "mongodb",
+      "servers": [
+        "db-dev"
+      ]
+    }
+  ],
+  "containers": [
+    {
+      "image": "redis",
+      "ipaddress": "10.0.0.1",
+      "name": "big_stallman"
+    },
+    {
+      "image": "nginx",
+      "ipaddress": "10.0.0.2",
+      "name": "cranky_euclid"
+    }
+  ],
+  "data": {
+    "msg": "U"
+  },
+  "message": "world",
+  "networks": [
+    {
+      "id": "net1",
+      "public": false
+    },
+    {
+      "id": "net2",
+      "public": false
+    },
+    {
+      "id": "net3",
+      "public": true
+    },
+    {
+      "id": "net4",
+      "public": true
+    }
+  ],
+  "parameters": {
+    "labels": [
+      "label11",
+      "label12",
+      "label13",
+      "label14"
+    ]
+  },
+  "ports": [
+    {
+      "id": "p1",
+      "network": "net1"
+    },
+    {
+      "id": "p2",
+      "network": "net3"
+    },
+    {
+      "id": "p3",
+      "network": "net2"
+    }
+  ],
+  "request1": {
+    "object1": {
+      "spec1": {
+        "containers1": {
+          "image1": "xxxxxci--dockerhub/dockerized-image1"
+        }
+      }
+    }
+  },
+  "request2": {
+    "object2": {
+      "spec2": {
+        "containers2": {
+          "image2": "xxxxxci--dockerhub/dockerized-image2"
+        }
+      }
+    }
+  },
+  "request3": {
+    "object3": {
+      "spec3": {
+        "containers3": {
+          "image3": "xxxxxci--dockerhub/dockerized-image3"
+        }
+      }
+    }
+  },
+  "request4": {
+    "object4": {
+      "spec4": {
+        "containers4": {
+          "image4": "xxxxxci--dockerhub/dockerized-image4"
+        }
+      }
+    }
+  },
+  "request5": {
+    "object5": {
+      "spec5": {
+        "containers5": {
+          "image5": "xxxxxci--dockerhub/dockerized-image5"
+        }
+      }
+    }
+  },
+  "request6": {
+    "object6": {
+      "spec6": {
+        "containers6": {
+          "image6": "xxxxxci--dockerhub/dockerized-image6"
+        }
+      }
+    }
+  },
+  "request7": {
+    "kind": {
+      "kind": "Pod"
+    }
+  },
+  "request8": {
+    "operation": "CREATE"
+  },
+  "request9": {
+    "object": {
+      "spec": {
+        "containers": [
+          "containers1",
+          "containers2",
+          "containers3",
+          "containers4",
+          "containers5"
+        ]
+      }
+    }
+  },
+  "review": {
+    "object": {
+      "metadata": {
+        "labels": [
+          "label11",
+          "label1",
+          "label2",
+          "label3",
+          "label4",
+          "label12",
+          "label13"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "id": "app",
+      "ports": [
+        "p1",
+        "p2",
+        "p3"
+      ],
+      "protocols": [
+        "https",
+        "ssh"
+      ]
+    },
+    {
+      "id": "db",
+      "ports": [
+        "p3"
+      ],
+      "protocols": [
+        "mysql"
+      ]
+    },
+    {
+      "id": "cache",
+      "ports": [
+        "p3"
+      ],
+      "protocols": [
+        "memcache"
+      ]
+    },
+    {
+      "id": "ci",
+      "ports": [
+        "p1",
+        "p2"
+      ],
+      "protocols": [
+        "http"
+      ]
+    },
+    {
+      "id": "busybox",
+      "ports": [
+        "p1"
+      ],
+      "protocols": [
+        "telnet"
+      ]
+    }
+  ],
+  "sites": [
+    {
+      "name": "prod",
+      "region": "east",
+      "servers": [
+        {
+          "hostname": "hydrogen",
+          "name": "web-0"
+        },
+        {
+          "hostname": "helium",
+          "name": "web-1"
+        },
+        {
+          "hostname": "lithium",
+          "name": "db-0"
+        }
+      ]
+    },
+    {
+      "name": "smoke",
+      "region": "west",
+      "servers": [
+        {
+          "hostname": "beryllium",
+          "name": "web-1000"
+        },
+        {
+          "hostname": "boron",
+          "name": "web-1001"
+        },
+        {
+          "hostname": "carbon",
+          "name": "db-1000"
+        }
+      ]
+    },
+    {
+      "name": "dev",
+      "region": "west",
+      "servers": [
+        {
+          "hostname": "nitrogen",
+          "name": "web-dev"
+        },
+        {
+          "hostname": "oxygen",
+          "name": "db-dev"
+        }
+      ]
+    }
+  ]
+}

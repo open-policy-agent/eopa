@@ -1,0 +1,84 @@
+{{
+"result": {
+            "deny": {
+              ": net1",
+              ": net2",
+              ": net3",
+              "image is not from trusted registry: xxxxxci--dockerhub/dockerized-image1",
+              "image is not from trusted registry: xxxxxci--dockerhub/dockerized-image2",
+              "image is not from trusted registry: xxxxxci--dockerhub/dockerized-image3",
+              "image is not from trusted registry: xxxxxci--dockerhub/dockerized-image4",
+              "image is not from trusted registry: xxxxxci--dockerhub/dockerized-image5",
+              {
+                "msg": "array_list[j]: host1.1.1.1.1"
+              },
+              {
+                "msg": "array_list[j]: host2.2.2.2.2"
+              },
+              {
+                "msg": "array_list[j]: host3.3.3.3.3"
+              },
+              {
+                "msg": "array_list[j]: host4.4.4.4.4"
+              },
+              {
+                "msg": "array_list[j]: host5.5.5.5.5"
+              },
+              {
+                "msg": "container is missing livenessProbe: containers1"
+              },
+              {
+                "msg": "container is missing livenessProbe: containers2"
+              },
+              {
+                "msg": "container is missing livenessProbe: containers3"
+              },
+              {
+                "msg": "container is missing livenessProbe: containers4"
+              },
+              {
+                "msg": "container is missing livenessProbe: containers5"
+              },
+              {
+                "msg": "container is missing readinessProbe: containers1"
+              },
+              {
+                "msg": "container is missing readinessProbe: containers2"
+              },
+              {
+                "msg": "container is missing readinessProbe: containers3"
+              },
+              {
+                "msg": "container is missing readinessProbe: containers4"
+              },
+              {
+                "msg": "container is missing readinessProbe: containers5"
+              }
+            },
+            "hello": true,
+            "input_container": {
+              "containers1",
+              "containers2",
+              "containers3",
+              "containers4",
+              "containers5"
+            },
+            "valid_ingress_hosts": {
+              "host1.1.1.1.1",
+              "host2.2.2.2.2",
+              "host3.3.3.3.3",
+              "host4.4.4.4.4",
+              "host5.5.5.5.5"
+            },
+            "violation": {
+              {
+                "details": {
+                  "missing_labels": {
+                    "label14"
+                  }
+                },
+                "msg": "you must provide labels: {\"label14\"}"
+              }
+            }
+          }
+}}
