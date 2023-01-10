@@ -593,7 +593,11 @@ func (l *Locals) grow(v Local) {
 		// Allocate more than exactly requested, as it is
 		// likely they are more registers. This amortizes the
 		// cost.
-		l.registers = append(l.registers, make([]definedValue, n+16)...)
+		if len(l.registers) == 0 {
+			l.registers = make([]definedValue, n+16)
+		} else {
+			l.registers = append(l.registers, make([]definedValue, n+16)...)
+		}
 	}
 }
 
