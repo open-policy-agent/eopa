@@ -531,7 +531,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 	call.ArgsIter(func(i uint32, arg Local) error {
 		if state.IsDefined(arg) {
 			v := state.Value(arg)
-			args[i] = &v
+			args[i] = v
 		} else {
 			args[i] = unset{}
 		}
