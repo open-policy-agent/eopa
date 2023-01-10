@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/OneOfOne/xxhash"
+	"github.com/open-policy-agent/opa/util"
 
 	fjson "github.com/styrainc/load/pkg/json"
 )
@@ -23,6 +24,10 @@ func hash(value interface{}) uint64 {
 	hasher := xxhash.New64()
 	hashImpl(value, hasher)
 	return hasher.Sum64()
+}
+
+func intHash(v util.T) int {
+	return int(hash(v))
 }
 
 func hashImpl(value interface{}, hasher *xxhash.XXHash64) {

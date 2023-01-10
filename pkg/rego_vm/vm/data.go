@@ -721,12 +721,7 @@ type Set struct {
 }
 
 func NewSet() *Set {
-	set := util.NewHashMap(func(a, b util.T) bool {
-		return equal(a.(fjson.Json), b.(fjson.Json))
-	}, func(v util.T) int {
-		return int(hash(v))
-	})
-	return &Set{set: set}
+	return &Set{set: util.NewHashMap(equalT, intHash)}
 }
 
 func (s *Set) Add(v fjson.Json) {
@@ -771,12 +766,7 @@ type Object struct {
 }
 
 func NewObject() *Object {
-	obj := util.NewHashMap(func(a, b util.T) bool {
-		return equal(a.(fjson.Json), b.(fjson.Json))
-	}, func(k util.T) int {
-		return int(hash(k))
-	})
-	return &Object{obj: obj}
+	return &Object{obj: util.NewHashMap(equalT, intHash)}
 }
 
 func (o *Object) Insert(k, v fjson.Json) {
@@ -877,6 +867,10 @@ func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
 	}
 
 	return nil, ErrInvalidData
+}
+
+func equalT(a, b util.T) bool {
+	return equal(a.(fjson.Json), b.(fjson.Json))
 }
 
 func equal(a, b fjson.Json) bool {
