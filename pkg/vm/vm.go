@@ -81,11 +81,15 @@ type (
 	}
 
 	Locals struct {
-		defined    []bool
-		registers  []Value
+		registers  []definedValue
 		data       map[Local]struct{}
 		ret        Local // function return value
 		retDefined bool
+	}
+
+	definedValue struct {
+		defined bool
+		value   Value
 	}
 
 	Value interface{}
@@ -267,14 +271,14 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				var v Value = *opts.Input
 				args[0] = v
 			} else {
-				args[0] = unset{}
+				args[0] = unset()
 			}
 
 			if vm.data != nil {
 				var v Value = *vm.data
 				args[1] = v
 			} else {
-				args[1] = unset{}
+				args[1] = unset()
 			}
 
 			state := newState(globals, StatisticsGet(ctx))
@@ -302,17 +306,6 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 
 	for i := 0; i < n; i++ {
 		if plan := plans.Plan(i); plan.Name() == pname {
-			args := make([]*Value, 2)
-			if opts.Input != nil {
-				var v Value = *opts.Input
-				args[0] = &v
-			}
-
-			if vm.data != nil {
-				var v Value = *vm.data
-				args[1] = &v
-			}
-
 			if opts.Time.IsZero() {
 				opts.Time = time.Now()
 			}
@@ -459,7 +452,7 @@ func (s *State) IsDefined(v LocalOrConst) bool {
 	switch v := v.(type) {
 	case Local:
 		s.locals.grow(v)
-		return s.locals.defined[v]
+		return s.locals.registers[v].defined
 	default:
 		return true
 	}
@@ -469,7 +462,7 @@ func (s *State) Value(v LocalOrConst) Value {
 	switch v := v.(type) {
 	case Local:
 		s.locals.grow(v)
-		return s.locals.registers[v]
+		return s.locals.registers[v].value
 	case BoolConst:
 		return s.ValueOps().MakeBoolean(bool(v))
 	case StringIndexConst:
@@ -489,18 +482,15 @@ func (s *State) Set(target Local, source LocalOrConst) {
 	case Local:
 		s.locals.grow(target)
 		s.locals.grow(v)
-		s.locals.defined[target] = s.locals.defined[v]
 		s.locals.registers[target] = s.locals.registers[v]
 
 	case BoolConst:
 		s.locals.grow(target)
-		s.locals.defined[target] = true
-		s.locals.registers[target] = s.Globals.vm.ops.MakeBoolean(bool(v))
+		s.locals.registers[target] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
 
 	case StringIndexConst:
 		s.locals.grow(target)
-		s.locals.defined[target] = true
-		s.locals.registers[target] = s.Globals.vm.executable.Strings().String(s.Globals.vm.ops, v)
+		s.locals.registers[target] = definedValue{true, s.Globals.vm.executable.Strings().String(s.Globals.vm.ops, v)}
 	}
 }
 
@@ -509,18 +499,15 @@ func (s *State) SetFrom(target Local, other *State, source LocalOrConst) {
 	case Local:
 		s.locals.grow(target)
 		other.locals.grow(v)
-		s.locals.defined[target] = other.locals.defined[v]
 		s.locals.registers[target] = other.locals.registers[v]
 
 	case BoolConst:
 		s.locals.grow(target)
-		s.locals.defined[target] = true
-		s.locals.registers[target] = s.Globals.vm.ops.MakeBoolean(bool(v))
+		s.locals.registers[target] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
 
 	case StringIndexConst:
 		s.locals.grow(target)
-		s.locals.defined[target] = true
-		s.locals.registers[target] = s.Globals.vm.executable.Strings().String(s.Globals.vm.ops, v)
+		s.locals.registers[target] = definedValue{true, s.Globals.vm.executable.Strings().String(s.Globals.vm.ops, v)}
 	}
 }
 
@@ -530,8 +517,7 @@ func (s *State) SetReturn(source Local) {
 
 func (s *State) SetValue(target Local, value Value) {
 	s.locals.grow(target)
-	s.locals.defined[target] = true
-	s.locals.registers[target] = value
+	s.locals.registers[target] = definedValue{true, value}
 }
 
 func (s *State) SetData(l Local) {
@@ -560,8 +546,7 @@ func (s *State) DataGet(ctx context.Context, value, key interface{}) (interface{
 
 func (s *State) Unset(target Local) {
 	s.locals.grow(target)
-	s.locals.defined[target] = false
-	s.locals.registers[target] = nil
+	s.locals.registers[target] = definedValue{false, nil}
 	delete(s.locals.data, target)
 }
 
@@ -600,13 +585,15 @@ func (s *State) Instr() error {
 
 func (l *Locals) SetReturn(source Local) {
 	l.ret = source
-	l.retDefined = l.defined[source]
+	l.retDefined = l.registers[source].defined
 }
 
 func (l *Locals) grow(v Local) {
-	if n := int(v) - len(l.defined); n >= 0 {
-		l.defined = append(l.defined, make([]bool, n+1)...)
-		l.registers = append(l.registers, make([]Value, n+1)...)
+	if n := int(v) - len(l.registers); n >= 0 {
+		// Allocate more than exactly requested, as it is
+		// likely they are more registers. This amortizes the
+		// cost.
+		l.registers = append(l.registers, make([]definedValue, n+16)...)
 	}
 }
 

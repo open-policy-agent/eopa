@@ -10,11 +10,15 @@ import (
 	"github.com/open-policy-agent/opa/topdown/builtins"
 )
 
-type unset struct{}
+type unsetValue struct{}
 
 func isUnset(v Value) bool {
-	_, ok := v.(unset)
+	_, ok := v.(unsetValue)
 	return ok
+}
+
+func unset() Value {
+	return unsetValue{}
 }
 
 func (p plan) Execute(state *State) error {
@@ -533,7 +537,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 			v := state.Value(arg)
 			args[i] = v
 		} else {
-			args[i] = unset{}
+			args[i] = unset()
 		}
 		return nil
 	})
@@ -641,7 +645,7 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 			v := state.Value(arg)
 			args[i] = v
 		} else {
-			args[i] = unset{}
+			args[i] = unset()
 		}
 		return nil
 	})
