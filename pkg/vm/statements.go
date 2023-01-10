@@ -120,7 +120,15 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		PrintHook: state.Globals.PrintHook,
 	}
 
-	a := make([]*ast.Term, len(args))
+	// Prefer allocating a fixed size slice, to keep it in stack.
+
+	var a []*ast.Term
+	if n := len(args); n <= 4 {
+		a = make([]*ast.Term, n, 4)
+	} else {
+		a = make([]*ast.Term, n)
+	}
+
 	for i := range args {
 		if isUnset(args[i]) {
 			return nil
@@ -145,9 +153,11 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return fmt.Errorf("builtin not found: %s", builtin.Name())
 	}
 
-	if err := func(f func(v *ast.Term) error) error {
-		return impl(bctx, a, *(*(func(v *ast.Term) error))(noescape(unsafe.Pointer(&f))))
-	}(func(value *ast.Term) error {
+	if err := func(a *[]*ast.Term, f func(v *ast.Term) error) error {
+		return impl(bctx,
+			*(*[]*ast.Term)(noescape(unsafe.Pointer(a))),
+			*(*(func(v *ast.Term) error))(noescape(unsafe.Pointer(&f))))
+	}(&a, func(value *ast.Term) error {
 		if relation {
 			arr, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(Unused), state.ValueOps().FromInterface(value.Value))
 			if err != nil {
@@ -639,7 +649,14 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 		return false, 0, err
 	}
 
-	args := make([]Value, call.ArgsLen())
+	// Prefer allocating a fixed size slice, to keep it in stack.
+
+	var args []Value
+	if n := call.ArgsLen(); n <= 4 {
+		args = make([]Value, n, 4)
+	} else {
+		args = make([]Value, n)
+	}
 	call.ArgsIter(func(i uint32, arg LocalOrConst) error {
 		if state.IsDefined(arg) {
 			v := state.Value(arg)
@@ -652,7 +669,12 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 
 	inner := state.New()
 
-	if err := state.Func(call.Func()).Execute((*State)(noescape(unsafe.Pointer(&inner))), args); err != nil {
+	if err := func(args *[]Value, inner *State) error {
+		return state.Func(call.Func()).Execute(
+			(*State)(noescape(unsafe.Pointer(inner))),
+			*(*[]Value)(noescape(unsafe.Pointer(args))),
+		)
+	}(&args, &inner); err != nil {
 		return false, 0, err
 	}
 
