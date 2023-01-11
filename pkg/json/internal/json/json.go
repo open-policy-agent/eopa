@@ -18,8 +18,9 @@ func CachedTypeFields(t reflect.Type) []Field {
 		return f.([]Field)
 	}
 
-	var resolved []Field
-	for _, f := range typeFields(t).list {
+	tf := typeFields(t)
+	resolved := make([]Field, 0, len(tf.list))
+	for _, f := range tf.list {
 		resolved = append(resolved, Field{Name: f.name, Index: f.index, OmitEmpty: f.omitEmpty})
 	}
 

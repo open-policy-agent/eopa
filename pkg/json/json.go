@@ -1027,11 +1027,10 @@ func (o ObjectBinary) Clone(deepCopy bool) File {
 }
 
 func (o ObjectBinary) String() string {
-	var s []string
-
 	properties, offsets, err := o.content.objectNameValueOffsets()
 	checkError(err)
 
+	s := make([]string, 0, len(properties))
 	for i, property := range properties {
 		f := newFile(o.content, offsets[i])
 		j, _ := f.(Json) // Non-JSON is printed as nil.
@@ -1286,9 +1285,9 @@ func (o *ObjectMap) Clone(deepCopy bool) File {
 }
 
 func (o *ObjectMap) String() string {
-	var s []string
-
-	for _, name := range o.Names() {
+	names := o.Names()
+	s := make([]string, 0, len(names))
+	for _, name := range names {
 		s = append(s, fmt.Sprint(strconv.Quote(name), ":", o.Value(name)))
 	}
 

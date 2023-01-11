@@ -56,7 +56,7 @@ func (c *Compiler) compileStrings() ([]byte, error) {
 }
 
 func (c *Compiler) compilePlans() ([]byte, error) {
-	var p [][]byte
+	p := make([][]byte, 0, len(c.policy.Plans.Plans))
 
 	for _, plan := range c.policy.Plans.Plans {
 		data, err := c.compilePlan(plan)
@@ -130,12 +130,11 @@ func (c *Compiler) compileFuncs() ([]byte, error) {
 }
 
 func (c *Compiler) compileFunc(fn *ir.Func, index int) ([]byte, error) {
-	var params []Local
-
 	if len(fn.Params) == 0 {
 		return nil, fmt.Errorf("illegal function: zero args")
 	}
 
+	params := make([]Local, 0, len(fn.Params))
 	for i := range fn.Params {
 		params = append(params, c.local(fn.Params[i]))
 	}
@@ -150,7 +149,7 @@ func (c *Compiler) compileFunc(fn *ir.Func, index int) ([]byte, error) {
 }
 
 func (c *Compiler) compileBlocks(input []*ir.Block) ([]byte, error) {
-	var writtenBlocks [][]byte
+	writtenBlocks := make([][]byte, 0, len(input))
 
 	for i := range input {
 		data, err := c.compileBlock(input[i])
@@ -165,7 +164,7 @@ func (c *Compiler) compileBlocks(input []*ir.Block) ([]byte, error) {
 }
 
 func (c *Compiler) compileBlock(b *ir.Block) ([]byte, error) {
-	var datas [][]byte
+	datas := make([][]byte, 0, len(b.Stmts))
 
 	for _, stmt := range b.Stmts {
 		var data []byte

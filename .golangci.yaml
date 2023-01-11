@@ -21,6 +21,7 @@ linters:
     - typecheck
     - staticcheck
     - gosimple
+    - prealloc
     # - gosec # too many false positives
 
 issues:

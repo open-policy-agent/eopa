@@ -266,10 +266,11 @@ func (d *deltaPatch) offset(offset int64) int64 {
 
 // check checks the resource is there.
 func (d *deltaPatch) check(name string) (Object, []string) {
-	var path []string
-
 	var obj Object = newObject(d, 0)
-	for _, seg := range PathSegments(name) {
+
+	pathSegments := PathSegments(name)
+	path := make([]string, 0, len(pathSegments))
+	for _, seg := range pathSegments {
 		path = append(path, "data:"+seg)
 
 		if kindImpl(obj) != Directory {
