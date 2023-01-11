@@ -155,8 +155,8 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 
 	if err := func(a *[]*ast.Term, f func(v *ast.Term) error) error {
 		return impl(bctx,
-			*(*[]*ast.Term)(noescape(unsafe.Pointer(a))),
-			*(*(func(v *ast.Term) error))(noescape(unsafe.Pointer(&f))))
+			*noescape(a),
+			*noescape(&f))
 	}(&a, func(value *ast.Term) error {
 		if relation {
 			arr, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(Unused), state.ValueOps().FromInterface(value.Value))
@@ -194,7 +194,7 @@ func memberBuiltin(state *State, args []Value) error {
 	var found bool
 
 	if err := func(f func(key, value interface{}) bool) error {
-		return state.ValueOps().Iter(state.Globals.Ctx, args[1], *(*(func(key, value interface{}) bool))(noescape(unsafe.Pointer(&f))))
+		return state.ValueOps().Iter(state.Globals.Ctx, args[1], *noescape(&f))
 	}(func(_, v interface{}) bool {
 		found, _ = state.ValueOps().Equal(state.Globals.Ctx, args[0], v)
 		return found
@@ -273,7 +273,7 @@ func objectGetBuiltin(state *State, args []Value) error {
 	var found bool
 
 	if err := func(f func(key, value interface{}) bool) error {
-		return state.ValueOps().Iter(state.Globals.Ctx, path, *(*(func(key, value interface{}) bool))(noescape(unsafe.Pointer(&f))))
+		return state.ValueOps().Iter(state.Globals.Ctx, path, *noescape(&f))
 	}(func(_, v interface{}) bool { // path array values are our object keys
 		obj, found, _ = state.ValueOps().Get(state.Globals.Ctx, obj, v)
 		return !found // always iterate path array to the end if found
@@ -458,7 +458,7 @@ func (s scan) Execute(state *State) (bool, uint32, error) {
 	source, skey, svalue := s.Source(), s.Key(), s.Value()
 
 	if err2 := func(f func(key, value interface{}) bool) error {
-		return state.ValueOps().Iter(state.Globals.Ctx, state.Value(source), *(*(func(key, value interface{}) bool))(noescape(unsafe.Pointer(&f))))
+		return state.ValueOps().Iter(state.Globals.Ctx, state.Value(source), *noescape(&f))
 	}(func(key, value interface{}) bool {
 		state.SetValue(skey, key)
 		state.SetValue(svalue, value)
@@ -586,7 +586,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 		return false, 0, nil
 	}
 
-	if err := f.Execute((*State)(noescape(unsafe.Pointer(&inner))), args); err != nil {
+	if err := f.Execute(noescape(&inner), args); err != nil {
 		return false, 0, err
 	}
 
@@ -671,8 +671,8 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 
 	if err := func(args *[]Value, inner *State) error {
 		return state.Func(call.Func()).Execute(
-			(*State)(noescape(unsafe.Pointer(inner))),
-			*(*[]Value)(noescape(unsafe.Pointer(args))),
+			noescape(inner),
+			*noescape(args),
 		)
 	}(&args, &inner); err != nil {
 		return false, 0, err
@@ -1070,9 +1070,9 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 // compiles down to zero instructions.
 // USE CAREFULLY!
 //
-//gcassert:inline
 //go:nosplit
-func noescape(p unsafe.Pointer) unsafe.Pointer {
+func noescape[T any](t *T) *T {
+	p := unsafe.Pointer(t)
 	x := uintptr(p)
-	return unsafe.Pointer(x ^ 0) //nolint:staticcheck
+	return (*T)(unsafe.Pointer(x ^ 0)) //nolint:staticcheck
 }
