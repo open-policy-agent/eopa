@@ -2,8 +2,8 @@ package rego_vm
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
-	"os"
 	"testing"
 	"time"
 
@@ -101,38 +101,27 @@ func BenchmarkCompiler(b *testing.B) {
 	}
 }
 
+//go:embed testdata/monster.rego
+var benchMonsterRego string
+
+//go:embed testdata/monster.input
+var benchMonsterInput string
+
+//go:embed testdata/monster.result
+var benchMonsterResult string
+
 func TestMonster(t *testing.T) {
-	rego, err := os.ReadFile("testdata/monster.rego")
-	if err != nil {
-		t.Fatal(err)
-	}
-	input, err := os.ReadFile("testdata/monster.input")
-	if err != nil {
-		t.Fatal(err)
-	}
-	result, err := os.ReadFile("testdata/monster.result")
-	if err != nil {
-		t.Fatal(err)
-	}
 	query := "play"
-	policy := setup(t, string(rego), query)
-	testCompiler(t, policy, string(input), query, string(result))
+	policy := setup(t, benchMonsterRego, query)
+	testCompiler(t, policy, benchMonsterInput, query, benchMonsterResult)
 }
 
 func BenchmarkMonster(b *testing.B) {
-	rego, err := os.ReadFile("monster.rego")
-	if err != nil {
-		b.Fatal(err)
-	}
-	input, err := os.ReadFile("monster.input")
-	if err != nil {
-		b.Fatal(err)
-	}
 	query := "play"
-	policy := setup(b, string(rego), query)
+	policy := setup(b, benchMonsterRego, query)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		testCompiler(b, policy, string(input), query, "")
+		testCompiler(b, policy, benchMonsterInput, query, "")
 	}
 }

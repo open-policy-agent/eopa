@@ -80,6 +80,8 @@ jobs:
         working-directory: load
         env:
           OPA_ROOT: ${{ steps.opa.outputs.dir }}
+      - run: make benchmark
+        working-directory: load
       - name: gobenchdata check
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:

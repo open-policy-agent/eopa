@@ -25,6 +25,9 @@ push:
 test:
 	go test ./...
 
+benchmark:
+	go test -run=- -bench=. -benchmem ./...
+
 fmt:
 	golangci-lint run -v --fix
 
