@@ -5,6 +5,7 @@ import (
 	gojson "encoding/json"
 	"errors"
 	"math/big"
+	"sort"
 	"strconv"
 
 	fjson "github.com/styrainc/load/pkg/json"
@@ -168,11 +169,12 @@ func (*operations) CopyShallow(value interface{}) interface{} {
 	case fjson.String:
 		return v
 	case fjson.Array:
-		arr := fjson.NewArray()
 		n := v.Len()
+		values := make([]fjson.File, 0, n)
 		for i := 0; i < n; i++ {
-			arr.Append(v.Iterate(i))
+			values = append(values, v.Iterate(i))
 		}
+		arr := fjson.NewArray(values...)
 
 		return arr
 	case *Object:
@@ -249,17 +251,19 @@ func (o *operations) FromInterface(x interface{}) interface{} {
 	case ast.String:
 		return fjson.NewString(string(x))
 	case []interface{}:
-		arr := fjson.NewArray()
+		values := make([]fjson.File, 0, len(x))
 		for _, v := range x {
-			arr.Append(o.FromInterface(v).(fjson.Json))
+			values = append(values, o.FromInterface(v).(fjson.Json))
 		}
+		arr := fjson.NewArray(values...)
 		return arr
 	case *ast.Array:
-		arr := fjson.NewArray()
+		values := make([]fjson.File, 0, x.Len())
 		x.Iter(func(v *ast.Term) error {
-			arr.Append(o.FromInterface(v.Value).(fjson.Json))
+			values = append(values, o.FromInterface(v.Value).(fjson.Json))
 			return nil
 		})
+		arr := fjson.NewArray(values...)
 		return arr
 	case map[string]interface{}:
 		obj := NewObject()
@@ -586,8 +590,8 @@ func (o *operations) ToAST(ctx context.Context, v interface{}) (ast.Value, error
 		return ast.String(v.Value()), nil
 
 	case fjson.Array:
-		arr := ast.NewArray()
 		n := v.Len()
+		terms := make([]*ast.Term, 0, n)
 		for i := 0; i < n; i++ {
 			x := v.Iterate(i)
 			a, err := o.ToAST(ctx, x)
@@ -595,14 +599,15 @@ func (o *operations) ToAST(ctx context.Context, v interface{}) (ast.Value, error
 				return nil, err
 			}
 
-			arr = arr.Append(ast.NewTerm(a))
+			terms = append(terms, ast.NewTerm(a))
 		}
+		arr := ast.NewArray(terms...)
 		return arr, nil
 
 	case *Object:
-		obj := ast.NewObject()
 		var err error
 
+		terms := make([][2]*ast.Term, 0, v.Len())
 		v.Iter(func(k, v fjson.Json) bool {
 			var a ast.Value
 			a, err = o.ToAST(ctx, k)
@@ -616,19 +621,21 @@ func (o *operations) ToAST(ctx context.Context, v interface{}) (ast.Value, error
 				return true
 			}
 
-			obj.Insert(ast.NewTerm(a), ast.NewTerm(b))
+			terms = append(terms, [2]*ast.Term{ast.NewTerm(a), ast.NewTerm(b)})
 			return false
 		})
 		if err != nil {
 			return nil, err
 		}
+		obj := ast.NewObject(terms...)
 		return obj, nil
 
 	case fjson.Object:
-		obj := ast.NewObject()
 		var err error
 
-		for i, k := range v.Names() {
+		names := v.Names()
+		terms := make([][2]*ast.Term, 0, len(names))
+		for i, k := range names {
 			v := v.Iterate(i)
 			a := ast.String(k)
 
@@ -638,8 +645,9 @@ func (o *operations) ToAST(ctx context.Context, v interface{}) (ast.Value, error
 				break
 			}
 
-			obj.Insert(ast.NewTerm(a), ast.NewTerm(b))
+			terms = append(terms, [2]*ast.Term{ast.NewTerm(a), ast.NewTerm(b)})
 		}
+		obj := ast.NewObject(terms...)
 		if err != nil {
 			return nil, err
 		}
@@ -647,8 +655,9 @@ func (o *operations) ToAST(ctx context.Context, v interface{}) (ast.Value, error
 
 	case *Set:
 		// TODO: Sorting is for deterministic tests.
-		arr := ast.NewArray()
+		// We prealloc the Term array and sort it here to trim down the total number of allocs.
 		var err error
+		terms := make([]*ast.Term, 0, v.Len())
 		v.Iter(func(v fjson.Json) bool {
 			var a ast.Value
 			a, err = o.ToAST(ctx, v)
@@ -656,18 +665,15 @@ func (o *operations) ToAST(ctx context.Context, v interface{}) (ast.Value, error
 				return true
 			}
 
-			arr = arr.Append(ast.NewTerm(a))
+			terms = append(terms, ast.NewTerm(a))
 			return false
 		})
 		if err != nil {
 			return nil, err
 		}
 
-		set := ast.NewSet()
-		arr.Sorted().Iter(func(v *ast.Term) error {
-			set.Add(v)
-			return nil
-		})
+		sort.Sort(termSlice(terms))
+		set := ast.NewSet(terms...)
 		return set, nil
 
 	case IterNamespace:
@@ -1006,3 +1012,10 @@ func compare(x, y fjson.Float) int {
 func notImplemented() {
 	panic("not implemented")
 }
+
+// Borrowed definitions from OPA's ast/term to allow using Golang's default sort on term slices.
+type termSlice []*ast.Term
+
+func (s termSlice) Less(i, j int) bool { return ast.Compare(s[i].Value, s[j].Value) < 0 }
+func (s termSlice) Swap(i, j int)      { x := s[i]; s[i] = s[j]; s[j] = x }
+func (s termSlice) Len() int           { return len(s) }
