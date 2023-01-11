@@ -61,7 +61,7 @@ type (
 		vm                     *VM
 		cancel                 *cancel
 		Limits                 Limits
-		memoize                []map[int]*Value
+		memoize                []map[int]Value
 		Ctx                    context.Context
 		ResultSet              Value
 		Input                  *interface{}
@@ -187,7 +187,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (Value, erro
 				vm:                     vm,
 				cancel:                 cancel,
 				Limits:                 *opts.Limits,
-				memoize:                []map[int]*Value{{}},
+				memoize:                []map[int]Value{{}},
 				Ctx:                    ctx,
 				ResultSet:              result,
 				Input:                  input,
@@ -255,7 +255,7 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				vm:                  vm,
 				Limits:              *opts.Limits,
 				cancel:              cancel,
-				memoize:             []map[int]*Value{{}},
+				memoize:             []map[int]Value{{}},
 				Ctx:                 ctx,
 				Input:               opts.Input, // TODO: This assumes it's already converted.
 				Metrics:             opts.Metrics,
@@ -325,7 +325,7 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				vm:                  vm,
 				cancel:              cancel,
 				Limits:              *opts.Limits,
-				memoize:             []map[int]*Value{{}},
+				memoize:             []map[int]Value{{}},
 				Ctx:                 ctx,
 				ResultSet:           result,
 				Input:               opts.Input,
@@ -551,19 +551,19 @@ func (s *State) Unset(target Local) {
 }
 
 func (s *State) MemoizePush() {
-	s.Globals.memoize = append(s.Globals.memoize, map[int]*Value{})
+	s.Globals.memoize = append(s.Globals.memoize, map[int]Value{})
 }
 
 func (s *State) MemoizePop() {
 	s.Globals.memoize = s.Globals.memoize[0 : len(s.Globals.memoize)-1]
 }
 
-func (s *State) MemoizeGet(idx int) (*Value, bool) {
+func (s *State) MemoizeGet(idx int) (Value, bool) {
 	v, ok := s.Globals.memoize[len(s.Globals.memoize)-1][idx]
 	return v, ok
 }
 
-func (s *State) MemoizeInsert(idx int, value *Value) {
+func (s *State) MemoizeInsert(idx int, value Value) {
 	s.Globals.memoize[len(s.Globals.memoize)-1][idx] = value
 }
 

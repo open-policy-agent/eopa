@@ -46,8 +46,8 @@ func (f function) execute(state *State, args []Value) error {
 	memoize := f.ParamsLen() == 2
 	if memoize {
 		if value, ok := state.MemoizeGet(index); ok {
-			if value != nil {
-				state.SetValue(ret, *value)
+			if !isUnset(value) {
+				state.SetValue(ret, value)
 				state.SetReturn(ret)
 			}
 			// else {
@@ -77,10 +77,11 @@ func (f function) execute(state *State, args []Value) error {
 	}
 
 	if memoize {
-		var value *Value
+		var value Value
 		if local, defined := state.Return(); defined {
-			v := state.Value(local)
-			value = &v
+			value = state.Value(local)
+		} else {
+			value = unset()
 		}
 
 		state.MemoizeInsert(index, value)
