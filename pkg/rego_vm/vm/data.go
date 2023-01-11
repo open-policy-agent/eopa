@@ -753,6 +753,10 @@ func (s *Set) Len() int {
 }
 
 func (s *Set) Equal(y *Set) bool {
+	if s == y {
+		return true
+	}
+
 	if s.Len() != y.Len() {
 		return false
 	}
@@ -827,6 +831,10 @@ func (o *Object) Equal(other interface{}) bool {
 	ob, ok := other.(*Object)
 	if !ok {
 		return false
+	}
+
+	if o == ob {
+		return true
 	}
 
 	if o.Len() != ob.Len() {
