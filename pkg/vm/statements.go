@@ -541,6 +541,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 	}
 
 	inner := state.New()
+	defer releaseState(state.Globals, &inner)
 
 	args := make([]Value, call.ArgsLen())
 	call.ArgsIter(func(i uint32, arg Local) error {
@@ -669,6 +670,7 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 	})
 
 	inner := state.New()
+	defer releaseState(state.Globals, &inner)
 
 	if err := func(args *[]Value, inner *State) error {
 		return state.Func(call.Func()).Execute(

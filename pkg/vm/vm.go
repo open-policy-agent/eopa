@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	gstrings "strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -74,6 +75,7 @@ type (
 		PrintHook              print.Hook
 		StrictBuiltinErrors    bool
 		BuiltinErrors          []error
+		registersPool          sync.Pool
 	}
 
 	Limits struct {
@@ -81,10 +83,15 @@ type (
 	}
 
 	Locals struct {
-		registers  []definedValue
+		registers  *registersList
 		data       map[Local]struct{}
 		ret        Local // function return value
 		retDefined bool
+	}
+
+	registersList struct {
+		next      *registersList // linked list of sync.Pool objects
+		registers [registersSize]definedValue
 	}
 
 	definedValue struct {
@@ -109,14 +116,35 @@ type (
 
 const (
 	// Input is the local variable that refers to the global input document.
-	Input Local = iota
-
-	// Data is the local variable that refers to the global data document.
-	Data
-
-	// Unused is the free local variable that can be allocated in a plan.
-	Unused
+	Input  Local = iota
+	Data         // Data is the local variable that refers to the global data document.
+	Unused       // Unused is the free local variable that can be allocated in a plan.
 )
+
+// registersSize: tradeoff between pre-allocating too much and not enough; tested values 4, 8 and 16
+const registersSize int = 16
+
+func newGlobals(ctx context.Context, vm *VM, opts EvalOpts, cancel *cancel, runtime *ast.Term, input *interface{}) *Globals {
+	return &Globals{
+		vm:                  vm,
+		Limits:              *opts.Limits,
+		cancel:              cancel,
+		memoize:             []map[int]Value{{}},
+		Ctx:                 ctx,
+		Input:               input,
+		Metrics:             opts.Metrics,
+		Time:                opts.Time,
+		Seed:                opts.Seed,
+		Runtime:             runtime,
+		PrintHook:           opts.PrintHook,
+		StrictBuiltinErrors: opts.StrictBuiltinErrors,
+		registersPool: sync.Pool{
+			New: func() any {
+				return new(registersList)
+			},
+		},
+	}
+}
 
 func NewVM() *VM {
 	return &VM{}
@@ -183,25 +211,13 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (Value, erro
 
 			result := vm.ops.MakeSet()
 
-			globals := &Globals{
-				vm:                     vm,
-				cancel:                 cancel,
-				Limits:                 *opts.Limits,
-				memoize:                []map[int]Value{{}},
-				Ctx:                    ctx,
-				ResultSet:              result,
-				Input:                  input,
-				Metrics:                opts.Metrics,
-				Time:                   opts.Time,
-				Seed:                   opts.Seed,
-				Runtime:                runtime,
-				Cache:                  opts.Cache,
-				PrintHook:              opts.PrintHook,
-				StrictBuiltinErrors:    opts.StrictBuiltinErrors,
-				InterQueryBuiltinCache: opts.InterQueryBuiltinCache,
-			}
+			globals := newGlobals(ctx, vm, opts, cancel, runtime, input)
+			globals.ResultSet = result
+			globals.Cache = opts.Cache
+			globals.InterQueryBuiltinCache = opts.InterQueryBuiltinCache
 
 			state := newState(globals, StatisticsGet(ctx))
+			defer releaseState(globals, &state)
 			if err := plan.Execute(&state); err != nil {
 				return nil, err
 			}
@@ -251,20 +267,7 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				return nil, false, false, err
 			}
 
-			globals := &Globals{
-				vm:                  vm,
-				Limits:              *opts.Limits,
-				cancel:              cancel,
-				memoize:             []map[int]Value{{}},
-				Ctx:                 ctx,
-				Input:               opts.Input, // TODO: This assumes it's already converted.
-				Metrics:             opts.Metrics,
-				Time:                opts.Time,
-				Seed:                opts.Seed,
-				Runtime:             runtime,
-				PrintHook:           opts.PrintHook,
-				StrictBuiltinErrors: opts.StrictBuiltinErrors,
-			}
+			globals := newGlobals(ctx, vm, opts, cancel, runtime, opts.Input)
 
 			args := make([]Value, 2)
 			if opts.Input != nil {
@@ -282,6 +285,7 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 			}
 
 			state := newState(globals, StatisticsGet(ctx))
+			defer releaseState(globals, &state)
 			if err := f.Execute(&state, args); err != nil {
 				return nil, false, false, err
 			}
@@ -321,21 +325,8 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 
 			result := vm.ops.MakeSet()
 
-			globals := &Globals{
-				vm:                  vm,
-				cancel:              cancel,
-				Limits:              *opts.Limits,
-				memoize:             []map[int]Value{{}},
-				Ctx:                 ctx,
-				ResultSet:           result,
-				Input:               opts.Input,
-				Metrics:             opts.Metrics,
-				Time:                opts.Time,
-				Seed:                opts.Seed,
-				Runtime:             runtime,
-				PrintHook:           opts.PrintHook,
-				StrictBuiltinErrors: opts.StrictBuiltinErrors,
-			}
+			globals := newGlobals(ctx, vm, opts, cancel, runtime, opts.Input)
+			globals.ResultSet = result
 
 			state := newState(globals, StatisticsGet(ctx))
 			if err := plan.Execute(&state); err != nil {
@@ -398,6 +389,7 @@ func newState(globals *Globals, stats *Statistics) State {
 		},
 		stats: stats,
 	}
+	s.locals.registers = s.Globals.registersPool.Get().(*registersList)
 
 	if globals.Input != nil {
 		s.SetValue(Input, *globals.Input)
@@ -407,6 +399,19 @@ func newState(globals *Globals, stats *Statistics) State {
 		s.SetValue(Data, *globals.vm.data)
 	}
 	return s
+}
+
+func releaseState(globals *Globals, state *State) {
+	p := state.locals.registers
+	var next *registersList
+	for ; p != nil; p = next {
+		for i := range p.registers {
+			p.registers[i] = definedValue{} // release Values
+		}
+		next = p.next
+		p.next = nil
+		globals.registersPool.Put(p) //nolint: staticcheck
+	}
 }
 
 func (s *State) New() State {
@@ -451,8 +456,8 @@ next:
 func (s *State) IsDefined(v LocalOrConst) bool {
 	switch v := v.(type) {
 	case Local:
-		s.locals.grow(v)
-		return s.locals.registers[v].defined
+		s.grow(v)
+		return s.locals.findReg(v).registers[int(v)%registersSize].defined
 	default:
 		return true
 	}
@@ -461,8 +466,8 @@ func (s *State) IsDefined(v LocalOrConst) bool {
 func (s *State) Value(v LocalOrConst) Value {
 	switch v := v.(type) {
 	case Local:
-		s.locals.grow(v)
-		return s.locals.registers[v].value
+		s.grow(v)
+		return s.locals.findReg(v).registers[int(v)%registersSize].value
 	case BoolConst:
 		return s.ValueOps().MakeBoolean(bool(v))
 	case StringIndexConst:
@@ -480,34 +485,34 @@ func (s *State) Return() (Local, bool) {
 func (s *State) Set(target Local, source LocalOrConst) {
 	switch v := source.(type) {
 	case Local:
-		s.locals.grow(target)
-		s.locals.grow(v)
-		s.locals.registers[target] = s.locals.registers[v]
+		s.grow(target)
+		s.grow(v)
+		s.locals.findReg(target).registers[int(target)%registersSize] = s.locals.findReg(v).registers[int(v)%registersSize]
 
 	case BoolConst:
-		s.locals.grow(target)
-		s.locals.registers[target] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
+		s.grow(target)
+		s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
 
 	case StringIndexConst:
-		s.locals.grow(target)
-		s.locals.registers[target] = definedValue{true, s.Globals.vm.executable.Strings().String(s.Globals.vm.ops, v)}
+		s.grow(target)
+		s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(s.Globals.vm.ops, v)}
 	}
 }
 
 func (s *State) SetFrom(target Local, other *State, source LocalOrConst) {
 	switch v := source.(type) {
 	case Local:
-		s.locals.grow(target)
-		other.locals.grow(v)
-		s.locals.registers[target] = other.locals.registers[v]
+		s.grow(target)
+		other.grow(v)
+		s.locals.findReg(target).registers[int(target)%registersSize] = other.locals.findReg(v).registers[int(v)%registersSize]
 
 	case BoolConst:
-		s.locals.grow(target)
-		s.locals.registers[target] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
+		s.grow(target)
+		s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
 
 	case StringIndexConst:
-		s.locals.grow(target)
-		s.locals.registers[target] = definedValue{true, s.Globals.vm.executable.Strings().String(s.Globals.vm.ops, v)}
+		s.grow(target)
+		s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(s.Globals.vm.ops, v)}
 	}
 }
 
@@ -516,8 +521,8 @@ func (s *State) SetReturn(source Local) {
 }
 
 func (s *State) SetValue(target Local, value Value) {
-	s.locals.grow(target)
-	s.locals.registers[target] = definedValue{true, value}
+	s.grow(target)
+	s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, value}
 }
 
 func (s *State) SetData(l Local) {
@@ -545,8 +550,8 @@ func (s *State) DataGet(ctx context.Context, value, key interface{}) (interface{
 }
 
 func (s *State) Unset(target Local) {
-	s.locals.grow(target)
-	s.locals.registers[target] = definedValue{false, nil}
+	s.grow(target)
+	s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{false, nil}
 	delete(s.locals.data, target)
 }
 
@@ -585,19 +590,26 @@ func (s *State) Instr() error {
 
 func (l *Locals) SetReturn(source Local) {
 	l.ret = source
-	l.retDefined = l.registers[source].defined
+	l.retDefined = l.findReg(source).registers[int(source)%registersSize].defined
 }
 
-func (l *Locals) grow(v Local) {
-	if n := int(v) - len(l.registers); n >= 0 {
-		// Allocate more than exactly requested, as it is
-		// likely they are more registers. This amortizes the
-		// cost.
-		if len(l.registers) == 0 {
-			l.registers = make([]definedValue, n+16)
-		} else {
-			l.registers = append(l.registers, make([]definedValue, n+16)...)
+func (l *Locals) findReg(target Local) *registersList {
+	buckets := int(target) / registersSize
+	r := l.registers
+	for i := 0; i < buckets; i++ {
+		r = r.next
+	}
+	return r
+}
+
+func (s *State) grow(v Local) {
+	buckets := int(v) / registersSize
+	r := s.locals.registers
+	for i := 0; i < buckets; i++ {
+		if r.next == nil {
+			r.next = s.Globals.registersPool.Get().(*registersList)
 		}
+		r = r.next
 	}
 }
 

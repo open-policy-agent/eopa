@@ -249,7 +249,7 @@ func assertErrorCode(t testing.TB, wantErrorCode string, err error) {
 	e, ok := err.(*topdown.Error)
 	if !ok {
 		// Try known exception
-		if strings.Contains(err.Error(), "object insert conflict") {
+		if err != nil && strings.Contains(err.Error(), "object insert conflict") {
 			return
 		}
 		t.Fatalf("expected topdown error but got: %v %[1]T", err)
