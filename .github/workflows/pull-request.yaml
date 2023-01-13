@@ -156,7 +156,7 @@ jobs:
           fetch-depth: 0
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      - uses: imjasonh/setup-ko@v0.6
+      - uses: ko-build/setup-ko@v0.6
       - name: Build
         run: make build
       - name: Upload image tarball
