@@ -206,7 +206,7 @@ jobs:
           fetch-depth: 0
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      - uses: imjasonh/setup-ko@v0.6
+      - uses: ko-build/setup-ko@v0.6
         env:
           KO_DOCKER_REPO: 547414210802.dkr.ecr.us-east-1.amazonaws.com/styra
       - name: Build and Push
