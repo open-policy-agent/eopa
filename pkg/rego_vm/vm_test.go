@@ -1,6 +1,7 @@
 package rego_vm
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -16,18 +17,7 @@ import (
 	"github.com/styrainc/load/pkg/vm"
 )
 
-func setup(tb testing.TB, rego string, query string) ir.Policy {
-	b := &bundle.Bundle{
-		Modules: []bundle.ModuleFile{
-			{
-				URL:    "/url",
-				Path:   "/foo.rego",
-				Raw:    []byte(rego),
-				Parsed: ast.MustParseModule(rego),
-			},
-		},
-	}
-
+func setup(tb testing.TB, b *bundle.Bundle, query string) ir.Policy {
 	// use OPA to extract IR
 	compiler := compile.New().WithTarget(compile.TargetPlan).WithBundle(b).WithEntrypoints(query)
 	if err := compiler.Build(context.Background()); err != nil {
@@ -41,6 +31,29 @@ func setup(tb testing.TB, rego string, query string) ir.Policy {
 		tb.Fatal(err)
 	}
 	return policy
+}
+
+func createBundle(tb testing.TB, rego string) *bundle.Bundle {
+	b := &bundle.Bundle{
+		Modules: []bundle.ModuleFile{
+			{
+				URL:    "/url",
+				Path:   "/foo.rego",
+				Raw:    []byte(rego),
+				Parsed: ast.MustParseModule(rego),
+			},
+		},
+	}
+	return b
+}
+
+func loadBundle(tb testing.TB, buffer []byte) *bundle.Bundle {
+	reader := bundle.NewCustomReader(bundle.NewTarballLoader(bytes.NewReader(buffer)))
+	b, err := reader.Read()
+	if err != nil {
+		tb.Fatal("bundle failed", err)
+	}
+	return &b
 }
 
 func testCompiler(tb testing.TB, policy ir.Policy, input string, query string, result string) {
@@ -88,12 +101,14 @@ const simpleQuery = "test/allow"
 const simpleResult = `{{"result": true}}`
 
 func TestCompiler(t *testing.T) {
-	policy := setup(t, simpleRego, simpleQuery)
+	bundle := createBundle(t, simpleRego)
+	policy := setup(t, bundle, simpleQuery)
 	testCompiler(t, policy, simpleInput, simpleQuery, simpleResult)
 }
 
 func BenchmarkCompiler(b *testing.B) {
-	policy := setup(b, simpleRego, simpleQuery)
+	bundle := createBundle(b, simpleRego)
+	policy := setup(b, bundle, simpleQuery)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -112,16 +127,47 @@ var benchMonsterResult string
 
 func TestMonster(t *testing.T) {
 	query := "play"
-	policy := setup(t, benchMonsterRego, query)
+	bundle := createBundle(t, benchMonsterRego)
+	policy := setup(t, bundle, query)
 	testCompiler(t, policy, benchMonsterInput, query, benchMonsterResult)
 }
 
 func BenchmarkMonster(b *testing.B) {
 	query := "play"
-	policy := setup(b, benchMonsterRego, query)
+	bundle := createBundle(b, benchMonsterRego)
+	policy := setup(b, bundle, query)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		testCompiler(b, policy, benchMonsterInput, query, "")
+	}
+}
+
+// Entitlements
+//
+//go:embed testdata/entitlements.input
+var benchEntitlementsInput string
+
+//go:embed testdata/entitlements.result
+var benchEntitlementsResult string
+
+//go:embed testdata/entitlements.bundle.tgz
+var benchEntitlementsBundle []byte
+
+var benchEntitlementsQuery = `main/main`
+
+func TestEntitlements(t *testing.T) {
+	bundle := loadBundle(t, benchEntitlementsBundle)
+	policy := setup(t, bundle, benchEntitlementsQuery)
+	testCompiler(t, policy, benchEntitlementsInput, benchEntitlementsQuery, benchEntitlementsResult)
+}
+
+func BenchmarkEntitlements(b *testing.B) {
+	bundle := loadBundle(b, benchEntitlementsBundle)
+	policy := setup(b, bundle, benchEntitlementsQuery)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		testCompiler(b, policy, benchEntitlementsInput, benchEntitlementsQuery, "")
 	}
 }
