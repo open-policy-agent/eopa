@@ -113,12 +113,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		Runtime:                state.Globals.Runtime,
 		Cache:                  state.Globals.Cache,
 		InterQueryBuiltinCache: state.Globals.InterQueryBuiltinCache,
-		// Location:               e.query[e.index].Location,
-		// QueryTracers:           e.tracers,
-		// TraceEnabled:           e.traceEnabled,
-		// QueryID:                e.queryID,
-		// ParentID:               parentID,
-		PrintHook: state.Globals.PrintHook,
+		PrintHook:              state.Globals.PrintHook,
 	}
 
 	// Prefer allocating a fixed size slice, to keep it in stack.
@@ -141,6 +136,10 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		}
 
 		a[i] = ast.NewTerm(v)
+	}
+
+	if builtin.Name() == ast.InternalPrint.Name {
+		bctx.Location = &ast.Location{}
 	}
 
 	relation := builtin.Relation()
