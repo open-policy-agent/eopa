@@ -2,6 +2,7 @@ package vm
 
 import (
 	"context"
+	"encoding/base64"
 	gojson "encoding/json"
 	"errors"
 	"math/big"
@@ -255,26 +256,30 @@ func (o *operations) FromInterface(x interface{}) interface{} {
 		for _, v := range x {
 			values = append(values, o.FromInterface(v).(fjson.Json))
 		}
-		arr := fjson.NewArray(values...)
-		return arr
+		return fjson.NewArray(values...)
 	case *ast.Array:
 		values := make([]fjson.File, 0, x.Len())
 		x.Iter(func(v *ast.Term) error {
 			values = append(values, o.FromInterface(v.Value).(fjson.Json))
 			return nil
 		})
-		arr := fjson.NewArray(values...)
-		return arr
+		return fjson.NewArray(values...)
 	case map[string]interface{}:
 		obj := NewObject()
 		for k, v := range x {
 			obj.Insert(fjson.NewString(k), o.FromInterface(v).(fjson.Json))
 		}
 		return obj
+	case []map[string]interface{}:
+		values := make([]fjson.File, 0, len(x))
+		for _, v := range x {
+			values = append(values, o.FromInterface(v).(fjson.Json))
+		}
+		return fjson.NewArray(values...)
 	case map[string]string:
 		obj := NewObject()
 		for k, v := range x {
-			obj.Insert(fjson.NewString(k), o.FromInterface(v).(fjson.Json))
+			obj.Insert(fjson.NewString(k), fjson.NewString(v))
 		}
 		return obj
 	case ast.Object:
@@ -295,6 +300,8 @@ func (o *operations) FromInterface(x interface{}) interface{} {
 		return set
 	case *ast.Term:
 		return o.FromInterface(x.Value)
+	case []byte:
+		return fjson.NewString(base64.StdEncoding.EncodeToString(x))
 	default:
 		notImplemented()
 	}

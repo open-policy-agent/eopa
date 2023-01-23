@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/styrainc/load/pkg/plugins/bundle"
+	"github.com/styrainc/load/pkg/plugins/data"
 	"github.com/styrainc/load/pkg/plugins/discovery"
 	inmem "github.com/styrainc/load/pkg/store"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/spf13/pflag"
 
 	bundleApi "github.com/open-policy-agent/opa/bundle"
+	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/runtime"
 	"github.com/open-policy-agent/opa/server"
 )
@@ -279,7 +281,10 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	rt.SetDistributedTracingLogging()
 
 	// register the discovery plugin
-	disco, err := discovery.New(rt.Manager, discovery.Metrics(rt.Metrics()))
+	disco, err := discovery.New(rt.Manager,
+		discovery.Metrics(rt.Metrics()),
+		discovery.Factories(map[string]plugins.Factory{data.Name: data.Factory()}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("config error: %w", err)
 	}
