@@ -3,6 +3,7 @@ package data_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/plugin/kzerolog"
 
+	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
@@ -59,10 +61,16 @@ transform contains {"op": "add", "path": key, "value": val} if {
 		t.Fatalf("store transform policy: %v", err)
 	}
 	h := topdown.NewPrintHook(os.Stderr)
-	mgr, err := plugins.New([]byte(config), "test-instance-id", store,
+	opts := []func(*plugins.Manager){
 		plugins.PrintHook(h),
 		plugins.EnablePrintStatements(true),
-	)
+	}
+	if !testing.Verbose() {
+		opts = append(opts, plugins.Logger(logging.NewNoOpLogger()))
+		opts = append(opts, plugins.ConsoleLogger(logging.NewNoOpLogger()))
+	}
+
+	mgr, err := plugins.New([]byte(config), "test-instance-id", store, opts...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +204,12 @@ func testKafka(t *testing.T) *dockertest.Resource {
 }
 
 func kafkaClient(k *dockertest.Resource) (*kgo.Client, error) {
-	logger := zerolog.New(os.Stderr)
+	var logger zerolog.Logger
+	if testing.Verbose() {
+		logger = zerolog.New(os.Stderr)
+	} else {
+		logger = zerolog.New(io.Discard)
+	}
 
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(fmt.Sprintf("localhost:%s", k.GetPort("9092/tcp"))),
