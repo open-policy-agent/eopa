@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 
@@ -174,7 +175,7 @@ func (c *Data) prepareTransform(ctx context.Context) error {
 				ast.NewTerm(ast.NewObject(
 					ast.Item(ast.StringTerm("op"), ast.VarTerm("op")),
 					ast.Item(ast.StringTerm("value"), ast.VarTerm("value")),
-					ast.Item(ast.StringTerm("path"), ast.VarTerm("path")), // TODO(sr): won't exist for remove
+					ast.Item(ast.StringTerm("path"), ast.VarTerm("path")),
 				)),
 			))),
 		)
@@ -224,13 +225,20 @@ func (c *Data) transformOne(ctx context.Context, txn storage.Transaction, messag
 	}
 	proc := make([]processed, len(rs))
 	for i := range rs {
-		p, ok := rs[i].Bindings["path"].(string) // TODO: more defensive, "path" might not exist
+		p0, ok := rs[i].Bindings["path"]
+		if !ok {
+			return nil, fmt.Errorf("no path in transform bindings %v", rs[i].Bindings)
+		}
+		p, ok := p0.(string)
 		if !ok {
 			return nil, fmt.Errorf("failed to parse path %q", rs[i].Bindings["path"])
 		}
-		path, err := storage.NewPathForRef(c.path.Append(ast.StringTerm(p)))
+		path, err := storage.NewPathForRef(c.path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse path %q: %w", p, err)
+		}
+		for _, piece := range strings.Split(p, "/") {
+			path = append(path, piece)
 		}
 		var op storage.PatchOp
 		switch rs[i].Bindings["op"] {
@@ -239,13 +247,13 @@ func (c *Data) transformOne(ctx context.Context, txn storage.Transaction, messag
 		case "add":
 			op = storage.AddOp
 		case "remove":
-			op = storage.RemoveOp // TODO(sr): remove wouldnt require a value
+			op = storage.RemoveOp
 		}
 
 		proc[i] = processed{
 			op:    op,
 			path:  path,
-			value: rs[i].Bindings["value"],
+			value: rs[i].Bindings["value"], // nil if not bound
 		}
 	}
 	return proc, nil

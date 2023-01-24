@@ -2,6 +2,7 @@ package data_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -136,6 +137,127 @@ transform contains {"op": "add", "path": key, "value": val} if {
 		if diff := cmp.Diff(exp, act); diff != "" {
 			t.Errorf("data value mismatch (-want +got):\n%s", diff)
 		}
+	}
+}
+
+func TestKafkaTransforms(t *testing.T) {
+	ctx := context.Background()
+	kafka := testKafka(t)
+	topic := "cipot"
+	store := inmem.New()
+	config := fmt.Sprintf(`
+plugins:
+  data:
+    kafka.messages:
+      type: kafka
+      brokerURLs: [%[1]s]
+      topics: [%[2]s]
+      rego_transform: "data.e2e.transform"
+`, kafka.GetHostPort("9092/tcp"), topic)
+
+	transform := `package e2e
+import future.keywords
+transform contains json.unmarshal(base64.decode(input.value)) if print(input)
+`
+	if err := storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
+		return store.UpsertPolicy(ctx, txn, "e2e.rego", []byte(transform))
+	}); err != nil {
+		t.Fatalf("store transform policy: %v", err)
+	}
+	l := logging.New()
+	l.SetLevel(logging.Debug)
+	mgr, err := plugins.New([]byte(config), "test-instance-id", store,
+		plugins.Logger(l),
+		plugins.EnablePrintStatements(true),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	disco, err := discovery.New(mgr,
+		discovery.Factories(map[string]plugins.Factory{data.Name: data.Factory()}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr.Register(discovery.Name, disco)
+
+	cl, err := kafkaClient(kafka)
+	if err != nil {
+		t.Fatalf("kafka client: %v", err)
+	}
+
+	if err := mgr.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, op := range []struct {
+		path string
+		op   string
+		val  any
+	}{
+		{
+			path: "a",
+			op:   "add",
+			val:  map[string]any{"b": false, "c": 21},
+		},
+		{
+			path: "a/c",
+			op:   "replace",
+			val:  float64(22),
+		},
+		{
+			path: "a/b",
+			op:   "remove",
+		},
+		{
+			path: "arr",
+			op:   "add",
+			val:  []string{"foo"},
+		},
+		{
+			path: "arr/-",
+			op:   "add",
+			val:  "bar",
+		},
+		{
+			path: "arr/0",
+			op:   "replace",
+			val:  "fox",
+		},
+		{
+			path: "done",
+			op:   "add",
+			val:  true,
+		},
+	} {
+		payload, err := json.Marshal(map[string]any{
+			"value": op.val,
+			"op":    op.op,
+			"path":  op.path,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		record := &kgo.Record{
+			Topic: topic,
+			Value: payload,
+		}
+		cl.Produce(ctx, record, nil)
+	}
+
+	waitForStorePath(ctx, t, store, "/kafka/messages/done")
+
+	act, err := storage.ReadOne(ctx, store, storage.MustParsePath("/kafka/messages"))
+	if err != nil {
+		t.Fatalf("read back data: %v", err)
+	}
+	exp := map[string]any{
+		"a":    map[string]any{"c": json.Number("22")},
+		"arr":  []any{"fox", "bar"},
+		"done": true,
+	}
+	if diff := cmp.Diff(exp, act); diff != "" {
+		t.Errorf("data value mismatch (-want +got):\n%s", diff)
 	}
 }
 

@@ -8,5 +8,4 @@ type Config struct {
 
 	RegoTransformRule string `json:"rego_transform"`
 	// TODO(sr): TLS
-	// TODO(sr): Data transformations
 }
