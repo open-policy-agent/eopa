@@ -132,6 +132,7 @@ jobs:
       - run: make test
         working-directory: _e2e
         env:
+          STYRA_LOAD_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
           IMAGE: ${{ steps.load.outputs.image }}
           BUNDLES: ${{ steps.load.outputs.bundles }}
           BUNDLE_FILE_PATH: bundles/systems/bc01d50d17d7446684c4e6c34a1ad07f
@@ -185,6 +186,7 @@ jobs:
       - run: make test
         working-directory: e2e/cli
         env:
+          STYRA_LOAD_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
           IMAGE: ${{ steps.load.outputs.image }}
 
   deploy:

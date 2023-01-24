@@ -35,7 +35,7 @@ check:
 	golangci-lint run -v
 
 run:
-	docker run -p 8181:8181 -v $$(pwd):/cwd -w /cwd $$($(KO_BUILD) --local) run --server --log-level debug
+	docker run -e STYRA_LOAD_LICENSE_TOKEN -p 8181:8181 -v $$(pwd):/cwd -w /cwd $$($(KO_BUILD) --local) run --server --log-level debug
 
 update:
 	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@load-0.48

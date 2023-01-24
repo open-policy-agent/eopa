@@ -25,11 +25,11 @@ import (
 // Run provides the CLI entrypoint for the `run` subcommand
 func Run(opa *cobra.Command) *cobra.Command {
 	// Only override Run, so we keep the args and usage texts
-	opa.Run = run
+	opa.RunE = run
 	return opa
 }
 
-func run(c *cobra.Command, args []string) {
+func run(c *cobra.Command, args []string) error {
 	ctx := context.Background()
 	params, err := newRunParams(c)
 	if err != nil {
@@ -39,9 +39,10 @@ func run(c *cobra.Command, args []string) {
 	rt, err := initRuntime(ctx, params, args)
 	if err != nil {
 		fmt.Println("error:", err)
-		os.Exit(1)
+		return err
 	}
-	startRuntime(ctx, rt, true)
+	startRuntime(ctx, rt, params.serverMode)
+	return nil
 }
 
 type runCmdParams struct {

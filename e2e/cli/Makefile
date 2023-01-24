@@ -1,4 +1,4 @@
-DOCKER:=docker run -v $$(pwd):/w -w /w --user root $(IMAGE)
+DOCKER:=docker run -e STYRA_LOAD_LICENSE_TOKEN -v $$(pwd):/w -w /w --user root $(IMAGE)
 
 .PHONY: test
 test:
