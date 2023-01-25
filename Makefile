@@ -8,7 +8,7 @@ KO_BUILD := ko build --sbom=none --base-import-paths --platform=linux/amd64 --ta
 
 BUILD_DIR := $(shell echo `pwd`)
 
-.PHONY: load build build-local push test fmt check run update docker-login deploy-ci
+.PHONY: load build build-local push test fmt check run update docker-login deploy-ci e2e
 
 load:
 	go build -o $(BUILD_DIR)/bin/load .
@@ -24,6 +24,9 @@ push:
 
 test:
 	go test ./...
+
+e2e:
+	go test -tags e2e ./e2e/... -v -count=1 # always run
 
 benchmark:
 	go test -run=- -bench=. -benchmem ./...

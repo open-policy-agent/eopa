@@ -10,6 +10,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/keygen-sh/keygen-go/v2 v2.2.1
 	github.com/open-policy-agent/opa v0.48.0
+	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/rs/zerolog v1.28.0
 	github.com/spf13/cobra v1.6.1
@@ -25,6 +26,7 @@ require (
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytecodealliance/wasmtime-go/v3 v3.0.2 // indirect
+	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cenkalti/backoff/v4 v4.1.3 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
@@ -55,6 +57,7 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
+	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
@@ -115,6 +118,7 @@ require (
 	google.golang.org/grpc v1.51.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gotest.tools v2.2.0+incompatible // indirect
 	oras.land/oras-go v1.2.2 // indirect
 )
 
