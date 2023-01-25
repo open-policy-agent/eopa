@@ -1,0 +1,88 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+project_name: load_wasm
+builds:
+  -
+    env:
+      - CGO_ENABLED=1
+    flags:
+      - -tags=opa_wasm
+    goos:
+      - windows
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    overrides:
+      - goos: windows
+        goarch: amd64
+        goamd64: v1
+        env:
+          - CGO_ENABLED=1
+          - CC=x86_64-w64-mingw32-gcc
+      - goos: linux
+        goarch: amd64
+        goamd64: v1
+        env:
+          - CGO_ENABLED=1
+          - CC=x86_64-linux-gnu-gcc
+          - CXX=x86_64-linux-gnu-g++
+      - goos: linux
+        goarch: arm64
+        env:
+          - CGO_ENABLED=1
+          - CC=aarch64-linux-gnu-gcc
+          - CXX=aarch64-linux-gnu-g++
+      - goos: darwin
+        goarch: amd64
+        goamd64: v1
+        env:
+          - CGO_ENABLED=1
+          - CC=o64-clang
+          - CXX=o64-clang++
+      - goos: darwin
+        goarch: arm64
+        env:
+          - CGO_ENABLED=1
+          - CC=oa64-clang
+          - CXX=oa64-clang++
+
+universal_binaries:
+- replace: true
+
+archives:
+  - format: tar.gz
+    # this name template makes the OS and Arch compatible with the results of uname.
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+      - CHANGELOG.md
+    allow_different_binary_count: true
+    rlcp: true
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^ci:'
