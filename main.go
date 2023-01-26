@@ -32,6 +32,7 @@ type sLicense struct {
 func (l *sLicense) validateLicense() error {
 	keygen.Account = "dd0105d1-9564-4f58-ae1c-9defdd0bfea7" // account=styra-com
 	keygen.Product = "f7da4ae5-7bf5-46f6-9634-026bec5e8599" // product=load
+	keygen.Logger = &keygenLogger{Level: keygen.LogLevelNone}
 
 	// validate licensekey or licensetoken
 	keygen.LicenseKey = os.Getenv(loadLicenseKey)
