@@ -1,6 +1,7 @@
 # This is an example .goreleaser.yml file with some sensible defaults.
 # Make sure to check the documentation at https://goreleaser.com
 project_name: load
+
 builds:
   - env:
       - CGO_ENABLED=0
@@ -11,6 +12,11 @@ builds:
     goarch:
       - amd64
       - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+      - goos: linux
+        goarch: arm64
 
 universal_binaries:
 - replace: true

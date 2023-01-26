@@ -4,11 +4,20 @@ export KO_DOCKER_REPO=547414210802.dkr.ecr.us-east-1.amazonaws.com/styra
 VERSION_OPA := $(shell ./build/get-opa-version.sh)
 VERSION := $(VERSION_OPA)$(shell ./build/get-plugin-rev.sh)
 
+GOVERSION ?= $(shell cat ./.go-version)
+GOARCH := $(shell go env GOARCH)
+GOOS := $(shell go env GOOS)
+
 KO_BUILD := ko build --sbom=none --base-import-paths --platform=linux/amd64 --tags $(VERSION)
 
 BUILD_DIR := $(shell echo `pwd`)
+RELEASE_DIR := _release
 
 .PHONY: load build release release-wasm build-local push test fmt check run update docker-login deploy-ci e2e
+
+.PHONY: release-dir
+$(RELEASE_DIR):
+	mkdir -p $(RELEASE_DIR)
 
 load:
 	go build -o $(BUILD_DIR)/bin/load .
@@ -58,3 +67,21 @@ docker-login:
 	@aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 547414210802.dkr.ecr.us-east-1.amazonaws.com
 
 deploy-ci: docker-login push
+
+# ci-smoke-test
+#    called by github action
+#    run locally:
+#      make release
+#      make ci-smoke-test ARCHIVE=dist/load_Darwin_all.tar.gz BINARY=load
+#
+.PHONY: ci-smoke-test
+ci-smoke-test: $(RELEASE_DIR)
+	test -f "$(ARCHIVE)"
+ifeq ($(GOOS),windows)
+	cd $(RELEASE_DIR); unzip ../$(ARCHIVE)
+else
+	cd $(RELEASE_DIR); tar xzf ../$(ARCHIVE)
+endif
+	test -f "$(RELEASE_DIR)/$(BINARY)"
+	./build/binary-smoke-test.sh "$(RELEASE_DIR)/$(BINARY)" rego
+	rm -rf $(RELEASE_DIR)
