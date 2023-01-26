@@ -72,10 +72,17 @@ func (l *sLicense) validateLicense() error {
 		if err := machine.Monitor(); err != nil {
 			return fmt.Errorf("license heartbeat monitor failed to start: %w", err)
 		}
+
+		// validate after activation: detect expired licenses
+		l.license, err = keygen.Validate(l.fingerprint)
+		if err != nil {
+			return fmt.Errorf("license validate failed: %w", err)
+		}
+
 		return nil
 
 	case err != nil:
-		return fmt.Errorf("invalid license: %v", err)
+		return fmt.Errorf("invalid license: %w", err)
 	}
 
 	return nil
