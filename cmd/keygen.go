@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/google/uuid"
@@ -19,6 +20,7 @@ type (
 		mutex       sync.Mutex
 		license     *keygen.License
 		released    bool
+		stop        int32
 		fingerprint string
 	}
 
@@ -62,18 +64,32 @@ func (l *keygenLogger) Debugf(format string, v ...interface{}) {
 	fmt.Fprintf(os.Stdout, "[DEBUG] "+format+"\n", v...)
 }
 
+// stopped: see if releaseLicense was called
+func (l *sLicense) stopped() bool {
+	return atomic.LoadInt32(&l.stop) != 0
+}
+
 // validate and activate the keygen license
-func (l *sLicense) validateLicense() error {
+func (l *sLicense) validateLicense() {
 	keygen.Account = "dd0105d1-9564-4f58-ae1c-9defdd0bfea7" // account=styra-com
 	keygen.Product = "f7da4ae5-7bf5-46f6-9634-026bec5e8599" // product=load
 	keygen.Logger = &keygenLogger{level: keygen.LogLevelNone}
+
+	var err error
+	defer func() {
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(2)
+		}
+	}()
 
 	// validate licensekey or licensetoken
 	keygen.LicenseKey = os.Getenv(loadLicenseKey)
 	if keygen.LicenseKey == "" {
 		keygen.Token = os.Getenv(loadLicenseToken) // activation-token of a license; determines the policy
 		if keygen.Token == "" {
-			return fmt.Errorf("missing license environment variable: %v or %v", loadLicenseKey, loadLicenseToken)
+			err = fmt.Errorf("missing license environment variable: %v or %v", loadLicenseKey, loadLicenseToken)
+			return
 		}
 	}
 	os.Unsetenv(loadLicenseToken) // remove token from environment! (opa.runtime.env)
@@ -81,15 +97,25 @@ func (l *sLicense) validateLicense() error {
 	// use random fingerprint: floating concurrent license
 	l.fingerprint = uuid.New().String()
 
+	if l.stopped() { // if releaseLicense was called, exit now
+		return
+	}
+
 	// Validate the license for the current fingerprint
-	var err error
-	l.license, err = keygen.Validate(l.fingerprint)
+	var lerr error
+	l.license, lerr = keygen.Validate(l.fingerprint)
 	switch {
-	case err == keygen.ErrLicenseNotActivated:
+	case lerr == keygen.ErrLicenseNotActivated:
 		// Activate the current fingerprint
-		machine, err := l.license.Activate(l.fingerprint)
-		if err != nil {
-			return fmt.Errorf("license activation failed: %w", err)
+
+		if l.stopped() { // if releaseLicense was called, exit now
+			return
+		}
+
+		machine, lerr := l.license.Activate(l.fingerprint)
+		if lerr != nil {
+			err = fmt.Errorf("license activation failed: %w", lerr)
+			return
 		}
 
 		// Handle SIGINT and gracefully deactivate the machine
@@ -102,31 +128,30 @@ func (l *sLicense) validateLicense() error {
 				os.Exit(1) // exit now (default behavior)!
 			}
 		}()
+		if l.stopped() { // if releaseLicense was called, exit now
+			return
+		}
 
 		// Start a heartbeat monitor for the current machine
-		if err := machine.Monitor(); err != nil {
-			return fmt.Errorf("license heartbeat monitor failed to start: %w", err)
+		if lerr := machine.Monitor(); lerr != nil {
+			err = fmt.Errorf("license heartbeat monitor failed to start: %w", lerr)
+			return
 		}
+		return
 
-		// validate after activation: detect expired licenses
-		l.license, err = keygen.Validate(l.fingerprint)
-		if err != nil {
-			return fmt.Errorf("license validate failed: %w", err)
-		}
-
-		return nil
-
-	case err != nil:
-		return fmt.Errorf("invalid license: %w", err)
+	case lerr != nil:
+		err = fmt.Errorf("invalid license: %w", lerr)
+		return
 	}
-
-	return nil
 }
 
 func (l *sLicense) releaseLicense() {
 	if l == nil {
 		return
 	}
+	// tell validateLicense to stop (if its still running)
+	atomic.AddInt32(&l.stop, 1)
+
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 	if l.released {

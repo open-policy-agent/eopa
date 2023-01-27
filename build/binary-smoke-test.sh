@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -eo pipefail
-OPA_EXEC="$1"
+LOAD_EXEC="$1"
 TARGET="$2"
 
 PATH_SEPARATOR="/"
-if [[ $OPA_EXEC == *".exe" ]]; then
+if [[ $LOAD_EXEC == *".exe" ]]; then
     PATH_SEPARATOR="\\"
 fi
 
@@ -17,7 +17,7 @@ github_actions_group() {
 
 load() {
     local args="$*"
-    github_actions_group $OPA_EXEC $args
+    github_actions_group $LOAD_EXEC $args
 }
 
 # assert_contains checks if the actual string contains the expected string.
@@ -49,5 +49,13 @@ github_actions_group assert_contains '/test/cli/smoke/test.rego' "$(tar -tf o3.t
 echo "::group:: Data files - correct namespaces"
 assert_contains "data.namespace | test${PATH_SEPARATOR}cli${PATH_SEPARATOR}smoke${PATH_SEPARATOR}namespace${PATH_SEPARATOR}data.json" "$(load inspect test/cli/smoke)"
 echo "::endgroup::"
+
+# Test server mode (requires a license): load run -s
+$LOAD_EXEC run -s &
+last_pid=$!
+sleep 1
+curl -X PUT localhost:8181/v1/policies/test -d 'package foo allow := x {x = true}'
+curl -X POST localhost:8181/v1/data/foo -d '{"input": {}}'
+kill $last_pid
 
 rm -f o?.tar.gz
