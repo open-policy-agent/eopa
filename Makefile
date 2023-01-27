@@ -15,10 +15,6 @@ RELEASE_DIR := _release
 
 .PHONY: load build release release-wasm build-local push test fmt check run update docker-login deploy-ci e2e
 
-.PHONY: release-dir
-$(RELEASE_DIR):
-	mkdir -p $(RELEASE_DIR)
-
 load:
 	go build -o $(BUILD_DIR)/bin/load .
 
@@ -75,7 +71,8 @@ deploy-ci: docker-login push
 #      make ci-smoke-test ARCHIVE=dist/load_Darwin_all.tar.gz BINARY=load
 #
 .PHONY: ci-smoke-test
-ci-smoke-test: $(RELEASE_DIR)
+ci-smoke-test:
+	mkdir -p $(RELEASE_DIR)
 	test -f "$(ARCHIVE)"
 ifeq ($(GOOS),windows)
 	cd $(RELEASE_DIR); unzip ../$(ARCHIVE)

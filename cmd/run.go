@@ -41,7 +41,11 @@ func run(c *cobra.Command, args []string) error {
 		fmt.Println("error:", err)
 		return err
 	}
-	startRuntime(ctx, rt, params.serverMode)
+	if err := startRuntime(ctx, rt, params.serverMode); err != nil {
+		c.SilenceErrors = true
+		c.SilenceUsage = true
+		return err
+	}
 	return nil
 }
 
@@ -295,12 +299,21 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	return rt, nil
 }
 
-func startRuntime(ctx context.Context, rt *runtime.Runtime, serverMode bool) {
+func startRuntime(ctx context.Context, rt *runtime.Runtime, serverMode bool) error {
+	l := newLicense()
+	err := l.validateLicense()
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+	defer l.releaseLicense()
+
 	if serverMode {
 		rt.StartServer(ctx)
 	} else {
 		rt.StartREPL(ctx)
 	}
+	return nil
 }
 
 func loadCertificate(tlsCertFile, tlsPrivateKeyFile string) (*tls.Certificate, error) {
