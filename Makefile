@@ -8,7 +8,8 @@ GOVERSION ?= $(shell cat ./.go-version)
 GOARCH := $(shell go env GOARCH)
 GOOS := $(shell go env GOOS)
 
-KO_BUILD := ko build --sbom=none --base-import-paths --platform=linux/amd64 --tags $(VERSION)
+KO_BUILD := ko build --sbom=none --base-import-paths --tags $(VERSION)
+KO_BUILD_ALL := $(KO_BUILD) --platform=linux/amd64,linux/arm64
 
 BUILD_DIR := $(shell echo `pwd`)
 RELEASE_DIR := _release
@@ -18,6 +19,8 @@ RELEASE_DIR := _release
 load:
 	go build -o $(BUILD_DIR)/bin/load .
 
+# build is used by the GHA workflow to build an image that can be tested on GHA,
+# i.e. linux/amd64 only.
 build:
 	$(KO_BUILD) --push=false --tarball=local.tar
 
@@ -31,10 +34,10 @@ release-wasm:
 	docker run --rm -v $$(PWD):/cwd -w /cwd ghcr.io/goreleaser/goreleaser-cross:v1.19 release -f .goreleaser-wasm.yaml --snapshot --skip-publish --rm-dist
 
 build-local:
-	@$(KO_BUILD) --local --tags edge
+	@$(KO_BUILD_ALL) --local --tags edge
 
 push:
-	$(KO_BUILD) --tags edge
+	$(KO_BUILD_ALL) --tags edge
 
 test:
 	go test ./...
