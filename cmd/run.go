@@ -43,8 +43,6 @@ func run(c *cobra.Command, args []string) error {
 		return err
 	}
 	if err := startRuntime(ctx, rt, params.serverMode); err != nil {
-		c.SilenceErrors = true
-		c.SilenceUsage = true
 		return err
 	}
 	return nil
@@ -316,11 +314,9 @@ func startRuntime(ctx context.Context, rt *runtime.Runtime, serverMode bool) err
 	}()
 
 	if serverMode {
-		rt.StartServer(ctx)
-	} else {
-		rt.StartREPL(ctx)
+		return rt.StartServer(ctx)
 	}
-	return nil
+	return rt.StartREPL(ctx)
 }
 
 func loadCertificate(tlsCertFile, tlsPrivateKeyFile string) (*tls.Certificate, error) {

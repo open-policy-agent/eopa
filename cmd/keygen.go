@@ -128,11 +128,8 @@ func (l *sLicense) validateLicense() {
 				os.Exit(1) // exit now (default behavior)!
 			}
 		}()
-		if l.stopped() { // if releaseLicense was called, exit now
-			return
-		}
 
-		// Start a heartbeat monitor for the current machine
+		// Always start a heartbeat monitor for the current machine
 		if lerr := machine.Monitor(); lerr != nil {
 			err = fmt.Errorf("license heartbeat monitor failed to start: %w", lerr)
 			return
