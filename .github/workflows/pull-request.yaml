@@ -245,7 +245,7 @@ jobs:
             archive: dist/load_Linux_x86_64.tar.gz
             exec: load
           - os: macos-latest
-            archive: dist/load_Darwin_all.tar.gz
+            archive: dist/load_Darwin_x86_64.tar.gz
             exec: load
           - os: windows-latest
             archive: dist/load_Windows_x86_64.zip

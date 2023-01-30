@@ -1,7 +1,4 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
 project_name: load
-
 builds:
   - env:
       - CGO_ENABLED=0
@@ -18,11 +15,9 @@ builds:
       - goos: linux
         goarch: arm64
 
-universal_binaries:
-- replace: true
-
 archives:
   - format: tar.gz
+    # example: load_Darwin_arm64
     # this name template makes the OS and Arch compatible with the results of uname.
     name_template: >-
       {{ .ProjectName }}_
@@ -31,12 +26,12 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-    # use zip for windows archives
     files:
       - LICENSE
       - CHANGELOG.md
     rlcp: true
     format_overrides:
+    # use zip for windows archives
     - goos: windows
       format: zip
 

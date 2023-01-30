@@ -71,7 +71,7 @@ deploy-ci: docker-login push
 #    called by github action
 #    run locally:
 #      make release
-#      make ci-smoke-test ARCHIVE=dist/load_Darwin_all.tar.gz BINARY=load
+#      make ci-smoke-test ARCHIVE=dist/load_Darwin_x86_64.tar.gz BINARY=load
 #
 .PHONY: ci-smoke-test
 ci-smoke-test:
