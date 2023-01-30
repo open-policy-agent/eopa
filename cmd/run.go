@@ -26,11 +26,14 @@ import (
 // Run provides the CLI entrypoint for the `run` subcommand
 func Run(opa *cobra.Command) *cobra.Command {
 	// Only override Run, so we keep the args and usage texts
-	opa.RunE = run
+	opa.RunE = runE
 	return opa
 }
 
-func run(c *cobra.Command, args []string) error {
+func runE(c *cobra.Command, args []string) error {
+	c.SilenceErrors = true
+	c.SilenceUsage = true
+
 	ctx := context.Background()
 	params, err := newRunParams(c)
 	if err != nil {

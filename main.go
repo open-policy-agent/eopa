@@ -22,10 +22,6 @@ func main() {
 	}() // orderly shutdown, run all defer routines
 
 	root := &cobra.Command{
-		// suppress RunE errors and usage messages
-		SilenceErrors: true,
-		SilenceUsage:  true,
-
 		Use:   path.Base(os.Args[0]),
 		Short: "Styra Load",
 	}
