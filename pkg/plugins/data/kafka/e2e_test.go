@@ -1,4 +1,4 @@
-package data_test
+package kafka_test
 
 import (
 	"context"
@@ -19,7 +19,6 @@ import (
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/util"
 
 	"github.com/styrainc/load/pkg/plugins/data"
@@ -28,21 +27,31 @@ import (
 	inmem "github.com/styrainc/load/pkg/store"
 )
 
+var dockerPool = func() *dockertest.Pool {
+	p, err := dockertest.NewPool("")
+	if err != nil {
+		panic(err)
+	}
+
+	if err = p.Client.Ping(); err != nil {
+		panic(err)
+	}
+	return p
+}()
+
 func TestKafkaData(t *testing.T) {
 	ctx := context.Background()
-	kafka := testKafka(t)
 	topic := "cipot"
 	topic2 := "btw"
-	store := inmem.New()
 	config := fmt.Sprintf(`
 plugins:
   data:
     kafka.messages:
       type: kafka
-      brokerURLs: [%[1]s]
-      topics: [%[2]s, %[3]s]
+      brokerURLs: [localhost:19092]
+      topics: [%[1]s, %[2]s]
       rego_transform: "data.e2e.transform"
-`, kafka.GetHostPort("9092/tcp"), topic, topic2)
+`, topic, topic2)
 
 	transform := `package e2e
 import future.keywords
@@ -56,33 +65,10 @@ transform contains {"op": "add", "path": key, "value": val} if {
 	}
 }
 `
-	if err := storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
-		return store.UpsertPolicy(ctx, txn, "e2e.rego", []byte(transform))
-	}); err != nil {
-		t.Fatalf("store transform policy: %v", err)
-	}
-	h := topdown.NewPrintHook(os.Stderr)
-	opts := []func(*plugins.Manager){
-		plugins.PrintHook(h),
-		plugins.EnablePrintStatements(true),
-	}
-	if !testing.Verbose() {
-		opts = append(opts, plugins.Logger(logging.NewNoOpLogger()))
-		opts = append(opts, plugins.ConsoleLogger(logging.NewNoOpLogger()))
-	}
+	store := storeWithPolicy(ctx, t, transform)
+	mgr := pluginMgr(ctx, t, store, config)
 
-	mgr, err := plugins.New([]byte(config), "test-instance-id", store, opts...)
-	if err != nil {
-		t.Fatal(err)
-	}
-	disco, err := discovery.New(mgr,
-		discovery.Factories(map[string]plugins.Factory{data.Name: data.Factory()}),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mgr.Register(discovery.Name, disco)
-
+	kafka := testKafka(t)
 	cl, err := kafkaClient(kafka)
 	if err != nil {
 		t.Fatalf("kafka client: %v", err)
@@ -150,10 +136,10 @@ plugins:
   data:
     kafka.messages:
       type: kafka
-      brokerURLs: [%[1]s]
-      topics: [%[2]s]
+      brokerURLs: [localhost:19092]
+      topics: [%[1]s]
       rego_transform: "data.e2e.transform"
-`, kafka.GetHostPort("9092/tcp"), topic)
+`, topic)
 
 	transform := `package e2e
 import future.keywords
@@ -262,15 +248,6 @@ transform contains json.unmarshal(base64.decode(input.value)) if print(input)
 }
 
 func testKafka(t *testing.T) *dockertest.Resource {
-	dockerPool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Could not construct pool: %s", err)
-	}
-
-	if err = dockerPool.Client.Ping(); err != nil {
-		t.Fatalf(`could not connect to docker: %s`, err)
-	}
-
 	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "kafka",
 		Repository: "bitnami/kafka",
@@ -282,16 +259,16 @@ func testKafka(t *testing.T) *dockertest.Resource {
 			"KAFKA_CFG_PROCESS_ROLES=broker,controller",
 			"KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER",
 			"KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true",
-			"KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093",
+			"KAFKA_CFG_LISTENERS=PLAINTEXT://:19092,CONTROLLER://:9093",
 			"KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT",
-			"KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://127.0.0.1:9092",
+			"KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://127.0.0.1:19092",
 			"KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@127.0.0.1:9093",
 			"ALLOW_PLAINTEXT_LISTENER=yes",
 		},
 		PortBindings: map[docker.Port][]docker.PortBinding{
-			"9092/tcp": {{HostIP: "localhost", HostPort: "9092/tcp"}},
+			"19092/tcp": {{HostIP: "localhost", HostPort: "19092/tcp"}},
 		},
-		ExposedPorts: []string{"9092/tcp"},
+		ExposedPorts: []string{"19092/tcp"},
 	})
 	if err != nil {
 		t.Fatalf("could not start kafka: %s", err)
@@ -325,7 +302,7 @@ func testKafka(t *testing.T) *dockertest.Resource {
 	return kafkaResource
 }
 
-func kafkaClient(k *dockertest.Resource) (*kgo.Client, error) {
+func kafkaClient(k *dockertest.Resource, extra ...kgo.Opt) (*kgo.Client, error) {
 	var logger zerolog.Logger
 	if testing.Verbose() {
 		logger = zerolog.New(os.Stderr)
@@ -334,11 +311,11 @@ func kafkaClient(k *dockertest.Resource) (*kgo.Client, error) {
 	}
 
 	opts := []kgo.Opt{
-		kgo.SeedBrokers(fmt.Sprintf("localhost:%s", k.GetPort("9092/tcp"))),
+		kgo.SeedBrokers("127.0.0.1:19092"),
 		kgo.WithLogger(kzerolog.New(&logger)),
 		kgo.AllowAutoTopicCreation(),
 	}
-	return kgo.NewClient(opts...)
+	return kgo.NewClient(append(opts, extra...)...)
 }
 
 func waitForStorePath(ctx context.Context, t *testing.T, store storage.Store, path string) {

@@ -50,6 +50,10 @@ func (c *Data) Start(ctx context.Context) error {
 		kgo.ConsumeTopics(c.config.Topics...),
 		kgo.SeedBrokers(c.config.BrokerURLs...),
 		kgo.WithLogger(c.kgoLogger()),
+		kgo.DialTLSConfig(c.config.tls), // if it's nil, it stays nil
+	}
+	if c.config.sasl != nil {
+		opts = append(opts, kgo.SASL(c.config.sasl))
 	}
 	var err error
 	c.client, err = kgo.NewClient(opts...)
