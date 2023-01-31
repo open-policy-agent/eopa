@@ -11,8 +11,8 @@ import (
 	"reflect"
 	"testing"
 
-	bjson "github.com/styrainc/load/pkg/json"
-	"github.com/styrainc/load/pkg/store/internal/errors"
+	bjson "github.com/styrainc/load-private/pkg/json"
+	"github.com/styrainc/load-private/pkg/store/internal/errors"
 
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/util"

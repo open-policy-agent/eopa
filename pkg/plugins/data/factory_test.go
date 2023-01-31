@@ -8,9 +8,9 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 
-	"github.com/styrainc/load/pkg/plugins/data"
-	"github.com/styrainc/load/pkg/plugins/data/kafka"
-	inmem "github.com/styrainc/load/pkg/store"
+	"github.com/styrainc/load-private/pkg/plugins/data"
+	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
+	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
 func TestValidate(t *testing.T) {

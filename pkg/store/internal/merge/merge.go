@@ -7,7 +7,7 @@
 package merge
 
 import (
-	bjson "github.com/styrainc/load/pkg/json"
+	bjson "github.com/styrainc/load-private/pkg/json"
 )
 
 // InterfaceMaps returns the result of merging a and b. If a and b cannot be

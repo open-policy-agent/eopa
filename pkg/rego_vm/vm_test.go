@@ -13,8 +13,8 @@ import (
 	"github.com/open-policy-agent/opa/compile"
 	"github.com/open-policy-agent/opa/ir"
 
-	regovm "github.com/styrainc/load/pkg/rego_vm/vm"
-	"github.com/styrainc/load/pkg/vm"
+	regovm "github.com/styrainc/load-private/pkg/rego_vm/vm"
+	"github.com/styrainc/load-private/pkg/vm"
 )
 
 func setup(tb testing.TB, b *bundle.Bundle, query string) ir.Policy {

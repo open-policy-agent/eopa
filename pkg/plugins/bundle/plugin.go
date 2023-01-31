@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	bundleUtils "github.com/styrainc/load/pkg/internal/bundle"
+	bundleUtils "github.com/styrainc/load-private/pkg/internal/bundle"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"

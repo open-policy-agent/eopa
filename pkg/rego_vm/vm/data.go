@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strconv"
 
-	fjson "github.com/styrainc/load/pkg/json"
-	"github.com/styrainc/load/pkg/vm"
+	fjson "github.com/styrainc/load-private/pkg/json"
+	"github.com/styrainc/load-private/pkg/vm"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/util"

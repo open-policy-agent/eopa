@@ -5,7 +5,7 @@ import (
 
 	"github.com/open-policy-agent/opa/util"
 
-	bjson "github.com/styrainc/load/pkg/json"
+	bjson "github.com/styrainc/load-private/pkg/json"
 )
 
 // BjsonFromBinary returns a bjson.Json instance (on success) that was read from

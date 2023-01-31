@@ -1,4 +1,4 @@
-module github.com/styrainc/load
+module github.com/styrainc/load-private
 
 go 1.19
 

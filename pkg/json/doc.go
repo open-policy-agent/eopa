@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/styrainc/load/pkg/json/internal/utils"
+	"github.com/styrainc/load-private/pkg/json/internal/utils"
 )
 
 type Kind uint

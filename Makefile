@@ -1,5 +1,5 @@
 export GOPRIVATE=github.com/StyraInc/opa
-export KO_DOCKER_REPO=547414210802.dkr.ecr.us-east-1.amazonaws.com/styra
+export KO_DOCKER_REPO=547414210802.dkr.ecr.us-east-1.amazonaws.com/styra/load
 
 VERSION_OPA := $(shell ./build/get-opa-version.sh)
 VERSION := $(VERSION_OPA)$(shell ./build/get-plugin-rev.sh)
@@ -8,7 +8,7 @@ GOVERSION ?= $(shell cat ./.go-version)
 GOARCH := $(shell go env GOARCH)
 GOOS := $(shell go env GOOS)
 
-KO_BUILD := ko build --sbom=none --base-import-paths --tags $(VERSION)
+KO_BUILD := ko build --sbom=none --bare --tags $(VERSION)
 KO_BUILD_ALL := $(KO_BUILD) --platform=linux/amd64,linux/arm64
 
 BUILD_DIR := $(shell echo `pwd`)

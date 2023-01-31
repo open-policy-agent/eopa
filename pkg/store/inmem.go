@@ -24,9 +24,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	bjson "github.com/styrainc/load/pkg/json"
-	"github.com/styrainc/load/pkg/plugins/bundle"
-	"github.com/styrainc/load/pkg/store/internal/merge"
+	bjson "github.com/styrainc/load-private/pkg/json"
+	"github.com/styrainc/load-private/pkg/plugins/bundle"
+	"github.com/styrainc/load-private/pkg/store/internal/merge"
 
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage"

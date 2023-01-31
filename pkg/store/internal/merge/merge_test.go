@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	bjson "github.com/styrainc/load/pkg/json"
+	bjson "github.com/styrainc/load-private/pkg/json"
 )
 
 func TestMergeDocs(t *testing.T) {

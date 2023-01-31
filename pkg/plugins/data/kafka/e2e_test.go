@@ -21,10 +21,10 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/util"
 
-	"github.com/styrainc/load/pkg/plugins/data"
-	"github.com/styrainc/load/pkg/plugins/discovery"
-	_ "github.com/styrainc/load/pkg/rego_vm" // important! use VM for rego.Eval below
-	inmem "github.com/styrainc/load/pkg/store"
+	"github.com/styrainc/load-private/pkg/plugins/data"
+	"github.com/styrainc/load-private/pkg/plugins/discovery"
+	_ "github.com/styrainc/load-private/pkg/rego_vm" // important! use VM for rego.Eval below
+	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
 var dockerPool = func() *dockertest.Pool {

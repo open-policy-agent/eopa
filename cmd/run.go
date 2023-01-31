@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/styrainc/load/pkg/plugins/bundle"
-	"github.com/styrainc/load/pkg/plugins/data"
-	"github.com/styrainc/load/pkg/plugins/discovery"
-	inmem "github.com/styrainc/load/pkg/store"
+	"github.com/styrainc/load-private/pkg/plugins/bundle"
+	"github.com/styrainc/load-private/pkg/plugins/data"
+	"github.com/styrainc/load-private/pkg/plugins/discovery"
+	inmem "github.com/styrainc/load-private/pkg/store"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

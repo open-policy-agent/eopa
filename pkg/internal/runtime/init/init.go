@@ -16,7 +16,7 @@ import (
 	"github.com/open-policy-agent/opa/loader"
 	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/storage"
-	storedversion "github.com/styrainc/load/pkg/internal/version"
+	storedversion "github.com/styrainc/load-private/pkg/internal/version"
 )
 
 // InsertAndCompileOptions contains the input for the operation.

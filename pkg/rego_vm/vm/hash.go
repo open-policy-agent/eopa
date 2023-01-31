@@ -7,7 +7,7 @@ import (
 	"github.com/OneOfOne/xxhash"
 	"github.com/open-policy-agent/opa/util"
 
-	fjson "github.com/styrainc/load/pkg/json"
+	fjson "github.com/styrainc/load-private/pkg/json"
 )
 
 const (

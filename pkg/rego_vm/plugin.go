@@ -5,10 +5,10 @@ import (
 	"context"
 	"crypto/rand"
 
-	bjson "github.com/styrainc/load/pkg/json"
-	regovm "github.com/styrainc/load/pkg/rego_vm/vm"
-	inmem "github.com/styrainc/load/pkg/store"
-	"github.com/styrainc/load/pkg/vm"
+	bjson "github.com/styrainc/load-private/pkg/json"
+	regovm "github.com/styrainc/load-private/pkg/rego_vm/vm"
+	inmem "github.com/styrainc/load-private/pkg/store"
+	"github.com/styrainc/load-private/pkg/vm"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/ir"

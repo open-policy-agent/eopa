@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/util"
-	"github.com/styrainc/load/pkg/plugins/data/kafka"
+	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
 )
 
 const Name = "data"
