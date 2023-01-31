@@ -3,13 +3,10 @@ package main
 import (
 	"errors"
 	"os"
-	"path"
-
-	loadCmd "github.com/styrainc/load-private/cmd"
-	_ "github.com/styrainc/load-private/pkg/rego_vm"
 
 	"github.com/open-policy-agent/opa/cmd"
-	"github.com/spf13/cobra"
+	loadCmd "github.com/styrainc/load-private/cmd"
+	_ "github.com/styrainc/load-private/pkg/rego_vm"
 )
 
 func main() {
@@ -21,23 +18,7 @@ func main() {
 		}
 	}() // orderly shutdown, run all defer routines
 
-	root := &cobra.Command{
-		Use:   path.Base(os.Args[0]),
-		Short: "Styra Load",
-	}
-	for _, c := range cmd.RootCommand.Commands() {
-		switch c.Name() {
-		case "run":
-			root.AddCommand(loadCmd.Run(c))
-		default:
-			root.AddCommand(c)
-		}
-	}
-	load := loadCmd.Load()
-	load.AddCommand(loadCmd.Convert())
-	load.AddCommand(loadCmd.Dump())
-
-	root.AddCommand(load)
+	root := loadCmd.LoadCommand()
 
 	if err := root.Execute(); err != nil {
 		var e *cmd.ExitError
