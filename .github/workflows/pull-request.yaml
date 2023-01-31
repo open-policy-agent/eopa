@@ -26,15 +26,17 @@ jobs:
     steps:
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      - uses: actions/setup-go@v3
-        with:
-          go-version: '1.19'
-          check-latest: true
-      # NOTE(sr): we need to install this before checking out the code, as it will otherwise
+      # NOTE(sr): we need to install this from a different workdir, as it will otherwise
       # interfere with the project's go.mod/go.sum
       - name: install gcassert
         run: go install github.com/jordanlewis/gcassert/cmd/gcassert@latest
+        working-directory: /tmp
       - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
@@ -51,15 +53,17 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - uses: actions/setup-go@v3
-        with:
-          go-version: '1.19'
-          check-latest: true
       - uses: open-policy-agent/setup-opa@v2
       - name: checkout Load
         uses: actions/checkout@v3
         with:
           path: load
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: load/go.mod
+          cache-dependency-path: load/go.sum
+          check-latest: true
+          cache: true
       - name: pick up opa version
         id: load
         run: echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
@@ -102,15 +106,16 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - uses: actions/setup-go@v3
-        with:
-          go-version: '1.19'
-          check-latest: true
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Download image tarball
@@ -151,15 +156,16 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - uses: actions/setup-go@v3
-        with:
-          go-version: '1.19'
-          check-latest: true
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
       - name: setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Run GoReleaser
@@ -186,20 +192,19 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - uses: actions/setup-go@v3
-        with:
-          go-version: '1.19'
-          check-latest: true
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: ko-build/setup-ko@v0.6
-      - name: update base image
-        run: docker pull distroless.dev/static:latest
       - name: Build
         run: make build
       - name: Upload image tarball
@@ -216,8 +221,6 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - name: Download image tarball
         uses: actions/download-artifact@v3
         with:
@@ -272,15 +275,16 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - uses: actions/setup-go@v3
-        with:
-          go-version: '1.19'
-          check-latest: true
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: ko-build/setup-ko@v0.6
