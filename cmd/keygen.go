@@ -16,7 +16,7 @@ const loadLicenseToken = "STYRA_LOAD_LICENSE_TOKEN"
 const loadLicenseKey = "STYRA_LOAD_LICENSE_KEY"
 
 type (
-	sLicense struct {
+	License struct {
 		mutex       sync.Mutex
 		license     *keygen.License
 		released    bool
@@ -29,8 +29,17 @@ type (
 	}
 )
 
-func newLicense() *sLicense {
-	return &sLicense{}
+func NewLicense() *License {
+	// validate licensekey or licensetoken
+	keygen.LicenseKey = os.Getenv(loadLicenseKey)
+	if keygen.LicenseKey == "" {
+		keygen.Token = os.Getenv(loadLicenseToken) // activation-token of a license; determines the policy
+	}
+
+	// remove licenses from environment! (opa.runtime.env)
+	os.Unsetenv(loadLicenseKey)
+	os.Unsetenv(loadLicenseToken)
+	return &License{}
 }
 
 func (l *keygenLogger) Errorf(format string, v ...interface{}) {
@@ -64,13 +73,13 @@ func (l *keygenLogger) Debugf(format string, v ...interface{}) {
 	fmt.Fprintf(os.Stdout, "[DEBUG] "+format+"\n", v...)
 }
 
-// stopped: see if releaseLicense was called
-func (l *sLicense) stopped() bool {
+// stopped: see if ReleaseLicense was called
+func (l *License) stopped() bool {
 	return atomic.LoadInt32(&l.stop) != 0
 }
 
 // validate and activate the keygen license
-func (l *sLicense) validateLicense() {
+func (l *License) ValidateLicense() {
 	keygen.Account = "dd0105d1-9564-4f58-ae1c-9defdd0bfea7" // account=styra-com
 	keygen.Product = "f7da4ae5-7bf5-46f6-9634-026bec5e8599" // product=load
 	keygen.Logger = &keygenLogger{level: keygen.LogLevelNone}
@@ -84,20 +93,15 @@ func (l *sLicense) validateLicense() {
 	}()
 
 	// validate licensekey or licensetoken
-	keygen.LicenseKey = os.Getenv(loadLicenseKey)
-	if keygen.LicenseKey == "" {
-		keygen.Token = os.Getenv(loadLicenseToken) // activation-token of a license; determines the policy
-		if keygen.Token == "" {
-			err = fmt.Errorf("missing license environment variable: %v or %v", loadLicenseKey, loadLicenseToken)
-			return
-		}
+	if keygen.LicenseKey == "" && keygen.Token == "" {
+		err = fmt.Errorf("missing license environment variable: %v or %v", loadLicenseKey, loadLicenseToken)
+		return
 	}
-	os.Unsetenv(loadLicenseToken) // remove token from environment! (opa.runtime.env)
 
 	// use random fingerprint: floating concurrent license
 	l.fingerprint = uuid.New().String()
 
-	if l.stopped() { // if releaseLicense was called, exit now
+	if l.stopped() { // if ReleaseLicense was called, exit now
 		return
 	}
 
@@ -108,7 +112,7 @@ func (l *sLicense) validateLicense() {
 	case lerr == keygen.ErrLicenseNotActivated:
 		// Activate the current fingerprint
 
-		if l.stopped() { // if releaseLicense was called, exit now
+		if l.stopped() { // if ReleaseLicense was called, exit now
 			return
 		}
 
@@ -124,7 +128,7 @@ func (l *sLicense) validateLicense() {
 
 		go func() {
 			for range sigs {
-				l.releaseLicense()
+				l.ReleaseLicense()
 				os.Exit(1) // exit now (default behavior)!
 			}
 		}()
@@ -142,7 +146,7 @@ func (l *sLicense) validateLicense() {
 	}
 }
 
-func (l *sLicense) releaseLicense() {
+func (l *License) ReleaseLicense() {
 	if l == nil {
 		return
 	}

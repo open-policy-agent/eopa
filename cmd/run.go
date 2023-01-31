@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/styrainc/load-private/pkg/plugins/bundle"
@@ -302,20 +301,6 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 }
 
 func startRuntime(ctx context.Context, rt *runtime.Runtime, serverMode bool) error {
-	var wg sync.WaitGroup
-	l := newLicense()
-	wg.Add(1)
-	go func() {
-		// do the license validate and activate asynchronously; so user doesn't have to wait
-		defer wg.Done()
-		l.validateLicense()
-	}()
-	defer func() {
-		// do release in a defer function; works with panics
-		l.releaseLicense()
-		wg.Wait() // wait for the validateLicense to complete
-	}()
-
 	if serverMode {
 		return rt.StartServer(ctx)
 	}
