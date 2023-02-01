@@ -50,4 +50,5 @@ changelog:
 
 release:
   github:
-    name: StyraInc/load
+    owner: StyraInc
+    name: load
