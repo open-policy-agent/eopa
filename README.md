@@ -9,6 +9,7 @@ Prerequisites:
 - Docker
 - Make
 - [goreleaser](https://goreleaser.com), `brew install goreleaser`
+- ghcr.io/goreleaser/goreleaser-cross:v1.19, goreleaser CGO cross compiler container, downloaded with 'make release' (1.5GB)
 
 Build with `make build`, run with `make run`, publish with `make push`.
 

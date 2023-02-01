@@ -8,6 +8,8 @@ GOVERSION ?= $(shell cat ./.go-version)
 GOARCH := $(shell go env GOARCH)
 GOOS := $(shell go env GOOS)
 
+TAGS ?= edge
+
 KO_BUILD := ko build --sbom=none --bare --tags $(VERSION)
 KO_BUILD_ALL := $(KO_BUILD) --platform=linux/amd64,linux/arm64
 
@@ -28,7 +30,7 @@ build-local:
 	@$(KO_BUILD_ALL) --local --tags edge
 
 push:
-	$(KO_BUILD_ALL) --tags edge
+	$(KO_BUILD_ALL) --tags $(TAGS)
 
 deploy-ci: push
 

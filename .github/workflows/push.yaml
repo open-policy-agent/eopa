@@ -60,4 +60,4 @@ jobs:
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: ko-build/setup-ko@v0.6
       - name: Build and Push
-        run: make deploy-ci
+        run: TAGS=${{ github.ref_name }} make deploy-ci
