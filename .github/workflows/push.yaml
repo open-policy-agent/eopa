@@ -36,3 +36,26 @@ jobs:
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+
+  kopush:
+    name: Ko Push
+    runs-on: ubuntu-22.04
+    environment: ci
+    env:
+      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
+    steps:
+      - uses: open-policy-agent/setup-opa@v2
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+      - name: Setup github api token
+        run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+      - uses: ko-build/setup-ko@v0.6
+      - name: Build and Push
+        run: make deploy-ci

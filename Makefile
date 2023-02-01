@@ -1,5 +1,5 @@
 export GOPRIVATE=github.com/StyraInc/opa
-export KO_DOCKER_REPO=547414210802.dkr.ecr.us-east-1.amazonaws.com/styra/load
+export KO_DOCKER_REPO=ghcr.io/styrainc/load-private
 
 VERSION_OPA := $(shell ./build/get-opa-version.sh)
 VERSION := $(VERSION_OPA)$(shell ./build/get-plugin-rev.sh)
@@ -14,15 +14,23 @@ KO_BUILD_ALL := $(KO_BUILD) --platform=linux/amd64,linux/arm64
 BUILD_DIR := $(shell echo `pwd`)
 RELEASE_DIR := _release
 
-.PHONY: load build release release-wasm build-local push test fmt check run update docker-login deploy-ci e2e
+.PHONY: load build build-local push deploy-ci release release-wasm test fmt check run update e2e
 
 load:
 	go build -o $(BUILD_DIR)/bin/load .
 
-# build is used by the GHA workflow to build an image that can be tested on GHA,
+# ko build is used by the GHA workflow to build an container image that can be tested on GHA,
 # i.e. linux/amd64 only.
 build:
 	$(KO_BUILD) --push=false --tarball=local.tar
+
+build-local:
+	@$(KO_BUILD_ALL) --local --tags edge
+
+push:
+	$(KO_BUILD_ALL) --tags edge
+
+deploy-ci: push
 
 # goreleaser uses latest version tag.
 release:
@@ -32,12 +40,6 @@ release:
 release-wasm:
 	go mod vendor
 	docker run --rm -v $$(PWD):/cwd -w /cwd ghcr.io/goreleaser/goreleaser-cross:v1.19 release -f .goreleaser-wasm.yaml --snapshot --skip-publish --rm-dist
-
-build-local:
-	@$(KO_BUILD_ALL) --local --tags edge
-
-push:
-	$(KO_BUILD_ALL) --tags edge
 
 test:
 	go test ./...
@@ -60,12 +62,6 @@ run:
 update:
 	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@load-0.48
 	go mod tidy
-
-docker-login:
-	@echo "Docker Login..."
-	@aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 547414210802.dkr.ecr.us-east-1.amazonaws.com
-
-deploy-ci: docker-login push
 
 # ci-smoke-test
 #    called by github action

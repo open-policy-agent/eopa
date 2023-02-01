@@ -8,6 +8,7 @@ Prerequisites:
 - [ko](https://github.com/ko-build/ko), `brew install ko`
 - Docker
 - Make
+- [goreleaser](https://goreleaser.com), `brew install goreleaser`
 
 Build with `make build`, run with `make run`, publish with `make push`.
 
