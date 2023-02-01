@@ -1,5 +1,5 @@
 export GOPRIVATE=github.com/StyraInc/opa
-export KO_DOCKER_REPO=ghcr.io/styrainc/load-private
+export KO_DOCKER_REPO=ghcr.io/styrainc/load
 
 VERSION_OPA := $(shell ./build/get-opa-version.sh)
 VERSION := $(VERSION_OPA)$(shell ./build/get-plugin-rev.sh)

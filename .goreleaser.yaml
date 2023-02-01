@@ -47,3 +47,7 @@ changelog:
     exclude:
       - '^docs:'
       - '^ci:'
+
+release:
+  github:
+    name: StyraInc/load
