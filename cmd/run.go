@@ -22,6 +22,9 @@ import (
 	"github.com/open-policy-agent/opa/server"
 )
 
+// default bind address if --addr (-a) was not provided in CLI args
+const defaultBindAddress = "localhost:8181"
+
 // Run provides the CLI entrypoint for the `run` subcommand
 func Run(opa *cobra.Command) *cobra.Command {
 	// Only override Run, so we keep the args and usage texts
@@ -195,11 +198,19 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 
 	// NOTE(sr): We can't wrap these into the stringslice loop above because p.rt.Addrs and
 	// p.rt.DiagnosticAddrs are pointers to slices
-	s, err := c.Flags().GetStringSlice("addr")
-	if err != nil {
-		return nil, err
+
+	// NOTE: Load has a different default: if the --addr parameter was NOT provided,
+	// we'll default to localhost:8181 instead of 0.0.0.0:8181 (OPA).
+	if c.Flags().Lookup("addr").Changed {
+		s, err := c.Flags().GetStringSlice("addr")
+		if err != nil {
+			return nil, err
+		}
+		p.rt.Addrs = &s
+	} else {
+		p.rt.Addrs = &[]string{defaultBindAddress}
 	}
-	p.rt.Addrs = &s
+
 	d, err := c.Flags().GetStringSlice("diagnostic-addr")
 	if err != nil {
 		return nil, err

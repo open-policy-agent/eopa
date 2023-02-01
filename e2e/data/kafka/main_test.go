@@ -186,7 +186,7 @@ func loadLoad(t *testing.T, config, policy, image string, network *docker.Networ
 			policyPath + ":/eval.rego",
 		},
 		ExposedPorts: []string{"8181/tcp"},
-		Cmd:          strings.Split("run --server --config-file /config.yml --log-level debug --disable-telemetry /eval.rego", " "),
+		Cmd:          strings.Split("run --server --addr :8181 --config-file /config.yml --log-level debug --disable-telemetry /eval.rego", " "),
 	})
 	if err != nil {
 		t.Fatalf("could not start %s: %s", image, err)
