@@ -2,8 +2,10 @@ name: Publish
 
 on:
   push:
+    branches:
+      - 'main'
     tags:
-      - '*'
+      - v[0-9].**
 
 env:
   GOPRIVATE: github.com/StyraInc/opa
