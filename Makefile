@@ -10,7 +10,7 @@ GOOS := $(shell go env GOOS)
 
 TAGS ?= edge
 
-KO_BUILD := ko build --sbom=none --bare --tags $(VERSION)
+KO_BUILD := ko build --sbom=none --bare --tags $(VERSION) --image-label org.opencontainers.image.source=https://github.com/StyraInc/load
 KO_BUILD_ALL := $(KO_BUILD) --platform=linux/amd64,linux/arm64
 
 BUILD_DIR := $(shell echo `pwd`)
