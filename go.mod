@@ -1,6 +1,6 @@
 module github.com/styrainc/load-private
 
-go 1.19
+go 1.20
 
 require (
 	github.com/OneOfOne/xxhash v1.2.8
