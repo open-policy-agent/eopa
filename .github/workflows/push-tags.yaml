@@ -44,6 +44,12 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v3
@@ -58,4 +64,7 @@ jobs:
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: ko-build/setup-ko@v0.6
       - name: Build and Push
-        run: TAGS=${{ github.ref_name }} make deploy-ci
+        run: make auth-deploy-ci
+        env:
+          TAGS: ${{ github.ref_name }}
+          AUTH_TOKEN: ${{ steps.generate_token.outputs.token }}

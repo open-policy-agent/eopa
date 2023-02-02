@@ -1,5 +1,11 @@
 export GOPRIVATE=github.com/StyraInc/opa
+
+ifdef AUTH_TOKEN
+# only auth-build-ci tag builds get put into 'load' packages repository
 export KO_DOCKER_REPO=ghcr.io/styrainc/load
+else
+export KO_DOCKER_REPO=ghcr.io/styrainc/load-private
+endif
 
 VERSION_OPA := $(shell ./build/get-opa-version.sh)
 VERSION := $(VERSION_OPA)$(shell ./build/get-plugin-rev.sh)
@@ -16,7 +22,7 @@ KO_BUILD_ALL := $(KO_BUILD) --platform=linux/amd64,linux/arm64
 BUILD_DIR := $(shell echo `pwd`)
 RELEASE_DIR := _release
 
-.PHONY: load build build-local push deploy-ci release release-wasm test fmt check run update e2e
+.PHONY: load build build-local push deploy-ci auth-deploy-ci release release-wasm test fmt check run update e2e
 
 load:
 	go build -o $(BUILD_DIR)/bin/load .
@@ -33,6 +39,9 @@ push:
 	$(KO_BUILD_ALL) --tags $(TAGS)
 
 deploy-ci: push
+
+auth-deploy-ci:
+	echo $(AUTH_TOKEN) | ko login ghcr.io --username load-builder --password-stdin | $(KO_BUILD_ALL) --tags $(TAGS)
 
 # goreleaser uses latest version tag.
 release:
