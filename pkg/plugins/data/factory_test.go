@@ -1,10 +1,14 @@
 package data_test
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"go.uber.org/goleak"
+
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 
@@ -288,6 +292,37 @@ kafka.updates:
 			}
 		})
 	}
+}
+
+func TestKafkaStop(t *testing.T) {
+	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
+
+	mgr := getTestManager()
+	config := `
+kafka.updates:
+  type: kafka
+  brokerURLs:
+  - 127.0.0.1:8083
+  topics:
+  - updates
+  rego_transform: data.utils.transform_events
+`
+	c, err := data.Factory().Validate(mgr, []byte(config))
+	if err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	dp := data.Factory().New(mgr, c)
+	ctx := context.Background()
+	if err := dp.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// NOTE(sr): The more time we give the go routines to actually start,
+	// the less flaky this test will be, if there are leaked routines.
+	time.Sleep(200 * time.Millisecond)
+	dp.Stop(ctx)
+
+	// goleak will assert that no goroutine is still running
 }
 
 func getTestManager() *plugins.Manager {

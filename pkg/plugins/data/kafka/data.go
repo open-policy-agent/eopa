@@ -3,9 +3,11 @@ package kafka
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 
@@ -21,18 +23,19 @@ const Name = "kafka"
 
 // Data plugin
 type Data struct {
-	manager *plugins.Manager
-	log     logging.Logger
-	config  Config
-	client  *kgo.Client
-	exit    <-chan struct{}
-	path    ast.Ref
+	manager        *plugins.Manager
+	log            logging.Logger
+	Config         Config
+	client         *kgo.Client
+	exit, doneExit chan struct{}
+	path           ast.Ref
 
 	transformRule ast.Ref
 	transform     *rego.PreparedEvalQuery
 }
 
 func (c *Data) Start(ctx context.Context) error {
+	c.exit = make(chan struct{})
 	if err := c.prepareTransform(ctx); err != nil {
 		return fmt.Errorf("prepare rego_transform: %w", err)
 	}
@@ -47,13 +50,13 @@ func (c *Data) Start(ctx context.Context) error {
 	}
 
 	opts := []kgo.Opt{
-		kgo.ConsumeTopics(c.config.Topics...),
-		kgo.SeedBrokers(c.config.BrokerURLs...),
+		kgo.ConsumeTopics(c.Config.Topics...),
+		kgo.SeedBrokers(c.Config.BrokerURLs...),
 		kgo.WithLogger(c.kgoLogger()),
-		kgo.DialTLSConfig(c.config.tls), // if it's nil, it stays nil
+		kgo.DialTLSConfig(c.Config.tls), // if it's nil, it stays nil
 	}
-	if c.config.sasl != nil {
-		opts = append(opts, kgo.SASL(c.config.sasl))
+	if c.Config.sasl != nil {
+		opts = append(opts, kgo.SASL(c.Config.sasl))
 	}
 	var err error
 	c.client, err = kgo.NewClient(opts...)
@@ -61,32 +64,50 @@ func (c *Data) Start(ctx context.Context) error {
 		return err
 	}
 
+	c.doneExit = make(chan struct{})
 	go c.loop(ctx) // Q: Does this context ever stop?
 	return nil
 }
 
-func (*Data) Stop(context.Context) {
-	// TODO
+func (c *Data) Stop(context.Context) {
+	if c.doneExit == nil {
+		return
+	}
+	c.client.Close()
+	close(c.exit) // stops our polling loop
+	<-c.doneExit  // waits for polling loop to be stopped
 }
 
-func (*Data) Reconfigure(context.Context, interface{}) {
-	// TODO
+func (c *Data) Reconfigure(ctx context.Context, next any) {
+	if c.Config.Equal(next.(Config)) {
+		return // nothing to do
+	}
+	if c.doneExit != nil { // started before
+		c.Stop(ctx)
+	}
+	c.Config = next.(Config)
+	c.Start(ctx)
 }
 
 func (c *Data) loop(ctx context.Context) {
-	records := make(chan kgo.Fetches)
-	go c.poll(ctx, records)
+LOOP:
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			break LOOP
 		case <-c.exit:
-			return
-		case rs := <-records:
+			break LOOP
+		default:
+			pollCtx, done := context.WithTimeout(ctx, 100*time.Millisecond)
+			rs := c.client.PollFetches(pollCtx)
+			done()
 			n := rs.NumRecords()
 			c.log.Debug("fetched %d records", n)
 			var merr []error
 			for _, err := range rs.Errors() {
+				if errors.Is(err.Err, context.DeadlineExceeded) {
+					continue
+				}
 				merr = append(merr, fmt.Errorf("fetch topic %q: %w", err.Topic, err.Err))
 			}
 			if merr != nil {
@@ -96,19 +117,7 @@ func (c *Data) loop(ctx context.Context) {
 			c.transformAndSave(ctx, n, rs.RecordIter())
 		}
 	}
-}
-
-func (c *Data) poll(ctx context.Context, records chan kgo.Fetches) {
-	for {
-		select {
-		case <-ctx.Done():
-			return // end all this
-		case <-c.exit:
-			return
-		default:
-			records <- c.client.PollFetches(ctx)
-		}
-	}
+	close(c.doneExit)
 }
 
 func mapFromRecord(r *kgo.Record) any {
@@ -175,7 +184,7 @@ func (c *Data) prepareTransform(ctx context.Context) error {
 
 	return storage.Txn(ctx, c.manager.Store, storage.TransactionParams{}, func(txn storage.Transaction) error {
 		query := ast.NewBody(
-			ast.NewExpr(ast.NewTerm(ast.MustParseRef(c.config.RegoTransformRule).Append(
+			ast.NewExpr(ast.NewTerm(ast.MustParseRef(c.Config.RegoTransformRule).Append(
 				ast.NewTerm(ast.NewObject(
 					ast.Item(ast.StringTerm("op"), ast.VarTerm("op")),
 					ast.Item(ast.StringTerm("value"), ast.VarTerm("value")),

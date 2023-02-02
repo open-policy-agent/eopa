@@ -4,11 +4,12 @@ import (
 	"crypto/tls"
 
 	"github.com/twmb/franz-go/pkg/sasl"
+	"golang.org/x/exp/slices"
 )
 
 // Config represents the configuration of the kafka data plugin
 type Config struct {
-	BrokerURLs []string `json:"brokerURLs"` // TODO(sr): should come from "services" config
+	BrokerURLs []string `json:"brokerURLs"` // TODO(sr): should perhaps come from "services" config?
 	Topics     []string `json:"topics"`
 	Path       string   `json:"path"`
 
@@ -27,4 +28,41 @@ type Config struct {
 	// inserted through Validate()
 	tls  *tls.Config
 	sasl sasl.Mechanism
+}
+
+func (c Config) Equal(other Config) bool {
+	switch {
+	case len(c.BrokerURLs) != len(other.BrokerURLs):
+	case len(c.Topics) != len(other.Topics):
+	case c.RegoTransformRule != other.RegoTransformRule:
+	case c.Cert != other.Cert:
+	case c.PrivateKey != other.PrivateKey:
+	case c.CACert != other.CACert:
+	case c.SASLMechanism != other.SASLMechanism:
+	case c.SASLUsername != other.SASLUsername:
+	case c.SASLPassword != other.SASLPassword:
+	case c.SASLToken != other.SASLToken:
+	case c.differentBrokers(other.BrokerURLs):
+	case c.differentTopics(other.Topics):
+	default:
+		return true
+	}
+	return false
+}
+
+func (c Config) differentBrokers(others []string) bool {
+	return !subset(c.BrokerURLs, others) || !subset(others, c.BrokerURLs)
+}
+
+func (c Config) differentTopics(others []string) bool {
+	return !subset(c.Topics, others) || !subset(others, c.Topics)
+}
+
+func subset[E comparable](a []E, b []E) bool {
+	for _, v := range a {
+		if !slices.Contains(b, v) {
+			return false
+		}
+	}
+	return true
 }

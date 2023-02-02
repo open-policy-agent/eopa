@@ -29,9 +29,9 @@ func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 
 	c := config.(Config)
 	return &Data{
-		config:        c,
+		Config:        c,
 		log:           m.Logger(),
-		exit:          make(<-chan struct{}),
+		exit:          make(chan struct{}),
 		path:          ast.MustParseRef("data." + config.(Config).Path),
 		manager:       m,
 		transformRule: ast.MustParseRef(c.RegoTransformRule),

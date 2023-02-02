@@ -17,6 +17,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/twmb/franz-go v1.11.0
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
+	go.uber.org/goleak v1.1.12
+	golang.org/x/exp v0.0.0-20230131120322-dfa7d7a641b0
 )
 
 require (

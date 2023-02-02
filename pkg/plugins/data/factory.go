@@ -1,7 +1,6 @@
 package data
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
@@ -20,11 +19,11 @@ func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 	p := &Data{
 		manager: m,
 		config:  config.(Config),
+		plugins: make(map[string]plugins.Plugin),
 	}
-	for _, dp := range p.config.DataPlugins {
-		p.plugins = append(p.plugins, dp.Factory.New(p.manager, dp.Config))
+	for path, dp := range p.config.DataPlugins {
+		p.plugins[path] = dp.Factory.New(p.manager, dp.Config)
 	}
-	p.Reconfigure(context.TODO(), p.config)
 	return p
 }
 
