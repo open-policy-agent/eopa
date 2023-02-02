@@ -35,7 +35,7 @@ func LoadCommand(wg *sync.WaitGroup, license *License) *cobra.Command {
 			root.AddCommand(c)
 		}
 	}
-	load := Load()
+	load := Bundle()
 	load.AddCommand(Convert())
 	load.AddCommand(Dump())
 
