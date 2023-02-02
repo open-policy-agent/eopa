@@ -173,7 +173,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --snapshot --skip-publish --rm-dist
+          args: release --snapshot --skip-publish --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
       - name: Upload release artifacts

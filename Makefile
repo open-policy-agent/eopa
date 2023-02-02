@@ -36,7 +36,7 @@ deploy-ci: push
 
 # goreleaser uses latest version tag.
 release:
-	goreleaser release --snapshot --skip-publish --rm-dist
+	goreleaser release --snapshot --skip-publish --clean
 
 # load docker image ghcr.io/goreleaser/goreleaser-cross:v1.19 and run goreleaser (build load and load_wasm)
 release-wasm:
