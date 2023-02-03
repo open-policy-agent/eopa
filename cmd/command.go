@@ -7,6 +7,8 @@ import (
 
 	"github.com/open-policy-agent/opa/cmd"
 	"github.com/spf13/cobra"
+
+	"github.com/styrainc/load-private/pkg"
 )
 
 var brand = "Load"
@@ -29,7 +31,7 @@ func LoadCommand(wg *sync.WaitGroup, license *License) *cobra.Command {
 			}
 		},
 	}
-	cmd.UserAgent(brand)
+	pkg.SetUserAgent(brand)
 	opa := cmd.Command(brand)
 	for _, c := range opa.Commands() {
 		switch c.Name() {
