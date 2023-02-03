@@ -27,6 +27,7 @@ func LoadCommand(wg *sync.WaitGroup, license *License) *cobra.Command {
 			}
 		},
 	}
+	cmd.UserAgent("Load")
 	opa := cmd.Command("Load")
 	for _, c := range opa.Commands() {
 		switch c.Name() {
