@@ -4,12 +4,19 @@
 
 Prerequisites:
 
-- Golang
-- [ko](https://github.com/ko-build/ko), `brew install ko`
-- Docker
-- Make
-- [goreleaser](https://goreleaser.com), `brew install goreleaser`
-- ghcr.io/goreleaser/goreleaser-cross:v1.19, goreleaser CGO cross compiler container, downloaded with 'make release' (1.5GB)
+Install using brew or directly from download page.
+
+- [golang](https://go.dev/dl/): `brew install go`
+- [golanglint-ci](https://golangci-lint.run/usage/install/): `brew install golanglint-ci`
+- [ko](https://github.com/ko-build/ko): `brew install ko`
+- [Docker](https://docs.docker.com/desktop/install/mac-install/)
+- Make: `xcode-select --install`
+- [goreleaser](https://goreleaser.com): `brew install goreleaser`
+
+Optional:
+- ghcr.io/goreleaser/goreleaser-cross:v1.19: goreleaser CGO cross compiler container, downloaded with 'make release' (1.5GB)
+- [visual studio code](https://code.visualstudio.com/download)
+- [delve](https://github.com/go-delve/delve/blob/master/Documentation/installation/osx/install.md): `brew install delve`
 
 Build with `make build`, run with `make run`, publish with `make push`.
 
