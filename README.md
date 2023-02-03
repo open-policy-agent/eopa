@@ -2,23 +2,52 @@
 
 ## Build
 
-Prerequisites:
+### Prerequisites:
 
 Install using brew or directly from download page.
 
 - [golang](https://go.dev/dl/): `brew install go`
 - [golanglint-ci](https://golangci-lint.run/usage/install/): `brew install golanglint-ci`
-- [ko](https://github.com/ko-build/ko): `brew install ko`
+- [ko-build](https://github.com/ko-build/ko): `brew install ko`
 - [Docker](https://docs.docker.com/desktop/install/mac-install/)
 - Make: `xcode-select --install`
 - [goreleaser](https://goreleaser.com): `brew install goreleaser`
+- [protobuf](https://developers.google.com/protocol-buffers): see pkg/grpc/README.md
+- [bufbuild](https://buf.build/)
 
-Optional:
-- ghcr.io/goreleaser/goreleaser-cross:v1.19: goreleaser CGO cross compiler container, downloaded with 'make release' (1.5GB)
+### Optional:
+- [goreleaser-cross](https://github.com/goreleaser/goreleaser-cross): `make release` (1.5GB)
 - [visual studio code](https://code.visualstudio.com/download)
 - [delve](https://github.com/go-delve/delve/blob/master/Documentation/installation/osx/install.md): `brew install delve`
 
 Build with `make build`, run with `make run`, publish with `make push`.
+
+## Directories
+
+- bin: built binaries
+- build: additional build scripts
+- cmd: cobra command CLI
+- e2e: end-to-end tests
+- pkg: load source
+- test: smoke tests data
+
+## Files
+
+- Makefile: toplevel make
+- main.go: golang main
+- go.mod, go.sum: golang module configuration: 'make update'
+- .goreleaser.yaml, .goreleaser-wasm.yaml: goreleaser build scripts
+- .golangci.yaml, .golangci-optional.yml: golang lint configuration
+- .github/workflows: github actions
+- .ko.yaml: ko-build
+
+## Common make targets
+
+- make: build load
+- make fmt: go fmt
+- make update: update module configuration
+- make test: run unittests
+- make check: run linter
 
 ## FAQ
 
