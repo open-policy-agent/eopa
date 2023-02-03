@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var brand = "Load"
+
 func LoadCommand(wg *sync.WaitGroup, license *License) *cobra.Command {
 	root := &cobra.Command{
 		Use:   path.Base(os.Args[0]),
@@ -27,21 +29,20 @@ func LoadCommand(wg *sync.WaitGroup, license *License) *cobra.Command {
 			}
 		},
 	}
-	cmd.UserAgent("Load")
-	opa := cmd.Command("Load")
+	cmd.UserAgent(brand)
+	opa := cmd.Command(brand)
 	for _, c := range opa.Commands() {
 		switch c.Name() {
 		case "run":
-			root.AddCommand(Run(c))
+			root.AddCommand(Run(c, brand))
 		default:
 			root.AddCommand(c)
 		}
 	}
-	load := Bundle()
-	load.AddCommand(Convert())
-	load.AddCommand(Dump())
+	bundle := Bundle()
+	bundle.AddCommand(Convert())
+	bundle.AddCommand(Dump())
 
-	root.AddCommand(load)
-
+	root.AddCommand(bundle)
 	return root
 }

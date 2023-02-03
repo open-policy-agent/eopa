@@ -26,31 +26,30 @@ import (
 const defaultBindAddress = "localhost:8181"
 
 // Run provides the CLI entrypoint for the `run` subcommand
-func Run(opa *cobra.Command) *cobra.Command {
+func Run(opa *cobra.Command, brand string) *cobra.Command {
 	// Only override Run, so we keep the args and usage texts
-	opa.RunE = runE
+	opa.RunE = func(c *cobra.Command, args []string) error {
+		c.SilenceErrors = true
+		c.SilenceUsage = true
+
+		ctx := context.Background()
+		params, err := newRunParams(c)
+		if err != nil {
+			panic(err)
+		}
+		params.rt.Brand = brand
+
+		rt, err := initRuntime(ctx, params, args)
+		if err != nil {
+			fmt.Println("error:", err)
+			return err
+		}
+		if err := startRuntime(ctx, rt, params.serverMode); err != nil {
+			return err
+		}
+		return nil
+	}
 	return opa
-}
-
-func runE(c *cobra.Command, args []string) error {
-	c.SilenceErrors = true
-	c.SilenceUsage = true
-
-	ctx := context.Background()
-	params, err := newRunParams(c)
-	if err != nil {
-		panic(err)
-	}
-
-	rt, err := initRuntime(ctx, params, args)
-	if err != nil {
-		fmt.Println("error:", err)
-		return err
-	}
-	if err := startRuntime(ctx, rt, params.serverMode); err != nil {
-		return err
-	}
-	return nil
 }
 
 type runCmdParams struct {
