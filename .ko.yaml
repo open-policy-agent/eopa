@@ -7,3 +7,5 @@ builds:
   ldflags:
   - -X github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=https://telemetry.openpolicyagent.org
   - -X github.com/open-policy-agent/opa/version.Hostname=github.actions.local
+  - -X github.com/open-policy-agent/opa/version.Program=Load
+  - -X github.com/open-policy-agent/opa/version.Version={{.Env.LOAD_VERSION}}

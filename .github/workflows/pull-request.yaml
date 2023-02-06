@@ -166,13 +166,14 @@ jobs:
           cache: true
       - name: setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      - name: Run GoReleaser
+      - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@v4
         with:
-          distribution: goreleaser
-          version: latest
-          args: release --snapshot --skip-publish --clean
+          install-only: true
+      - name: Make GoReleaser
+        run: make release
         env:
+          HOSTNAME: github.actions.local
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
       - name: Upload release artifacts
         uses: actions/upload-artifact@v3

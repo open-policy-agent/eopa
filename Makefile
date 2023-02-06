@@ -22,21 +22,31 @@ KO_BUILD_ALL := $(KO_BUILD) --platform=linux/amd64,linux/arm64
 BUILD_DIR := $(shell echo `pwd`)
 RELEASE_DIR := _release
 
+LOAD_VERSION := $(shell git describe --abbrev=0 --tags)
+HOSTNAME ?= $(shell hostname -f)
+
+LOAD_LDFLAGS := -X=github.com/open-policy-agent/opa/version.Program=Load
+VERSION_LDFLAGS := -X=github.com/open-policy-agent/opa/version.Version=$(LOAD_VERSION)
+TELEMETRY_LDFLAGS := -X=github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=https://telemetry.openpolicyagent.org
+HOSTNAME_LDFLAGS := -X=github.com/open-policy-agent/opa/version.Hostname=$(HOSTNAME)
+
+LDFLAGS := $(LOAD_LDFLAGS) $(VERSION_LDFLAGS) $(TELEMETRY_LDFLAGS) $(HOSTNAME_LDFLAGS)
+
 .PHONY: load build build-local push deploy-ci auth-deploy-ci release release-wasm test fmt check run update e2e
 
 load:
-	go build -o $(BUILD_DIR)/bin/load .
+	go build -o $(BUILD_DIR)/bin/load "-ldflags=$(LDFLAGS)"
 
 # ko build is used by the GHA workflow to build an container image that can be tested on GHA,
 # i.e. linux/amd64 only.
 build:
-	$(KO_BUILD) --push=false --tarball=local.tar
+	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD) --push=false --tarball=local.tar
 
 build-local:
-	@$(KO_BUILD_ALL) --local --tags edge
+	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --local --tags edge
 
 push:
-	$(KO_BUILD_ALL) --tags $(TAGS)
+	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --tags $(TAGS)
 
 deploy-ci: push
 
@@ -45,7 +55,10 @@ auth-deploy-ci:
 
 # goreleaser uses latest version tag.
 release:
-	goreleaser release --snapshot --skip-publish --clean
+	HOSTNAME=$(HOSTNAME) LOAD_VERSION=$(LOAD_VERSION) goreleaser release --snapshot --skip-publish --clean
+
+release-ci:
+	HOSTNAME=$(HOSTNAME) LOAD_VERSION=$(LOAD_VERSION) goreleaser release --clean
 
 # load docker image ghcr.io/goreleaser/goreleaser-cross:v1.19 and run goreleaser (build load and load_wasm)
 release-wasm:

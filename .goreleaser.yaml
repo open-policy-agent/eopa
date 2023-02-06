@@ -14,6 +14,12 @@ builds:
         goarch: arm64
       - goos: linux
         goarch: arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser
+      - -X github.com/open-policy-agent/opa/version.Program=Load
+      - -X github.com/open-policy-agent/opa/version.Version={{.Env.LOAD_VERSION}}
+      - -X github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=https://telemetry.openpolicyagent.org
+      - -X github.com/open-policy-agent/opa/version.Hostname={{.Env.HOSTNAME}}
 
 archives:
   - format: tar.gz
