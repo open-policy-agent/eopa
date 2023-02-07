@@ -748,7 +748,8 @@ func compileModules(compiler *ast.Compiler, m metrics.Metrics, bundles map[strin
 			}
 		} else {
 			for name, module := range b.ParsedModules(bundleName) {
-				modules[name] = module
+				x := strings.TrimLeft(name, "/")
+				modules[x] = module
 			}
 		}
 	}
