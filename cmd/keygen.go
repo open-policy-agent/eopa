@@ -7,9 +7,12 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/keygen-sh/keygen-go/v2"
+
+	"github.com/open-policy-agent/opa/logging"
 )
 
 const loadLicenseToken = "STYRA_LOAD_LICENSE_TOKEN"
@@ -22,6 +25,7 @@ type (
 		released    bool
 		stop        int32
 		fingerprint string
+		logger      *logging.StandardLogger
 	}
 
 	keygenLogger struct {
@@ -39,7 +43,7 @@ func NewLicense() *License {
 	// remove licenses from environment! (opa.runtime.env)
 	os.Unsetenv(loadLicenseKey)
 	os.Unsetenv(loadLicenseToken)
-	return &License{}
+	return &License{logger: logging.Get()}
 }
 
 func (l *keygenLogger) Errorf(format string, v ...interface{}) {
@@ -87,7 +91,7 @@ func (l *License) ValidateLicense() {
 	var err error
 	defer func() {
 		if err != nil {
-			fmt.Println(err.Error())
+			l.logger.Error("licensing error: %v", err)
 			os.Exit(2)
 		}
 	}()
@@ -108,9 +112,13 @@ func (l *License) ValidateLicense() {
 	// Validate the license for the current fingerprint
 	var lerr error
 	l.license, lerr = keygen.Validate(l.fingerprint)
+
 	switch {
 	case lerr == keygen.ErrLicenseNotActivated:
 		// Activate the current fingerprint
+		d := time.Until(*l.license.Expiry).Truncate(time.Second)
+
+		l.logger.Debug("Licensing activation: expires in %v", d)
 
 		if l.stopped() { // if ReleaseLicense was called, exit now
 			return
@@ -134,9 +142,8 @@ func (l *License) ValidateLicense() {
 		}()
 
 		// Always start a heartbeat monitor for the current machine
-		if lerr := machine.Monitor(); lerr != nil {
+		if lerr := l.monitor(machine); lerr != nil {
 			err = fmt.Errorf("license heartbeat monitor failed to start: %w", lerr)
-			return
 		}
 		return
 
@@ -159,7 +166,52 @@ func (l *License) ReleaseLicense() {
 		return
 	}
 	if l.license != nil {
+		l.logger.Debug("Licensing deactivation")
 		l.license.Deactivate(l.fingerprint)
 	}
 	l.released = true
+}
+
+// monitorRetry: try connecting to keygen SaaS for upto 16 minutes
+func (l *License) monitorRetry(m *keygen.Machine) error {
+	t := 30 * time.Second
+	c := 32
+
+	for range time.Tick(t) {
+		if err := heartbeat(m); err != nil {
+			if c = c - 1; c < 0 {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// monitor: send keygen SaaS heartbeat
+func (l *License) monitor(m *keygen.Machine) error {
+	if err := heartbeat(m); err != nil {
+		return err
+	}
+
+	go func() {
+		t := (time.Duration(m.HeartbeatDuration) * time.Second) - (30 * time.Second)
+
+		for range time.Tick(t) {
+			if err := heartbeat(m); err != nil {
+				if err := l.monitorRetry(m); err != nil {
+					// give up - leak license
+					l.logger.Error("Licensing heartbeat error: %v", err)
+					return
+				}
+			}
+		}
+	}()
+	return nil
+}
+
+func heartbeat(m *keygen.Machine) error {
+	client := keygen.NewClient()
+
+	_, err := client.Post("machines/"+m.ID+"/actions/ping", nil, m)
+	return err
 }
