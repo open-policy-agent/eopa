@@ -117,8 +117,11 @@ func (l *License) ValidateLicense() {
 	case lerr == keygen.ErrLicenseNotActivated:
 		// Activate the current fingerprint
 		d := time.Until(*l.license.Expiry).Truncate(time.Second)
-
-		l.logger.Debug("Licensing activation: expires in %v", d)
+		if d > 3*24*time.Hour { // > 3 days
+			l.logger.Debug("Licensing activation: expires in %.2fd", float64(d)/float64(24*time.Hour))
+		} else {
+			l.logger.Debug("Licensing activation: expires in %v", d)
+		}
 
 		if l.stopped() { // if ReleaseLicense was called, exit now
 			return
