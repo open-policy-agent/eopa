@@ -16,13 +16,17 @@ GOOS := $(shell go env GOOS)
 
 TAGS ?= edge
 
-KO_BUILD := ko build --sbom=none --bare --tags $(VERSION) --image-label org.opencontainers.image.source=https://github.com/StyraInc/load
+# default KO_DEFAULTBASEIMAGE = cgr.dev/chainguard/static
+KO_DEBUG_IMAGE ?= cgr.dev/chainguard/busybox:latest
+
+KO_BUILD := ko build --sbom=none --bare --image-label org.opencontainers.image.source=https://github.com/StyraInc/load
 KO_BUILD_ALL := $(KO_BUILD) --platform=linux/amd64,linux/arm64
 
 BUILD_DIR := $(shell echo `pwd`)
 RELEASE_DIR := _release
 
-LOAD_VERSION := $(shell git describe --abbrev=0 --tags)
+# LOAD_VERSION: strip 'v' from tag
+LOAD_VERSION := $(shell git describe --abbrev=0 --tags | sed s/^v//)
 HOSTNAME ?= $(shell hostname -f)
 
 LOAD_LDFLAGS := -X=github.com/open-policy-agent/opa/version.Program=Load
@@ -32,28 +36,46 @@ HOSTNAME_LDFLAGS := -X=github.com/open-policy-agent/opa/version.Hostname=$(HOSTN
 
 LDFLAGS := $(LOAD_LDFLAGS) $(VERSION_LDFLAGS) $(TELEMETRY_LDFLAGS) $(HOSTNAME_LDFLAGS)
 
-.PHONY: load build build-local push deploy-ci auth-deploy-ci release release-wasm test fmt check run update e2e
-
+.PHONY: load
 load:
 	go build -o $(BUILD_DIR)/bin/load "-ldflags=$(LDFLAGS)"
 
 # ko build is used by the GHA workflow to build an container image that can be tested on GHA,
 # i.e. linux/amd64 only.
+.PHONY: build build-local run build-local-debug push deploy-ci deploy-ci-debug auth-deploy-ci auth-deploy-ci-debug
+
+# build container image file: local.tar
 build:
 	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD) --push=false --tarball=local.tar
 
+# build local container image (tagged)
 build-local:
-	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --local --tags edge
+	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --local --tags $(VERSION) --tags edge
 
+# build and run local ko-build container (no tags)
+run:
+	docker run -e STYRA_LOAD_LICENSE_TOKEN -e STYRA_LOAD_LICENSE_KEY -p 8181:8181 -v $$(pwd):/cwd -w /cwd $$(LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD) --local) run --server --log-level debug
+
+# build off distroless container.
+# execute: docker run -it --rm --entrypoint sh ko.local:debug
+build-local-debug:
+	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --local --disable-optimizations --tags $(VERSION)-debug --tags debug
+
+deploy-ci: push
 push:
 	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --tags $(TAGS)
 
-deploy-ci: push
+deploy-ci-debug:
+	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --disable-optimizations --tags $(TAGS)-debug
 
 auth-deploy-ci:
 	echo $(AUTH_TOKEN) | ko login ghcr.io --username load-builder --password-stdin | $(KO_BUILD_ALL) --tags $(TAGS)
 
+auth-deploy-ci-debug:
+	echo $(AUTH_TOKEN) | ko login ghcr.io --username load-builder --password-stdin | KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) $(KO_BUILD_ALL) --disable-optimizations --tags $(TAGS)-debug
+
 # goreleaser uses latest version tag.
+.PHONY: release release-ci release-wasm
 release:
 	HOSTNAME=$(HOSTNAME) LOAD_VERSION=$(LOAD_VERSION) goreleaser release --snapshot --skip-publish --clean
 
@@ -65,6 +87,8 @@ release-wasm:
 	go mod vendor
 	docker run --rm -v $$(PWD):/cwd -w /cwd ghcr.io/goreleaser/goreleaser-cross:v1.19 release -f .goreleaser-wasm.yaml --snapshot --skip-publish --rm-dist
 
+# utilities
+.PHONY: test e2e benchmark fmt check update
 test:
 	go test ./...
 
@@ -79,9 +103,6 @@ fmt:
 
 check:
 	golangci-lint run -v
-
-run:
-	docker run -e STYRA_LOAD_LICENSE_TOKEN -e STYRA_LOAD_LICENSE_KEY -p 8181:8181 -v $$(pwd):/cwd -w /cwd $$($(KO_BUILD) --local) run --server --log-level debug
 
 update:
 	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@load-0.48
