@@ -69,10 +69,10 @@ deploy-ci-debug:
 	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --disable-optimizations --tags $(TAGS)-debug
 
 auth-deploy-ci:
-	echo $(AUTH_TOKEN) | ko login ghcr.io --username load-builder --password-stdin | LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --tags $(TAGS)
+	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --tags $(TAGS)
 
 auth-deploy-ci-debug:
-	echo $(AUTH_TOKEN) | ko login ghcr.io --username load-builder --password-stdin | KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --disable-optimizations --tags $(TAGS)-debug
+	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --disable-optimizations --tags $(TAGS)-debug
 
 # goreleaser uses latest version tag.
 .PHONY: release release-ci release-wasm
