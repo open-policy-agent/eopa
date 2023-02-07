@@ -57,9 +57,9 @@ run:
 	docker run -e STYRA_LOAD_LICENSE_TOKEN -e STYRA_LOAD_LICENSE_KEY -p 8181:8181 -v $$(pwd):/cwd -w /cwd $$(LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD) --local) run --server --log-level debug
 
 # build off distroless container.
-# execute: docker run -it --rm --entrypoint sh ko.local:debug
+# execute: docker run -it --rm --entrypoint sh ko.local:edge-debug
 build-local-debug:
-	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --local --disable-optimizations --tags $(VERSION)-debug --tags debug
+	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --local --disable-optimizations --tags $(VERSION)-debug --tags edge-debug
 
 deploy-ci: push
 push:
