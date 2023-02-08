@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -82,8 +83,20 @@ func (l *License) stopped() bool {
 	return atomic.LoadInt32(&l.stop) != 0
 }
 
+func readLicense(file string) (string, error) {
+	dat, err := os.ReadFile(file)
+	if err != nil {
+		return "", fmt.Errorf("invalid license file %v: %w", file, err)
+	}
+	s := strings.TrimSpace(string(dat))
+	if len(s) == 0 {
+		return "", fmt.Errorf("invalid license file %v", file)
+	}
+	return s, nil
+}
+
 // validate and activate the keygen license
-func (l *License) ValidateLicense() {
+func (l *License) ValidateLicense(key string, token string) {
 	keygen.Account = "dd0105d1-9564-4f58-ae1c-9defdd0bfea7" // account=styra-com
 	keygen.Product = "f7da4ae5-7bf5-46f6-9634-026bec5e8599" // product=load
 	keygen.Logger = &keygenLogger{level: keygen.LogLevelNone}
@@ -98,8 +111,23 @@ func (l *License) ValidateLicense() {
 
 	// validate licensekey or licensetoken
 	if keygen.LicenseKey == "" && keygen.Token == "" {
-		err = fmt.Errorf("missing license environment variable: %v or %v", loadLicenseKey, loadLicenseToken)
-		return
+		var dat string
+		if key != "" {
+			dat, err = readLicense(key)
+			if err != nil {
+				return
+			}
+			keygen.LicenseKey = dat
+		} else if token != "" {
+			dat, err = readLicense(token)
+			if err != nil {
+				return
+			}
+			keygen.Token = dat
+		} else {
+			err = fmt.Errorf("missing license environment variable: %v or %v", loadLicenseKey, loadLicenseToken)
+			return
+		}
 	}
 
 	// use random fingerprint: floating concurrent license
