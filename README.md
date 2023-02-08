@@ -57,6 +57,26 @@ Build with `make build`, run with `make run`, publish with `make push`.
 
 - `make update`
 
+### How do I update OPA in Load?
+
+Let's assume an update from OPA 0.49.0 to 0.50.0:
+
+First, we update the fork:
+
+1. push `main` from github.com/open-policy-agent/opa to the fork github.com/StyraInc/opa
+2. push the latest version tag (v0.50.0) from github.com/open-policy-agent/opa to the fork (NB the post-tag action on the fork always fails)
+3. checkout the previous fork branch, e.g. `load-0.49`
+4. `git rebase v0.50.0` -- rebase ontop of the latest release tag
+5. name the branch `load-0.50` and push it to the fork github.com/StyraInc/opa
+
+Then we update the reference in Load:
+
+1. Update it in go.mod: `GOPRIVATE=github.com/StyraInc go get github.com/open-policy-agent/opa@v0.50.0` (NB this has no consequences except for version-tag bookkeeping)
+2. Update `load-xx` in the `update` target of the Makefile
+3. Run `make update`.
+4. Bump the OPA version number in the README.md badge at the top
+5. Commit the changes and push a PR to github.com/StyraInc/load-private.
+
 ### Can't build locally: private github repo
 
 ````
