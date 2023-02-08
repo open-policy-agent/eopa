@@ -45,13 +45,6 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@v1
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-
       - uses: open-policy-agent/setup-opa@v2
 
       - name: Check out code
@@ -73,11 +66,9 @@ jobs:
       - name: Build and Push
         run: make auth-deploy-ci
         env:
-          TAGS: ${{ github.ref_name }}
-          AUTH_TOKEN: ${{ steps.generate_token.outputs.token }}
+          AUTH_RELEASE: ${{ github.ref_name }}
 
       - name: Debug Build and Push
         run: make auth-deploy-ci-debug
         env:
-          TAGS: ${{ github.ref_name }}
-          AUTH_TOKEN: ${{ steps.generate_token.outputs.token }}
+          AUTH_RELEASE: ${{ github.ref_name }}
