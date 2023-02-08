@@ -899,7 +899,7 @@ func equalWasmResolversAndRoots(a, b bundleApi.Manifest) bool {
 	}
 
 	for i := 0; i < len(a.WasmResolvers); i++ {
-		if a.WasmResolvers[i] != b.WasmResolvers[i] {
+		if !a.WasmResolvers[i].Equal(&b.WasmResolvers[i]) {
 			return false
 		}
 	}

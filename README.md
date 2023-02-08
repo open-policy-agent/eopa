@@ -1,5 +1,7 @@
 # Styra Load-Private
 
+![OPA v0.49.0](https://openpolicyagent.org/badge/v0.49.0)
+
 ## Build
 
 ### Prerequisites:
