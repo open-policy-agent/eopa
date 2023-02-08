@@ -285,6 +285,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 
 	params.rt.BundleLazyLoadingMode = true
 
+	params.rt.NDBCacheEnabled = true // We need this for LIA.
+
 	a := &bundle.CustomActivator{}
 	bundleApi.RegisterActivator("_load", a)
 	params.rt.BundleActivatorPlugin = "_load"

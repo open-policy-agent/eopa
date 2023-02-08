@@ -49,6 +49,7 @@ type (
 		StrictBuiltinErrors    bool
 		Limits                 *Limits
 		Cache                  builtins.Cache
+		NDBCache               builtins.NDBCache
 	}
 
 	// State holds all the evaluation state and is passed along the statements as the evaluation progresses.
@@ -75,6 +76,7 @@ type (
 		PrintHook              print.Hook
 		StrictBuiltinErrors    bool
 		BuiltinErrors          []error
+		NDBCache               builtins.NDBCache
 		registersPool          sync.Pool
 	}
 
@@ -138,6 +140,7 @@ func newGlobals(ctx context.Context, vm *VM, opts EvalOpts, cancel *cancel, runt
 		Runtime:             runtime,
 		PrintHook:           opts.PrintHook,
 		StrictBuiltinErrors: opts.StrictBuiltinErrors,
+		NDBCache:            opts.NDBCache,
 		registersPool: sync.Pool{
 			New: func() any {
 				return new(registersList)

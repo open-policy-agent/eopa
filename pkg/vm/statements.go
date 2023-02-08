@@ -112,6 +112,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		Cancel:                 state.Globals.cancel,
 		Runtime:                state.Globals.Runtime,
 		Cache:                  state.Globals.Cache,
+		NDBuiltinCache:         state.Globals.NDBCache,
 		InterQueryBuiltinCache: state.Globals.InterQueryBuiltinCache,
 		PrintHook:              state.Globals.PrintHook,
 	}
@@ -153,6 +154,22 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return fmt.Errorf("builtin not found: %s", builtin.Name())
 	}
 
+	if state.Globals.NDBCache != nil {
+		bi, ok := ast.BuiltinMap[builtin.Name()]
+		if !ok {
+			return fmt.Errorf("builtin not found: %s", builtin.Name())
+		}
+		if bi.IsNondeterministic() {
+			value, ok := state.Globals.NDBCache.Get(bi.Name, ast.NewArray(a...))
+			// NOTE(sr): Nondet builtins currently aren't relations, and don't return void.
+			if ok {
+				state.SetValue(Unused, state.ValueOps().FromInterface(value))
+				state.SetReturn(Unused)
+				return nil
+			}
+		}
+	}
+
 	if err := func(a *[]*ast.Term, f func(v *ast.Term) error) error {
 		return impl(bctx,
 			*noescape(a),
@@ -169,6 +186,9 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 			// topdown print returns iter(nil)
 			if value != nil {
 				state.SetValue(Unused, state.ValueOps().FromInterface(value.Value))
+				if state.Globals.NDBCache != nil {
+					state.Globals.NDBCache.Put(builtin.Name(), ast.NewArray(a...), value.Value)
+				}
 			} else {
 				state.SetValue(Unused, state.ValueOps().MakeArray(0))
 			}

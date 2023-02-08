@@ -80,7 +80,6 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 	if seed == nil {
 		seed = rand.Reader
 	}
-
 	result, err := t.vm.Eval(ctx, "eval", vm.EvalOpts{
 		Metrics:                ectx.Metrics(),
 		Input:                  input,
@@ -88,6 +87,7 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		Seed:                   seed,
 		Runtime:                runtime(rt),
 		Cache:                  builtins.Cache{},
+		NDBCache:               ectx.NDBCache(),
 		InterQueryBuiltinCache: ectx.InterQueryBuiltinCache(),
 		PrintHook:              ectx.PrintHook(),
 		StrictBuiltinErrors:    ectx.StrictBuiltinErrors(),
