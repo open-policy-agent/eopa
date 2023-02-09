@@ -1,6 +1,11 @@
 export GOPRIVATE=github.com/StyraInc/opa
 
 ifdef AUTH_RELEASE
+NEWEST := $(shell git tag -l --sort -version:refname | head -n 1)
+ifeq ($(AUTH_RELEASE), $(NEWEST))
+LATEST := --tags latest
+LATEST_DEBUG := --tags latest-debug
+endif
 # only auth-build-ci tag builds get put into 'load' packages repository
 export KO_DOCKER_REPO=ghcr.io/styrainc/load
 else
@@ -65,10 +70,10 @@ deploy-ci-debug:
 	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --disable-optimizations --tags $(VERSION)-debug --tags edge-debug
 
 auth-deploy-ci:
-	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --tags $(LOAD_VERSION)
+	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --tags $(LOAD_VERSION) $(LATEST)
 
 auth-deploy-ci-debug:
-	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --disable-optimizations --tags $(LOAD_VERSION)-debug
+	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --disable-optimizations --tags $(LOAD_VERSION)-debug $(LATEST_DEBUG)
 
 # goreleaser uses latest version tag.
 .PHONY: release release-ci release-wasm
