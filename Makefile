@@ -19,8 +19,9 @@ GOOS := $(shell go env GOOS)
 # default KO_DEFAULTBASEIMAGE = cgr.dev/chainguard/static
 KO_DEBUG_IMAGE ?= cgr.dev/chainguard/busybox:latest
 
-KO_BUILD := ko build --sbom=none --bare --image-label org.opencontainers.image.source=https://github.com/StyraInc/load
-KO_BUILD_ALL := $(KO_BUILD) --platform=linux/amd64,linux/arm64
+KO_BUILD := ko build . --sbom=none --image-label org.opencontainers.image.source=https://github.com/StyraInc/load
+KO_BUILD_LOCAL := $(KO_BUILD) --base-import-paths --local
+KO_BUILD_DEPLOY := $(KO_BUILD) --bare --platform=linux/amd64,linux/arm64
 
 BUILD_DIR := $(shell echo `pwd`)
 RELEASE_DIR := _release
@@ -50,30 +51,30 @@ build:
 	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD) --push=false --tarball=local.tar
 
 # build and run local ko-build container (no tags)
-run:
-	docker run -e STYRA_LOAD_LICENSE_TOKEN -e STYRA_LOAD_LICENSE_KEY -p 8181:8181 -v $$(pwd):/cwd -w /cwd $$(LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD) --local) run --server --log-level debug
+run: build-local
+	docker run -e STYRA_LOAD_LICENSE_TOKEN -e STYRA_LOAD_LICENSE_KEY -p 8181:8181 -v $$(pwd):/cwd -w /cwd ko.local/load-private:edge run --server --log-level debug
 
 # build local container image (tagged)
 build-local:
-	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --local --tags $(VERSION) --tags edge
+	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_LOCAL) --tags $(VERSION) --tags edge
 
 # build container.
-# execute: docker run -it --rm --entrypoint sh ko.local:edge-debug
+# execute: docker run -it --rm --entrypoint sh ko.local/load-private:edge-debug
 build-local-debug:
-	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --local --disable-optimizations --tags $(VERSION)-debug --tags edge-debug
+	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_LOCAL) --disable-optimizations --tags $(VERSION)-debug --tags edge-debug
 
 deploy-ci: push
 push:
-	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --tags $(VERSION) --tags edge
+	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_DEPLOY) --tags $(VERSION) --tags edge
 
 deploy-ci-debug:
-	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --disable-optimizations --tags $(VERSION)-debug --tags edge-debug
+	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_DEPLOY) --disable-optimizations --tags $(VERSION)-debug --tags edge-debug
 
 auth-deploy-ci:
-	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --tags $(LOAD_VERSION) $(LATEST)
+	LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_DEPLOY) --tags $(LOAD_VERSION) $(LATEST)
 
 auth-deploy-ci-debug:
-	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_ALL) --disable-optimizations --tags $(LOAD_VERSION)-debug $(LATEST_DEBUG)
+	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) LOAD_VERSION=$(LOAD_VERSION) $(KO_BUILD_DEPLOY) --disable-optimizations --tags $(LOAD_VERSION)-debug $(LATEST_DEBUG)
 
 # goreleaser uses latest version tag.
 .PHONY: release release-ci release-wasm
