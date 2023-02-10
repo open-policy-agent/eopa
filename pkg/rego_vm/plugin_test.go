@@ -14,7 +14,8 @@ func TestNDBCache(t *testing.T) {
 	r := rego.New(
 		rego.Query("data.x.p = x"),
 		rego.Module("test.rego", `package x
-p := rand.intn("x", 2)`),
+import future.keywords.if
+p := rand.intn("x", 2) if numbers.range(1, 2)`), // only one of the builtins is non-det
 		rego.NDBuiltinCache(ndbc),
 	)
 	res, err := r.Eval(context.Background())
