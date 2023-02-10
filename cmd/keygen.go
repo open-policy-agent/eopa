@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -32,9 +33,19 @@ type (
 	keygenLogger struct {
 		level keygen.LogLevel
 	}
+
+	keygenDataset struct {
+		License struct {
+			Expiry string
+		}
+	}
 )
 
 func NewLicense() *License {
+	keygen.Account = "dd0105d1-9564-4f58-ae1c-9defdd0bfea7" // account=styra-com
+	keygen.Product = "f7da4ae5-7bf5-46f6-9634-026bec5e8599" // product=load
+	keygen.Logger = &keygenLogger{level: keygen.LogLevelNone}
+
 	// validate licensekey or licensetoken
 	keygen.LicenseKey = os.Getenv(loadLicenseKey)
 	if keygen.LicenseKey == "" {
@@ -95,17 +106,22 @@ func readLicense(file string) (string, error) {
 	return s, nil
 }
 
-// validate and activate the keygen license
-func (l *License) ValidateLicense(key string, token string) {
-	keygen.Account = "dd0105d1-9564-4f58-ae1c-9defdd0bfea7" // account=styra-com
-	keygen.Product = "f7da4ae5-7bf5-46f6-9634-026bec5e8599" // product=load
-	keygen.Logger = &keygenLogger{level: keygen.LogLevelNone}
+func (l *License) showExpiry(expiry time.Time, prefix string) {
+	d := time.Until(expiry).Truncate(time.Second)
+	if d > 3*24*time.Hour { // > 3 days
+		l.logger.Debug("%s: expires in %.2fd", prefix, float64(d)/float64(24*time.Hour))
+	} else {
+		l.logger.Debug("%s: expires in %v", prefix, d)
+	}
+}
 
+// validate and activate the keygen license
+func (l *License) ValidateLicense(key string, token string, terminate func(code int)) {
 	var err error
 	defer func() {
 		if err != nil {
 			l.logger.Error("licensing error: %v", err)
-			os.Exit(2)
+			terminate(2)
 		}
 	}()
 
@@ -130,56 +146,85 @@ func (l *License) ValidateLicense(key string, token string) {
 		}
 	}
 
-	// use random fingerprint: floating concurrent license
-	l.fingerprint = uuid.New().String()
-
 	if l.stopped() { // if ReleaseLicense was called, exit now
 		return
 	}
 
-	// Validate the license for the current fingerprint
-	var lerr error
-	l.license, lerr = keygen.Validate(l.fingerprint)
-
-	switch {
-	case lerr == keygen.ErrLicenseNotActivated:
-		// Activate the current fingerprint
-		d := time.Until(*l.license.Expiry).Truncate(time.Second)
-		if d > 3*24*time.Hour { // > 3 days
-			l.logger.Debug("Licensing activation: expires in %.2fd", float64(d)/float64(24*time.Hour))
-		} else {
-			l.logger.Debug("Licensing activation: expires in %v", d)
-		}
-
-		if l.stopped() { // if ReleaseLicense was called, exit now
-			return
-		}
-
-		machine, lerr := l.license.Activate(l.fingerprint)
+	if keygen.LicenseKey != "" && strings.HasPrefix(keygen.LicenseKey, "key/") {
+		// Verify the license key's signature and decode embedded dataset
+		keygen.PublicKey = "8b8ff31c1d3031add9b1b734e09e81c794731718c2cac2e601b8dfbc95daa4fc"
+		license := &keygen.License{Scheme: keygen.SchemeCodeEd25519, Key: keygen.LicenseKey}
+		dataset, lerr := license.Verify()
 		if lerr != nil {
-			err = fmt.Errorf("license activation failed: %w", lerr)
+			err = fmt.Errorf("off-line license verification failed: %w", lerr)
 			return
 		}
 
-		// Handle SIGINT and gracefully deactivate the machine
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGSEGV) // disable default os.Interrupt handler
-
-		go func() {
-			for range sigs {
-				l.ReleaseLicense()
-				os.Exit(1) // exit now (default behavior)!
-			}
-		}()
-
-		// Always start a heartbeat monitor for the current machine
-		if lerr := l.monitor(machine); lerr != nil {
-			err = fmt.Errorf("license heartbeat monitor failed to start: %w", lerr)
+		var data keygenDataset
+		if lerr := json.Unmarshal(dataset, &data); lerr != nil {
+			err = fmt.Errorf("off-line license verification failed: %w", lerr)
+			return
 		}
-		return
+		if data.License.Expiry == "" {
+			err = fmt.Errorf("off-line license verification failed: missing expiry")
+			return
+		}
+		expiry, lerr := time.Parse("2006-01-02T15:04:05.000Z", data.License.Expiry)
+		if lerr != nil {
+			err = fmt.Errorf("off-line license verification failed: %w", lerr)
+			return
+		}
+		l.showExpiry(expiry, "Licensing offline verification")
 
-	case lerr != nil:
-		err = fmt.Errorf("invalid license: %w", lerr)
+	} else {
+		// use random fingerprint: floating concurrent license
+		l.fingerprint = uuid.New().String()
+
+		// Validate the license for the current fingerprint
+		var lerr error
+		l.license, lerr = keygen.Validate(l.fingerprint)
+
+		if lerr == keygen.ErrLicenseNotActivated {
+			// Activate the current fingerprint
+			if l.license.Expiry == nil {
+				err = fmt.Errorf("license activation failed: missing expiry")
+				return
+			}
+
+			l.showExpiry(*l.license.Expiry, "Licensing activation")
+
+			if l.stopped() { // if ReleaseLicense was called, exit now
+				return
+			}
+
+			machine, lerr := l.license.Activate(l.fingerprint)
+			if lerr != nil {
+				err = fmt.Errorf("license activation failed: %w", lerr)
+				return
+			}
+
+			// Handle SIGINT and gracefully deactivate the machine
+			sigs := make(chan os.Signal, 1)
+			signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGSEGV) // disable default os.Interrupt handler
+
+			go func() {
+				for range sigs {
+					l.ReleaseLicense()
+					terminate(1) // exit now (default behavior)!
+				}
+			}()
+
+			// Always start a heartbeat monitor for the current machine
+			if lerr := l.monitor(machine); lerr != nil {
+				err = fmt.Errorf("license heartbeat monitor failed to start: %w", lerr)
+			}
+			return
+		}
+		if lerr != nil {
+			err = fmt.Errorf("invalid license: %w", lerr)
+			return
+		}
+		err = fmt.Errorf("invalid license: expected NotActiviated")
 		return
 	}
 }

@@ -19,6 +19,7 @@ require (
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	go.uber.org/goleak v1.1.12
 	golang.org/x/exp v0.0.0-20230131120322-dfa7d7a641b0
+	gopkg.in/h2non/gock.v1 v1.1.2
 )
 
 require (
@@ -62,6 +63,7 @@ require (
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
+	github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect

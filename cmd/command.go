@@ -32,7 +32,7 @@ func LoadCommand(wg *sync.WaitGroup, license *License) *cobra.Command {
 					go func() {
 						// do the license validate and activate asynchronously; so user doesn't have to wait
 						defer wg.Done()
-						license.ValidateLicense(key, token)
+						license.ValidateLicense(key, token, os.Exit)
 					}()
 				}
 			}
