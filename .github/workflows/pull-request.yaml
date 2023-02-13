@@ -181,8 +181,7 @@ jobs:
           name: binaries
           path: |
             dist/checksums.txt
-            dist/*gz
-            dist/*zip
+            dist/load_*/*
 
   build:
     name: Ko Build
@@ -244,14 +243,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            archive: dist/load_Linux_x86_64.tar.gz
-            exec: load
+            exec: dist/load_linux_amd64_v1/load
           - os: macos-latest
-            archive: dist/load_Darwin_x86_64.tar.gz
-            exec: load
+            exec: dist/load_darwin_amd64_v1/load
           - os: windows-latest
-            archive: dist/load_Windows_x86_64.zip
-            exec: load.exe
+            exec: dist/load_windows_amd64_v1/load.exe
 
     steps:
       - name: Check out code
@@ -262,6 +258,6 @@ jobs:
           name: binaries
           path: dist
       - name: Test binaries
-        run: make ci-smoke-test ARCHIVE=${{ matrix.archive }} BINARY=${{ matrix.exec }}
+        run: make ci-smoke-test BINARY=${{ matrix.exec }}
         env:
           STYRA_LOAD_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}

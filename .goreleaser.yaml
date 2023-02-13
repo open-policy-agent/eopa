@@ -22,7 +22,8 @@ builds:
       - -X github.com/open-policy-agent/opa/version.Hostname={{.Env.HOSTNAME}}
 
 archives:
-  - format: tar.gz
+  - id: binary
+    format: binary
     # example: load_Darwin_arm64
     # this name template makes the OS and Arch compatible with the results of uname.
     name_template: >-
@@ -32,14 +33,6 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-    files:
-      - LICENSE
-      - CHANGELOG.md
-    rlcp: true
-    format_overrides:
-    # use zip for windows archives
-    - goos: windows
-      format: zip
 
 checksum:
   name_template: 'checksums.txt'

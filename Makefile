@@ -24,7 +24,6 @@ KO_BUILD_LOCAL := $(KO_BUILD) --base-import-paths --local
 KO_BUILD_DEPLOY := $(KO_BUILD) --bare --platform=linux/amd64,linux/arm64
 
 BUILD_DIR := $(shell echo `pwd`)
-RELEASE_DIR := _release
 
 # LOAD_VERSION: strip 'v' from tag
 LOAD_VERSION := $(shell git describe --abbrev=0 --tags | sed s/^v//)
@@ -114,17 +113,10 @@ update:
 #    called by github action
 #    run locally:
 #      make release
-#      make ci-smoke-test ARCHIVE=dist/load_Darwin_x86_64.tar.gz BINARY=load
+#      make ci-smoke-test BINARY=dist/load_darwin_amd64_v1/load
 #
 .PHONY: ci-smoke-test
 ci-smoke-test:
-	mkdir -p $(RELEASE_DIR)
-	test -f "$(ARCHIVE)"
-ifeq ($(GOOS),windows)
-	cd $(RELEASE_DIR); unzip ../$(ARCHIVE)
-else
-	cd $(RELEASE_DIR); tar xzf ../$(ARCHIVE)
-endif
-	test -f "$(RELEASE_DIR)/$(BINARY)"
-	./build/binary-smoke-test.sh "$(RELEASE_DIR)/$(BINARY)" rego
-	rm -rf $(RELEASE_DIR)
+	test -f "$(BINARY)"
+	chmod +x "$(BINARY)"
+	./build/binary-smoke-test.sh "$(BINARY)" rego
