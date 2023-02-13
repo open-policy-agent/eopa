@@ -3,7 +3,6 @@ package cmd
 import (
 	"os"
 	"path"
-	"sync"
 
 	"github.com/open-policy-agent/opa/cmd"
 	"github.com/spf13/cobra"
@@ -16,7 +15,7 @@ func addLicenseFlags(c *cobra.Command, key *string, token *string) {
 	c.Flags().StringVar(token, "license-token", "", "Location of file containing STYRA_LOAD_LICENSE_TOKEN")
 }
 
-func LoadCommand(wg *sync.WaitGroup, license *License) *cobra.Command {
+func LoadCommand(license *License) *cobra.Command {
 	var key string
 	var token string
 
@@ -27,11 +26,9 @@ func LoadCommand(wg *sync.WaitGroup, license *License) *cobra.Command {
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			switch cmd.CalledAs() {
 			case "eval", "run":
-				if wg != nil && license != nil {
-					wg.Add(1)
+				if license != nil {
 					go func() {
 						// do the license validate and activate asynchronously; so user doesn't have to wait
-						defer wg.Done()
 						license.ValidateLicense(key, token, func(code int, err error) { os.Exit(code) })
 					}()
 				}

@@ -31,7 +31,7 @@ func main() {
 	}
 	out := os.Args[1]
 
-	command := loadCmd.LoadCommand(nil, nil)
+	command := loadCmd.LoadCommand(nil)
 	command.Use = "load [command]"
 	command.DisableAutoGenTag = true
 

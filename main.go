@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"os"
-	"sync"
 
 	"github.com/open-policy-agent/opa/cmd"
 	loadCmd "github.com/styrainc/load-private/cmd"
@@ -20,13 +19,11 @@ func main() {
 	}() // orderly shutdown, run all defer routines
 
 	license := loadCmd.NewLicense()
-	var wg sync.WaitGroup
-	root := loadCmd.LoadCommand(&wg, license)
+	root := loadCmd.LoadCommand(license)
 
 	defer func() {
 		// do release in a defer function; works with panics
 		license.ReleaseLicense()
-		wg.Wait() // wait for the validateLicense to complete
 	}()
 
 	if err := root.Execute(); err != nil {

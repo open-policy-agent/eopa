@@ -232,18 +232,6 @@ func (l *License) ValidateLicense(key string, token string, terminate func(code 
 		return
 	}
 
-	// Handle SIGINT and gracefully deactivate the machine
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGSEGV) // disable default os.Interrupt handler
-
-	go func() {
-		for s := range sigs {
-			l.ReleaseLicense()
-			time.Sleep(100 * time.Millisecond)              // give load server sometime to finish
-			terminate(1, fmt.Errorf("caught signal %v", s)) // exit now (default behavior)!
-		}
-	}()
-
 	// use random fingerprint: floating concurrent license
 	l.fingerprint = uuid.New().String()
 
@@ -255,6 +243,18 @@ func (l *License) ValidateLicense(key string, token string, terminate func(code 
 	}
 
 	if lerr == keygen.ErrLicenseNotActivated {
+		// Handle SIGINT and gracefully deactivate the machine
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGSEGV) // disable default os.Interrupt handler
+
+		go func() {
+			for s := range sigs {
+				l.ReleaseLicense()
+				time.Sleep(100 * time.Millisecond)              // give load server sometime to finish
+				terminate(1, fmt.Errorf("caught signal %v", s)) // exit now (default behavior)!
+			}
+		}()
+
 		// Activate the current fingerprint
 		if license.Expiry == nil {
 			err = fmt.Errorf("license activation failed: missing expiry")
