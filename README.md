@@ -92,3 +92,17 @@ Adding this snippet to your .gitconfig should help:
 [url "ssh://git@github.com/"]
 	insteadOf = https://github.com/
 ```
+
+### Permission denied when running 'load'
+
+If you get "permission denied: ./load"
+
+```
+% chmod +x load
+```
+
+### MacOS 'cannot verify the developer of "load"' after downloading
+
+```
+% xattr -d com.apple.quarantine load
+```
