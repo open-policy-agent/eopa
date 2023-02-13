@@ -81,7 +81,7 @@ release:
 	HOSTNAME=$(HOSTNAME) LOAD_VERSION=$(LOAD_VERSION) goreleaser release --snapshot --skip-publish --clean
 
 release-ci:
-	HOSTNAME=$(HOSTNAME) LOAD_VERSION=$(LOAD_VERSION) goreleaser release --clean
+	HOSTNAME=$(HOSTNAME) LOAD_VERSION=$(LOAD_VERSION) goreleaser release --clean --release-notes CHANGELOG.md
 
 # load docker image ghcr.io/goreleaser/goreleaser-cross:v1.19 and run goreleaser (build load and load_wasm)
 release-wasm:
