@@ -178,7 +178,7 @@ func (l *License) validateOffline() error {
 	return nil
 }
 
-// ValidateLicenses: validate and activate the keygen license
+// ValidateLicense validate and activate the keygen license
 //  1. keygen.Validate
 //     a. on Timeout and NetworkErrors
 //     - i. if offline key; perform offline validation
@@ -211,7 +211,9 @@ func (l *License) ValidateLicense(key string, token string, terminate func(code 
 			}
 			keygen.Token = dat
 		} else {
-			err = fmt.Errorf("missing license environment variable: %v or %v", loadLicenseKey, loadLicenseToken)
+			err = fmt.Errorf(
+				"missing license: please provide one either via the `--license-key` or `--license-token` flag, or an environment variable: %v or %v",
+				loadLicenseKey, loadLicenseToken)
 			return
 		}
 	}
