@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/keygen-sh/keygen-go/v2"
 
 	"github.com/open-policy-agent/opa/logging"
@@ -57,17 +56,6 @@ func NewLicense() *License {
 	//keygen.APIURL = "https://2.2.2.99" // simulate offline network (timeout)
 	//keygen.APIURL = "https://api.keygenx.sh" // simulate offline network (DNS not found)
 	keygen.Logger = &keygenLogger{level: keygen.LogLevelNone}
-
-	c := retryablehttp.NewClient()
-
-	// Configure with a jitter backoff and max attempts
-	c.Backoff = retryablehttp.LinearJitterBackoff
-	c.RetryMax = 2
-	c.RetryWaitMax = 5 * time.Second
-	c.RetryWaitMin = 1 * time.Second
-	c.Logger = nil
-
-	keygen.HTTPClient = c.StandardClient()
 
 	// validate licensekey or licensetoken
 	keygen.LicenseKey = os.Getenv(loadLicenseKey)
