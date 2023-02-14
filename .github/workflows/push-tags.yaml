@@ -63,12 +63,8 @@ jobs:
 
       - uses: ko-build/setup-ko@v0.6
 
-      - name: Build and Push
-        run: make auth-deploy-ci
+      - name: Build and Push Images
+        run: make auth-deploy-ci-debug auth-deploy-ci
         env:
           AUTH_RELEASE: ${{ github.ref_name }}
 
-      - name: Debug Build and Push
-        run: make auth-deploy-ci-debug
-        env:
-          AUTH_RELEASE: ${{ github.ref_name }}
