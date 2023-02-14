@@ -294,11 +294,14 @@ kafka.updates:
 	}
 }
 
-func TestKafkaStop(t *testing.T) {
-	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
-
-	mgr := getTestManager()
-	config := `
+func TestStop(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		config string
+	}{
+		{
+			name: "kafka",
+			config: `
 kafka.updates:
   type: kafka
   brokerURLs:
@@ -306,23 +309,39 @@ kafka.updates:
   topics:
   - updates
   rego_transform: data.utils.transform_events
-`
-	c, err := data.Factory().Validate(mgr, []byte(config))
-	if err != nil {
-		t.Fatalf("Validate: %v", err)
-	}
-	dp := data.Factory().New(mgr, c)
-	ctx := context.Background()
-	if err := dp.Start(ctx); err != nil {
-		t.Fatalf("Start: %v", err)
-	}
+`,
+		},
+		{
+			name: "http",
+			config: `
+http.test:
+  type: http
+  url: https://www.example.com
+`,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			defer goleak.VerifyNone(t)
 
-	// NOTE(sr): The more time we give the go routines to actually start,
-	// the less flaky this test will be, if there are leaked routines.
-	time.Sleep(200 * time.Millisecond)
-	dp.Stop(ctx)
+			mgr := getTestManager()
+			c, err := data.Factory().Validate(mgr, []byte(tt.config))
+			if err != nil {
+				t.Fatalf("Validate: %v", err)
+			}
+			dp := data.Factory().New(mgr, c)
+			ctx := context.Background()
+			if err := dp.Start(ctx); err != nil {
+				t.Fatalf("Start: %v", err)
+			}
 
-	// goleak will assert that no goroutine is still running
+			// NOTE(sr): The more time we give the go routines to actually start,
+			// the less flaky this test will be, if there are leaked routines.
+			time.Sleep(200 * time.Millisecond)
+			dp.Stop(ctx)
+
+			// goleak will assert that no goroutine is still running
+		})
+	}
 }
 
 func getTestManager() *plugins.Manager {

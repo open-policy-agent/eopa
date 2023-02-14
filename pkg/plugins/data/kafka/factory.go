@@ -1,12 +1,7 @@
 package kafka
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"encoding/pem"
-	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -15,6 +10,8 @@ import (
 	"github.com/twmb/franz-go/pkg/sasl"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
 	"github.com/twmb/franz-go/pkg/sasl/scram"
+
+	"github.com/styrainc/load-private/pkg/plugins/data/utils"
 )
 
 type factory struct{}
@@ -32,7 +29,6 @@ func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 		Config:        c,
 		log:           m.Logger(),
 		exit:          make(chan struct{}),
-		path:          ast.MustParseRef("data." + config.(Config).Path),
 		manager:       m,
 		transformRule: ast.MustParseRef(c.RegoTransformRule),
 	}
@@ -55,50 +51,18 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 	}
 
 	// TLS and/or SASL
-	if c.Cert != "" && c.PrivateKey != "" { // TLS
-		if c.tls, err = readTLSConfig(c.Cert, c.PrivateKey, c.CACert); err != nil {
-			return nil, err
-		}
+	if c.tls, err = utils.ReadTLSConfig(c.SkipVerification, c.Cert, c.PrivateKey, c.CACert); err != nil {
+		return nil, err
 	}
 	if c.SASLMechanism != "" {
 		if c.sasl, err = readSASLConfig(c.SASLMechanism, c.SASLUsername, c.SASLPassword, c.SASLToken); err != nil {
 			return nil, err
 		}
 	}
+	if c.path, err = utils.AddDataPrefixAndParsePath(c.Path); err != nil {
+		return nil, err
+	}
 	return c, nil
-}
-
-func readTLSConfig(certFile, privKeyFile, caCertPath string) (*tls.Config, error) {
-	keyPEMBlock, err := os.ReadFile(privKeyFile)
-	if err != nil {
-		return nil, err
-	}
-	block, _ := pem.Decode(keyPEMBlock)
-	if block == nil {
-		return nil, errors.New("PEM data could not be found")
-	}
-
-	certPEMBlock, err := os.ReadFile(certFile)
-	if err != nil {
-		return nil, err
-	}
-
-	cert, err := tls.X509KeyPair(certPEMBlock, keyPEMBlock)
-	if err != nil {
-		return nil, err
-	}
-	t := tls.Config{Certificates: []tls.Certificate{cert}}
-
-	if caCertPath != "" {
-		caCert, err := os.ReadFile(caCertPath)
-		if err != nil {
-			return nil, err
-		}
-		t.RootCAs = x509.NewCertPool()
-		t.RootCAs.AppendCertsFromPEM(caCert)
-	}
-
-	return &t, nil
 }
 
 func readSASLConfig(mechanism, username, password string, token bool) (sasl.Mechanism, error) {

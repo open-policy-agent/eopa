@@ -28,7 +28,6 @@ type Data struct {
 	Config         Config
 	client         *kgo.Client
 	exit, doneExit chan struct{}
-	path           ast.Ref
 
 	transformRule ast.Ref
 	transform     *rego.PreparedEvalQuery
@@ -40,11 +39,7 @@ func (c *Data) Start(ctx context.Context) error {
 		return fmt.Errorf("prepare rego_transform: %w", err)
 	}
 	if err := storage.Txn(ctx, c.manager.Store, storage.WriteParams, func(txn storage.Transaction) error {
-		p, err := storage.NewPathForRef(c.path)
-		if err != nil {
-			return err
-		}
-		return storage.MakeDir(ctx, c.manager.Store, txn, p)
+		return storage.MakeDir(ctx, c.manager.Store, txn, c.Config.path)
 	}); err != nil {
 		return err
 	}
@@ -174,7 +169,7 @@ func (c *Data) transformAndSave(ctx context.Context, n int, iter *kgo.FetchesRec
 		}
 		return nil
 	}); err != nil {
-		c.log.Error("write batch %v to %v: %v", batch, c.path, err)
+		c.log.Error("write batch %v to %v: %v", batch, c.Config.path, err)
 	}
 }
 
@@ -246,10 +241,7 @@ func (c *Data) transformOne(ctx context.Context, txn storage.Transaction, messag
 		if !ok {
 			return nil, fmt.Errorf("failed to parse path %q", rs[i].Bindings["path"])
 		}
-		path, err := storage.NewPathForRef(c.path)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse path %q: %w", p, err)
-		}
+		path := c.Config.path[:]
 		for _, piece := range strings.Split(p, "/") {
 			path = append(path, piece)
 		}
