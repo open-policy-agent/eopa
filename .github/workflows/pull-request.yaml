@@ -240,16 +240,25 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-22.04
             exec: dist/load_linux_amd64_v1/load
+          - os: ubuntu-22.04
+            exec: dist/load_linux_arm64/load
+            arch: arm64
           - os: macos-latest
             exec: dist/load_darwin_amd64_v1/load
           - os: windows-latest
             exec: dist/load_windows_amd64_v1/load.exe
 
     steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: arm64
+        if: matrix.arch == 'arm64'
       - name: Check out code
         uses: actions/checkout@v3
       - name: Download release binaries
