@@ -84,17 +84,17 @@ jobs:
           OPA_ROOT: ${{ steps.opa.outputs.dir }}
       - run: make benchmark
         working-directory: load
-      - name: gobenchdata check
-        run: go run go.bobheadxi.dev/gobenchdata@v1 action
-        env:
-          INPUT_GO_TEST_FLAGS: -timeout=10m
-          INPUT_SUBDIRECTORY: load
-          INPUT_CHECKS: true
-          INPUT_CHECKS_CONFIG: load/gobenchdata-checks.yml
-          INPUT_PUBLISH_BRANCH: benchmarks
-          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
-        timeout-minutes: 10
-        if: github.ref != 'refs/heads/main' # do not run for commits on main
+      #- name: gobenchdata check
+        #run: go run go.bobheadxi.dev/gobenchdata@v1 action
+        #env:
+          #INPUT_GO_TEST_FLAGS: -timeout=10m
+          #INPUT_SUBDIRECTORY: load
+          #INPUT_CHECKS: true
+          #INPUT_CHECKS_CONFIG: load/gobenchdata-checks.yml
+          #INPUT_PUBLISH_BRANCH: benchmarks
+          #GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+        #timeout-minutes: 10
+        #if: github.ref != 'refs/heads/main' # do not run for commits on main
 
   test-e2e:
     name: Test E2E

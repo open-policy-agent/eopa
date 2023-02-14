@@ -30,6 +30,7 @@ type (
 		stop        int32
 		fingerprint string
 		logger      *logging.StandardLogger
+		expiry      time.Time
 	}
 
 	keygenLogger struct {
@@ -45,6 +46,22 @@ type (
 		License struct {
 			Created string
 			Expiry  string
+		}
+	}
+
+	// retrieve license: https://keygen.sh/docs/api/licenses/#licenses-retrieve
+	keygenLicense struct {
+		Data struct {
+			Attributes struct {
+				MaxMachines int
+			}
+			RelationShips struct {
+				Machines struct {
+					Meta struct {
+						Count int
+					}
+				}
+			}
 		}
 	}
 )
@@ -118,6 +135,8 @@ func readLicense(file string) (string, error) {
 }
 
 func (l *License) showExpiry(expiry time.Time, prefix string) {
+	l.expiry = expiry
+
 	d := time.Until(expiry).Truncate(time.Second)
 	if d > 3*24*time.Hour { // > 3 days
 		l.logger.Debug("%s: expires in %.2fd", prefix, float64(d)/float64(24*time.Hour))
@@ -373,4 +392,22 @@ func heartbeat(m *keygen.Machine) error {
 
 	_, err := client.Post("machines/"+m.ID+"/actions/ping", nil, m)
 	return err
+}
+
+func (l *License) Machines() (int, error) {
+	m, err := l.license.Machines()
+	return len(m), err
+}
+
+func (l *License) Policy() (*keygenLicense, error) {
+	client := keygen.NewClient()
+	license, err := client.Get("licenses/"+l.license.ID, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	var data keygenLicense
+	if lerr := json.Unmarshal(license.Body, &data); lerr != nil {
+		return nil, fmt.Errorf("license unmarshal failed: %w", lerr)
+	}
+	return &data, err
 }
