@@ -13,6 +13,7 @@ import (
 	bjson "github.com/styrainc/load-private/pkg/json"
 	"github.com/styrainc/load-private/pkg/plugins/data/http"
 	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
+	"github.com/styrainc/load-private/pkg/plugins/data/okta"
 	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
@@ -21,6 +22,7 @@ const Name = "data"
 var dataPluginRegistery = map[string]plugins.Factory{
 	kafka.Name: kafka.Factory(),
 	http.Name:  http.Factory(),
+	okta.Name:  okta.Factory(),
 } // type -> plugin
 
 // Data plugin

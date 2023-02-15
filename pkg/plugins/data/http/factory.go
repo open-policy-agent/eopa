@@ -89,7 +89,7 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 		return nil, err
 	}
 
-	if c.interval, err = utils.ParseInterval(c.Interval); err != nil {
+	if c.interval, err = utils.ParseInterval(c.Interval, utils.DefaultInterval); err != nil {
 		return nil, err
 	}
 

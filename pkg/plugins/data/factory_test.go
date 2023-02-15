@@ -319,6 +319,17 @@ http.test:
   url: https://www.example.com
 `,
 		},
+		{
+			name: "okta",
+			config: `
+okta.test:
+  type: okta
+  tenant_url: https://example.com
+  client_id: test
+  client_secret: secret
+  users: true
+`,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			defer goleak.VerifyNone(t)

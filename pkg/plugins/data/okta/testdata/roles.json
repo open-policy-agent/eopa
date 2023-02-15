@@ -1,0 +1,34 @@
+{
+  "roles": [
+    {
+      "_links": {
+        "permissions": {
+          "href": "https://dev-09267642-admin.okta.com/api/v1/iam/roles/cr08ciat6nBKUPtfG5d7/permissions"
+        },
+        "self": {
+          "href": "https://dev-09267642-admin.okta.com/api/v1/iam/roles/cr08ciat6nBKUPtfG5d7"
+        }
+      },
+      "created": "2023-02-15T18:56:19.000Z",
+      "description": "for testing purpose with users.read permissions",
+      "id": "cr08ciat6nBKUPtfG5d7",
+      "label": "read-users",
+      "lastUpdated": "2023-02-15T18:56:19.000Z"
+    },
+    {
+      "_links": {
+        "permissions": {
+          "href": "https://dev-09267642-admin.okta.com/api/v1/iam/roles/cr08cicu3ym2mDPWM5d7/permissions"
+        },
+        "self": {
+          "href": "https://dev-09267642-admin.okta.com/api/v1/iam/roles/cr08cicu3ym2mDPWM5d7"
+        }
+      },
+      "created": "2023-02-15T18:57:01.000Z",
+      "description": "for testing purpose with groups.read permissions",
+      "id": "cr08cicu3ym2mDPWM5d7",
+      "label": "read-groups",
+      "lastUpdated": "2023-02-15T18:57:01.000Z"
+    }
+  ]
+}

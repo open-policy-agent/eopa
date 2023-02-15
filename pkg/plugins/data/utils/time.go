@@ -4,8 +4,10 @@ import (
 	"time"
 )
 
-func ParseInterval(s string) (time.Duration, error) {
-	v, err := ParseDuration(s, 30*time.Second)
+const DefaultInterval = 30 * time.Second
+
+func ParseInterval(s string, def time.Duration) (time.Duration, error) {
+	v, err := ParseDuration(s, def)
 	if err != nil {
 		return v, err
 	}

@@ -1,0 +1,36 @@
+[
+  {
+    "_links": {
+      "apps": {
+        "href": "https://dev-09267642.okta.com/api/v1/groups/00g8c2qsz3rt2VcB85d7/apps"
+      },
+      "logo": [
+        {
+          "href": "https://ok12static.oktacdn.com/assets/img/logos/groups/odyssey/okta-medium.1a5ebe44c4244fb796c235d86b47e3bb.png",
+          "name": "medium",
+          "type": "image/png"
+        },
+        {
+          "href": "https://ok12static.oktacdn.com/assets/img/logos/groups/odyssey/okta-large.d9cfbd8a00a4feac1aa5612ba02e99c0.png",
+          "name": "large",
+          "type": "image/png"
+        }
+      ],
+      "users": {
+        "href": "https://dev-09267642.okta.com/api/v1/groups/00g8c2qsz3rt2VcB85d7/users"
+      }
+    },
+    "created": "2023-02-14T20:45:07.000Z",
+    "id": "00g8c2qsz3rt2VcB85d7",
+    "lastMembershipUpdated": "2023-02-14T20:45:11.000Z",
+    "lastUpdated": "2023-02-14T20:45:07.000Z",
+    "objectClass": [
+      "okta:user_group"
+    ],
+    "profile": {
+      "description": "All users in your organization",
+      "name": "Everyone"
+    },
+    "type": "BUILT_IN"
+  }
+]
