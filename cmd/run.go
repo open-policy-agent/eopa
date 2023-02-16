@@ -291,7 +291,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, licen
 	}
 	params.rt.BundleVerificationConfig = bvc
 
-	params.rt.Store = storage.New()
+	params.rt.StoreBuilder = storage.New2
 
 	params.rt.SkipPluginRegistration = true
 

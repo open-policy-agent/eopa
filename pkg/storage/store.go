@@ -15,6 +15,7 @@ import (
 
 	bjson "github.com/styrainc/load-private/pkg/json"
 	"github.com/styrainc/load-private/pkg/storage/inmem"
+	"github.com/styrainc/load-private/pkg/storage/sql"
 	"github.com/styrainc/load-private/pkg/vm"
 )
 
@@ -85,6 +86,35 @@ func New() storage.Store {
 		panic(err)
 	}
 	return s
+}
+
+func New2(ctx context.Context, logger logging.Logger, prom prometheus.Registerer, config []byte, id string) (storage.Store, error) {
+	sqlOptions, err := sql.OptionsFromConfig(ctx, config, id)
+	if err != nil {
+		return nil, err
+	}
+
+	var options Options
+	if sqlOptions != nil {
+		var paths [][2]storage.Path
+		for _, table := range sqlOptions.Tables {
+			paths = append(paths, [2]storage.Path{
+				table.AbsolutePath(nil),
+				table.Path,
+			})
+		}
+
+		options.Stores = []StoreOptions{
+			{
+				Paths:   paths,
+				New:     sql.New,
+				Options: *sqlOptions,
+			},
+		}
+	}
+
+	root := inmem.New()
+	return newInternal(ctx, logger, prom, root, options)
 }
 
 // NewFromObject returns a new in-memory store from the supplied data object.
@@ -298,6 +328,10 @@ func (s *store) Abort(ctx context.Context, txn storage.Transaction) {
 	s.underlying(txn).Abort(ctx)
 }
 
+func (s *store) MakeDir(ctx context.Context, txn storage.Transaction, path storage.Path) error {
+	return s.underlying(txn).MakeDir(ctx, path)
+}
+
 // store supports only traversing into the hierarchy.
 func (txn *transaction) Get(ctx context.Context, key interface{}) (interface{}, bool, error) {
 	return txn.tree.Get(ctx, key)
@@ -392,6 +426,20 @@ func (txn *transaction) Abort(ctx context.Context) {
 	for _, t := range txn.transactions {
 		t.store.Abort(ctx, t.txn)
 	}
+}
+
+func (txn *transaction) MakeDir(ctx context.Context, path storage.Path) error {
+	s, err := txn.tree.Find(path)
+	if err != nil {
+		return err
+	}
+
+	t, err := txn.dispatch(ctx, s, true)
+	if err != nil {
+		return err
+	}
+
+	return storage.MakeDir(ctx, s, t, path)
 }
 
 func (txn *transaction) dispatch(ctx context.Context, s storage.Store, write bool) (storage.Transaction, error) {
