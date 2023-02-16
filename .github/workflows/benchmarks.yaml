@@ -12,10 +12,6 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - uses: actions/setup-go@v3
-        with:
-          go-version: '1.19'
-          check-latest: true
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Check out code
@@ -23,6 +19,12 @@ jobs:
         with:
           fetch-depth: 0
           path: load
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: load/go.mod
+          cache-dependency-path: load/go.sum
+          check-latest: true
+          cache: true
       - name: Check out "benchmarks" branch
         uses: actions/checkout@v3
         with:
