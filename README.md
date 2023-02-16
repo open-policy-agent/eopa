@@ -93,6 +93,18 @@ Adding this snippet to your .gitconfig should help:
 	insteadOf = https://github.com/
 ```
 
+### Run 'load' documentation locally
+
+From fetchdb repo; see \<fetchdb\>/docs/public/docs-website/README.md
+
+```
+brew install npm
+cd <fetchdb>/docs/public/docs-website
+npm install
+npm run start
+```
+from browser: http://localhost:3000/load
+
 ### Permission denied when running 'load'
 
 If you get "permission denied: ./load"
