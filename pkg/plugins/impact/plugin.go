@@ -1,0 +1,232 @@
+package impact
+
+import (
+	"context"
+	"math/rand"
+	"reflect"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/sourcegraph/conc/pool"
+
+	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/logging"
+	"github.com/open-policy-agent/opa/metrics"
+	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/plugins/logs"
+	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/server"
+	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/topdown/builtins"
+
+	inmem "github.com/styrainc/load-private/pkg/store"
+)
+
+// Impact holds the state of a plugin instantiation
+type Impact struct {
+	manager *plugins.Manager
+	workers *pool.Pool
+	ctx     context.Context
+	cancel  context.CancelFunc
+	log     logging.Logger
+	config  Config
+	dl      *logs.Plugin
+}
+
+var mutex = &sync.Mutex{}
+var singleton *Impact
+
+type EvalContext interface {
+	CompiledQuery() ast.Body
+	NDBCache() builtins.NDBCache
+	ParsedInput() ast.Value
+}
+
+// Enqueue is the quick and dirty entrypoint that the singleton Impact plugin works from
+func Enqueue(ctx context.Context, ectx EvalContext, exp ast.Value) {
+	if singleton == nil {
+		return // plugin not enabled
+	}
+
+	// NOTE(sr): This also serves a device to stop us from looping infinitely:
+	// When we're calling eval below, it's using the singleton's ctx, not the
+	// incoming one. Any subsequent calls to impact.Enqueue will thus stop here.
+	rctx, ok := logging.FromContext(ctx)
+	if !ok {
+		return
+	}
+
+	if !singleton.sample(rctx.ReqPath, ectx.CompiledQuery()[0]) {
+		return
+	}
+	decisionID, _ := logging.DecisionIDFromContext(ctx)
+
+	// TODO(sr): think about this:
+	// Go submits a task to be run in the pool. If all goroutines in the pool
+	// are busy, a call to Go() will block until the task can be started.
+	singleton.workers.Go(func() {
+		// NOTE(sr): We're using a new context here because the one we're given is
+		// scoped to the HTTP request. Once that's done, it'll be cancelled, and that
+		// may not give us enough time for the secondary evaluation.
+		ctx, cancel := context.WithTimeout(singleton.ctx, 5*time.Second)
+		defer cancel()
+		ctx = logging.WithDecisionID(ctx, decisionID)
+		if err := singleton.eval(ctx, ectx, rctx, exp); err != nil {
+			singleton.log.Warn("live impact analysis: %v", err)
+		}
+	})
+}
+
+func (i *Impact) sample(reqPath string, query *ast.Expr) bool {
+	// NOTE(sr): We have to use rctx.Path AND query for selecting the sample population:
+	// otherwise, we'll also run LIA for DL drop/mask decisions and whatnot.
+	q, ok := query.Operand(0).Value.(ast.Ref)
+	if !ok {
+		return false
+	}
+	requestPath, ok := storage.ParsePath(reqPath)
+	if !ok {
+		return false
+	}
+	path, err := storage.NewPathForRef(q)
+	if err != nil {
+		return false
+	}
+	if !requestPath[2:].Equal(path) { // this won't be the case for DL drop/mask decisions
+		return false
+	}
+	return rand.Float32() <= i.config.Rate
+}
+
+func (i *Impact) Start(ctx context.Context) error {
+	// TODO(sr): think, benchmark, guess MaxGoroutines, pass via .WithMaxGoroutines(int)
+	i.workers = pool.New()
+
+	// i.cancel is used to abort all running evals in Stop()
+	i.ctx, i.cancel = context.WithCancel(ctx)
+
+	mutex.Lock()
+	singleton = i
+	mutex.Unlock()
+	i.manager.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateOK})
+	return nil
+}
+
+func (i *Impact) Stop(context.Context) {
+	i.cancel()
+	i.workers.Wait()
+	i.manager.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateNotReady})
+}
+
+func (i *Impact) Reconfigure(_ context.Context, cfg any) {
+	// TODO
+}
+
+// We'll evaluate at the configured sampling rate, with a different set of policies (TBD).
+// TODO: cache PrepareForEval?
+func (i *Impact) eval(ctx context.Context, ectx EvalContext, rctx *logging.RequestContext, exp ast.Value) error {
+	// NOTE(sr): While rego.New() could take much more complex things, we know that the queries
+	// we're interested in have been generated from API calls. That allows for some simpler moves
+	// here:
+	queryT := ectx.CompiledQuery()[0].Operand(0)
+	input := ectx.ParsedInput()
+
+	store := inmem.New()
+	txn := storage.NewTransactionOrDie(ctx, store, storage.WriteParams) // never fails, the store is new
+	m := metrics.New()
+	opts := []func(*rego.Rego){
+		rego.ParsedQuery(ast.NewBody(ast.NewExpr(queryT))),
+		rego.Store(store),
+		rego.Transaction(txn),
+		rego.LoadBundle(i.config.BundlePath),
+		rego.NDBuiltinCache(ectx.NDBCache()),
+		rego.Metrics(m),
+	}
+	if input != nil {
+		opts = append(opts, rego.ParsedInput(input))
+	}
+	r := rego.New(opts...)
+	secondaryResult, err := r.Eval(ctx)
+	if err != nil {
+		return err
+	}
+
+	primaryResult, err := unwrap(exp)
+	if err != nil {
+		return err
+	}
+
+	eq := i.equalResults(ctx, primaryResult, secondaryResult)
+	if eq && !i.config.PublishEquals {
+		return nil
+	}
+	var in any
+	if input != nil {
+		in0, err := ast.ValueToInterface(input, nil)
+		if err != nil {
+			return err
+		}
+		in = in0
+	}
+
+	var ndbc any = ectx.NDBCache()
+	var secRes any
+	if len(secondaryResult) == 1 {
+		secRes = secondaryResult[0].Expressions[0].Value
+	}
+	return i.dlog(ctx, rctx, queryT.String(), &in, &secRes, &ndbc, m)
+}
+
+func unwrap(exp ast.Value) (any, error) {
+	var resultObj *ast.Term
+	resultSet := exp.(ast.Set)
+	if resultSet.Len() == 0 {
+		return nil, nil
+	}
+	// what follows is unwrapping the one result in `resultSet`, to compare it with `res`
+	_ = resultSet.Iter(func(t *ast.Term) error {
+		resultObj = t
+		return nil
+	})
+	// rv := query.Operand(1)
+	// res0 := resultObj.Get(rv) // Q: why doesn't this work?
+	var res0 ast.Value
+	_ = resultObj.Value.(ast.Object).Iter(func(_, v *ast.Term) error {
+		res0 = v.Value
+		return nil
+	})
+	return ast.ValueToInterface(res0, nil)
+}
+
+// TODO(sr): increment some metrics according to the comparison outcomes: diff++, same++
+func (i *Impact) equalResults(ctx context.Context, primaryResult any, secondaryResult rego.ResultSet) bool {
+	switch {
+	case primaryResult == nil && len(secondaryResult) > 0: // secondary has result, primary has not
+		return false
+	case primaryResult != nil && len(secondaryResult) == 0: // primary has result, secondary has not
+		return false
+	case primaryResult != nil && len(secondaryResult) > 0: // both have results
+		resUnwrapped := secondaryResult[0].Expressions[0].Value
+		return reflect.DeepEqual(resUnwrapped, primaryResult) // TODO(sr): do better than that
+	}
+	return true // both empty
+}
+
+// dlog emits a decision log if DL is available
+func (i *Impact) dlog(ctx context.Context, rctx *logging.RequestContext, query string, input, result *any, ndbc *any, m metrics.Metrics) error {
+	if i.dl == nil {
+		return nil
+	}
+	decisionID, _ := logging.DecisionIDFromContext(ctx)
+	return i.dl.Log(ctx, &server.Info{
+		RequestID:      rctx.ReqID,
+		Results:        result,
+		Input:          input,
+		Path:           strings.TrimPrefix(strings.TrimPrefix(rctx.ReqPath, "/v1/data/"), "/v0/data/"),
+		NDBuiltinCache: ndbc,
+		Timestamp:      time.Now(),
+		Metrics:        m,
+		DecisionID:     decisionID,
+	})
+}

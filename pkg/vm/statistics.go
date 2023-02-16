@@ -2,6 +2,7 @@ package vm
 
 import (
 	"context"
+	"fmt"
 )
 
 type (
@@ -23,6 +24,10 @@ func StatisticsGet(ctx context.Context) *Statistics {
 	}
 
 	return s.(*Statistics)
+}
+
+func (s *Statistics) String() string {
+	return fmt.Sprintf("<statistics eval_instrs:%d>", s.EvalInstructions)
 }
 
 func WithStatistics(ctx context.Context) (*Statistics, context.Context) {

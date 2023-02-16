@@ -27,7 +27,7 @@ import (
 	"github.com/open-policy-agent/opa/util"
 )
 
-const defaultImage = "ko.local/load:edge" // built via `make build-local`
+const defaultImage = "ko.local:edge" // built via `make build-local`
 
 // number of messages to produce
 const messageCount = 1_000

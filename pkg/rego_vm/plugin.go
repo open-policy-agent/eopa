@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 
 	bjson "github.com/styrainc/load-private/pkg/json"
+	"github.com/styrainc/load-private/pkg/plugins/impact"
 	regovm "github.com/styrainc/load-private/pkg/rego_vm/vm"
 	inmem "github.com/styrainc/load-private/pkg/store"
 	"github.com/styrainc/load-private/pkg/vm"
@@ -104,6 +105,8 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		return nil, err
 	}
 	statsToMetrics(ectx.Metrics(), s)
+
+	go impact.Enqueue(ctx, ectx, result.(ast.Value))
 	return result.(ast.Value), nil
 }
 

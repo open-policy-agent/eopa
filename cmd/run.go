@@ -11,6 +11,7 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/bundle"
 	"github.com/styrainc/load-private/pkg/plugins/data"
 	"github.com/styrainc/load-private/pkg/plugins/discovery"
+	"github.com/styrainc/load-private/pkg/plugins/impact"
 	inmem "github.com/styrainc/load-private/pkg/store"
 
 	"github.com/spf13/cobra"
@@ -301,7 +302,10 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	// register the discovery plugin
 	disco, err := discovery.New(rt.Manager,
 		discovery.Metrics(rt.Metrics()),
-		discovery.Factories(map[string]plugins.Factory{data.Name: data.Factory()}),
+		discovery.Factories(map[string]plugins.Factory{
+			data.Name:   data.Factory(),
+			impact.Name: impact.Factory(),
+		}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("config error: %w", err)
