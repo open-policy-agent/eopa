@@ -6,10 +6,8 @@ import (
 	"crypto/rand"
 	"sync"
 
-	bjson "github.com/styrainc/load-private/pkg/json"
 	dl "github.com/styrainc/load-private/pkg/plugins/decision_logs"
 	"github.com/styrainc/load-private/pkg/plugins/impact"
-	inmem "github.com/styrainc/load-private/pkg/store"
 	"github.com/styrainc/load-private/pkg/vm"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -44,31 +42,14 @@ func (*vmp) IsTarget(t string) bool {
 }
 
 // TODO(sr): move store and tx into PrepareOption?
-func (*vmp) PrepareForEval(ctx context.Context, policy *ir.Policy, store storage.Store, txn storage.Transaction, _ ...rego.PrepareOption) (rego.TargetPluginEval, error) {
-	var data bjson.Json
-	var err error
-
-	switch s := store.(type) {
-	case inmem.BJSONReader:
-		data, err = s.ReadBJSON(ctx, txn, storage.Path{})
-		if err != nil {
-			return nil, err
-		}
-	default:
-		blob, err := s.Read(ctx, txn, storage.Path{})
-		if err != nil {
-			return nil, err
-		}
-		data = bjson.MustNew(blob)
-	}
-
+func (*vmp) PrepareForEval(_ context.Context, policy *ir.Policy, _ storage.Store, _ storage.Transaction, _ ...rego.PrepareOption) (rego.TargetPluginEval, error) {
 	executable, err := vm.NewCompiler().WithPolicy(policy).Compile()
 	if err != nil {
 		return nil, err
 	}
 
 	return &vme{
-		vm: vm.NewVM().WithDataJSON(data).WithExecutable(executable),
+		vm: vm.NewVM().WithExecutable(executable),
 	}, nil
 }
 
@@ -91,7 +72,10 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 	if seed == nil {
 		seed = rand.Reader
 	}
-	result, err := t.vm.Eval(ctx, "eval", vm.EvalOpts{
+
+	v := t.vm.WithDataNamespace(ectx.Transaction())
+
+	result, err := v.Eval(ctx, "eval", vm.EvalOpts{
 		Metrics:                ectx.Metrics(),
 		Input:                  input,
 		Time:                   ectx.Time(),

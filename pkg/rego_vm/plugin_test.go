@@ -2,11 +2,14 @@ package rego_vm_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
+	opa_storage "github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown/builtins"
+	"github.com/styrainc/load-private/pkg/storage"
 )
 
 func TestNDBCache(t *testing.T) {
@@ -34,5 +37,38 @@ p := rand.intn("x", 2) if numbers.range(1, 2)`), // only one of the builtins is 
 	}
 	if v.Compare(ast.Number("0")) != 0 && v.Compare(ast.Number("1")) != 0 {
 		t.Errorf("expected value 0 or 1, got %v", v)
+	}
+}
+
+// TestStorageTransactionRead asserts that something added to the inflight txn
+// after PrepareForEval is consulted during the subsequent Eval.
+func TestStorageTransactionRead(t *testing.T) {
+	ctx := context.Background()
+	store := storage.New()
+	txn := opa_storage.NewTransactionOrDie(ctx, store, opa_storage.WriteParams)
+	defer store.Abort(ctx, txn)
+
+	pq, err := rego.New(
+		rego.Store(store),
+		rego.Transaction(txn),
+		rego.Query("data.foo = x"),
+	).PrepareForEval(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := store.Write(ctx, txn, opa_storage.AddOp, []string{"foo"}, 3); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := pq.Eval(ctx, rego.EvalTransaction(txn))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exp, act := 1, len(res); exp != act {
+		t.Fatalf("expected %d result(s), got %d", exp, act)
+	}
+	if exp, act := json.Number("3"), res[0].Bindings["x"]; exp != act {
+		t.Errorf("expected x bound to %v %[1]T, got %v %[2]T", exp, act)
 	}
 }

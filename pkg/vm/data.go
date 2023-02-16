@@ -142,6 +142,8 @@ func (*DataOperations) ArrayAppend(ctx context.Context, array interface{}, value
 
 	switch a := array.(type) {
 	case fjson.Array:
+		// TODO: Avoiding castJSON would delay the reading of iterable object.
+
 		// Using singular version avoids an allocation to construct slice of arguments.
 		b, ok := a.AppendSingle(jvalue)
 		return b, ok, nil

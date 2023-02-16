@@ -20,7 +20,7 @@ import (
 
 	"github.com/styrainc/load-private/pkg/plugins/data"
 	"github.com/styrainc/load-private/pkg/plugins/discovery"
-	inmem "github.com/styrainc/load-private/pkg/store"
+	inmem "github.com/styrainc/load-private/pkg/storage"
 )
 
 func TestGitData(t *testing.T) {

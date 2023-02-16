@@ -76,7 +76,7 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.XXHash64) e
 		}
 		return err
 
-	case *Object:
+	case IterableObject:
 		// The two object implementation should have equal
 		// hash implementation
 		hasher.Write([]byte{typeHashObject})

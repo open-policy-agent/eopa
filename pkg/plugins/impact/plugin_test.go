@@ -19,7 +19,7 @@ import (
 	load_bundle "github.com/styrainc/load-private/pkg/plugins/bundle"
 	"github.com/styrainc/load-private/pkg/plugins/discovery"
 	"github.com/styrainc/load-private/pkg/plugins/impact"
-	inmem "github.com/styrainc/load-private/pkg/store"
+	inmem "github.com/styrainc/load-private/pkg/storage"
 )
 
 func TestStop(t *testing.T) {

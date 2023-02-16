@@ -11,6 +11,7 @@ import (
 	"go.uber.org/goleak"
 
 	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
+	load_storage "github.com/styrainc/load-private/pkg/storage"
 	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
@@ -220,7 +221,7 @@ func getTestManager() *plugins.Manager {
 }
 
 func getTestManagerWithOpts(config []byte, stores ...storage.Store) *plugins.Manager {
-	store := inmem.New()
+	store := load_storage.New()
 	if len(stores) == 1 {
 		store = stores[0]
 	}

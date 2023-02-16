@@ -26,7 +26,7 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/discovery"
 	"github.com/styrainc/load-private/pkg/plugins/grpc"
 	"github.com/styrainc/load-private/pkg/plugins/impact"
-	inmem "github.com/styrainc/load-private/pkg/store"
+	"github.com/styrainc/load-private/pkg/storage"
 )
 
 // default bind address if --addr (-a) was not provided in CLI args
@@ -291,7 +291,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, licen
 	}
 	params.rt.BundleVerificationConfig = bvc
 
-	params.rt.Store = inmem.New()
+	params.rt.Store = storage.New()
 
 	params.rt.SkipPluginRegistration = true
 

@@ -23,7 +23,7 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/data/ldap"
 	"github.com/styrainc/load-private/pkg/plugins/data/okta"
 	"github.com/styrainc/load-private/pkg/plugins/data/s3"
-	inmem "github.com/styrainc/load-private/pkg/store"
+	inmem "github.com/styrainc/load-private/pkg/storage"
 )
 
 func isConfig[T any](tb testing.TB, pluginType string, path string, exp T) func(testing.TB, any, error) {

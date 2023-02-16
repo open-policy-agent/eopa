@@ -14,7 +14,7 @@ import (
 
 	cfg "github.com/styrainc/load-private/pkg/internal/config"
 	"github.com/styrainc/load-private/pkg/plugins/bundle"
-	inmem "github.com/styrainc/load-private/pkg/store"
+	inmem "github.com/styrainc/load-private/pkg/storage"
 
 	"github.com/open-policy-agent/opa/ast"
 	bundleApi "github.com/open-policy-agent/opa/bundle"

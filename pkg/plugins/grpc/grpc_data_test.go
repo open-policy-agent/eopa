@@ -17,7 +17,7 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/data"
 	"github.com/styrainc/load-private/pkg/plugins/discovery"
 	grpc_plugin "github.com/styrainc/load-private/pkg/plugins/grpc"
-	inmem "github.com/styrainc/load-private/pkg/store"
+	inmem "github.com/styrainc/load-private/pkg/storage"
 	datav1 "github.com/styrainc/load-private/proto/gen/go/load/data/v1"
 
 	"google.golang.org/grpc"

@@ -28,7 +28,6 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/bundle"
 	"github.com/styrainc/load-private/pkg/store/internal/merge"
 
-	bundleApi "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/storage"
 )
@@ -513,8 +512,4 @@ func (db *store) NonEmpty(ctx context.Context, txn storage.Transaction) func([]s
 		}
 		return false, nil
 	}
-}
-
-func init() {
-	bundleApi.RegisterStore(New)
 }

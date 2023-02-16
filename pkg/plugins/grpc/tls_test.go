@@ -23,7 +23,7 @@ import (
 
 	bjson "github.com/styrainc/load-private/pkg/json"
 	_ "github.com/styrainc/load-private/pkg/rego_vm" // important! use VM for rego.Eval below
-	inmem "github.com/styrainc/load-private/pkg/store"
+	inmem "github.com/styrainc/load-private/pkg/storage"
 	datav1 "github.com/styrainc/load-private/proto/gen/go/load/data/v1"
 )
 
