@@ -11,7 +11,9 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/bundle"
 	"github.com/styrainc/load-private/pkg/plugins/data"
 	"github.com/styrainc/load-private/pkg/plugins/discovery"
+	"github.com/styrainc/load-private/pkg/plugins/grpc"
 	"github.com/styrainc/load-private/pkg/plugins/impact"
+
 	inmem "github.com/styrainc/load-private/pkg/store"
 
 	"github.com/spf13/cobra"
@@ -303,8 +305,9 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	disco, err := discovery.New(rt.Manager,
 		discovery.Metrics(rt.Metrics()),
 		discovery.Factories(map[string]plugins.Factory{
-			data.Name:   data.Factory(),
-			impact.Name: impact.Factory(),
+			data.Name:       data.Factory(),
+			impact.Name:     impact.Factory(),
+			grpc.PluginName: grpc.Factory(),
 		}),
 	)
 	if err != nil {
@@ -324,7 +327,6 @@ func startRuntime(ctx context.Context, rt *runtime.Runtime, serverMode bool) err
 }
 
 func loadCertificate(tlsCertFile, tlsPrivateKeyFile string) (*tls.Certificate, error) {
-
 	if tlsCertFile != "" && tlsPrivateKeyFile != "" {
 		cert, err := tls.LoadX509KeyPair(tlsCertFile, tlsPrivateKeyFile)
 		if err != nil {

@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      # NOTE(sr): we need to install this from a different workdir, as it will otherwise
+      # NOTE(sr): we need to install this before checking out the code, as it will otherwise
       # interfere with the project's go.mod/go.sum
       - name: install gcassert
         run: go install github.com/jordanlewis/gcassert/cmd/gcassert@latest
@@ -43,6 +43,28 @@ jobs:
           skip-build-cache: true
       - name: gcassert
         run: gcassert ./...
+      # Note(philip): We need to install the `buf` CLI before we can lint our protobuf sources.
+      # The action uses the repo-scoped GITHUB_TOKEN to allow one of its dependencies (Octokit)
+      # to skip Github API rate limits when fetching the latest buf build artifact.
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: bufbuild/buf-lint-action@v1
+      # Now that we've passed linting, we check to make sure the build artifacts are identical
+      # to what was checked in.
+      - name: Install protoc-gen-go dependencies
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
+      - name: Fail if `buf generate` diff detected between generated/checked in files
+        run: |-
+          buf generate
+          if [[ "$(git diff --name-status | wc -l)" != 0 ]]; then
+            echo "::error:: Files with diffs: $(git diff --name-status)"
+            echo "::error:: Diffs are: $(git diff)"
+            echo "::info:: If the diffs above include the protoc version number, consider reinstalling to get the latest protbuf/grpc tooling."
+            exit 1
+          fi
 
   test:
     name: Test
