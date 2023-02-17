@@ -22,6 +22,18 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
+      - name: (Dependabot Only) Generate GitHub App Token
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: (Dependabot Only) Override GH Token Env Var
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: override_gh_api_token
+        run:
+          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       # NOTE(sr): we need to install this before checking out the code, as it will otherwise
@@ -73,6 +85,18 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
+      - name: (Dependabot Only) Generate GitHub App Token
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: (Dependabot Only) Override GH Token Env Var
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: override_gh_api_token
+        run:
+          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: checkout Load
         uses: actions/checkout@v3
@@ -126,6 +150,18 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
+      - name: (Dependabot Only) Generate GitHub App Token
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: (Dependabot Only) Override GH Token Env Var
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: override_gh_api_token
+        run:
+          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v3
@@ -176,6 +212,18 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
+      - name: (Dependabot Only) Generate GitHub App Token
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: (Dependabot Only) Override GH Token Env Var
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: override_gh_api_token
+        run:
+          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v3
@@ -212,6 +260,18 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
+      - name: (Dependabot Only) Generate GitHub App Token
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: (Dependabot Only) Override GH Token Env Var
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: override_gh_api_token
+        run:
+          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v3
@@ -239,6 +299,18 @@ jobs:
     needs: build
     environment: ci
     steps:
+      - name: (Dependabot Only) Generate GitHub App Token
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: (Dependabot Only) Override GH Token Env Var
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: override_gh_api_token
+        run:
+          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@v3
       - name: Download image tarball
@@ -276,6 +348,18 @@ jobs:
             exec: dist/load_windows_amd64_v1/load.exe
 
     steps:
+      - name: (Dependabot Only) Generate GitHub App Token
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: (Dependabot Only) Override GH Token Env Var
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: override_gh_api_token
+        run:
+          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
         with:
