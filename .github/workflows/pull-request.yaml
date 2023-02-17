@@ -35,7 +35,7 @@ jobs:
         run:
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Setup github api token
-        run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       # NOTE(sr): we need to install this before checking out the code, as it will otherwise
       # interfere with the project's go.mod/go.sum
       - name: install gcassert
@@ -123,7 +123,7 @@ jobs:
         working-directory: opa
         run: echo "dir=$(pwd)" >> $GITHUB_OUTPUT
       - name: setup github api token
-        run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - run: make test
         working-directory: load
         env:
@@ -173,7 +173,7 @@ jobs:
           check-latest: true
           cache: true
       - name: Setup github api token
-        run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Download image tarball
         uses: actions/download-artifact@v3
         with:
@@ -235,7 +235,7 @@ jobs:
           check-latest: true
           cache: true
       - name: setup github api token
-        run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@v4
         with:
@@ -283,7 +283,7 @@ jobs:
           check-latest: true
           cache: true
       - name: Setup github api token
-        run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: ko-build/setup-ko@v0.6
       - name: Build
         run: make build
