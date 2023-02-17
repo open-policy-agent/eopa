@@ -600,7 +600,7 @@ plugins:
   data:
     okta.placeholder:
       type: okta
-      tenant_url: https://okta.local
+      url: https://okta.local
       token: test-token
       users: true
       groups: true
@@ -649,7 +649,7 @@ plugins:
   data:
     okta.placeholder:
       type: okta
-      tenant_url: https://okta.local
+      url: https://okta.local
       client_id: test-client-id
       private_key: testdata/private_key_old.txt
       private_key_id: test-private-key-id
@@ -705,7 +705,7 @@ plugins:
   data:
     okta.placeholder:
       type: okta
-      tenant_url: https://okta.local
+      url: https://okta.local
       client_id: test-client-id
       private_key: testdata/private_key_new.txt
       private_key_id: test-private-key-id
@@ -761,7 +761,7 @@ plugins:
   data:
     okta.placeholder:
       type: okta
-      tenant_url: https://okta.local
+      url: https://okta.local
       client_id: test-client-id
       client_secret: test-client-secret
       users: true

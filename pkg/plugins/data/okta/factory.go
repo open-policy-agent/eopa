@@ -43,10 +43,10 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 	if err != nil {
 		return nil, err
 	}
-	if c.TenantURL == "" {
+	if c.URL == "" {
 		return nil, fmt.Errorf("tenant url required")
 	}
-	u, err := url.Parse(c.TenantURL)
+	u, err := url.Parse(c.URL)
 	if err != nil {
 		return nil, err
 	}

@@ -41,7 +41,7 @@ plugins:
   data:
     kafka.messages:
       type: kafka
-      brokerURLs: [127.0.0.1:19092]
+      urls: [127.0.0.1:19092]
       topics: [%[1]s]
       rego_transform: "data.e2e.transform"
       tls_client_cert: testdata/tls/client-cert.pem
@@ -130,7 +130,7 @@ plugins:
   data:
     kafka.messages:
       type: kafka
-      brokerURLs: [127.0.0.1:19092]
+      urls: [127.0.0.1:19092]
       topics: [%[1]s]
       rego_transform: "data.e2e.transform"
       sasl_mechanism: scram-sha-256
@@ -197,7 +197,7 @@ plugins:
   data:
     kafka.messages:
       type: kafka
-      brokerURLs: [127.0.0.1:19092]
+      urls: [127.0.0.1:19092]
       topics: [%[1]s]
       rego_transform: "data.e2e.transform"
       tls_client_cert: testdata/tls/client-cert.pem

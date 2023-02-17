@@ -46,7 +46,7 @@ func (c *Data) Start(ctx context.Context) error {
 
 	opts := []kgo.Opt{
 		kgo.ConsumeTopics(c.Config.Topics...),
-		kgo.SeedBrokers(c.Config.BrokerURLs...),
+		kgo.SeedBrokers(c.Config.URLs...),
 		kgo.WithLogger(c.kgoLogger()),
 		kgo.DialTLSConfig(c.Config.tls), // if it's nil, it stays nil
 	}

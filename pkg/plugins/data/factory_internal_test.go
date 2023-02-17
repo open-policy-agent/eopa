@@ -26,7 +26,7 @@ func TestKafkaReconfigure(t *testing.T) {
 		config := `
 kafka.updates:
   type: kafka
-  brokerURLs:
+  urls:
   - 127.0.0.1:8083
   topics:
   - updates
@@ -69,7 +69,7 @@ kafka.updates:
 		config := `
 kafka.updates:
   type: kafka
-  brokerURLs:
+  urls:
   - 127.0.0.1:8083
   topics:
   - updates
@@ -86,11 +86,11 @@ kafka.updates:
 		}
 		defer dp.Stop(ctx)
 
-		// copy old config, change BrokerURLs
+		// copy old config, change URLs
 		next := Config{DataPlugins: make(map[string]DataPlugin)}
 		next.DataPlugins["kafka.updates"] = c.(Config).DataPlugins["kafka.updates"]
 		nextKafka := next.DataPlugins["kafka.updates"].Config.(kafka.Config)
-		nextKafka.BrokerURLs = []string{"foo:9092"}
+		nextKafka.URLs = []string{"foo:9092"}
 		next.DataPlugins["kafka.updates"] = DataPlugin{
 			Factory: c.(Config).DataPlugins["kafka.updates"].Factory,
 			Config:  nextKafka,
@@ -111,7 +111,7 @@ kafka.updates:
 		config := `
 kafka.updates:
   type: kafka
-  brokerURLs: [127.0.0.1:8083]
+  urls: [127.0.0.1:8083]
   topics: [updates]
   rego_transform: data.utils.transform_events
 `
@@ -165,7 +165,7 @@ kafka.updates:
 		config := `
 kafka.updates:
   type: kafka
-  brokerURLs: [127.0.0.1:8083]
+  urls: [127.0.0.1:8083]
   topics: [updates]
   rego_transform: data.utils.transform_events
 `

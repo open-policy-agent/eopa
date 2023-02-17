@@ -255,7 +255,7 @@ func exchangeClientSecret(ctx context.Context, client *http.Client, conf Config)
 	body.Add("grant_type", "client_credentials")
 	body.Add("scope", strings.Join(conf.scopes, " "))
 
-	u, err := url.JoinPath(conf.TenantURL, "/oauth2/v1/token")
+	u, err := url.JoinPath(conf.URL, "/oauth2/v1/token")
 	if err != nil {
 		return "", err
 	}

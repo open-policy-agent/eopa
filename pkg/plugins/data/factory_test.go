@@ -51,7 +51,7 @@ func TestValidate(t *testing.T) {
 			config: `
 kafka.updates:
   type: kafka
-  brokerURLs:
+  urls:
   - 127.0.0.1:8083
   topics:
   - updates
@@ -60,7 +60,7 @@ kafka.updates:
 			checks: isConfig(t, "kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
 				Path:              "kafka.updates",
-				BrokerURLs:        []string{"127.0.0.1:8083"},
+				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
 			}),
 		},
@@ -69,7 +69,7 @@ kafka.updates:
 			config: `
 kafka.updates:
   type: kafka
-  brokerURLs:
+  urls:
   - 127.0.0.1:8083
   topics:
   - updates
@@ -81,7 +81,7 @@ kafka.updates:
 			checks: isConfig(t, "kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
 				Path:              "kafka.updates",
-				BrokerURLs:        []string{"127.0.0.1:8083"},
+				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
 				Cert:              "kafka/testdata/tls/client-cert.pem",
 				PrivateKey:        "kafka/testdata/tls/client-key.pem",
@@ -93,7 +93,7 @@ kafka.updates:
 			config: `
 kafka.updates:
   type: kafka
-  brokerURLs:
+  urls:
   - 127.0.0.1:8083
   topics:
   - updates
@@ -105,7 +105,7 @@ kafka.updates:
 			checks: isConfig(t, "kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
 				Path:              "kafka.updates",
-				BrokerURLs:        []string{"127.0.0.1:8083"},
+				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
 				SASLMechanism:     "PLAIN",
 				SASLUsername:      "alice",
@@ -117,7 +117,7 @@ kafka.updates:
 			config: `
 kafka.updates:
   type: kafka
-  brokerURLs:
+  urls:
   - 127.0.0.1:8083
   topics:
   - updates
@@ -130,7 +130,7 @@ kafka.updates:
 			checks: isConfig(t, "kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
 				Path:              "kafka.updates",
-				BrokerURLs:        []string{"127.0.0.1:8083"},
+				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
 				SASLMechanism:     "SCRAM-SHA-512",
 				SASLUsername:      "alice",
@@ -143,7 +143,7 @@ kafka.updates:
 			config: `
 kafka.updates:
   type: kafka
-  brokerURLs:
+  urls:
   - 127.0.0.1:8083
   topics:
   - updates
@@ -156,7 +156,7 @@ kafka.updates:
 			checks: isConfig(t, "kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
 				Path:              "kafka.updates",
-				BrokerURLs:        []string{"127.0.0.1:8083"},
+				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
 				SASLMechanism:     "SCRAM-SHA-256",
 				SASLUsername:      "alice",
@@ -169,7 +169,7 @@ kafka.updates:
 			config: `
 kafka.updates:
   type: kafka
-  brokerURLs:
+  urls:
   - 127.0.0.1:8083
   topics:
   - updates
@@ -185,7 +185,7 @@ kafka.updates:
 			checks: isConfig(t, "kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
 				Path:              "kafka.updates",
-				BrokerURLs:        []string{"127.0.0.1:8083"},
+				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
 				Cert:              "kafka/testdata/tls/client-cert.pem",
 				PrivateKey:        "kafka/testdata/tls/client-key.pem",
@@ -201,14 +201,14 @@ kafka.updates:
 			config: `
 kafka.updates:
   type: kafka
-  brokerURLs:
+  urls:
   - 127.0.0.1:8083
   topics:
   - updates
   rego_transform: data.utils.transform_events
 kafka.downdates:
   type: kafka
-  brokerURLs:
+  urls:
   - some.other:8083
   topics:
   - downdates.huh
@@ -218,19 +218,19 @@ kafka.downdates:
 				isConfig(t, "kafka.updates", kafka.Config{
 					Topics:            []string{"updates"},
 					Path:              "kafka.updates",
-					BrokerURLs:        []string{"127.0.0.1:8083"},
+					URLs:              []string{"127.0.0.1:8083"},
 					RegoTransformRule: "data.utils.transform_events",
 				})(t, c, err)
 				isConfig(t, "kafka.downdates", kafka.Config{
 					Topics:            []string{"downdates.huh"},
 					Path:              "kafka.downdates",
-					BrokerURLs:        []string{"some.other:8083"},
+					URLs:              []string{"some.other:8083"},
 					RegoTransformRule: "data.utils.transform_events",
 				})(t, c, err)
 			},
 		},
 		{
-			note: "kafka, no brokerURLs",
+			note: "kafka, no urls",
 			config: `
 kafka.updates:
   type: kafka
@@ -248,7 +248,7 @@ kafka.updates:
 			config: `
 kafka.updates:
   type: kafka
-  brokerURLs: ["127.0.0.1:9092"]
+  urls: ["127.0.0.1:9092"]
   topics:
 `,
 			checks: func(t *testing.T, _ any, err error) {
@@ -262,7 +262,7 @@ kafka.updates:
 			config: `
 kafka.updates:
   type: kafka
-  brokerURLs:
+  urls:
   - 127.0.0.1:8083
   topics:
   - updates
@@ -304,7 +304,7 @@ func TestStop(t *testing.T) {
 			config: `
 kafka.updates:
   type: kafka
-  brokerURLs:
+  urls:
   - 127.0.0.1:8083
   topics:
   - updates
@@ -324,7 +324,7 @@ http.test:
 			config: `
 okta.test:
   type: okta
-  tenant_url: https://example.com
+  url: https://example.com
   client_id: test
   client_secret: secret
   users: true

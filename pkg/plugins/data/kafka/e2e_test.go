@@ -48,7 +48,7 @@ plugins:
   data:
     kafka.messages:
       type: kafka
-      brokerURLs: [localhost:19092]
+      urls: [localhost:19092]
       topics: [%[1]s, %[2]s]
       rego_transform: "data.e2e.transform"
 `, topic, topic2)
@@ -136,7 +136,7 @@ plugins:
   data:
     kafka.messages:
       type: kafka
-      brokerURLs: [localhost:19092]
+      urls: [localhost:19092]
       topics: [%[1]s]
       rego_transform: "data.e2e.transform"
 `, topic)

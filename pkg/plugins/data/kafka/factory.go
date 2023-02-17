@@ -40,7 +40,7 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 	if err != nil {
 		return nil, err
 	}
-	if len(c.BrokerURLs) == 0 {
+	if len(c.URLs) == 0 {
 		return nil, fmt.Errorf("need at least one broker URL")
 	}
 	if len(c.Topics) == 0 {

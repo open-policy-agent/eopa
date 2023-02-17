@@ -10,9 +10,9 @@ import (
 
 // Config represents the configuration of the kafka data plugin
 type Config struct {
-	BrokerURLs []string `json:"brokerURLs"` // TODO(sr): should perhaps come from "services" config?
-	Topics     []string `json:"topics"`
-	Path       string   `json:"path"`
+	URLs   []string `json:"urls"`
+	Topics []string `json:"topics"`
+	Path   string   `json:"path"`
 
 	RegoTransformRule string `json:"rego_transform"`
 
@@ -35,7 +35,7 @@ type Config struct {
 
 func (c Config) Equal(other Config) bool {
 	switch {
-	case len(c.BrokerURLs) != len(other.BrokerURLs):
+	case len(c.URLs) != len(other.URLs):
 	case len(c.Topics) != len(other.Topics):
 	case c.RegoTransformRule != other.RegoTransformRule:
 	case c.SkipVerification != other.SkipVerification:
@@ -46,7 +46,7 @@ func (c Config) Equal(other Config) bool {
 	case c.SASLUsername != other.SASLUsername:
 	case c.SASLPassword != other.SASLPassword:
 	case c.SASLToken != other.SASLToken:
-	case c.differentBrokers(other.BrokerURLs):
+	case c.differentBrokers(other.URLs):
 	case c.differentTopics(other.Topics):
 	default:
 		return true
@@ -55,7 +55,7 @@ func (c Config) Equal(other Config) bool {
 }
 
 func (c Config) differentBrokers(others []string) bool {
-	return !subset(c.BrokerURLs, others) || !subset(others, c.BrokerURLs)
+	return !subset(c.URLs, others) || !subset(others, c.URLs)
 }
 
 func (c Config) differentTopics(others []string) bool {

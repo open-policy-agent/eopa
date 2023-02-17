@@ -88,7 +88,7 @@ plugins:
   data:
     kafka.messages:
       type: kafka
-      brokerURLs: ["kafka-e2e:9091"]
+      urls: ["kafka-e2e:9091"]
       topics:
       - toothpaste
       - dinner

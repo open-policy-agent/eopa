@@ -9,7 +9,7 @@ import (
 
 // Config represents the configuration of the okta data plugin
 type Config struct {
-	TenantURL string `json:"tenant_url"`
+	URL string `json:"url"`
 
 	// Bearer mode
 	ClientID     string `json:"client_id,omitempty"`
@@ -41,7 +41,7 @@ type Config struct {
 
 func (c Config) Equal(other Config) bool {
 	switch {
-	case c.TenantURL != other.TenantURL:
+	case c.URL != other.URL:
 	case c.ClientID != other.ClientID:
 	case c.ClientSecret != other.ClientSecret:
 	case c.Token != other.Token:
