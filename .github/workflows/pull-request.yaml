@@ -187,7 +187,18 @@ jobs:
         env:
           IMAGE: ${{ steps.load.outputs.image }}
           STYRA_LOAD_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
+      # If it's a dependabot run, we fetch the token from the environment directly.
+      - name: (Dependabot Only) checkout opa-testing-e2e
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        uses: actions/checkout@v3
+        with:
+          repository: StyraInc/opa-testing-e2e
+          path: _e2e
+          token: ${{ env.GH_API_TOKEN }}
+          persist-credentials: false
+      # Else, we use the repo secret directly.
       - name: checkout opa-testing-e2e
+        if: ${{ github.actor != 'dependabot[bot]' }}
         uses: actions/checkout@v3
         with:
           repository: StyraInc/opa-testing-e2e
