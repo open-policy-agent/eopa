@@ -15,7 +15,7 @@ require (
 	github.com/open-policy-agent/opa v0.49.0
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.9.1
-	github.com/rs/zerolog v1.28.0
+	github.com/rs/zerolog v1.29.0
 	github.com/sbabiv/xml2map v1.2.1
 	github.com/sourcegraph/conc v0.2.0
 	github.com/spf13/cobra v1.6.1
