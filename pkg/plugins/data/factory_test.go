@@ -2,9 +2,11 @@ package data_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
+	goldap "github.com/go-ldap/ldap/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.uber.org/goleak"
@@ -15,15 +17,47 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/data"
 	"github.com/styrainc/load-private/pkg/plugins/data/http"
 	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
+	"github.com/styrainc/load-private/pkg/plugins/data/ldap"
 	"github.com/styrainc/load-private/pkg/plugins/data/okta"
 	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
-func isConfig[T any](path string, exp T) func(testing.TB, any, error) {
+func isConfig[T any](tb testing.TB, pluginType string, path string, exp T) func(testing.TB, any, error) {
 	opt := cmpopts.IgnoreUnexported(exp)
 	diff := func(x, y any) string {
 		return cmp.Diff(x, y, opt)
 	}
+	raw, err := json.Marshal(exp)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	var tmp map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &tmp); err != nil {
+		tb.Fatal(err)
+	}
+	tmp["type"] = json.RawMessage(`"` + pluginType + `"`)
+	tmp["path"] = json.RawMessage(`"` + path + `"`)
+	raw, err = json.Marshal(map[string]any{
+		path: tmp,
+	})
+	if err != nil {
+		tb.Fatal(err)
+	}
+	c, err := data.Factory().Validate(getTestManager(), raw)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	cfg := c.(data.Config)
+	k, ok := cfg.DataPlugins[path]
+	if !ok {
+		tb.Fatalf("expected config under %q", path)
+	}
+	validated, ok := k.Config.(T)
+	if !ok {
+		tb.Fatalf("expected %T, got %T", exp, validated)
+	}
+	exp = validated
+
 	return func(tb testing.TB, c any, err error) {
 		if err != nil {
 			tb.Fatalf("unexpected error: %v", err)
@@ -60,9 +94,8 @@ kafka.updates:
   - updates
   rego_transform: data.utils.transform_events
 `,
-			checks: isConfig("kafka.updates", kafka.Config{
+			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
-				Path:              "kafka.updates",
 				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
 			}),
@@ -81,9 +114,8 @@ kafka.updates:
   tls_client_private_key: kafka/testdata/tls/client-key.pem
   tls_ca_cert: kafka/testdata/tls/ca.pem
 `,
-			checks: isConfig("kafka.updates", kafka.Config{
+			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
-				Path:              "kafka.updates",
 				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
 				Cert:              "kafka/testdata/tls/client-cert.pem",
@@ -105,9 +137,8 @@ kafka.updates:
   sasl_username: alice
   sasl_password: password
 `,
-			checks: isConfig("kafka.updates", kafka.Config{
+			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
-				Path:              "kafka.updates",
 				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
 				SASLMechanism:     "PLAIN",
@@ -130,9 +161,8 @@ kafka.updates:
   sasl_password: password
   sasl_token: true
 `,
-			checks: isConfig("kafka.updates", kafka.Config{
+			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
-				Path:              "kafka.updates",
 				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
 				SASLMechanism:     "SCRAM-SHA-512",
@@ -156,9 +186,8 @@ kafka.updates:
   sasl_password: password
   sasl_token: true
 `,
-			checks: isConfig("kafka.updates", kafka.Config{
+			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
-				Path:              "kafka.updates",
 				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
 				SASLMechanism:     "SCRAM-SHA-256",
@@ -185,9 +214,8 @@ kafka.updates:
   sasl_password: password
   sasl_token: true
 `,
-			checks: isConfig("kafka.updates", kafka.Config{
+			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
-				Path:              "kafka.updates",
 				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
 				Cert:              "kafka/testdata/tls/client-cert.pem",
@@ -218,15 +246,13 @@ kafka.downdates:
   rego_transform: data.utils.transform_events
 `,
 			checks: func(tb testing.TB, c any, err error) {
-				isConfig("kafka.updates", kafka.Config{
+				isConfig(tb, kafka.Name, "kafka.updates", kafka.Config{
 					Topics:            []string{"updates"},
-					Path:              "kafka.updates",
 					URLs:              []string{"127.0.0.1:8083"},
 					RegoTransformRule: "data.utils.transform_events",
 				})(tb, c, err)
-				isConfig("kafka.downdates", kafka.Config{
+				isConfig(tb, kafka.Name, "kafka.downdates", kafka.Config{
 					Topics:            []string{"downdates.huh"},
-					Path:              "kafka.downdates",
 					URLs:              []string{"some.other:8083"},
 					RegoTransformRule: "data.utils.transform_events",
 				})(tb, c, err)
@@ -291,9 +317,8 @@ http.placeholder:
   type: http
   url: https://example.com
 `,
-			checks: isConfig("http.placeholder", http.Config{
-				URL:  "https://example.com",
-				Path: "http.placeholder",
+			checks: isConfig(t, http.Name, "http.placeholder", http.Config{
+				URL: "https://example.com",
 			}),
 		},
 		{
@@ -309,7 +334,7 @@ http.placeholder:
   file: path/to/foo.txt
   headers:
     Authorization: Bearer Foo
-    Custom: 
+    Custom:
       - Foo
       - Bar
   timeout: 5s
@@ -319,7 +344,7 @@ http.placeholder:
   tls_client_private_key: http/testdata/client-key.pem
   tls_ca_cert: http/testdata/ca.pem
 `,
-			checks: isConfig("http.placeholder", http.Config{
+			checks: isConfig(t, http.Name, "http.placeholder", http.Config{
 				URL:    "https://example.com",
 				Method: "foo",
 				Body:   "plain body\n",
@@ -330,7 +355,6 @@ http.placeholder:
 				},
 				Timeout:          "5s",
 				Interval:         "1m",
-				Path:             "http.placeholder",
 				SkipVerification: true,
 				Cert:             "http/testdata/client-cert.pem",
 				CACert:           "http/testdata/ca.pem",
@@ -346,14 +370,12 @@ http.placeholder:
   follow_redirects: true
 `,
 			checks: func(tb testing.TB, a any, err error) {
-				isConfig("http.placeholder", http.Config{
-					URL:  "https://example.com",
-					Path: "http.placeholder",
+				isConfig(tb, http.Name, "http.placeholder", http.Config{
+					URL: "https://example.com",
 				})(tb, a, err)
 				t := true
-				isConfig("http.placeholder", http.Config{
+				isConfig(tb, http.Name, "http.placeholder", http.Config{
 					URL:             "https://example.com",
-					Path:            "http.placeholder",
 					FollowRedirects: &t,
 				})(tb, a, err)
 			},
@@ -366,14 +388,12 @@ http.placeholder:
   url: https://example.com
 `,
 			checks: func(tb testing.TB, a any, err error) {
-				isConfig("http.placeholder", http.Config{
-					URL:  "https://example.com",
-					Path: "http.placeholder",
+				isConfig(tb, http.Name, "http.placeholder", http.Config{
+					URL: "https://example.com",
 				})(tb, a, err)
 				t := true
-				isConfig("http.placeholder", http.Config{
+				isConfig(tb, http.Name, "http.placeholder", http.Config{
 					URL:             "https://example.com",
-					Path:            "http.placeholder",
 					FollowRedirects: &t,
 				})(tb, a, err)
 			},
@@ -388,9 +408,8 @@ http.placeholder:
 `,
 			checks: func(tb testing.TB, a any, err error) {
 				f := false
-				isConfig("http.placeholder", http.Config{
+				isConfig(tb, http.Name, "http.placeholder", http.Config{
 					URL:             "https://example.com",
-					Path:            "http.placeholder",
 					FollowRedirects: &f,
 				})(tb, a, err)
 			},
@@ -412,9 +431,8 @@ okta.placeholder:
   apps: true
   polling_interval: 1m
 `,
-			checks: isConfig("okta.placeholder", okta.Config{
+			checks: isConfig(t, okta.Name, "okta.placeholder", okta.Config{
 				URL:          "https://example.com",
-				Path:         "okta.placeholder",
 				ClientID:     "foo",
 				ClientSecret: "bar",
 				Token:        "xyz",
@@ -427,6 +445,48 @@ okta.placeholder:
 				Interval:     "1m",
 			}),
 		},
+		{
+			note: "ldap full",
+			config: `
+ldap.placeholder:
+  type: ldap
+  urls:
+    - https://example.com
+    - https://example2.com
+  username: foo
+  password: bar
+  base_dn: dn=example,dn=com
+  filter: "(objectclass=*)"
+  scope: whole-subtree
+  deref: never
+  attributes:
+    - foo
+    - bar
+  polling_interval: 1m
+  tls_skip_verification: true
+  tls_client_cert: ldap/testdata/client-cert.pem
+  tls_client_private_key: ldap/testdata/client-key.pem
+  tls_ca_cert: ldap/testdata/ca.pem
+`,
+			checks: isConfig(t, ldap.Name, "ldap.placeholder", ldap.Config{
+				URLs: []string{
+					"https://example.com",
+					"https://example2.com",
+				},
+				Username:         "foo",
+				Password:         "bar",
+				BaseDN:           "dn=example,dn=com",
+				Filter:           "(objectclass=*)",
+				Scope:            "whole-subtree",
+				Deref:            "never",
+				Attributes:       []string{"foo", "bar"},
+				Interval:         "1m",
+				SkipVerification: true,
+				Cert:             "ldap/testdata/client-cert.pem",
+				CACert:           "ldap/testdata/ca.pem",
+				PrivateKey:       "ldap/testdata/client-key.pem",
+			}),
+		},
 	}
 
 	for _, tc := range tests {
@@ -434,15 +494,22 @@ okta.placeholder:
 		t.Run(tc.note, func(t *testing.T) {
 			t.Parallel()
 			mgr := getTestManager()
-			data, err := data.Factory().Validate(mgr, []byte(tc.config))
+			config, err := data.Factory().Validate(mgr, []byte(tc.config))
 			if tc.checks != nil {
-				tc.checks(t, data, err)
+				tc.checks(t, config, err)
 			}
 		})
 	}
 }
 
 func TestStop(t *testing.T) {
+	// change the default timeout of ldap to speed up the tests, since the real connection is not required
+	origDefaultTimeout := goldap.DefaultTimeout
+	t.Cleanup(func() {
+		goldap.DefaultTimeout = origDefaultTimeout
+	})
+	goldap.DefaultTimeout = 100 * time.Millisecond
+
 	for _, tt := range []struct {
 		name   string
 		config string
@@ -476,6 +543,17 @@ okta.test:
   client_id: test
   client_secret: secret
   users: true
+`,
+		},
+		{
+			name: "ldap",
+			config: `
+ldap.test:
+  type: ldap
+  urls:
+    - ldaps://example.com
+  base_dn: "dc=example,dc=com"
+  filter: "(objectclass=*)"
 `,
 		},
 	} {

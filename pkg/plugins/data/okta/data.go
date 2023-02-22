@@ -39,16 +39,19 @@ func (c *Data) Start(ctx context.Context) error {
 	}
 
 	c.doneExit = make(chan struct{})
-	go c.loop(ctx) // Q: Does this context ever stop?
+	go c.loop(ctx)
 	return nil
 }
 
-func (c *Data) Stop(context.Context) {
+func (c *Data) Stop(ctx context.Context) {
 	if c.doneExit == nil {
 		return
 	}
 	close(c.exit) // stops our polling loop
-	<-c.doneExit  // waits for polling loop to be stopped
+	select {
+	case <-c.doneExit: // waits for polling loop to be stopped
+	case <-ctx.Done(): // or exit if context canceled or timed out
+	}
 }
 
 func (c *Data) Reconfigure(ctx context.Context, next any) {
