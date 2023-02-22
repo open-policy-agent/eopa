@@ -13,38 +13,41 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 
 	"github.com/styrainc/load-private/pkg/plugins/data"
+	"github.com/styrainc/load-private/pkg/plugins/data/http"
 	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
+	"github.com/styrainc/load-private/pkg/plugins/data/okta"
 	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
-func TestValidate(t *testing.T) {
-	opt := cmpopts.IgnoreUnexported(kafka.Config{})
+func isConfig[T any](path string, exp T) func(testing.TB, any, error) {
+	opt := cmpopts.IgnoreUnexported(exp)
 	diff := func(x, y any) string {
 		return cmp.Diff(x, y, opt)
 	}
-	isConfig := func(t *testing.T, path string, exp kafka.Config) func(*testing.T, any, error) {
-		return func(t *testing.T, c any, err error) {
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			cfg := c.(data.Config)
-			k, ok := cfg.DataPlugins[path]
-			if !ok {
-				t.Fatalf("expected config under %q", path)
-			}
-			act, ok := k.Config.(kafka.Config)
-			if !ok {
-				t.Fatalf("expected %T, got %T", act, k)
-			}
-			if diff := diff(exp, act); diff != "" {
-				t.Errorf("kafka.Config mismatch (-want +got):\n%s", diff)
-			}
+	return func(tb testing.TB, c any, err error) {
+		if err != nil {
+			tb.Fatalf("unexpected error: %v", err)
+		}
+		cfg := c.(data.Config)
+		k, ok := cfg.DataPlugins[path]
+		if !ok {
+			tb.Fatalf("expected config under %q", path)
+		}
+		act, ok := k.Config.(T)
+		if !ok {
+			tb.Fatalf("expected %T, got %T", act, k)
+		}
+		if d := diff(exp, act); d != "" {
+			tb.Errorf("Config mismatch (-want +got):\n%s", d)
 		}
 	}
+}
+
+func TestValidate(t *testing.T) {
 	tests := []struct {
 		note   string
 		config string
-		checks func(*testing.T, any, error)
+		checks func(testing.TB, any, error)
 	}{
 		{
 			note: "one kafka",
@@ -57,7 +60,7 @@ kafka.updates:
   - updates
   rego_transform: data.utils.transform_events
 `,
-			checks: isConfig(t, "kafka.updates", kafka.Config{
+			checks: isConfig("kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
 				Path:              "kafka.updates",
 				URLs:              []string{"127.0.0.1:8083"},
@@ -78,7 +81,7 @@ kafka.updates:
   tls_client_private_key: kafka/testdata/tls/client-key.pem
   tls_ca_cert: kafka/testdata/tls/ca.pem
 `,
-			checks: isConfig(t, "kafka.updates", kafka.Config{
+			checks: isConfig("kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
 				Path:              "kafka.updates",
 				URLs:              []string{"127.0.0.1:8083"},
@@ -102,7 +105,7 @@ kafka.updates:
   sasl_username: alice
   sasl_password: password
 `,
-			checks: isConfig(t, "kafka.updates", kafka.Config{
+			checks: isConfig("kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
 				Path:              "kafka.updates",
 				URLs:              []string{"127.0.0.1:8083"},
@@ -127,7 +130,7 @@ kafka.updates:
   sasl_password: password
   sasl_token: true
 `,
-			checks: isConfig(t, "kafka.updates", kafka.Config{
+			checks: isConfig("kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
 				Path:              "kafka.updates",
 				URLs:              []string{"127.0.0.1:8083"},
@@ -153,7 +156,7 @@ kafka.updates:
   sasl_password: password
   sasl_token: true
 `,
-			checks: isConfig(t, "kafka.updates", kafka.Config{
+			checks: isConfig("kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
 				Path:              "kafka.updates",
 				URLs:              []string{"127.0.0.1:8083"},
@@ -182,7 +185,7 @@ kafka.updates:
   sasl_password: password
   sasl_token: true
 `,
-			checks: isConfig(t, "kafka.updates", kafka.Config{
+			checks: isConfig("kafka.updates", kafka.Config{
 				Topics:            []string{"updates"},
 				Path:              "kafka.updates",
 				URLs:              []string{"127.0.0.1:8083"},
@@ -214,19 +217,19 @@ kafka.downdates:
   - downdates.huh
   rego_transform: data.utils.transform_events
 `,
-			checks: func(t *testing.T, c any, err error) {
-				isConfig(t, "kafka.updates", kafka.Config{
+			checks: func(tb testing.TB, c any, err error) {
+				isConfig("kafka.updates", kafka.Config{
 					Topics:            []string{"updates"},
 					Path:              "kafka.updates",
 					URLs:              []string{"127.0.0.1:8083"},
 					RegoTransformRule: "data.utils.transform_events",
-				})(t, c, err)
-				isConfig(t, "kafka.downdates", kafka.Config{
+				})(tb, c, err)
+				isConfig("kafka.downdates", kafka.Config{
 					Topics:            []string{"downdates.huh"},
 					Path:              "kafka.downdates",
 					URLs:              []string{"some.other:8083"},
 					RegoTransformRule: "data.utils.transform_events",
-				})(t, c, err)
+				})(tb, c, err)
 			},
 		},
 		{
@@ -237,9 +240,9 @@ kafka.updates:
   topics:
   - updates
 `,
-			checks: func(t *testing.T, _ any, err error) {
+			checks: func(tb testing.TB, _ any, err error) {
 				if exp, act := "data plugin kafka (kafka.updates): need at least one broker URL", err.Error(); exp != act {
-					t.Errorf("expected error %q, got %q", exp, act)
+					tb.Errorf("expected error %q, got %q", exp, act)
 				}
 			},
 		},
@@ -251,7 +254,7 @@ kafka.updates:
   urls: ["127.0.0.1:9092"]
   topics:
 `,
-			checks: func(t *testing.T, _ any, err error) {
+			checks: func(tb testing.TB, _ any, err error) {
 				if exp, act := "data plugin kafka (kafka.updates): need at least one topic", err.Error(); exp != act {
 					t.Errorf("expected error %q, got %q", exp, act)
 				}
@@ -272,7 +275,7 @@ kafka.updates:
   sasl_password: password
   sasl_token: true
 `,
-			checks: func(t *testing.T, _ any, err error) {
+			checks: func(tb testing.TB, _ any, err error) {
 				if err == nil {
 					t.Fatal("expected error")
 				}
@@ -281,10 +284,155 @@ kafka.updates:
 				}
 			},
 		},
+		{
+			note: "http simple",
+			config: `
+http.placeholder:
+  type: http
+  url: https://example.com
+`,
+			checks: isConfig("http.placeholder", http.Config{
+				URL:  "https://example.com",
+				Path: "http.placeholder",
+			}),
+		},
+		{
+			note: "http full",
+			config: `
+http.placeholder:
+  type: http
+  url: https://example.com
+  method: foo
+  body: >
+    plain
+    body
+  file: path/to/foo.txt
+  headers:
+    Authorization: Bearer Foo
+    Custom: 
+      - Foo
+      - Bar
+  timeout: 5s
+  polling_interval: 1m
+  tls_skip_verification: true
+  tls_client_cert: http/testdata/client-cert.pem
+  tls_client_private_key: http/testdata/client-key.pem
+  tls_ca_cert: http/testdata/ca.pem
+`,
+			checks: isConfig("http.placeholder", http.Config{
+				URL:    "https://example.com",
+				Method: "foo",
+				Body:   "plain body\n",
+				File:   "path/to/foo.txt",
+				Headers: map[string]any{
+					"Authorization": "Bearer Foo",
+					"Custom":        []any{"Foo", "Bar"},
+				},
+				Timeout:          "5s",
+				Interval:         "1m",
+				Path:             "http.placeholder",
+				SkipVerification: true,
+				Cert:             "http/testdata/client-cert.pem",
+				CACert:           "http/testdata/ca.pem",
+				PrivateKey:       "http/testdata/client-key.pem",
+			}),
+		},
+		{
+			note: "http follow redirects true",
+			config: `
+http.placeholder:
+  type: http
+  url: https://example.com
+  follow_redirects: true
+`,
+			checks: func(tb testing.TB, a any, err error) {
+				isConfig("http.placeholder", http.Config{
+					URL:  "https://example.com",
+					Path: "http.placeholder",
+				})(tb, a, err)
+				t := true
+				isConfig("http.placeholder", http.Config{
+					URL:             "https://example.com",
+					Path:            "http.placeholder",
+					FollowRedirects: &t,
+				})(tb, a, err)
+			},
+		},
+		{
+			note: "http follow redirects empty",
+			config: `
+http.placeholder:
+  type: http
+  url: https://example.com
+`,
+			checks: func(tb testing.TB, a any, err error) {
+				isConfig("http.placeholder", http.Config{
+					URL:  "https://example.com",
+					Path: "http.placeholder",
+				})(tb, a, err)
+				t := true
+				isConfig("http.placeholder", http.Config{
+					URL:             "https://example.com",
+					Path:            "http.placeholder",
+					FollowRedirects: &t,
+				})(tb, a, err)
+			},
+		},
+		{
+			note: "http follow redirects false",
+			config: `
+http.placeholder:
+  type: http
+  url: https://example.com
+  follow_redirects: false
+`,
+			checks: func(tb testing.TB, a any, err error) {
+				f := false
+				isConfig("http.placeholder", http.Config{
+					URL:             "https://example.com",
+					Path:            "http.placeholder",
+					FollowRedirects: &f,
+				})(tb, a, err)
+			},
+		},
+		{
+			note: "okta full",
+			config: `
+okta.placeholder:
+  type: okta
+  url: https://example.com
+  client_id: foo
+  client_secret: bar
+  token: xyz
+  private_key: okta/testdata/private_key_new.txt
+  private_key_id: buzz
+  users: true
+  groups: true
+  roles: true
+  apps: true
+  polling_interval: 1m
+`,
+			checks: isConfig("okta.placeholder", okta.Config{
+				URL:          "https://example.com",
+				Path:         "okta.placeholder",
+				ClientID:     "foo",
+				ClientSecret: "bar",
+				Token:        "xyz",
+				PrivateKey:   "okta/testdata/private_key_new.txt",
+				PrivateKeyID: "buzz",
+				Users:        true,
+				Groups:       true,
+				Roles:        true,
+				Apps:         true,
+				Interval:     "1m",
+			}),
+		},
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.note, func(t *testing.T) {
+			t.Parallel()
 			mgr := getTestManager()
 			data, err := data.Factory().Validate(mgr, []byte(tc.config))
 			if tc.checks != nil {

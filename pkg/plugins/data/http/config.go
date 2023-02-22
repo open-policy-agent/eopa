@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/opa/storage"
-	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 )
 
 // Config represents the configuration of the http data plugin
@@ -39,6 +39,15 @@ type Config struct {
 	timeout  time.Duration
 }
 
+func compareFollowRedirects(v1, v2 *bool) bool {
+	// nil is true
+	if v1 == nil || (v1 != nil && *v1) { // v1 == true
+		return v2 == nil || (v2 != nil && *v2)
+	}
+	// v1 == false
+	return v2 != nil && !*v2
+}
+
 func (c Config) Equal(other Config) bool {
 	switch {
 	case c.URL != other.URL:
@@ -46,13 +55,24 @@ func (c Config) Equal(other Config) bool {
 	case c.Body != other.Body:
 	case c.File != other.File:
 	case c.Timeout != other.Timeout:
-	case c.FollowRedirects != other.FollowRedirects:
+	case !compareFollowRedirects(c.FollowRedirects, other.FollowRedirects):
 	case c.Interval != other.Interval:
 	case c.SkipVerification != other.SkipVerification:
 	case c.Cert != other.Cert:
 	case c.PrivateKey != other.PrivateKey:
 	case c.CACert != other.CACert:
-	case !maps.Equal(c.Headers, other.Headers):
+	case len(c.headers) == len(other.headers):
+		// the maps.Equal function cannot be used here because some values can be a slice of strings
+		for n, v1 := range c.headers {
+			v2, ok := other.headers[n]
+			if !ok {
+				return false
+			}
+			if !slices.Equal(v1, v2) {
+				return false
+			}
+		}
+		return true
 	default:
 		return true
 	}
