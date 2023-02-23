@@ -7,11 +7,13 @@ on:
 jobs:
   benchmarks:
     name: Benchmarks
+    if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-22.04
     environment: ci
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
+      - uses: open-policy-agent/setup-opa@v2 # needed for below
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Check out code
@@ -31,21 +33,7 @@ jobs:
           fetch-depth: 0
           ref: benchmarks
           path: benchmarks
-      - uses: open-policy-agent/setup-opa@v2 # needed for below
-      - name: pick up OPA version
-        id: load
-        run: echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
-        working-directory: load
-      - name: checkout OPA
-        uses: actions/checkout@v3
-        with:
-          repository: open-policy-agent/opa
-          ref: ${{ steps.load.outputs.opa_version }}
-          path: opa
-      - name: pick up OPA directory
-        id: opa
-        working-directory: opa
-        run: echo "dir=$(pwd)" >> $GITHUB_OUTPUT
+
       - name: gobenchdata publish
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
@@ -54,5 +42,4 @@ jobs:
           INPUT_PUBLISH: true
           INPUT_PUBLISH_BRANCH: benchmarks
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
-          OPA_ROOT: ${{ steps.opa.outputs.dir }}
         timeout-minutes: 120
