@@ -13,7 +13,6 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/discovery"
 	"github.com/styrainc/load-private/pkg/plugins/grpc"
 	"github.com/styrainc/load-private/pkg/plugins/impact"
-
 	inmem "github.com/styrainc/load-private/pkg/store"
 
 	"github.com/spf13/cobra"

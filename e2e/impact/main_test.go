@@ -8,11 +8,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -22,9 +24,10 @@ import (
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
 	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 )
 
-const defaultImage = "ko.local:edge" // built via `make build-local`
+const defaultImage = "ko.local/load-private:edge" // built via `make build-local`
 
 var dockerPool = func() *dockertest.Pool {
 	p, err := dockertest.NewPool("")
@@ -45,6 +48,22 @@ type payload struct {
 	DecisionID string         `json:"decision_id"`
 }
 
+type liaResponse struct {
+	Result     any            `json:"value"`
+	Input      any            `json:"input"`
+	Path       string         `json:"path"`
+	Metrics    map[string]int `json:"metrics"`
+	ReqID      int            `json:"req_id"`
+	DecisionID string         `json:"decision_id"`
+	NodeID     string         `json:"node_id"`
+}
+
+// NOTE(sr): These three tests check the following:
+//  1. Use decision logs to assert the actual number of evals run; including
+//     primary and secondary (LIA) evaluations.
+//  2. Check the returned responses for the LIA POST call that controls the
+//     LIA run.
+
 func TestDecisionLogsAllEqual(t *testing.T) {
 
 	cleanupPrevious(t)
@@ -55,9 +74,7 @@ decision_logs:
   console: true
 plugins:
   impact_analysis:
-    sampling_rate: 1
-    bundle_path: /load-bundle.tar.gz
-    publish_equal: true
+    decision_logs: true
 `
 	policy := `
 package test
@@ -66,6 +83,50 @@ import future.keywords
 p := rand.intn("test", 2)
 `
 	load := loadLoad(t, config, policy)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	{ // arrange: enable LIA via HTTP call, discard the results
+		path := "testdata/load-bundle.tar.gz"
+		body, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read bundle file: %v", err)
+		}
+		req, err := http.NewRequest("POST", "http://localhost:"+load.GetPort("8181/tcp")+"/v0/impact?rate=1&duration=1s&equals=true", bytes.NewReader(body))
+		if err != nil {
+			t.Fatalf("http request: %v", err)
+		}
+		go func() {
+			resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+			if err != nil {
+				t.Error(err)
+			}
+			defer resp.Body.Close()
+			buf := bytes.Buffer{}
+			io.Copy(&buf, resp.Body)
+			if exp, act := 200, resp.StatusCode; exp != act {
+				t.Errorf("expected status %d, got %d -- body: %s", exp, act, buf.String())
+			}
+			var act liaResponse
+			if err := json.NewDecoder(&buf).Decode(&act); err != nil {
+				t.Error(err)
+			}
+			exp := liaResponse{
+				ReqID: 3, // 1 is the "ready" check "GET /"; 2 is the LIA req above
+				Path:  "test/p",
+				Input: nil,
+			}
+			if diff := cmp.Diff(exp, act, cmpopts.IgnoreFields(liaResponse{}, "Metrics", "NodeID", "DecisionID", "Result")); diff != "" {
+				t.Errorf("diff: (-want +got):\n%s", diff)
+			}
+			if !slices.Contains([]any{float64(0), float64(1)}, act.Result) {
+				t.Errorf("expected result to be 0 or 1, got %v", act.Result)
+			}
+			wg.Done()
+		}()
+	}
+
+	waitForLIAStart(ctx, t, load.Container.ID)
 
 	{ // act: evaluate the policy via the v1 data API
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
@@ -109,8 +170,6 @@ p := rand.intn("test", 2)
 	}
 	{
 		exp := []string{"counter_regovm_eval_instructions",
-			"timer_rego_load_bundles_ns",
-			"timer_rego_module_parse_ns",
 			"timer_rego_module_compile_ns",
 			"timer_rego_query_compile_ns",
 			"timer_regovm_eval_ns",
@@ -125,6 +184,7 @@ p := rand.intn("test", 2)
 	if evalA >= evalB {
 		t.Errorf("expected secondary eval to take longer, got a: %d, b: %d (ns)", evalA, evalB)
 	}
+	wg.Wait()
 }
 
 func TestDecisionLogsSomeDiffs(t *testing.T) {
@@ -137,9 +197,7 @@ decision_logs:
   console: true
 plugins:
   impact_analysis:
-    sampling_rate: 1
-    bundle_path: /load-bundle.tar.gz
-    publish_equal: false
+    decision_logs: true
 `
 	policy := `
 package test
@@ -148,6 +206,47 @@ import future.keywords
 q := true
 `
 	load := loadLoad(t, config, policy)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	{ // arrange: enable LIA via HTTP call, discard the results
+		path := "testdata/load-bundle.tar.gz"
+		body, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read bundle file: %v", err)
+		}
+		req, err := http.NewRequest("POST", "http://localhost:"+load.GetPort("8181/tcp")+"/v0/impact?rate=1&duration=1s", bytes.NewReader(body))
+		if err != nil {
+			t.Fatalf("http request: %v", err)
+		}
+		go func() {
+			resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+			if err != nil {
+				t.Error(err)
+			}
+			defer resp.Body.Close()
+			buf := bytes.Buffer{}
+			io.Copy(&buf, resp.Body)
+			if exp, act := 200, resp.StatusCode; exp != act {
+				t.Errorf("expected status %d, got %d -- body: %s", exp, act, buf.String())
+			}
+			var act liaResponse
+			if err := json.NewDecoder(&buf).Decode(&act); err != nil {
+				t.Error(err)
+			}
+			exp := liaResponse{
+				ReqID: 4, // 1 is the "ready" check "GET /"; 2 is the LIA req above; 3 is the request with equal results
+				Path:  "test/q",
+				Input: map[string]any{},
+			}
+			if diff := cmp.Diff(exp, act, cmpopts.IgnoreFields(liaResponse{}, "Metrics", "NodeID", "DecisionID")); diff != "" {
+				t.Errorf("diff: (-want +got):\n%s", diff)
+			}
+			wg.Done()
+		}()
+	}
+
+	waitForLIAStart(ctx, t, load.Container.ID)
 
 	{ // act: evaluate the policy via the v1 data API, provide input
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
@@ -197,6 +296,8 @@ q := true
 	if exp, act := any(nil), logs[2].Result; exp != act {
 		t.Errorf("expected primary result to be %v, got %v", exp, act)
 	}
+
+	wg.Wait()
 }
 
 func TestDecisionLogsAllDiffsSampling(t *testing.T) {
@@ -209,9 +310,7 @@ decision_logs:
   console: true
 plugins:
   impact_analysis:
-    sampling_rate: 0.1
-    bundle_path: /load-bundle.tar.gz
-    publish_equal: false
+    decision_logs: true
 `
 	policy := `
 package test
@@ -220,6 +319,46 @@ import future.keywords
 q := true
 `
 	load := loadLoad(t, config, policy)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	{ // arrange: enable LIA via HTTP call, discard the results
+		path := "testdata/load-bundle.tar.gz"
+		body, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read bundle file: %v", err)
+		}
+		req, err := http.NewRequest("POST", "http://localhost:"+load.GetPort("8181/tcp")+"/v0/impact?rate=0.1&duration=10s", bytes.NewReader(body))
+		if err != nil {
+			t.Fatalf("http request: %v", err)
+		}
+		go func() {
+			resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+			if err != nil {
+				t.Error(err)
+			}
+			defer resp.Body.Close()
+			buf := bytes.Buffer{}
+			io.Copy(&buf, resp.Body)
+			if exp, act := 200, resp.StatusCode; exp != act {
+				t.Errorf("expected status %d, got %d -- body: %s", exp, act, buf.String())
+			}
+
+			// count diffs returned to client
+			n := -1 // we'll count one extra on EOF, adjust
+			dec := json.NewDecoder(&buf)
+			for err := error(nil); err != io.EOF; err = dec.Decode(&struct{}{}) {
+				n++
+			}
+			if n > count*0.2 || n <= 0 {
+				t.Errorf("expected sample count to be +/- ~10%% of %d, got %d", count, n)
+			}
+			wg.Done()
+		}()
+	}
+
+	waitForLIAStart(ctx, t, load.Container.ID)
+
 	for i := 0; i < count; i++ { // act: evaluate the policy via the v1 data API, provide empty input, many times
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
@@ -242,8 +381,10 @@ q := true
 	logs := retrieveDLs(ctx, t, load.Container.ID)
 	act := len(logs) - count
 	if act > count*0.2 || act <= 0 {
-		t.Errorf("expected sample count to be ~10%% above %d, got %d", count, act)
+		t.Errorf("expected sample count to be +/- ~10%% of %d, got %d", count, act)
 	}
+
+	wg.Wait()
 }
 
 func loadLoad(t *testing.T, config, policy string) *dockertest.Resource {
@@ -322,6 +463,52 @@ func loadLoad(t *testing.T, config, policy string) *dockertest.Resource {
 	return load
 }
 
+func TestStopWhenCallerGoesAway(t *testing.T) {
+	cleanupPrevious(t)
+	ctx := context.Background()
+
+	config := `
+decision_logs:
+  console: true
+plugins:
+  impact_analysis:
+    decision_logs: true
+`
+	policy := `
+package test
+import future.keywords
+
+q := true
+`
+	load := loadLoad(t, config, policy)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	{ // arrange: enable LIA via HTTP call, discard the results
+		path := "testdata/load-bundle.tar.gz"
+		body, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read bundle file: %v", err)
+		}
+		req, err := http.NewRequest("POST", "http://localhost:"+load.GetPort("8181/tcp")+"/v0/impact?rate=0.1&duration=10s", bytes.NewReader(body))
+		if err != nil {
+			t.Fatalf("http request: %v", err)
+		}
+		go func() {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			defer cancel()
+			_, err := http.DefaultClient.Do(req.WithContext(ctx))
+			if !errors.Is(err, context.DeadlineExceeded) {
+				t.Error(err)
+			}
+		}()
+	}
+
+	waitForLIAEnd(ctx, t, load.Container.ID)
+	wg.Wait()
+}
+
 // collectDL either returns `exp` decision log payloads, or calls t.Fatal
 func collectDL(ctx context.Context, t *testing.T, container string, exp int) []payload {
 	for i := 0; i <= 3; i++ {
@@ -332,32 +519,16 @@ func collectDL(ctx context.Context, t *testing.T, container string, exp int) []p
 		if act := len(ms); act == exp {
 			return ms
 		} else if i == 3 {
-			t.Fatalf("expected %d payload, got %d", exp, act)
+			t.Fatalf("expected %d payloads, got %d", exp, act)
 		}
 	}
 	return nil
 }
 
 func retrieveDLs(ctx context.Context, t *testing.T, container string) []payload {
-	buf := bytes.Buffer{}
-	opts := docker.LogsOptions{
-		Context:      ctx,
-		Stderr:       true,
-		Stdout:       true,
-		RawTerminal:  true,
-		Container:    container,
-		OutputStream: &buf,
-	}
-	if err := dockerPool.Client.Logs(opts); err != nil {
-		t.Fatalf("tail logs: %v", err)
-	}
-	var stdout, stderr = bytes.Buffer{}, bytes.Buffer{}
-	if _, err := stdcopy.StdCopy(&stdout, &stderr, &buf); err != nil {
-		t.Fatalf("demux logs: %v", err)
-	}
-
+	stderr := getStderr(ctx, t, container)
 	ms := []payload{}
-	dec := json.NewDecoder(&stderr)
+	dec := json.NewDecoder(stderr)
 	for {
 		m := payload{}
 		if err := dec.Decode(&m); err != nil {
@@ -371,6 +542,69 @@ func retrieveDLs(ctx context.Context, t *testing.T, container string) []payload 
 		}
 	}
 	return ms
+}
+
+func waitForLIAStart(ctx context.Context, t *testing.T, container string) {
+	waitForLog(ctx, t, container, 1, func(s string) bool { return strings.HasPrefix(s, "started live impact analysis") }, 100*time.Millisecond)
+}
+
+func waitForLIAEnd(ctx context.Context, t *testing.T, container string) {
+	waitForLog(ctx, t, container, 1, func(s string) bool { return strings.HasPrefix(s, "stopped live impact analysis") }, time.Second)
+}
+
+func waitForLog(ctx context.Context, t *testing.T, container string, exp int, assert func(string) bool, dur time.Duration) {
+	for i := 0; i <= 3; i++ {
+		if i != 0 {
+			time.Sleep(dur)
+		}
+		if act := retrieveReqCount(ctx, t, container, assert); act == exp {
+			return
+		} else if i == 3 {
+			t.Fatalf("expected %d requests, got %d", exp, act)
+		}
+	}
+	return
+}
+
+func retrieveReqCount(ctx context.Context, t *testing.T, container string, assert func(string) bool) int {
+	c := 0
+	stderr := getStderr(ctx, t, container)
+	dec := json.NewDecoder(stderr)
+	for {
+		m := struct {
+			Msg string `json:"msg"`
+		}{}
+		if err := dec.Decode(&m); err != nil {
+			if err == io.EOF {
+				break
+			}
+			t.Fatalf("decode recorded logs: %v", err)
+		}
+		if assert(m.Msg) {
+			c++
+		}
+	}
+	return c
+}
+
+func getStderr(ctx context.Context, t *testing.T, container string) io.Reader {
+	buf := bytes.Buffer{}
+	opts := docker.LogsOptions{
+		Context:      ctx,
+		Stderr:       true,
+		Stdout:       true,
+		RawTerminal:  true,
+		Container:    container,
+		OutputStream: &buf,
+	}
+	if err := dockerPool.Client.Logs(opts); err != nil {
+		t.Fatalf("tail logs: %v", err)
+	}
+	stderr := bytes.Buffer{}
+	if _, err := stdcopy.StdCopy(io.Discard, &stderr, &buf); err != nil {
+		t.Fatalf("demux logs: %v", err)
+	}
+	return &stderr
 }
 
 func cleanupPrevious(t *testing.T) {

@@ -2,8 +2,10 @@ package impact
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -32,6 +34,14 @@ type Impact struct {
 	log     logging.Logger
 	config  Config
 	dl      *logs.Plugin
+	job     Job
+}
+
+func Lookup(manager *plugins.Manager) *Impact {
+	if p := manager.Plugin(Name); p != nil {
+		return p.(*Impact)
+	}
+	return nil
 }
 
 var mutex = &sync.Mutex{}
@@ -47,6 +57,11 @@ type EvalContext interface {
 func Enqueue(ctx context.Context, ectx EvalContext, exp ast.Value) {
 	if singleton == nil {
 		return // plugin not enabled
+	}
+
+	if singleton.job == nil {
+		singleton.log.Debug("no LIA job")
+		return // no LIA job running
 	}
 
 	// NOTE(sr): This also serves a device to stop us from looping infinitely:
@@ -96,12 +111,14 @@ func (i *Impact) sample(reqPath string, query *ast.Expr) bool {
 	if !requestPath[2:].Equal(path) { // this won't be the case for DL drop/mask decisions
 		return false
 	}
-	return rand.Float32() <= i.config.Rate
+	return rand.Float32() <= i.job.SampleRate()
 }
 
 func (i *Impact) Start(ctx context.Context) error {
-	// TODO(sr): think, benchmark, guess MaxGoroutines, pass via .WithMaxGoroutines(int)
-	i.workers = pool.New()
+	i.manager.GetRouter().Handle(httpPrefix, i)
+
+	// TODO(sr): think, benchmark, guess MaxGoroutines?
+	i.workers = pool.New().WithMaxGoroutines(runtime.NumCPU())
 
 	// i.cancel is used to abort all running evals in Stop()
 	i.ctx, i.cancel = context.WithCancel(ctx)
@@ -109,6 +126,7 @@ func (i *Impact) Start(ctx context.Context) error {
 	mutex.Lock()
 	singleton = i
 	mutex.Unlock()
+
 	i.manager.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateOK})
 	return nil
 }
@@ -139,7 +157,7 @@ func (i *Impact) eval(ctx context.Context, ectx EvalContext, rctx *logging.Reque
 		rego.ParsedQuery(ast.NewBody(ast.NewExpr(queryT))),
 		rego.Store(store),
 		rego.Transaction(txn),
-		rego.LoadBundle(i.config.BundlePath),
+		rego.ParsedBundle(i.job.Bundle().Etag, i.job.Bundle()), // TODO(sr): Etag appropriate?
 		rego.NDBuiltinCache(ectx.NDBCache()),
 		rego.Metrics(m),
 	}
@@ -158,7 +176,7 @@ func (i *Impact) eval(ctx context.Context, ectx EvalContext, rctx *logging.Reque
 	}
 
 	eq := i.equalResults(ctx, primaryResult, secondaryResult)
-	if eq && !i.config.PublishEquals {
+	if eq && !i.job.PublishEquals() {
 		return nil
 	}
 	var in any
@@ -175,7 +193,7 @@ func (i *Impact) eval(ctx context.Context, ectx EvalContext, rctx *logging.Reque
 	if len(secondaryResult) == 1 {
 		secRes = secondaryResult[0].Expressions[0].Value
 	}
-	return i.dlog(ctx, rctx, queryT.String(), &in, &secRes, &ndbc, m)
+	return i.publish(ctx, rctx, queryT.String(), &in, &secRes, &ndbc, m)
 }
 
 func unwrap(exp ast.Value) (any, error) {
@@ -213,6 +231,23 @@ func (i *Impact) equalResults(ctx context.Context, primaryResult any, secondaryR
 	return true // both empty
 }
 
+// TODO(sr): don't let this grow out of hand, flush to controller periodically
+func (i *Impact) publish(ctx context.Context, rctx *logging.RequestContext, query string, input, result *any, ndbc *any, m metrics.Metrics) error {
+	decisionID, _ := logging.DecisionIDFromContext(ctx)
+	res := Result{
+		NodeID:     i.manager.ID,
+		RequestID:  rctx.ReqID,
+		Value:      result,
+		Input:      input,
+		Path:       strings.TrimPrefix(strings.TrimPrefix(rctx.ReqPath, "/v1/data/"), "/v0/data/"),
+		Metrics:    m,
+		DecisionID: decisionID,
+	}
+	i.job.Result(&res)
+
+	return i.dlog(ctx, rctx, query, input, result, ndbc, m)
+}
+
 // dlog emits a decision log if DL is available
 func (i *Impact) dlog(ctx context.Context, rctx *logging.RequestContext, query string, input, result *any, ndbc *any, m metrics.Metrics) error {
 	if i.dl == nil {
@@ -229,4 +264,21 @@ func (i *Impact) dlog(ctx context.Context, rctx *logging.RequestContext, query s
 		Metrics:        m,
 		DecisionID:     decisionID,
 	})
+}
+
+func (i *Impact) StartJob(ctx context.Context, j Job) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+	if i.job != nil {
+		return fmt.Errorf("busy with job %s", i.job.ID())
+	}
+	j.Start(ctx, func() {
+		mutex.Lock()
+		i.job = nil
+		defer mutex.Unlock()
+		i.log.Info("stopped live impact analysis job %s", j.ID())
+	})
+	i.job = j
+	i.log.Info("started live impact analysis job %s", j.ID())
+	return nil
 }

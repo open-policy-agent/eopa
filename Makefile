@@ -97,7 +97,7 @@ test:
 	go test ./...
 
 e2e:
-	go test -tags e2e ./e2e/... -v -count=1 # always run
+	go test -p 1 -tags e2e ./e2e/... -v -count=1 # always run, no parallelism
 
 benchmark:
 	go test -run=- -bench=. -benchmem ./...

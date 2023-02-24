@@ -2,52 +2,67 @@ package impact_test
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
+	"go.uber.org/goleak"
+
+	"github.com/gorilla/mux"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/logging"
+	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
+
+	load_bundle "github.com/styrainc/load-private/pkg/plugins/bundle"
+	"github.com/styrainc/load-private/pkg/plugins/discovery"
 	"github.com/styrainc/load-private/pkg/plugins/impact"
 	inmem "github.com/styrainc/load-private/pkg/store"
-	"go.uber.org/goleak"
 )
 
 func TestStop(t *testing.T) {
 	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
-
-	mgr := getTestManager()
-	config := `
-sampling_rate: 1
-bundle_path: testdata/load-bundle.tar.gz
-`
-	c, err := impact.Factory().Validate(mgr, []byte(config))
-	if err != nil {
-		t.Fatalf("Validate: %v", err)
-	}
-	dp := impact.Factory().New(mgr, c)
 	ctx := context.Background()
-	if err := dp.Start(ctx); err != nil {
-		t.Fatalf("Start: %v", err)
+
+	mgr := pluginMgr(t, `
+plugins:
+  impact_analysis: {}`)
+	if err := mgr.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	lia := impact.Lookup(mgr)
+	if lia == nil {
+		t.Fatal("could not find plugin")
 	}
 
-	// fake a request
-	ctx = logging.NewContext(ctx, &logging.RequestContext{
-		ReqPath: "/v1/data/x",
-	})
-	ectx := fakeEval{
-		body:  ast.MustParseBody("data.x = y"),
-		input: ast.Boolean(true),
+	path := "testdata/load-bundle.tar.gz"
+	bndls, err := (&load_bundle.CustomLoader{}).Load(ctx, metrics.New(), []string{path})
+	if err != nil {
+		t.Fatalf("load bundle: %v", err)
 	}
-	exp := ast.NewSet(ast.ObjectTerm(ast.Item(ast.StringTerm("result"), ast.BooleanTerm(true))))
-	impact.Enqueue(ctx, &ectx, exp)
+	j := impact.NewJob(ctx, 1, true, bndls[path], time.Second)
+	if err := lia.StartJob(ctx, j); err != nil {
+		t.Fatalf("error starting job: %v", err)
+	}
+
+	{ // fake a request
+		ctx := logging.NewContext(ctx, &logging.RequestContext{
+			ReqPath: "/v1/data/x",
+		})
+		ectx := fakeEval{
+			body:  ast.MustParseBody("data.x = y"),
+			input: ast.Boolean(true),
+		}
+		exp := ast.NewSet(ast.ObjectTerm(ast.Item(ast.StringTerm("result"), ast.BooleanTerm(true))))
+		impact.Enqueue(ctx, &ectx, exp)
+	}
 
 	// NOTE(sr): The more time we give the go routines to actually start,
 	// the less flaky this test will be, if there are leaked routines.
 	time.Sleep(200 * time.Millisecond)
-	dp.Stop(ctx)
+	mgr.Stop(ctx)
 
 	// goleak will assert that no goroutine is still running
 }
@@ -70,19 +85,33 @@ func (f *fakeEval) NDBCache() builtins.NDBCache {
 	return f.ndbc
 }
 
-func getTestManager() *plugins.Manager {
-	return getTestManagerWithOpts(nil)
-}
+func pluginMgr(t *testing.T, config string) *plugins.Manager {
+	t.Helper()
+	h := topdown.NewPrintHook(os.Stderr)
+	mux := mux.NewRouter()
+	opts := []func(*plugins.Manager){
+		plugins.WithRouter(mux),
+		plugins.PrintHook(h),
+		plugins.EnablePrintStatements(true),
+	}
+	if !testing.Verbose() {
+		opts = append(opts, plugins.Logger(logging.NewNoOpLogger()))
+		opts = append(opts, plugins.ConsoleLogger(logging.NewNoOpLogger()))
+	}
 
-func getTestManagerWithOpts(config []byte, stores ...storage.Store) *plugins.Manager {
 	store := inmem.New()
-	if len(stores) == 1 {
-		store = stores[0]
-	}
-
-	manager, err := plugins.New(config, "test-instance-id", store)
+	mgr, err := plugins.New([]byte(config), "test-instance-id", store, opts...)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	return manager
+	disco, err := discovery.New(mgr,
+		discovery.Factories(map[string]plugins.Factory{
+			impact.Name: impact.Factory(),
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mgr.Register(discovery.Name, disco)
+	return mgr
 }
