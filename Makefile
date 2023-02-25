@@ -35,7 +35,7 @@ LOAD_LDFLAGS := -X=github.com/open-policy-agent/opa/version.Program=Load
 ALT_LOAD_LDFLAGS := "-X=github.com/open-policy-agent/opa/version.AltProgram=Open Policy Agent"
 VERSION_LDFLAGS := -X=github.com/open-policy-agent/opa/version.Version=$(LOAD_VERSION)
 ALT_VERSION_LDFLAGS := -X=github.com/open-policy-agent/opa/version.AltVersion=$(OPA_VERSION)
-TELEMETRY_LDFLAGS := -X=github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=https://load-telemetry.styra.corp.com
+TELEMETRY_LDFLAGS := -X=github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=https://load-telemetry.corp.styra.com
 HOSTNAME_LDFLAGS := -X=github.com/open-policy-agent/opa/version.Hostname=$(HOSTNAME)
 
 LDFLAGS := $(LOAD_LDFLAGS) $(ALT_LOAD_LDFLAGS) $(VERSION_LDFLAGS) $(ALT_VERSION_LDFLAGS) $(TELEMETRY_LDFLAGS) $(HOSTNAME_LDFLAGS)
