@@ -45,6 +45,10 @@ echo '{"yay": "bar"}' | load eval --format pretty --bundle o2.tar.gz -I data.tes
 load build --output o3.tar.gz test/cli/smoke
 github_actions_group assert_contains '/test/cli/smoke/test.rego' "$(tar -tf o3.tar.gz /test/cli/smoke/test.rego)"
 
+load bundle convert o3.tar.gz o4.tar.gz
+
+load test -b o4.tar.gz
+
 # Data files - correct namespaces
 echo "::group:: Data files - correct namespaces"
 assert_contains "data.namespace | test${PATH_SEPARATOR}cli${PATH_SEPARATOR}smoke${PATH_SEPARATOR}namespace${PATH_SEPARATOR}data.json" "$(load inspect test/cli/smoke)"

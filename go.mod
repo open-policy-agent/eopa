@@ -19,7 +19,6 @@ require (
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/rs/zerolog v1.29.0
 	github.com/sbabiv/xml2map v1.2.1
-	github.com/sirupsen/logrus v1.9.0
 	github.com/sourcegraph/conc v0.2.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
@@ -119,6 +118,7 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/sourcegraph/sourcegraph/lib v0.0.0-20221216004406-749998a2ac74 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
@@ -153,4 +153,4 @@ require (
 	oras.land/oras-go v1.2.2 // indirect
 )
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.49.1-0.20230224085004-8aac66736381
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.49.1-0.20230227155137-8224a39cb134

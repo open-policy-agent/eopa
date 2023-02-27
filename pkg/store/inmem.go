@@ -30,6 +30,7 @@ import (
 
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/tester"
 )
 
 type BJSONReader interface {
@@ -461,4 +462,5 @@ func (db *store) NonEmpty(ctx context.Context, txn storage.Transaction) func([]s
 
 func init() {
 	rego.RegisterStore(New())
+	tester.RegisterStore(New())
 }

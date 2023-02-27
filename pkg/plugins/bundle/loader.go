@@ -8,6 +8,7 @@ import (
 	"github.com/open-policy-agent/opa/loader"
 	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/tester"
 )
 
 type CustomLoader struct{}
@@ -32,4 +33,5 @@ func (*CustomLoader) Load(_ context.Context, m metrics.Metrics, paths []string) 
 
 func init() {
 	rego.RegisterBundleLoader(&CustomLoader{})
+	tester.RegisterBundleLoader(&CustomLoader{})
 }
