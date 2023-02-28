@@ -49,7 +49,7 @@ release:
 
 brews:
   - tap:
-      owner: styrainc
+      owner: StyraInc
       name: homebrew-packages
     url_template: >-
       https://github.com/StyraInc/load/releases/download/{{ .Tag }}/{{ .ProjectName }}_{{- title .Os }}_
