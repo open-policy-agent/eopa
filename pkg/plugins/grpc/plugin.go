@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/open-policy-agent/opa/plugins"
-	"google.golang.org/grpc"
 )
 
 const PluginName = "grpc"
@@ -22,7 +21,7 @@ type grpcServerPlugin struct {
 	manager          *plugins.Manager
 	mtx              sync.Mutex
 	config           Config
-	server           *grpc.Server
+	server           *Server
 	shutdownComplete chan struct{} // Signal channel for when GracefulShutdwon completes.
 }
 
@@ -68,7 +67,7 @@ func (p *grpcServerPlugin) Reconfigure(ctx context.Context, config interface{}) 
 
 	// Reinitialize the gRPC server's state, then restart it.
 	p.Stop(ctx)
-	p.server = New(p.manager.Store)
+	p.server = New(p.manager)
 	p.config = newConf
 	p.Start(ctx)
 }

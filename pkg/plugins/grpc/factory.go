@@ -19,7 +19,7 @@ func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 	return &grpcServerPlugin{
 		manager:          m,
 		config:           config.(Config),
-		server:           New(m.Store),
+		server:           New(m),
 		shutdownComplete: make(chan struct{}),
 	}
 }

@@ -1,0 +1,96 @@
+syntax = "proto3";
+package load.v1;
+
+import "load/v1/data.proto";
+import "load/v1/policy.proto";
+
+// --------------------------------------------------------
+
+// A transaction, comprised of a wrapped series of multiple gRPC messages.
+// If any of the write operations in the transaction fail, the transaction is aborted, and no changes will be committed to the store.
+// The writes are treated as a "write barrier", and must all complete before any reads occur.
+message BulkRWRequest {
+  string id = 1; // string identifier used to ID responses as they come back.
+
+  message WriteDataRequest {
+    oneof req {
+      CreateDataRequest create = 1;
+      UpdateDataRequest update = 2;
+      DeleteDataRequest delete = 3;
+    }
+  }
+
+  message WritePolicyRequest {
+    oneof req {
+      CreatePolicyRequest create = 1;
+      UpdatePolicyRequest update = 2;
+      DeletePolicyRequest delete = 3;
+    }
+  }
+
+  message ReadDataRequest {
+    GetDataRequest req = 1;
+  }
+
+  message ReadPolicyRequest {
+    GetPolicyRequest req = 1;
+  }
+
+  // All writes occur first. First policy, then data.
+  // Writes are done in-order.
+  repeated WritePolicyRequest writes_policy = 2;
+  repeated WriteDataRequest writes_data = 3;
+
+  // Reads occur second. Order of results is arbitrary.
+  repeated ReadPolicyRequest reads_policy = 4;
+  repeated ReadDataRequest reads_data = 5;
+}
+
+message BulkRWResponse {
+  string id = 1;
+
+  message WriteDataResponse {
+    oneof resp {
+      CreateDataResponse create = 1;
+      UpdateDataResponse update = 2;
+      DeleteDataResponse delete = 3;
+    }
+  }
+
+  message WritePolicyResponse {
+    oneof resp {
+      CreatePolicyResponse create = 1;
+      UpdatePolicyResponse update = 2;
+      DeletePolicyResponse delete = 3;
+    }
+  }
+
+  message ReadDataResponse {
+    GetDataResponse resp = 1;
+    ErrorList errors = 2;
+  }
+
+  message ReadPolicyResponse {
+    GetPolicyResponse resp = 1;
+    ErrorList errors = 2;
+  }
+
+  // All writes occur first. First policy, then data.
+  // Writes are done in-order.
+  repeated WritePolicyResponse writes_policy = 2;
+  repeated WriteDataResponse writes_data = 3;
+
+  // Reads occur second. Order of results is arbitrary.
+  repeated ReadPolicyResponse reads_policy = 4;
+  repeated ReadDataResponse reads_data = 5;
+}
+
+// The errors included depend on the context.
+message ErrorList {
+  // The errors in the list.
+  repeated string errors = 1;
+}
+
+service BulkService {
+  rpc BulkRW(BulkRWRequest) returns (BulkRWResponse);
+}

@@ -1,0 +1,13 @@
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/styrainc/load/proto/gen/go/load/v1
+plugins:
+  - plugin: go
+    out: gen/go
+    opt: paths=source_relative
+  - plugin: go-grpc
+    out: gen/go
+    opt:
+      - paths=source_relative

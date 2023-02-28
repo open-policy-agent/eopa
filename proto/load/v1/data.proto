@@ -1,0 +1,54 @@
+syntax = "proto3";
+package load.v1;
+
+enum PatchOp {
+  PATCH_OP_UNSPECIFIED = 0;
+  PATCH_OP_ADD = 1;
+  PATCH_OP_REMOVE = 2;
+  PATCH_OP_REPLACE = 3;
+}
+
+// Create
+message CreateDataRequest {
+  string path = 1;
+  bytes data = 2; // json string, like "{\"foo\":true}"
+}
+
+message CreateDataResponse {
+}
+
+// Read / Query
+message GetDataRequest {
+  string path = 1;
+  bytes input = 2; // json string, like "{\"foo\":true}"
+}
+
+message GetDataResponse {
+  string path = 1;
+  bytes result = 2; // json string, like "{\"foo\":true}"
+}
+
+// Update
+message UpdateDataRequest {
+  string path = 1;
+  PatchOp op = 2; // If unspecified, defaults is to "overwrite/replace".
+  bytes data = 3; // json string, like "{\"foo\":true}"
+}
+
+message UpdateDataResponse {
+}
+
+// Delete
+message DeleteDataRequest {
+  string path = 1;
+}
+
+message DeleteDataResponse {
+}
+
+service DataService {
+  rpc GetData(GetDataRequest) returns (GetDataResponse);
+  rpc CreateData(CreateDataRequest) returns (CreateDataResponse);
+  rpc UpdateData(UpdateDataRequest) returns (UpdateDataResponse);
+  rpc DeleteData(DeleteDataRequest) returns (DeleteDataResponse);
+}

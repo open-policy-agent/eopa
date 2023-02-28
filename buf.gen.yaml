@@ -1,8 +1,0 @@
-version: v1
-plugins:
-  - plugin: go
-    out: gen/proto/go
-    opt: paths=source_relative,Mapis/data/v1/data.proto=github.com/styrainc/load/apis/data/v1
-  - plugin: go-grpc #buf.build/grpc/go:v1.2.0
-    out: gen/proto/go
-    opt: paths=source_relative,Mapis/data/v1/data.proto=github.com/styrainc/load/apis/data/v1

@@ -1,0 +1,45 @@
+syntax = "proto3";
+package load.v1;
+
+// Create
+message CreatePolicyRequest {
+  string path = 1;
+  bytes policy = 2; // json string, like "{\"foo\":true}"
+}
+
+message CreatePolicyResponse {
+}
+
+// Read / Query
+message GetPolicyRequest {
+  string path = 1;
+}
+
+message GetPolicyResponse {
+  string path = 1;
+  bytes result = 2; // json string, like "{\"foo\":true}"
+}
+
+// Update
+message UpdatePolicyRequest {
+  string path = 1;
+  bytes policy = 2; // json string, like "{\"foo\":true}"
+}
+
+message UpdatePolicyResponse {
+}
+
+// Delete
+message DeletePolicyRequest {
+  string path = 1;
+}
+
+message DeletePolicyResponse {
+}
+
+service PolicyService {
+  rpc GetPolicy(GetPolicyRequest) returns (GetPolicyResponse);
+  rpc CreatePolicy(CreatePolicyRequest) returns (CreatePolicyResponse);
+  rpc UpdatePolicy(UpdatePolicyRequest) returns (UpdatePolicyResponse);
+  rpc DeletePolicy(DeletePolicyRequest) returns (DeletePolicyResponse);
+}

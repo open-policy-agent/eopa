@@ -62,6 +62,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - uses: bufbuild/buf-lint-action@v1
+        with:
+          input: proto
       # Now that we've passed linting, we check to make sure the build artifacts are identical
       # to what was checked in.
       - name: Install protoc-gen-go dependencies
@@ -70,7 +72,7 @@ jobs:
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
       - name: Fail if `buf generate` diff detected between generated/checked in files
         run: |-
-          buf generate
+          cd proto && buf generate
           if [[ "$(git diff --name-status | wc -l)" != 0 ]]; then
             echo "::error:: Files with diffs: $(git diff --name-status)"
             echo "::error:: Diffs are: $(git diff)"

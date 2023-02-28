@@ -1,208 +1,302 @@
+// Package grpc provides the implementation of Load's gRPC server. It is
+// modeled directly off of OPA's HTTP Server implementation, and borrows as
+// much code from OPA as is reasonable.
+//
+// Several features of the OPA HTTP Server are missing, notably:
+//   - TLS support
+//   - Logging
+//   - Metrics
+//   - Provenance
+//   - Tracing/Explain
 package grpc
 
 import (
 	"context"
-	"io"
+	"fmt"
+	"net"
+	"net/url"
+	"strconv"
 	"strings"
+	"sync"
 
-	datav1 "github.com/styrainc/load-private/gen/proto/go/apis/data/v1"
-	bjson "github.com/styrainc/load-private/pkg/json"
+	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/server/types"
+	"github.com/open-policy-agent/opa/topdown"
+	iCache "github.com/open-policy-agent/opa/topdown/cache"
+	"github.com/styrainc/load-private/pkg/plugins/bundle"
+	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
-	"google.golang.org/grpc/status"
 
+	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 )
 
-type srv struct {
-	store storage.Store
-	datav1.UnimplementedLoadServiceServer
+// General gRPC server utilities.
+type Server struct {
+	mtx                 sync.RWMutex
+	preparedEvalQueries *cache
+	manager             *plugins.Manager
+	grpcServer          *grpc.Server
+	decisionIDFactory   func() string
+	// logger                 func(context.Context, *Info) error
+	// metrics                Metrics
+	interQueryBuiltinCache iCache.InterQueryCache
+	// allPluginsOkOnce       bool
+	runtimeData     *ast.Term
+	ndbCacheEnabled bool
+	store           storage.Store
+	loadv1.UnimplementedDataServiceServer
+	loadv1.UnimplementedPolicyServiceServer
+	loadv1.UnimplementedBulkServiceServer
 }
 
-type pathValuePair struct {
-	path  string
-	value interface{}
+// type pathValuePair struct {
+// 	path  string
+// 	value interface{}
+// }
+
+const pqMaxCacheSize = 100
+
+// map of unsafe builtins
+var unsafeBuiltinsMap = map[string]struct{}{ast.HTTPSend.Name: {}}
+
+func New(manager *plugins.Manager) *Server {
+	grpcServer := grpc.NewServer()
+
+	server := Server{
+		mtx:                    sync.RWMutex{},
+		preparedEvalQueries:    newCache(pqMaxCacheSize),
+		manager:                manager,
+		grpcServer:             grpcServer,
+		interQueryBuiltinCache: iCache.NewInterQueryCache(manager.InterQueryBuiltinCacheConfig()),
+		store:                  manager.Store,
+	}
+
+	loadv1.RegisterDataServiceServer(grpcServer, &server)
+	loadv1.RegisterPolicyServiceServer(grpcServer, &server)
+	loadv1.RegisterBulkServiceServer(grpcServer, &server)
+	reflection.Register(grpcServer)
+	return &server
 }
 
-func New(store storage.Store) *grpc.Server {
-	s := grpc.NewServer()
-	datav1.RegisterLoadServiceServer(s, &srv{store: store})
-	reflection.Register(s)
+func (s *Server) Serve(lis net.Listener) error {
+	return s.grpcServer.Serve(lis)
+}
+
+func (s *Server) Stop() {
+	s.grpcServer.Stop()
+}
+
+func (s *Server) GracefulStop() {
+	s.grpcServer.GracefulStop()
+}
+
+// Borrowed functions from open-policy-agent/opa/server/server.go:
+
+// WithDecisionIDFactory sets a function on the server to generate decision IDs.
+func (s *Server) WithDecisionIDFactory(f func() string) *Server {
+	s.decisionIDFactory = f
 	return s
 }
 
-// ----------------------------------------------------------------------------------------------------------------------------------------------------
-func (s *srv) ReadData(ctx context.Context, req *datav1.ReadDataRequest) (*datav1.ReadDataResponse, error) {
-	path := req.GetPath()
-	p, ok := storage.ParsePath(path)
-	if !ok {
-		return nil, status.Error(codes.InvalidArgument, "invalid path")
-	}
-	// Read single value from the store:
-	v, err := storage.ReadOne(ctx, s.store, p)
-	if err != nil {
-		return nil, err
-	}
-	// Return bjson value from store:
-	bjsonItem, err := bjson.New(v)
-	if err != nil {
-		return nil, err
-	}
-	bs := bjsonItem.String()
-	return &datav1.ReadDataResponse{Path: path, Data: bs}, nil
+// WithRuntimeData sets the runtime data to provide to the evaluation engine.
+func (s *Server) WithRuntimeData(term *ast.Term) *Server {
+	s.runtimeData = term
+	return s
 }
 
-func (s *srv) WriteData(ctx context.Context, req *datav1.WriteDataRequest) (*datav1.WriteDataResponse, error) {
-	path := req.GetPath()
-	p, ok := storage.ParsePath(path)
-	if !ok {
-		return nil, status.Error(codes.InvalidArgument, "invalid path")
+// Utility function for path reachability.
+func isPathOwned(path, root []string) bool {
+	for i := 0; i < len(path) && i < len(root); i++ {
+		if path[i] != root[i] {
+			return false
+		}
 	}
-	val, err := bjson.NewDecoder(strings.NewReader(req.GetData())).Decode()
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
-	}
-	// Write single value to the store:
-	var patchOp storage.PatchOp
-	op := req.GetOperation()
-	switch op {
-	case "add":
-		patchOp = storage.AddOp
-	case "patch", "replace":
-		patchOp = storage.ReplaceOp
-	case "remove":
-		patchOp = storage.RemoveOp
-	default:
-		return nil, status.Errorf(codes.InvalidArgument, "invalid op: %v", op)
-	}
-	if err := storage.WriteOne(ctx, s.store, patchOp, p, val); err != nil {
-		return nil, err
-	}
-	return &datav1.WriteDataResponse{Path: path}, nil
+	return true
 }
 
-// Applies multiple store writes in a single store transaction.
-// Because the transaction is a parameter, this allows squeezing in more store operations on an externally-managed transaction.
-func (s *srv) upsertMany(ctx context.Context, txn storage.Transaction, upserts []pathValuePair) error {
-	for i := range upserts {
-		pvp := upserts[i]
-		path := pvp.path
-		value := pvp.value
-		p, ok := storage.ParsePath(path)
-		if !ok {
-			return status.Error(codes.InvalidArgument, "invalid path")
+// Pulls a policy out of the store by ID, and then performs a bundle safety check against its package path.
+func (s *Server) checkPolicyIDScope(ctx context.Context, txn storage.Transaction, id string) error {
+	bs, err := s.store.GetPolicy(ctx, txn, id)
+	if err != nil {
+		return err
+	}
+
+	module, err := ast.ParseModule(id, string(bs))
+	if err != nil {
+		return err
+	}
+
+	return s.checkPolicyPackageScope(ctx, txn, module.Package)
+}
+
+// Unravels a package's path, and delegates to checkPathScope for the bundle safety check.
+func (s *Server) checkPolicyPackageScope(ctx context.Context, txn storage.Transaction, pkg *ast.Package) error {
+	path, err := pkg.Path.Ptr()
+	if err != nil {
+		return err
+	}
+
+	spath, ok := storage.ParsePathEscaped("/" + path)
+	if !ok {
+		return types.BadRequestErr("invalid package path: cannot determine scope")
+	}
+
+	return s.checkPathScope(ctx, txn, spath)
+}
+
+// Safety check, used to prevent overwriting parts of bundles in the store.
+func (s *Server) checkPathScope(ctx context.Context, txn storage.Transaction, path storage.Path) error {
+	names, err := bundle.ReadBundleNamesFromStore(ctx, s.store, txn)
+	if err != nil {
+		if !storage.IsNotFound(err) {
+			return err
 		}
-		if len(p) > 1 {
-			if err := storage.MakeDir(ctx, s.store, txn, p[:len(p)-1]); err != nil {
-				return err
-			}
+		return nil
+	}
+
+	bundleRoots := map[string][]string{}
+	for _, name := range names {
+		roots, err := bundle.ReadBundleRootsFromStore(ctx, s.store, txn, name)
+		if err != nil && !storage.IsNotFound(err) {
+			return err
 		}
-		if err := s.store.Write(ctx, txn, storage.ReplaceOp, p, value); err != nil {
-			if !storage.IsNotFound(err) {
-				return err
+		bundleRoots[name] = roots
+	}
+
+	spath := strings.Trim(path.String(), "/")
+
+	if spath == "" && len(bundleRoots) > 0 {
+		return types.BadRequestErr("can't write to document root with bundle roots configured")
+	}
+
+	spathParts := strings.Split(spath, "/")
+
+	for name, roots := range bundleRoots {
+		if roots == nil {
+			return types.BadRequestErr(fmt.Sprintf("all paths owned by bundle %q", name))
+		}
+		for _, root := range roots {
+			if root == "" {
+				return types.BadRequestErr(fmt.Sprintf("all paths owned by bundle %q", name))
 			}
-			if err := s.store.Write(ctx, txn, storage.AddOp, p, value); err != nil {
-				return err
+			if isPathOwned(spathParts, strings.Split(root, "/")) {
+				return types.BadRequestErr(fmt.Sprintf("path %v is owned by bundle %q", spath, name))
 			}
 		}
 	}
+
 	return nil
 }
 
-func (s *srv) readMany(ctx context.Context, txn storage.Transaction, paths []string) ([]interface{}, error) {
-	results := make([]interface{}, 0, len(paths))
-	for i := range paths {
-		p, ok := storage.ParsePath(paths[i])
-		if !ok {
-			return nil, status.Error(codes.InvalidArgument, "invalid path")
+func (s *Server) loadModules(ctx context.Context, txn storage.Transaction) (map[string]*ast.Module, error) {
+	ids, err := s.store.ListPolicies(ctx, txn)
+	if err != nil {
+		return nil, err
+	}
+
+	modules := make(map[string]*ast.Module, len(ids))
+
+	for _, id := range ids {
+		bs, err := s.store.GetPolicy(ctx, txn, id)
+		if err != nil {
+			return nil, err
 		}
-		if v, err := s.store.Read(ctx, txn, p); err == nil {
-			results = append(results, v)
+
+		parsed, err := ast.ParseModule(id, string(bs))
+		if err != nil {
+			return nil, err
+		}
+
+		modules[id] = parsed
+	}
+
+	return modules, nil
+}
+
+func (s *Server) getCompiler() *ast.Compiler {
+	return s.manager.GetCompiler()
+}
+
+// func (s *Server) getCachedPreparedEvalQuery(key string, m metrics.Metrics) (*rego.PreparedEvalQuery, bool) {
+func (s *Server) getCachedPreparedEvalQuery(key string) (*rego.PreparedEvalQuery, bool) {
+	pq, ok := s.preparedEvalQueries.Get(key)
+	// m.Counter(metrics.ServerQueryCacheHit) // Creates the counter on the metrics if it doesn't exist, starts at 0
+	if ok {
+		// m.Counter(metrics.ServerQueryCacheHit).Incr() // Increment counter on hit
+		return pq.(*rego.PreparedEvalQuery), true
+	}
+	return nil, false
+}
+
+func stringPathToRef(s string) (r ast.Ref) {
+	if len(s) == 0 {
+		return r
+	}
+	p := strings.Split(s, "/")
+	for _, x := range p {
+		if x == "" {
+			continue
+		}
+		if y, err := url.PathUnescape(x); err == nil {
+			x = y
+		}
+		i, err := strconv.Atoi(x)
+		if err != nil {
+			r = append(r, ast.StringTerm(x))
 		} else {
-			if !storage.IsNotFound(err) {
-				return nil, err
-			}
+			r = append(r, ast.IntNumberTerm(i))
 		}
 	}
-	return results, nil
+	return r
 }
 
-// Note(philip): We've inlined the transaction-handling logic from
-// storage.Txn so that we don't have to use a closure here. The Go compiler
-// still struggles with optimizing closures, and this also gives us *very*
-// fine-grained control over transaction behavior.
-func (s *srv) RWDataTransactionStream(stream datav1.LoadService_RWDataTransactionStreamServer) error {
-	ctx := stream.Context()
-	for {
-		// Check context to allow cancellation.
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		resp := datav1.RWDataTransactionStreamResponse{}
-		switch req, err := stream.Recv(); err {
-		case nil:
-			txnID := req.GetId()
-			if txnID != "" {
-				resp.Id = txnID
-			}
-			writes := req.GetWrites()
-			params := storage.TransactionParams{Write: len(writes) > 0}
+// func validateQuery(query string) (ast.Body, error) {
+// 	return ast.ParseBody(query)
+// }
 
-			txn, err := s.store.NewTransaction(ctx, params)
-			if err != nil {
-				return err
-			}
-
-			// Run batched writes.
-			upserts := make([]pathValuePair, 0, len(writes))
-			for i := range writes {
-				val, err := bjson.NewDecoder(strings.NewReader(writes[i].GetData())).Decode()
-				if err != nil {
-					return status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
-				}
-				upserts = append(upserts, pathValuePair{path: writes[i].GetPath(), value: val})
-			}
-			if err := s.upsertMany(stream.Context(), txn, upserts); err != nil {
-				s.store.Abort(ctx, txn)
-				return err
-			}
-			// Prepare write responses.
-			outWrites := make([]*datav1.WriteDataResponse, 0, len(writes))
-			for i := range writes {
-				outWrites = append(outWrites, &datav1.WriteDataResponse{Path: writes[i].GetPath()})
-			}
-			resp.Writes = outWrites
-
-			// Run batched reads, and return responses.
-			reads := req.GetReads()
-			readPaths := make([]string, 0, len(reads))
-			outReads := make([]*datav1.ReadDataResponse, 0, len(reads))
-			for i := range reads {
-				readPaths = append(readPaths, reads[i].GetPath())
-			}
-			if results, err := s.readMany(ctx, txn, readPaths); err == nil {
-				for i := range results {
-					bjsonItem, err := bjson.New(results[i])
-					if err != nil {
-						s.store.Abort(ctx, txn)
-						return err
-					}
-					bs := bjsonItem.String()
-					outReads = append(outReads, &datav1.ReadDataResponse{Path: readPaths[i], Data: bs})
-				}
-				resp.Reads = outReads
-			}
-
-			s.store.Commit(ctx, txn)
-			stream.Send(&resp)
-
-		case io.EOF:
-			return nil
-
-		default:
-			return err
-		}
-	}
+func stringPathToDataRef(s string) (r ast.Ref) {
+	result := ast.Ref{ast.DefaultRootDocument}
+	result = append(result, stringPathToRef(s)...)
+	return result
 }
+
+func (s *Server) makeRego(ctx context.Context,
+	strictBuiltinErrors bool,
+	txn storage.Transaction,
+	input ast.Value,
+	urlPath string,
+	// m metrics.Metrics,
+	instrument bool,
+	tracer topdown.QueryTracer,
+	opts []func(*rego.Rego),
+) (*rego.Rego, error) {
+	queryPath := stringPathToDataRef(urlPath).String()
+
+	opts = append(
+		opts,
+		rego.Transaction(txn),
+		rego.Query(queryPath),
+		rego.ParsedInput(input),
+		// rego.Metrics(m),
+		rego.QueryTracer(tracer),
+		rego.Instrument(instrument),
+		rego.Runtime(s.runtimeData),
+		rego.UnsafeBuiltins(unsafeBuiltinsMap),
+		rego.StrictBuiltinErrors(strictBuiltinErrors),
+		rego.PrintHook(s.manager.PrintHook()),
+		// rego.DistributedTracingOpts(s.distributedTracingOpts),
+	)
+
+	return rego.New(opts...), nil
+}
+
+// func (s *Server) generateDecisionID() string {
+// 	if s.decisionIDFactory != nil {
+// 		return s.decisionIDFactory()
+// 	}
+// 	return ""
+// }
