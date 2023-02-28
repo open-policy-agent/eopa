@@ -1,10 +1,10 @@
 package grpc
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	bjson "github.com/styrainc/load-private/pkg/json"
 	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
@@ -28,9 +28,9 @@ import (
 // that we can use these helper functions in the transaction service too.
 
 // This is only the JSON-parsing path from OPA's server.readInputPostV1() function.
-func readInputJSON(jstr []byte) (ast.Value, error) {
+func readInputJSON(jstr string) (ast.Value, error) {
 	var request types.DataRequestV1
-	dec := util.NewJSONDecoder(bytes.NewReader(jstr))
+	dec := util.NewJSONDecoder(strings.NewReader(jstr))
 	if err := dec.Decode(&request); err != nil && err != io.EOF {
 		return nil, fmt.Errorf("body contains malformed input document: %w", err)
 	}
@@ -55,7 +55,7 @@ func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transact
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "invalid path")
 	}
-	val, err := bjson.NewDecoder(bytes.NewReader(req.GetData())).Decode()
+	val, err := bjson.NewDecoder(strings.NewReader(req.GetData())).Decode()
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
 	}
@@ -186,7 +186,7 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	bs := bjsonItem.String()
-	return &loadv1.GetDataResponse{Path: path, Result: []byte(bs)}, nil
+	return &loadv1.GetDataResponse{Path: path, Result: bs}, nil
 }
 
 func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.UpdateDataRequest) (*loadv1.UpdateDataResponse, error) {
@@ -195,7 +195,7 @@ func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transact
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "invalid path")
 	}
-	val, err := bjson.NewDecoder(bytes.NewReader(req.GetData())).Decode()
+	val, err := bjson.NewDecoder(strings.NewReader(req.GetData())).Decode()
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
 	}

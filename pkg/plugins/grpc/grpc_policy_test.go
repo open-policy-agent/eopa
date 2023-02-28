@@ -2,11 +2,8 @@ package grpc_test
 
 import (
 	"context"
-	"encoding/json"
-	"reflect"
 	"testing"
 
-	"github.com/open-policy-agent/opa/server/types"
 	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
 
 	"google.golang.org/grpc"
@@ -31,11 +28,11 @@ func TestCreatePolicy(t *testing.T) {
 	// Create new policy in the store.
 	{
 		_, err := client.CreatePolicy(ctx, &loadv1.CreatePolicyRequest{
-			Path: "/a", Policy: []byte(`package a
+			Path: "/a", Policy: `package a
 
 x { true }
 y { false }
-`),
+`,
 		})
 		if err != nil {
 			t.Fatalf("CreatePolicy failed: %v", err)
@@ -51,21 +48,11 @@ y { false }
 		if path != "/a" {
 			t.Fatalf("Expected /a, got: %v", path)
 		}
-		// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST to this JSON.
-		var expected types.PolicyV1
-		const expectedJSON = `{"id":"/a","raw":"package a\n\nx { true }\ny { false }\n"}`
-		err = json.Unmarshal([]byte(expectedJSON), &expected)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var actual types.PolicyV1
+		// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST.
+		const expectedPolicy = "package a\n\nx { true }\ny { false }\n"
 		result := resp.GetResult()
-		err = json.Unmarshal([]byte(result), &actual)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !reflect.DeepEqual(expected, actual) {
-			t.Fatalf("Expected %v\n\ngot:\n%v", expected, actual)
+		if expectedPolicy != string(result) {
+			t.Fatalf("Expected %v\n\ngot:\n%v", expectedPolicy, string(result))
 		}
 	}
 }
@@ -94,21 +81,11 @@ y { false }
 	if err != nil {
 		t.Fatalf("GetPolicy failed: %v", err)
 	}
-	// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST to this JSON.
-	var expected types.PolicyV1
-	const expectedJSON = `{"id":"/a","raw":"package a\n\nx { true }\ny { false }\n"}`
-	err = json.Unmarshal([]byte(expectedJSON), &expected)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var actual types.PolicyV1
+	// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST.
+	const expectedPolicy = "package a\n\nx { true }\ny { false }\n"
 	result := resp.GetResult()
-	err = json.Unmarshal([]byte(result), &actual)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("Expected %v\n\ngot:\n%v", expected, actual)
+	if expectedPolicy != string(result) {
+		t.Fatalf("Expected %v\n\ngot:\n%v", expectedPolicy, string(result))
 	}
 }
 
@@ -134,11 +111,11 @@ y { false }
 	// Update the policy in the store.
 	{
 		_, err := client.UpdatePolicy(ctx, &loadv1.UpdatePolicyRequest{
-			Path: "/a", Policy: []byte(`package a
+			Path: "/a", Policy: `package a
 
 r { true }
 s { false }
-`),
+`,
 		})
 		if err != nil {
 			t.Fatalf("UpdatePolicy failed: %v", err)
@@ -154,21 +131,11 @@ s { false }
 		if path != "/a" {
 			t.Fatalf("Expected /a, got: %v", path)
 		}
-		// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST to this JSON.
-		var expected types.PolicyV1
-		const expectedJSON = `{"id":"/a","raw":"package a\n\nr { true }\ns { false }\n"}`
-		err = json.Unmarshal([]byte(expectedJSON), &expected)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var actual types.PolicyV1
+		// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST.
+		const expectedPolicy = "package a\n\nr { true }\ns { false }\n"
 		result := resp.GetResult()
-		err = json.Unmarshal([]byte(result), &actual)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !reflect.DeepEqual(expected, actual) {
-			t.Fatalf("Expected %v\n\ngot:\n%v", expected, actual)
+		if expectedPolicy != string(result) {
+			t.Fatalf("Expected %v\n\ngot:\n%v", expectedPolicy, string(result))
 		}
 	}
 }

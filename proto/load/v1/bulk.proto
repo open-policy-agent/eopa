@@ -4,22 +4,25 @@ package load.v1;
 import "load/v1/data.proto";
 import "load/v1/policy.proto";
 
-// --------------------------------------------------------
-
-// A transaction, comprised of a wrapped series of multiple gRPC messages.
-// If any of the write operations in the transaction fail, the transaction is aborted, and no changes will be committed to the store.
-// The writes are treated as a "write barrier", and must all complete before any reads occur.
+// BulkRWRequest allows specifying a fixed-structure, bulk read/write
+// operation. WritePolicy/Data requests are executed sequentially, aborting
+// the entire gRPC call if any requests fail. The ReadPolicy/Data requests
+// are then executed sequentially, but will report errors inline in their
+// responses, instead of aborting the entire gRPC call.
+//
+// Warning: The underlying implementation currently executes exactly two
+// store transactions, one write transaction for all writes, and one read
+// transaction for the sequential reads. Note that for long-running
+// queries, this can cause the server to block pending writes on other
+// threads until this BulkRWRequest completes. The blocking read
+// transaction behavior may change in the future, and should not be
+// relied upon for correct client behavior.
 message BulkRWRequest {
-  string id = 1; // string identifier used to ID responses as they come back.
-
-  message WriteDataRequest {
-    oneof req {
-      CreateDataRequest create = 1;
-      UpdateDataRequest update = 2;
-      DeleteDataRequest delete = 3;
-    }
-  }
-
+  // WritePolicyRequest provides a union of possible Policy request types.
+  // This allows creating arbitrary sequences of policy store operations.
+  //
+  // Warning: The same performance hazards described for the Policy API
+  // apply for these operations as well.
   message WritePolicyRequest {
     oneof req {
       CreatePolicyRequest create = 1;
@@ -28,35 +31,41 @@ message BulkRWRequest {
     }
   }
 
-  message ReadDataRequest {
-    GetDataRequest req = 1;
+  // WriteDataRequest provides a union of possible Data request types.
+  // This allows creating arbitrary sequences of data store operations.
+  message WriteDataRequest {
+    oneof req {
+      CreateDataRequest create = 1;
+      UpdateDataRequest update = 2;
+      DeleteDataRequest delete = 3;
+    }
   }
 
+  // ReadPolicyRequest is currently a simple wrapper over the GetPolicy
+  // request type.
   message ReadPolicyRequest {
     GetPolicyRequest req = 1;
   }
 
+  // ReadDataRequest is currently a simple wrapper over the GetData
+  // request type.
+  message ReadDataRequest {
+    GetDataRequest req = 1;
+  }
+
   // All writes occur first. First policy, then data.
-  // Writes are done in-order.
+  // Writes are done in-order, sequentially.
   repeated WritePolicyRequest writes_policy = 2;
   repeated WriteDataRequest writes_data = 3;
 
-  // Reads occur second. Order of results is arbitrary.
+  // Reads occur second.
+  // Reads may be executed in arbitrary order, but currently are executed in-order.
   repeated ReadPolicyRequest reads_policy = 4;
   repeated ReadDataRequest reads_data = 5;
 }
 
 message BulkRWResponse {
-  string id = 1;
-
-  message WriteDataResponse {
-    oneof resp {
-      CreateDataResponse create = 1;
-      UpdateDataResponse update = 2;
-      DeleteDataResponse delete = 3;
-    }
-  }
-
+  // WritePolicyResponse provides a union of possible response types, mirroring the union of possible request types.
   message WritePolicyResponse {
     oneof resp {
       CreatePolicyResponse create = 1;
@@ -65,32 +74,45 @@ message BulkRWResponse {
     }
   }
 
-  message ReadDataResponse {
-    GetDataResponse resp = 1;
-    ErrorList errors = 2;
+  // WriteDataResponse provides a union of possible response types, mirroring the union of possible request types.
+  message WriteDataResponse {
+    oneof resp {
+      CreateDataResponse create = 1;
+      UpdateDataResponse update = 2;
+      DeleteDataResponse delete = 3;
+    }
   }
 
+  // ReadPolicyResponse provides fields for a response or list of errors. The two should be mutually exclusive.
   message ReadPolicyResponse {
     GetPolicyResponse resp = 1;
     ErrorList errors = 2;
   }
 
+  // ReadDataResponse provides fields for a response or list of errors. The two should be mutually exclusive.
+  message ReadDataResponse {
+    GetDataResponse resp = 1;
+    ErrorList errors = 2;
+  }
+
   // All writes occur first. First policy, then data.
-  // Writes are done in-order.
+  // Writes are done in-order, sequentially.
   repeated WritePolicyResponse writes_policy = 2;
   repeated WriteDataResponse writes_data = 3;
 
-  // Reads occur second. Order of results is arbitrary.
+  // Reads occur second.
+  // Reads may be executed in arbitrary order, but currently are executed in-order.
   repeated ReadPolicyResponse reads_policy = 4;
   repeated ReadDataResponse reads_data = 5;
 }
 
-// The errors included depend on the context.
+// Context-dependent error messages.
 message ErrorList {
   // The errors in the list.
   repeated string errors = 1;
 }
 
+// BulkService is an API for specifying batches of read/write operations.
 service BulkService {
   rpc BulkRW(BulkRWRequest) returns (BulkRWResponse);
 }

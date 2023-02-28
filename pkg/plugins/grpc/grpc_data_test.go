@@ -127,7 +127,7 @@ func TestCreateData(t *testing.T) {
 
 	// Create new data store item.
 	{
-		_, err := client.CreateData(ctx, &loadv1.CreateDataRequest{Path: "/a", Data: []byte("27")})
+		_, err := client.CreateData(ctx, &loadv1.CreateDataRequest{Path: "/a", Data: "27"})
 		if err != nil {
 			t.Fatalf("CreateData failed: %v", err)
 		}
@@ -191,7 +191,7 @@ func TestUpdateData(t *testing.T) {
 
 	// Update the data item.
 	{
-		_, err := client.UpdateData(ctx, &loadv1.UpdateDataRequest{Path: "/a", Op: loadv1.PatchOp_PATCH_OP_REPLACE, Data: []byte("4")})
+		_, err := client.UpdateData(ctx, &loadv1.UpdateDataRequest{Path: "/a", Op: loadv1.PatchOp_PATCH_OP_REPLACE, Data: "4"})
 		if err != nil {
 			t.Fatalf("UpdateData failed: %v", err)
 		}

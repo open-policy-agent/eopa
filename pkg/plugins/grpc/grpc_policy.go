@@ -7,10 +7,8 @@ import (
 	"fmt"
 
 	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/storage"
 
-	bjson "github.com/styrainc/load-private/pkg/json"
 	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
 
 	"google.golang.org/grpc/codes"
@@ -41,7 +39,7 @@ func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transa
 		if !storage.IsNotFound(err) {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-	} else if bytes.Equal(rawPolicy, bs) {
+	} else if bytes.Equal([]byte(rawPolicy), bs) {
 		return &loadv1.CreatePolicyResponse{}, nil
 	}
 
@@ -89,7 +87,7 @@ func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transa
 	// m.Timer(metrics.RegoModuleCompile).Stop()
 
 	// Upsert policy into the store.
-	if err := s.store.UpsertPolicy(ctx, txn, path, rawPolicy); err != nil {
+	if err := s.store.UpsertPolicy(ctx, txn, path, []byte(rawPolicy)); err != nil {
 		if storage.IsNotFound(err) {
 			return nil, status.Error(codes.NotFound, err.Error())
 		}
@@ -98,6 +96,10 @@ func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transa
 	return &loadv1.CreatePolicyResponse{}, nil
 }
 
+// Note(philip): For the Miro PoC, we're simply dropping the alternative
+// fields, like ID and AST, since we can add them directly to the protobuf
+// definition later when we've decided how to solve the compiler state
+// problem for the plugin.
 func (s *Server) getPolicyFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.GetPolicyRequest) (*loadv1.GetPolicyResponse, error) {
 	path := req.GetPath()
 
@@ -117,17 +119,17 @@ func (s *Server) getPolicyFromRequest(ctx context.Context, txn storage.Transacti
 	// compile them, or do we rely on a stateful compiler stored somewhere?
 	// c := s.getCompiler()
 
-	result := types.PolicyV1{
-		ID:  path,
-		Raw: string(policyBytes),
-		// AST: c.Modules[path], // TODO(philip): We intentionally leave out the AST here for complexity reasons.
-	}
-	bjsonItem, err := bjson.New(result)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	bs := bjsonItem.String()
-	return &loadv1.GetPolicyResponse{Path: path, Result: []byte(bs)}, nil
+	// result := types.PolicyV1{
+	// 	ID:  path,
+	// 	Raw: string(policyBytes),
+	// 	// AST: c.Modules[path], // TODO(philip): We intentionally leave out the AST here for complexity reasons.
+	// }
+	// bjsonItem, err := bjson.New(result)
+	// if err != nil {
+	// 	return nil, status.Error(codes.Internal, err.Error())
+	// }
+	// bs := bjsonItem.String()
+	return &loadv1.GetPolicyResponse{Path: path, Result: string(policyBytes)}, nil
 }
 
 func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.UpdatePolicyRequest) (*loadv1.UpdatePolicyResponse, error) {
@@ -141,7 +143,7 @@ func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transa
 		if !storage.IsNotFound(err) {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-	} else if bytes.Equal(rawPolicy, bs) {
+	} else if bytes.Equal([]byte(rawPolicy), bs) {
 		return &loadv1.UpdatePolicyResponse{}, nil
 	}
 
@@ -189,7 +191,7 @@ func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transa
 	// m.Timer(metrics.RegoModuleCompile).Stop()
 
 	// Upsert policy into the store.
-	if err := s.store.UpsertPolicy(ctx, txn, path, rawPolicy); err != nil {
+	if err := s.store.UpsertPolicy(ctx, txn, path, []byte(rawPolicy)); err != nil {
 		if storage.IsNotFound(err) {
 			return nil, status.Error(codes.NotFound, err.Error())
 		}

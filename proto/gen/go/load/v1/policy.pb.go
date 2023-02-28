@@ -20,14 +20,25 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Create
+// CreatePolicyRequest allows inserting new policy code into the policy
+// store.
+//
+// This is equivalent in functionality to OPA's
+// [Policy REST API Create/Update method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-update-a-policy).
+//
+// Warning: Inserting a new policy will trigger a full recompilation
+// of *all* policies in the store, in order to ensure the new policy does
+// not break existing policies. This is a known performance hazard for the
+// OPA REST API, and remains a hazard for gRPC as well. Keeping the unique
+// number of policies down, or using Bundles are the recommended
+// workarounds for most OPA users.
 type CreatePolicyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
 	Path   string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	Policy []byte `protobuf:"bytes,2,opt,name=policy,proto3" json:"policy,omitempty"` // json string, like "{\"foo\":true}"
+	Policy string `protobuf:"bytes,2,opt,name=policy,proto3" json:"policy,omitempty"` // Rego module.
 }
 
 func (x *CreatePolicyRequest) Reset() {
@@ -69,11 +80,11 @@ func (x *CreatePolicyRequest) GetPath() string {
 	return ""
 }
 
-func (x *CreatePolicyRequest) GetPolicy() []byte {
+func (x *CreatePolicyRequest) GetPolicy() string {
 	if x != nil {
 		return x.Policy
 	}
-	return nil
+	return ""
 }
 
 type CreatePolicyResponse struct {
@@ -114,7 +125,13 @@ func (*CreatePolicyResponse) Descriptor() ([]byte, []int) {
 	return file_load_v1_policy_proto_rawDescGZIP(), []int{1}
 }
 
-// Read / Query
+// GetPolicyRequest allows inserting new policy code into the policy
+// store.
+//
+// This is roughly equivalent in functionality to OPA's
+// [Policy REST API Get method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-policy).
+//
+// Note: Only the raw policy text is returned in this version of the API.
 type GetPolicyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -168,7 +185,7 @@ type GetPolicyResponse struct {
 	unknownFields protoimpl.UnknownFields
 
 	Path   string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	Result []byte `protobuf:"bytes,2,opt,name=result,proto3" json:"result,omitempty"` // json string, like "{\"foo\":true}"
+	Result string `protobuf:"bytes,2,opt,name=result,proto3" json:"result,omitempty"` // Rego module.
 }
 
 func (x *GetPolicyResponse) Reset() {
@@ -210,21 +227,32 @@ func (x *GetPolicyResponse) GetPath() string {
 	return ""
 }
 
-func (x *GetPolicyResponse) GetResult() []byte {
+func (x *GetPolicyResponse) GetResult() string {
 	if x != nil {
 		return x.Result
 	}
-	return nil
+	return ""
 }
 
-// Update
+// UpdatePolicyRequest allows updating a policy module in the policy
+// store.
+//
+// This is equivalent in functionality to OPA's
+// [Policy REST API Create/Update method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-update-a-policy).
+//
+// Warning: Modifying an existing policy will trigger a full recompilation
+// of *all* policies in the store, in order to ensure the updated policy does
+// not break existing policies. This is a known performance hazard for the
+// OPA REST API, and remains a hazard for gRPC as well. Keeping the unique
+// number of policies down, or using Bundles are the recommended
+// workarounds for most OPA users.
 type UpdatePolicyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
 	Path   string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	Policy []byte `protobuf:"bytes,2,opt,name=policy,proto3" json:"policy,omitempty"` // json string, like "{\"foo\":true}"
+	Policy string `protobuf:"bytes,2,opt,name=policy,proto3" json:"policy,omitempty"` // Rego module.
 }
 
 func (x *UpdatePolicyRequest) Reset() {
@@ -266,11 +294,11 @@ func (x *UpdatePolicyRequest) GetPath() string {
 	return ""
 }
 
-func (x *UpdatePolicyRequest) GetPolicy() []byte {
+func (x *UpdatePolicyRequest) GetPolicy() string {
 	if x != nil {
 		return x.Policy
 	}
-	return nil
+	return ""
 }
 
 type UpdatePolicyResponse struct {
@@ -311,7 +339,18 @@ func (*UpdatePolicyResponse) Descriptor() ([]byte, []int) {
 	return file_load_v1_policy_proto_rawDescGZIP(), []int{5}
 }
 
-// Delete
+// DeletePolicyRequest allows removing a policy module from the policy
+// store.
+//
+// This is equivalent in functionality to OPA's
+// [Policy REST API Delete method](https://www.openpolicyagent.org/docs/latest/rest-api/#delete-a-policy).
+//
+// Warning: Removing a policy will trigger a full recompilation of *all*
+// policies in the store, in order to ensure that removing the policy
+// module does not break existing policies. This is a known performance
+// hazard for the OPA REST API, and remains a hazard for gRPC as well.
+// Keeping the unique number of policies down, or using Bundles are the
+// recommended workarounds for most OPA users.
 type DeletePolicyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -405,7 +444,7 @@ var file_load_v1_policy_proto_rawDesc = []byte{
 	0x41, 0x0a, 0x13, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52,
 	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61, 0x74, 0x68, 0x12, 0x16, 0x0a, 0x06, 0x70, 0x6f,
-	0x6c, 0x69, 0x63, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x70, 0x6f, 0x6c, 0x69,
+	0x6c, 0x69, 0x63, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x70, 0x6f, 0x6c, 0x69,
 	0x63, 0x79, 0x22, 0x16, 0x0a, 0x14, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x50, 0x6f, 0x6c, 0x69,
 	0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x26, 0x0a, 0x10, 0x47, 0x65,
 	0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12,
@@ -413,11 +452,11 @@ var file_load_v1_policy_proto_rawDesc = []byte{
 	0x74, 0x68, 0x22, 0x3f, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52,
 	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61, 0x74, 0x68, 0x12, 0x16, 0x0a, 0x06, 0x72,
-	0x65, 0x73, 0x75, 0x6c, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x72, 0x65, 0x73,
+	0x65, 0x73, 0x75, 0x6c, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x72, 0x65, 0x73,
 	0x75, 0x6c, 0x74, 0x22, 0x41, 0x0a, 0x13, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x50, 0x6f, 0x6c,
 	0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61,
 	0x74, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61, 0x74, 0x68, 0x12, 0x16,
-	0x0a, 0x06, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06,
+	0x0a, 0x06, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06,
 	0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x22, 0x16, 0x0a, 0x14, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65,
 	0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x29,
 	0x0a, 0x13, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65,

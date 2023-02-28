@@ -20,20 +20,30 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// A transaction, comprised of a wrapped series of multiple gRPC messages.
-// If any of the write operations in the transaction fail, the transaction is aborted, and no changes will be committed to the store.
-// The writes are treated as a "write barrier", and must all complete before any reads occur.
+// BulkRWRequest allows specifying a fixed-structure, bulk read/write
+// operation. WritePolicy/Data requests are executed sequentially, aborting
+// the entire gRPC call if any requests fail. The ReadPolicy/Data requests
+// are then executed sequentially, but will report errors inline in their
+// responses, instead of aborting the entire gRPC call.
+//
+// Warning: The underlying implementation currently executes exactly two
+// store transactions, one write transaction for all writes, and one read
+// transaction for the sequential reads. Note that for long-running
+// queries, this can cause the server to block pending writes on other
+// threads until this BulkRWRequest completes. The blocking read
+// transaction behavior may change in the future, and should not be
+// relied upon for correct client behavior.
 type BulkRWRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // string identifier used to ID responses as they come back.
 	// All writes occur first. First policy, then data.
-	// Writes are done in-order.
+	// Writes are done in-order, sequentially.
 	WritesPolicy []*BulkRWRequest_WritePolicyRequest `protobuf:"bytes,2,rep,name=writes_policy,json=writesPolicy,proto3" json:"writes_policy,omitempty"`
 	WritesData   []*BulkRWRequest_WriteDataRequest   `protobuf:"bytes,3,rep,name=writes_data,json=writesData,proto3" json:"writes_data,omitempty"`
-	// Reads occur second. Order of results is arbitrary.
+	// Reads occur second.
+	// Reads may be executed in arbitrary order, but currently are executed in-order.
 	ReadsPolicy []*BulkRWRequest_ReadPolicyRequest `protobuf:"bytes,4,rep,name=reads_policy,json=readsPolicy,proto3" json:"reads_policy,omitempty"`
 	ReadsData   []*BulkRWRequest_ReadDataRequest   `protobuf:"bytes,5,rep,name=reads_data,json=readsData,proto3" json:"reads_data,omitempty"`
 }
@@ -70,13 +80,6 @@ func (*BulkRWRequest) Descriptor() ([]byte, []int) {
 	return file_load_v1_bulk_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *BulkRWRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
 func (x *BulkRWRequest) GetWritesPolicy() []*BulkRWRequest_WritePolicyRequest {
 	if x != nil {
 		return x.WritesPolicy
@@ -110,12 +113,12 @@ type BulkRWResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// All writes occur first. First policy, then data.
-	// Writes are done in-order.
+	// Writes are done in-order, sequentially.
 	WritesPolicy []*BulkRWResponse_WritePolicyResponse `protobuf:"bytes,2,rep,name=writes_policy,json=writesPolicy,proto3" json:"writes_policy,omitempty"`
 	WritesData   []*BulkRWResponse_WriteDataResponse   `protobuf:"bytes,3,rep,name=writes_data,json=writesData,proto3" json:"writes_data,omitempty"`
-	// Reads occur second. Order of results is arbitrary.
+	// Reads occur second.
+	// Reads may be executed in arbitrary order, but currently are executed in-order.
 	ReadsPolicy []*BulkRWResponse_ReadPolicyResponse `protobuf:"bytes,4,rep,name=reads_policy,json=readsPolicy,proto3" json:"reads_policy,omitempty"`
 	ReadsData   []*BulkRWResponse_ReadDataResponse   `protobuf:"bytes,5,rep,name=reads_data,json=readsData,proto3" json:"reads_data,omitempty"`
 }
@@ -152,13 +155,6 @@ func (*BulkRWResponse) Descriptor() ([]byte, []int) {
 	return file_load_v1_bulk_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *BulkRWResponse) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
 func (x *BulkRWResponse) GetWritesPolicy() []*BulkRWResponse_WritePolicyResponse {
 	if x != nil {
 		return x.WritesPolicy
@@ -187,7 +183,7 @@ func (x *BulkRWResponse) GetReadsData() []*BulkRWResponse_ReadDataResponse {
 	return nil
 }
 
-// The errors included depend on the context.
+// Context-dependent error messages.
 type ErrorList struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -236,101 +232,11 @@ func (x *ErrorList) GetErrors() []string {
 	return nil
 }
 
-type BulkRWRequest_WriteDataRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	// Types that are assignable to Req:
-	//
-	//	*BulkRWRequest_WriteDataRequest_Create
-	//	*BulkRWRequest_WriteDataRequest_Update
-	//	*BulkRWRequest_WriteDataRequest_Delete
-	Req isBulkRWRequest_WriteDataRequest_Req `protobuf_oneof:"req"`
-}
-
-func (x *BulkRWRequest_WriteDataRequest) Reset() {
-	*x = BulkRWRequest_WriteDataRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_load_v1_bulk_proto_msgTypes[3]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *BulkRWRequest_WriteDataRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BulkRWRequest_WriteDataRequest) ProtoMessage() {}
-
-func (x *BulkRWRequest_WriteDataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_load_v1_bulk_proto_msgTypes[3]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BulkRWRequest_WriteDataRequest.ProtoReflect.Descriptor instead.
-func (*BulkRWRequest_WriteDataRequest) Descriptor() ([]byte, []int) {
-	return file_load_v1_bulk_proto_rawDescGZIP(), []int{0, 0}
-}
-
-func (m *BulkRWRequest_WriteDataRequest) GetReq() isBulkRWRequest_WriteDataRequest_Req {
-	if m != nil {
-		return m.Req
-	}
-	return nil
-}
-
-func (x *BulkRWRequest_WriteDataRequest) GetCreate() *CreateDataRequest {
-	if x, ok := x.GetReq().(*BulkRWRequest_WriteDataRequest_Create); ok {
-		return x.Create
-	}
-	return nil
-}
-
-func (x *BulkRWRequest_WriteDataRequest) GetUpdate() *UpdateDataRequest {
-	if x, ok := x.GetReq().(*BulkRWRequest_WriteDataRequest_Update); ok {
-		return x.Update
-	}
-	return nil
-}
-
-func (x *BulkRWRequest_WriteDataRequest) GetDelete() *DeleteDataRequest {
-	if x, ok := x.GetReq().(*BulkRWRequest_WriteDataRequest_Delete); ok {
-		return x.Delete
-	}
-	return nil
-}
-
-type isBulkRWRequest_WriteDataRequest_Req interface {
-	isBulkRWRequest_WriteDataRequest_Req()
-}
-
-type BulkRWRequest_WriteDataRequest_Create struct {
-	Create *CreateDataRequest `protobuf:"bytes,1,opt,name=create,proto3,oneof"`
-}
-
-type BulkRWRequest_WriteDataRequest_Update struct {
-	Update *UpdateDataRequest `protobuf:"bytes,2,opt,name=update,proto3,oneof"`
-}
-
-type BulkRWRequest_WriteDataRequest_Delete struct {
-	Delete *DeleteDataRequest `protobuf:"bytes,3,opt,name=delete,proto3,oneof"`
-}
-
-func (*BulkRWRequest_WriteDataRequest_Create) isBulkRWRequest_WriteDataRequest_Req() {}
-
-func (*BulkRWRequest_WriteDataRequest_Update) isBulkRWRequest_WriteDataRequest_Req() {}
-
-func (*BulkRWRequest_WriteDataRequest_Delete) isBulkRWRequest_WriteDataRequest_Req() {}
-
+// WritePolicyRequest provides a union of possible Policy request types.
+// This allows creating arbitrary sequences of policy store operations.
+//
+// Warning: The same performance hazards described for the Policy API
+// apply for these operations as well.
 type BulkRWRequest_WritePolicyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -347,7 +253,7 @@ type BulkRWRequest_WritePolicyRequest struct {
 func (x *BulkRWRequest_WritePolicyRequest) Reset() {
 	*x = BulkRWRequest_WritePolicyRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_load_v1_bulk_proto_msgTypes[4]
+		mi := &file_load_v1_bulk_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -360,7 +266,7 @@ func (x *BulkRWRequest_WritePolicyRequest) String() string {
 func (*BulkRWRequest_WritePolicyRequest) ProtoMessage() {}
 
 func (x *BulkRWRequest_WritePolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_load_v1_bulk_proto_msgTypes[4]
+	mi := &file_load_v1_bulk_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -373,7 +279,7 @@ func (x *BulkRWRequest_WritePolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkRWRequest_WritePolicyRequest.ProtoReflect.Descriptor instead.
 func (*BulkRWRequest_WritePolicyRequest) Descriptor() ([]byte, []int) {
-	return file_load_v1_bulk_proto_rawDescGZIP(), []int{0, 1}
+	return file_load_v1_bulk_proto_rawDescGZIP(), []int{0, 0}
 }
 
 func (m *BulkRWRequest_WritePolicyRequest) GetReq() isBulkRWRequest_WritePolicyRequest_Req {
@@ -426,31 +332,38 @@ func (*BulkRWRequest_WritePolicyRequest_Update) isBulkRWRequest_WritePolicyReque
 
 func (*BulkRWRequest_WritePolicyRequest_Delete) isBulkRWRequest_WritePolicyRequest_Req() {}
 
-type BulkRWRequest_ReadDataRequest struct {
+// WriteDataRequest provides a union of possible Data request types.
+// This allows creating arbitrary sequences of data store operations.
+type BulkRWRequest_WriteDataRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Req *GetDataRequest `protobuf:"bytes,1,opt,name=req,proto3" json:"req,omitempty"`
+	// Types that are assignable to Req:
+	//
+	//	*BulkRWRequest_WriteDataRequest_Create
+	//	*BulkRWRequest_WriteDataRequest_Update
+	//	*BulkRWRequest_WriteDataRequest_Delete
+	Req isBulkRWRequest_WriteDataRequest_Req `protobuf_oneof:"req"`
 }
 
-func (x *BulkRWRequest_ReadDataRequest) Reset() {
-	*x = BulkRWRequest_ReadDataRequest{}
+func (x *BulkRWRequest_WriteDataRequest) Reset() {
+	*x = BulkRWRequest_WriteDataRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_load_v1_bulk_proto_msgTypes[5]
+		mi := &file_load_v1_bulk_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
 }
 
-func (x *BulkRWRequest_ReadDataRequest) String() string {
+func (x *BulkRWRequest_WriteDataRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BulkRWRequest_ReadDataRequest) ProtoMessage() {}
+func (*BulkRWRequest_WriteDataRequest) ProtoMessage() {}
 
-func (x *BulkRWRequest_ReadDataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_load_v1_bulk_proto_msgTypes[5]
+func (x *BulkRWRequest_WriteDataRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_load_v1_bulk_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -461,18 +374,63 @@ func (x *BulkRWRequest_ReadDataRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BulkRWRequest_ReadDataRequest.ProtoReflect.Descriptor instead.
-func (*BulkRWRequest_ReadDataRequest) Descriptor() ([]byte, []int) {
-	return file_load_v1_bulk_proto_rawDescGZIP(), []int{0, 2}
+// Deprecated: Use BulkRWRequest_WriteDataRequest.ProtoReflect.Descriptor instead.
+func (*BulkRWRequest_WriteDataRequest) Descriptor() ([]byte, []int) {
+	return file_load_v1_bulk_proto_rawDescGZIP(), []int{0, 1}
 }
 
-func (x *BulkRWRequest_ReadDataRequest) GetReq() *GetDataRequest {
-	if x != nil {
-		return x.Req
+func (m *BulkRWRequest_WriteDataRequest) GetReq() isBulkRWRequest_WriteDataRequest_Req {
+	if m != nil {
+		return m.Req
 	}
 	return nil
 }
 
+func (x *BulkRWRequest_WriteDataRequest) GetCreate() *CreateDataRequest {
+	if x, ok := x.GetReq().(*BulkRWRequest_WriteDataRequest_Create); ok {
+		return x.Create
+	}
+	return nil
+}
+
+func (x *BulkRWRequest_WriteDataRequest) GetUpdate() *UpdateDataRequest {
+	if x, ok := x.GetReq().(*BulkRWRequest_WriteDataRequest_Update); ok {
+		return x.Update
+	}
+	return nil
+}
+
+func (x *BulkRWRequest_WriteDataRequest) GetDelete() *DeleteDataRequest {
+	if x, ok := x.GetReq().(*BulkRWRequest_WriteDataRequest_Delete); ok {
+		return x.Delete
+	}
+	return nil
+}
+
+type isBulkRWRequest_WriteDataRequest_Req interface {
+	isBulkRWRequest_WriteDataRequest_Req()
+}
+
+type BulkRWRequest_WriteDataRequest_Create struct {
+	Create *CreateDataRequest `protobuf:"bytes,1,opt,name=create,proto3,oneof"`
+}
+
+type BulkRWRequest_WriteDataRequest_Update struct {
+	Update *UpdateDataRequest `protobuf:"bytes,2,opt,name=update,proto3,oneof"`
+}
+
+type BulkRWRequest_WriteDataRequest_Delete struct {
+	Delete *DeleteDataRequest `protobuf:"bytes,3,opt,name=delete,proto3,oneof"`
+}
+
+func (*BulkRWRequest_WriteDataRequest_Create) isBulkRWRequest_WriteDataRequest_Req() {}
+
+func (*BulkRWRequest_WriteDataRequest_Update) isBulkRWRequest_WriteDataRequest_Req() {}
+
+func (*BulkRWRequest_WriteDataRequest_Delete) isBulkRWRequest_WriteDataRequest_Req() {}
+
+// ReadPolicyRequest is currently a simple wrapper over the GetPolicy
+// request type.
 type BulkRWRequest_ReadPolicyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -484,7 +442,7 @@ type BulkRWRequest_ReadPolicyRequest struct {
 func (x *BulkRWRequest_ReadPolicyRequest) Reset() {
 	*x = BulkRWRequest_ReadPolicyRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_load_v1_bulk_proto_msgTypes[6]
+		mi := &file_load_v1_bulk_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -497,7 +455,7 @@ func (x *BulkRWRequest_ReadPolicyRequest) String() string {
 func (*BulkRWRequest_ReadPolicyRequest) ProtoMessage() {}
 
 func (x *BulkRWRequest_ReadPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_load_v1_bulk_proto_msgTypes[6]
+	mi := &file_load_v1_bulk_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -510,7 +468,7 @@ func (x *BulkRWRequest_ReadPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkRWRequest_ReadPolicyRequest.ProtoReflect.Descriptor instead.
 func (*BulkRWRequest_ReadPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_load_v1_bulk_proto_rawDescGZIP(), []int{0, 3}
+	return file_load_v1_bulk_proto_rawDescGZIP(), []int{0, 2}
 }
 
 func (x *BulkRWRequest_ReadPolicyRequest) GetReq() *GetPolicyRequest {
@@ -520,36 +478,33 @@ func (x *BulkRWRequest_ReadPolicyRequest) GetReq() *GetPolicyRequest {
 	return nil
 }
 
-type BulkRWResponse_WriteDataResponse struct {
+// ReadDataRequest is currently a simple wrapper over the GetData
+// request type.
+type BulkRWRequest_ReadDataRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Types that are assignable to Resp:
-	//
-	//	*BulkRWResponse_WriteDataResponse_Create
-	//	*BulkRWResponse_WriteDataResponse_Update
-	//	*BulkRWResponse_WriteDataResponse_Delete
-	Resp isBulkRWResponse_WriteDataResponse_Resp `protobuf_oneof:"resp"`
+	Req *GetDataRequest `protobuf:"bytes,1,opt,name=req,proto3" json:"req,omitempty"`
 }
 
-func (x *BulkRWResponse_WriteDataResponse) Reset() {
-	*x = BulkRWResponse_WriteDataResponse{}
+func (x *BulkRWRequest_ReadDataRequest) Reset() {
+	*x = BulkRWRequest_ReadDataRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_load_v1_bulk_proto_msgTypes[7]
+		mi := &file_load_v1_bulk_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
 }
 
-func (x *BulkRWResponse_WriteDataResponse) String() string {
+func (x *BulkRWRequest_ReadDataRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BulkRWResponse_WriteDataResponse) ProtoMessage() {}
+func (*BulkRWRequest_ReadDataRequest) ProtoMessage() {}
 
-func (x *BulkRWResponse_WriteDataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_load_v1_bulk_proto_msgTypes[7]
+func (x *BulkRWRequest_ReadDataRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_load_v1_bulk_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -560,61 +515,19 @@ func (x *BulkRWResponse_WriteDataResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BulkRWResponse_WriteDataResponse.ProtoReflect.Descriptor instead.
-func (*BulkRWResponse_WriteDataResponse) Descriptor() ([]byte, []int) {
-	return file_load_v1_bulk_proto_rawDescGZIP(), []int{1, 0}
+// Deprecated: Use BulkRWRequest_ReadDataRequest.ProtoReflect.Descriptor instead.
+func (*BulkRWRequest_ReadDataRequest) Descriptor() ([]byte, []int) {
+	return file_load_v1_bulk_proto_rawDescGZIP(), []int{0, 3}
 }
 
-func (m *BulkRWResponse_WriteDataResponse) GetResp() isBulkRWResponse_WriteDataResponse_Resp {
-	if m != nil {
-		return m.Resp
+func (x *BulkRWRequest_ReadDataRequest) GetReq() *GetDataRequest {
+	if x != nil {
+		return x.Req
 	}
 	return nil
 }
 
-func (x *BulkRWResponse_WriteDataResponse) GetCreate() *CreateDataResponse {
-	if x, ok := x.GetResp().(*BulkRWResponse_WriteDataResponse_Create); ok {
-		return x.Create
-	}
-	return nil
-}
-
-func (x *BulkRWResponse_WriteDataResponse) GetUpdate() *UpdateDataResponse {
-	if x, ok := x.GetResp().(*BulkRWResponse_WriteDataResponse_Update); ok {
-		return x.Update
-	}
-	return nil
-}
-
-func (x *BulkRWResponse_WriteDataResponse) GetDelete() *DeleteDataResponse {
-	if x, ok := x.GetResp().(*BulkRWResponse_WriteDataResponse_Delete); ok {
-		return x.Delete
-	}
-	return nil
-}
-
-type isBulkRWResponse_WriteDataResponse_Resp interface {
-	isBulkRWResponse_WriteDataResponse_Resp()
-}
-
-type BulkRWResponse_WriteDataResponse_Create struct {
-	Create *CreateDataResponse `protobuf:"bytes,1,opt,name=create,proto3,oneof"`
-}
-
-type BulkRWResponse_WriteDataResponse_Update struct {
-	Update *UpdateDataResponse `protobuf:"bytes,2,opt,name=update,proto3,oneof"`
-}
-
-type BulkRWResponse_WriteDataResponse_Delete struct {
-	Delete *DeleteDataResponse `protobuf:"bytes,3,opt,name=delete,proto3,oneof"`
-}
-
-func (*BulkRWResponse_WriteDataResponse_Create) isBulkRWResponse_WriteDataResponse_Resp() {}
-
-func (*BulkRWResponse_WriteDataResponse_Update) isBulkRWResponse_WriteDataResponse_Resp() {}
-
-func (*BulkRWResponse_WriteDataResponse_Delete) isBulkRWResponse_WriteDataResponse_Resp() {}
-
+// WritePolicyResponse provides a union of possible response types, mirroring the union of possible request types.
 type BulkRWResponse_WritePolicyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -631,7 +544,7 @@ type BulkRWResponse_WritePolicyResponse struct {
 func (x *BulkRWResponse_WritePolicyResponse) Reset() {
 	*x = BulkRWResponse_WritePolicyResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_load_v1_bulk_proto_msgTypes[8]
+		mi := &file_load_v1_bulk_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -644,7 +557,7 @@ func (x *BulkRWResponse_WritePolicyResponse) String() string {
 func (*BulkRWResponse_WritePolicyResponse) ProtoMessage() {}
 
 func (x *BulkRWResponse_WritePolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_load_v1_bulk_proto_msgTypes[8]
+	mi := &file_load_v1_bulk_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -657,7 +570,7 @@ func (x *BulkRWResponse_WritePolicyResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use BulkRWResponse_WritePolicyResponse.ProtoReflect.Descriptor instead.
 func (*BulkRWResponse_WritePolicyResponse) Descriptor() ([]byte, []int) {
-	return file_load_v1_bulk_proto_rawDescGZIP(), []int{1, 1}
+	return file_load_v1_bulk_proto_rawDescGZIP(), []int{1, 0}
 }
 
 func (m *BulkRWResponse_WritePolicyResponse) GetResp() isBulkRWResponse_WritePolicyResponse_Resp {
@@ -710,32 +623,37 @@ func (*BulkRWResponse_WritePolicyResponse_Update) isBulkRWResponse_WritePolicyRe
 
 func (*BulkRWResponse_WritePolicyResponse_Delete) isBulkRWResponse_WritePolicyResponse_Resp() {}
 
-type BulkRWResponse_ReadDataResponse struct {
+// WriteDataResponse provides a union of possible response types, mirroring the union of possible request types.
+type BulkRWResponse_WriteDataResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Resp   *GetDataResponse `protobuf:"bytes,1,opt,name=resp,proto3" json:"resp,omitempty"`
-	Errors *ErrorList       `protobuf:"bytes,2,opt,name=errors,proto3" json:"errors,omitempty"`
+	// Types that are assignable to Resp:
+	//
+	//	*BulkRWResponse_WriteDataResponse_Create
+	//	*BulkRWResponse_WriteDataResponse_Update
+	//	*BulkRWResponse_WriteDataResponse_Delete
+	Resp isBulkRWResponse_WriteDataResponse_Resp `protobuf_oneof:"resp"`
 }
 
-func (x *BulkRWResponse_ReadDataResponse) Reset() {
-	*x = BulkRWResponse_ReadDataResponse{}
+func (x *BulkRWResponse_WriteDataResponse) Reset() {
+	*x = BulkRWResponse_WriteDataResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_load_v1_bulk_proto_msgTypes[9]
+		mi := &file_load_v1_bulk_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
 }
 
-func (x *BulkRWResponse_ReadDataResponse) String() string {
+func (x *BulkRWResponse_WriteDataResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BulkRWResponse_ReadDataResponse) ProtoMessage() {}
+func (*BulkRWResponse_WriteDataResponse) ProtoMessage() {}
 
-func (x *BulkRWResponse_ReadDataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_load_v1_bulk_proto_msgTypes[9]
+func (x *BulkRWResponse_WriteDataResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_load_v1_bulk_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -746,25 +664,62 @@ func (x *BulkRWResponse_ReadDataResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BulkRWResponse_ReadDataResponse.ProtoReflect.Descriptor instead.
-func (*BulkRWResponse_ReadDataResponse) Descriptor() ([]byte, []int) {
-	return file_load_v1_bulk_proto_rawDescGZIP(), []int{1, 2}
+// Deprecated: Use BulkRWResponse_WriteDataResponse.ProtoReflect.Descriptor instead.
+func (*BulkRWResponse_WriteDataResponse) Descriptor() ([]byte, []int) {
+	return file_load_v1_bulk_proto_rawDescGZIP(), []int{1, 1}
 }
 
-func (x *BulkRWResponse_ReadDataResponse) GetResp() *GetDataResponse {
-	if x != nil {
-		return x.Resp
+func (m *BulkRWResponse_WriteDataResponse) GetResp() isBulkRWResponse_WriteDataResponse_Resp {
+	if m != nil {
+		return m.Resp
 	}
 	return nil
 }
 
-func (x *BulkRWResponse_ReadDataResponse) GetErrors() *ErrorList {
-	if x != nil {
-		return x.Errors
+func (x *BulkRWResponse_WriteDataResponse) GetCreate() *CreateDataResponse {
+	if x, ok := x.GetResp().(*BulkRWResponse_WriteDataResponse_Create); ok {
+		return x.Create
 	}
 	return nil
 }
 
+func (x *BulkRWResponse_WriteDataResponse) GetUpdate() *UpdateDataResponse {
+	if x, ok := x.GetResp().(*BulkRWResponse_WriteDataResponse_Update); ok {
+		return x.Update
+	}
+	return nil
+}
+
+func (x *BulkRWResponse_WriteDataResponse) GetDelete() *DeleteDataResponse {
+	if x, ok := x.GetResp().(*BulkRWResponse_WriteDataResponse_Delete); ok {
+		return x.Delete
+	}
+	return nil
+}
+
+type isBulkRWResponse_WriteDataResponse_Resp interface {
+	isBulkRWResponse_WriteDataResponse_Resp()
+}
+
+type BulkRWResponse_WriteDataResponse_Create struct {
+	Create *CreateDataResponse `protobuf:"bytes,1,opt,name=create,proto3,oneof"`
+}
+
+type BulkRWResponse_WriteDataResponse_Update struct {
+	Update *UpdateDataResponse `protobuf:"bytes,2,opt,name=update,proto3,oneof"`
+}
+
+type BulkRWResponse_WriteDataResponse_Delete struct {
+	Delete *DeleteDataResponse `protobuf:"bytes,3,opt,name=delete,proto3,oneof"`
+}
+
+func (*BulkRWResponse_WriteDataResponse_Create) isBulkRWResponse_WriteDataResponse_Resp() {}
+
+func (*BulkRWResponse_WriteDataResponse_Update) isBulkRWResponse_WriteDataResponse_Resp() {}
+
+func (*BulkRWResponse_WriteDataResponse_Delete) isBulkRWResponse_WriteDataResponse_Resp() {}
+
+// ReadPolicyResponse provides fields for a response or list of errors. The two should be mutually exclusive.
 type BulkRWResponse_ReadPolicyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -777,7 +732,7 @@ type BulkRWResponse_ReadPolicyResponse struct {
 func (x *BulkRWResponse_ReadPolicyResponse) Reset() {
 	*x = BulkRWResponse_ReadPolicyResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_load_v1_bulk_proto_msgTypes[10]
+		mi := &file_load_v1_bulk_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -790,7 +745,7 @@ func (x *BulkRWResponse_ReadPolicyResponse) String() string {
 func (*BulkRWResponse_ReadPolicyResponse) ProtoMessage() {}
 
 func (x *BulkRWResponse_ReadPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_load_v1_bulk_proto_msgTypes[10]
+	mi := &file_load_v1_bulk_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -803,7 +758,7 @@ func (x *BulkRWResponse_ReadPolicyResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use BulkRWResponse_ReadPolicyResponse.ProtoReflect.Descriptor instead.
 func (*BulkRWResponse_ReadPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_load_v1_bulk_proto_rawDescGZIP(), []int{1, 3}
+	return file_load_v1_bulk_proto_rawDescGZIP(), []int{1, 2}
 }
 
 func (x *BulkRWResponse_ReadPolicyResponse) GetResp() *GetPolicyResponse {
@@ -820,6 +775,62 @@ func (x *BulkRWResponse_ReadPolicyResponse) GetErrors() *ErrorList {
 	return nil
 }
 
+// ReadDataResponse provides fields for a response or list of errors. The two should be mutually exclusive.
+type BulkRWResponse_ReadDataResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Resp   *GetDataResponse `protobuf:"bytes,1,opt,name=resp,proto3" json:"resp,omitempty"`
+	Errors *ErrorList       `protobuf:"bytes,2,opt,name=errors,proto3" json:"errors,omitempty"`
+}
+
+func (x *BulkRWResponse_ReadDataResponse) Reset() {
+	*x = BulkRWResponse_ReadDataResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_load_v1_bulk_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *BulkRWResponse_ReadDataResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BulkRWResponse_ReadDataResponse) ProtoMessage() {}
+
+func (x *BulkRWResponse_ReadDataResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_load_v1_bulk_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BulkRWResponse_ReadDataResponse.ProtoReflect.Descriptor instead.
+func (*BulkRWResponse_ReadDataResponse) Descriptor() ([]byte, []int) {
+	return file_load_v1_bulk_proto_rawDescGZIP(), []int{1, 3}
+}
+
+func (x *BulkRWResponse_ReadDataResponse) GetResp() *GetDataResponse {
+	if x != nil {
+		return x.Resp
+	}
+	return nil
+}
+
+func (x *BulkRWResponse_ReadDataResponse) GetErrors() *ErrorList {
+	if x != nil {
+		return x.Errors
+	}
+	return nil
+}
+
 var File_load_v1_bulk_proto protoreflect.FileDescriptor
 
 var file_load_v1_bulk_proto_rawDesc = []byte{
@@ -827,9 +838,8 @@ var file_load_v1_bulk_proto_rawDesc = []byte{
 	0x72, 0x6f, 0x74, 0x6f, 0x12, 0x07, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x1a, 0x12, 0x6c,
 	0x6f, 0x61, 0x64, 0x2f, 0x76, 0x31, 0x2f, 0x64, 0x61, 0x74, 0x61, 0x2e, 0x70, 0x72, 0x6f, 0x74,
 	0x6f, 0x1a, 0x14, 0x6c, 0x6f, 0x61, 0x64, 0x2f, 0x76, 0x31, 0x2f, 0x70, 0x6f, 0x6c, 0x69, 0x63,
-	0x79, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0xd1, 0x06, 0x0a, 0x0d, 0x42, 0x75, 0x6c, 0x6b,
-	0x52, 0x57, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x4e, 0x0a, 0x0d, 0x77, 0x72, 0x69,
+	0x79, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0xc1, 0x06, 0x0a, 0x0d, 0x42, 0x75, 0x6c, 0x6b,
+	0x52, 0x57, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x4e, 0x0a, 0x0d, 0x77, 0x72, 0x69,
 	0x74, 0x65, 0x73, 0x5f, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b,
 	0x32, 0x29, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x42, 0x75, 0x6c, 0x6b, 0x52,
 	0x57, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x2e, 0x57, 0x72, 0x69, 0x74, 0x65, 0x50, 0x6f,
@@ -848,41 +858,40 @@ var file_load_v1_bulk_proto_rawDesc = []byte{
 	0x20, 0x03, 0x28, 0x0b, 0x32, 0x26, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x42,
 	0x75, 0x6c, 0x6b, 0x52, 0x57, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x2e, 0x52, 0x65, 0x61,
 	0x64, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x09, 0x72, 0x65,
-	0x61, 0x64, 0x73, 0x44, 0x61, 0x74, 0x61, 0x1a, 0xbb, 0x01, 0x0a, 0x10, 0x57, 0x72, 0x69, 0x74,
-	0x65, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x34, 0x0a, 0x06,
-	0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x6c,
-	0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74,
-	0x61, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52, 0x06, 0x63, 0x72, 0x65, 0x61,
-	0x74, 0x65, 0x12, 0x34, 0x0a, 0x06, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x55, 0x70, 0x64,
+	0x61, 0x64, 0x73, 0x44, 0x61, 0x74, 0x61, 0x1a, 0xc3, 0x01, 0x0a, 0x12, 0x57, 0x72, 0x69, 0x74,
+	0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x36,
+	0x0a, 0x06, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c,
+	0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x50,
+	0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52, 0x06,
+	0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x12, 0x36, 0x0a, 0x06, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31,
+	0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52, 0x06, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x36,
+	0x0a, 0x06, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c,
+	0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50,
+	0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52, 0x06,
+	0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x42, 0x05, 0x0a, 0x03, 0x72, 0x65, 0x71, 0x1a, 0xbb, 0x01,
+	0x0a, 0x10, 0x57, 0x72, 0x69, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x12, 0x34, 0x0a, 0x06, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x72, 0x65,
 	0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x00,
-	0x52, 0x06, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x34, 0x0a, 0x06, 0x64, 0x65, 0x6c, 0x65,
-	0x74, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e,
-	0x76, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52, 0x06, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x42, 0x05,
-	0x0a, 0x03, 0x72, 0x65, 0x71, 0x1a, 0xc3, 0x01, 0x0a, 0x12, 0x57, 0x72, 0x69, 0x74, 0x65, 0x50,
-	0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x36, 0x0a, 0x06,
-	0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x6c,
-	0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x50, 0x6f, 0x6c,
-	0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52, 0x06, 0x63, 0x72,
-	0x65, 0x61, 0x74, 0x65, 0x12, 0x36, 0x0a, 0x06, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x55,
-	0x70, 0x64, 0x61, 0x74, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x48, 0x00, 0x52, 0x06, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x36, 0x0a, 0x06,
-	0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x6c,
-	0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x6f, 0x6c,
-	0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52, 0x06, 0x64, 0x65,
-	0x6c, 0x65, 0x74, 0x65, 0x42, 0x05, 0x0a, 0x03, 0x72, 0x65, 0x71, 0x1a, 0x3c, 0x0a, 0x0f, 0x52,
-	0x65, 0x61, 0x64, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x29,
-	0x0a, 0x03, 0x72, 0x65, 0x71, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x17, 0x2e, 0x6c, 0x6f,
-	0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x52, 0x03, 0x72, 0x65, 0x71, 0x1a, 0x40, 0x0a, 0x11, 0x52, 0x65, 0x61,
-	0x64, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x2b,
-	0x0a, 0x03, 0x72, 0x65, 0x71, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x19, 0x2e, 0x6c, 0x6f,
-	0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x03, 0x72, 0x65, 0x71, 0x22, 0xc4, 0x07, 0x0a, 0x0e,
-	0x42, 0x75, 0x6c, 0x6b, 0x52, 0x57, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x0e,
-	0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x50,
+	0x52, 0x06, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x12, 0x34, 0x0a, 0x06, 0x75, 0x70, 0x64, 0x61,
+	0x74, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e,
+	0x76, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52, 0x06, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x34,
+	0x0a, 0x06, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a,
+	0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x44,
+	0x61, 0x74, 0x61, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52, 0x06, 0x64, 0x65,
+	0x6c, 0x65, 0x74, 0x65, 0x42, 0x05, 0x0a, 0x03, 0x72, 0x65, 0x71, 0x1a, 0x40, 0x0a, 0x11, 0x52,
+	0x65, 0x61, 0x64, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x2b, 0x0a, 0x03, 0x72, 0x65, 0x71, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x19, 0x2e,
+	0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63,
+	0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x03, 0x72, 0x65, 0x71, 0x1a, 0x3c, 0x0a,
+	0x0f, 0x52, 0x65, 0x61, 0x64, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x29, 0x0a, 0x03, 0x72, 0x65, 0x71, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x17, 0x2e,
+	0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x03, 0x72, 0x65, 0x71, 0x22, 0xb4, 0x07, 0x0a, 0x0e,
+	0x42, 0x75, 0x6c, 0x6b, 0x52, 0x57, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x50,
 	0x0a, 0x0d, 0x77, 0x72, 0x69, 0x74, 0x65, 0x73, 0x5f, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x18,
 	0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2b, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e,
 	0x42, 0x75, 0x6c, 0x6b, 0x52, 0x57, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x2e, 0x57,
@@ -902,42 +911,42 @@ var file_load_v1_bulk_proto_rawDesc = []byte{
 	0x28, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x42, 0x75, 0x6c, 0x6b, 0x52, 0x57,
 	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x2e, 0x52, 0x65, 0x61, 0x64, 0x44, 0x61, 0x74,
 	0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x09, 0x72, 0x65, 0x61, 0x64, 0x73,
-	0x44, 0x61, 0x74, 0x61, 0x1a, 0xc0, 0x01, 0x0a, 0x11, 0x57, 0x72, 0x69, 0x74, 0x65, 0x44, 0x61,
-	0x74, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x35, 0x0a, 0x06, 0x63, 0x72,
-	0x65, 0x61, 0x74, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e, 0x6c, 0x6f, 0x61,
-	0x64, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x48, 0x00, 0x52, 0x06, 0x63, 0x72, 0x65, 0x61, 0x74,
-	0x65, 0x12, 0x35, 0x0a, 0x06, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x0b, 0x32, 0x1b, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61,
-	0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x48, 0x00,
-	0x52, 0x06, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x35, 0x0a, 0x06, 0x64, 0x65, 0x6c, 0x65,
-	0x74, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e,
-	0x76, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x48, 0x00, 0x52, 0x06, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x42,
-	0x06, 0x0a, 0x04, 0x72, 0x65, 0x73, 0x70, 0x1a, 0xc8, 0x01, 0x0a, 0x13, 0x57, 0x72, 0x69, 0x74,
-	0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
-	0x37, 0x0a, 0x06, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32,
-	0x1d, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65,
-	0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x48, 0x00,
-	0x52, 0x06, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x12, 0x37, 0x0a, 0x06, 0x75, 0x70, 0x64, 0x61,
-	0x74, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1d, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e,
-	0x76, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x48, 0x00, 0x52, 0x06, 0x75, 0x70, 0x64, 0x61, 0x74,
-	0x65, 0x12, 0x37, 0x0a, 0x06, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28,
-	0x0b, 0x32, 0x1d, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65,
-	0x74, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x44, 0x61, 0x74, 0x61, 0x1a, 0xc8, 0x01, 0x0a, 0x13, 0x57, 0x72, 0x69, 0x74, 0x65, 0x50, 0x6f,
+	0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x37, 0x0a, 0x06,
+	0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1d, 0x2e, 0x6c,
+	0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x50, 0x6f, 0x6c,
+	0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x48, 0x00, 0x52, 0x06, 0x63,
+	0x72, 0x65, 0x61, 0x74, 0x65, 0x12, 0x37, 0x0a, 0x06, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1d, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e,
+	0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x48, 0x00, 0x52, 0x06, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x37,
+	0x0a, 0x06, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1d,
+	0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50,
+	0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x48, 0x00, 0x52,
+	0x06, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x42, 0x06, 0x0a, 0x04, 0x72, 0x65, 0x73, 0x70, 0x1a,
+	0xc0, 0x01, 0x0a, 0x11, 0x57, 0x72, 0x69, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x35, 0x0a, 0x06, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e,
+	0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x48, 0x00, 0x52, 0x06, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x12, 0x35, 0x0a, 0x06,
+	0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e, 0x6c,
+	0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44, 0x61, 0x74,
+	0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x48, 0x00, 0x52, 0x06, 0x75, 0x70, 0x64,
+	0x61, 0x74, 0x65, 0x12, 0x35, 0x0a, 0x06, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x44, 0x65,
+	0x6c, 0x65, 0x74, 0x65, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
 	0x48, 0x00, 0x52, 0x06, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x42, 0x06, 0x0a, 0x04, 0x72, 0x65,
-	0x73, 0x70, 0x1a, 0x6c, 0x0a, 0x10, 0x52, 0x65, 0x61, 0x64, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2c, 0x0a, 0x04, 0x72, 0x65, 0x73, 0x70, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x0b, 0x32, 0x18, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x47,
-	0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x04,
-	0x72, 0x65, 0x73, 0x70, 0x12, 0x2a, 0x0a, 0x06, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x73, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x45,
-	0x72, 0x72, 0x6f, 0x72, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x06, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x73,
-	0x1a, 0x70, 0x0a, 0x12, 0x52, 0x65, 0x61, 0x64, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2e, 0x0a, 0x04, 0x72, 0x65, 0x73, 0x70, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31, 0x2e, 0x47,
-	0x65, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x73, 0x70, 0x1a, 0x70, 0x0a, 0x12, 0x52, 0x65, 0x61, 0x64, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2e, 0x0a, 0x04, 0x72, 0x65, 0x73, 0x70,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31,
+	0x2e, 0x47, 0x65, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x52, 0x04, 0x72, 0x65, 0x73, 0x70, 0x12, 0x2a, 0x0a, 0x06, 0x65, 0x72, 0x72, 0x6f,
+	0x72, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e,
+	0x76, 0x31, 0x2e, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x06, 0x65, 0x72,
+	0x72, 0x6f, 0x72, 0x73, 0x1a, 0x6c, 0x0a, 0x10, 0x52, 0x65, 0x61, 0x64, 0x44, 0x61, 0x74, 0x61,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2c, 0x0a, 0x04, 0x72, 0x65, 0x73, 0x70,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x18, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31,
+	0x2e, 0x47, 0x65, 0x74, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
 	0x52, 0x04, 0x72, 0x65, 0x73, 0x70, 0x12, 0x2a, 0x0a, 0x06, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x73,
 	0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e, 0x6c, 0x6f, 0x61, 0x64, 0x2e, 0x76, 0x31,
 	0x2e, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x06, 0x65, 0x72, 0x72, 0x6f,
@@ -977,58 +986,58 @@ var file_load_v1_bulk_proto_goTypes = []interface{}{
 	(*BulkRWRequest)(nil),                      // 0: load.v1.BulkRWRequest
 	(*BulkRWResponse)(nil),                     // 1: load.v1.BulkRWResponse
 	(*ErrorList)(nil),                          // 2: load.v1.ErrorList
-	(*BulkRWRequest_WriteDataRequest)(nil),     // 3: load.v1.BulkRWRequest.WriteDataRequest
-	(*BulkRWRequest_WritePolicyRequest)(nil),   // 4: load.v1.BulkRWRequest.WritePolicyRequest
-	(*BulkRWRequest_ReadDataRequest)(nil),      // 5: load.v1.BulkRWRequest.ReadDataRequest
-	(*BulkRWRequest_ReadPolicyRequest)(nil),    // 6: load.v1.BulkRWRequest.ReadPolicyRequest
-	(*BulkRWResponse_WriteDataResponse)(nil),   // 7: load.v1.BulkRWResponse.WriteDataResponse
-	(*BulkRWResponse_WritePolicyResponse)(nil), // 8: load.v1.BulkRWResponse.WritePolicyResponse
-	(*BulkRWResponse_ReadDataResponse)(nil),    // 9: load.v1.BulkRWResponse.ReadDataResponse
-	(*BulkRWResponse_ReadPolicyResponse)(nil),  // 10: load.v1.BulkRWResponse.ReadPolicyResponse
-	(*CreateDataRequest)(nil),                  // 11: load.v1.CreateDataRequest
-	(*UpdateDataRequest)(nil),                  // 12: load.v1.UpdateDataRequest
-	(*DeleteDataRequest)(nil),                  // 13: load.v1.DeleteDataRequest
-	(*CreatePolicyRequest)(nil),                // 14: load.v1.CreatePolicyRequest
-	(*UpdatePolicyRequest)(nil),                // 15: load.v1.UpdatePolicyRequest
-	(*DeletePolicyRequest)(nil),                // 16: load.v1.DeletePolicyRequest
-	(*GetDataRequest)(nil),                     // 17: load.v1.GetDataRequest
-	(*GetPolicyRequest)(nil),                   // 18: load.v1.GetPolicyRequest
-	(*CreateDataResponse)(nil),                 // 19: load.v1.CreateDataResponse
-	(*UpdateDataResponse)(nil),                 // 20: load.v1.UpdateDataResponse
-	(*DeleteDataResponse)(nil),                 // 21: load.v1.DeleteDataResponse
-	(*CreatePolicyResponse)(nil),               // 22: load.v1.CreatePolicyResponse
-	(*UpdatePolicyResponse)(nil),               // 23: load.v1.UpdatePolicyResponse
-	(*DeletePolicyResponse)(nil),               // 24: load.v1.DeletePolicyResponse
-	(*GetDataResponse)(nil),                    // 25: load.v1.GetDataResponse
-	(*GetPolicyResponse)(nil),                  // 26: load.v1.GetPolicyResponse
+	(*BulkRWRequest_WritePolicyRequest)(nil),   // 3: load.v1.BulkRWRequest.WritePolicyRequest
+	(*BulkRWRequest_WriteDataRequest)(nil),     // 4: load.v1.BulkRWRequest.WriteDataRequest
+	(*BulkRWRequest_ReadPolicyRequest)(nil),    // 5: load.v1.BulkRWRequest.ReadPolicyRequest
+	(*BulkRWRequest_ReadDataRequest)(nil),      // 6: load.v1.BulkRWRequest.ReadDataRequest
+	(*BulkRWResponse_WritePolicyResponse)(nil), // 7: load.v1.BulkRWResponse.WritePolicyResponse
+	(*BulkRWResponse_WriteDataResponse)(nil),   // 8: load.v1.BulkRWResponse.WriteDataResponse
+	(*BulkRWResponse_ReadPolicyResponse)(nil),  // 9: load.v1.BulkRWResponse.ReadPolicyResponse
+	(*BulkRWResponse_ReadDataResponse)(nil),    // 10: load.v1.BulkRWResponse.ReadDataResponse
+	(*CreatePolicyRequest)(nil),                // 11: load.v1.CreatePolicyRequest
+	(*UpdatePolicyRequest)(nil),                // 12: load.v1.UpdatePolicyRequest
+	(*DeletePolicyRequest)(nil),                // 13: load.v1.DeletePolicyRequest
+	(*CreateDataRequest)(nil),                  // 14: load.v1.CreateDataRequest
+	(*UpdateDataRequest)(nil),                  // 15: load.v1.UpdateDataRequest
+	(*DeleteDataRequest)(nil),                  // 16: load.v1.DeleteDataRequest
+	(*GetPolicyRequest)(nil),                   // 17: load.v1.GetPolicyRequest
+	(*GetDataRequest)(nil),                     // 18: load.v1.GetDataRequest
+	(*CreatePolicyResponse)(nil),               // 19: load.v1.CreatePolicyResponse
+	(*UpdatePolicyResponse)(nil),               // 20: load.v1.UpdatePolicyResponse
+	(*DeletePolicyResponse)(nil),               // 21: load.v1.DeletePolicyResponse
+	(*CreateDataResponse)(nil),                 // 22: load.v1.CreateDataResponse
+	(*UpdateDataResponse)(nil),                 // 23: load.v1.UpdateDataResponse
+	(*DeleteDataResponse)(nil),                 // 24: load.v1.DeleteDataResponse
+	(*GetPolicyResponse)(nil),                  // 25: load.v1.GetPolicyResponse
+	(*GetDataResponse)(nil),                    // 26: load.v1.GetDataResponse
 }
 var file_load_v1_bulk_proto_depIdxs = []int32{
-	4,  // 0: load.v1.BulkRWRequest.writes_policy:type_name -> load.v1.BulkRWRequest.WritePolicyRequest
-	3,  // 1: load.v1.BulkRWRequest.writes_data:type_name -> load.v1.BulkRWRequest.WriteDataRequest
-	6,  // 2: load.v1.BulkRWRequest.reads_policy:type_name -> load.v1.BulkRWRequest.ReadPolicyRequest
-	5,  // 3: load.v1.BulkRWRequest.reads_data:type_name -> load.v1.BulkRWRequest.ReadDataRequest
-	8,  // 4: load.v1.BulkRWResponse.writes_policy:type_name -> load.v1.BulkRWResponse.WritePolicyResponse
-	7,  // 5: load.v1.BulkRWResponse.writes_data:type_name -> load.v1.BulkRWResponse.WriteDataResponse
-	10, // 6: load.v1.BulkRWResponse.reads_policy:type_name -> load.v1.BulkRWResponse.ReadPolicyResponse
-	9,  // 7: load.v1.BulkRWResponse.reads_data:type_name -> load.v1.BulkRWResponse.ReadDataResponse
-	11, // 8: load.v1.BulkRWRequest.WriteDataRequest.create:type_name -> load.v1.CreateDataRequest
-	12, // 9: load.v1.BulkRWRequest.WriteDataRequest.update:type_name -> load.v1.UpdateDataRequest
-	13, // 10: load.v1.BulkRWRequest.WriteDataRequest.delete:type_name -> load.v1.DeleteDataRequest
-	14, // 11: load.v1.BulkRWRequest.WritePolicyRequest.create:type_name -> load.v1.CreatePolicyRequest
-	15, // 12: load.v1.BulkRWRequest.WritePolicyRequest.update:type_name -> load.v1.UpdatePolicyRequest
-	16, // 13: load.v1.BulkRWRequest.WritePolicyRequest.delete:type_name -> load.v1.DeletePolicyRequest
-	17, // 14: load.v1.BulkRWRequest.ReadDataRequest.req:type_name -> load.v1.GetDataRequest
-	18, // 15: load.v1.BulkRWRequest.ReadPolicyRequest.req:type_name -> load.v1.GetPolicyRequest
-	19, // 16: load.v1.BulkRWResponse.WriteDataResponse.create:type_name -> load.v1.CreateDataResponse
-	20, // 17: load.v1.BulkRWResponse.WriteDataResponse.update:type_name -> load.v1.UpdateDataResponse
-	21, // 18: load.v1.BulkRWResponse.WriteDataResponse.delete:type_name -> load.v1.DeleteDataResponse
-	22, // 19: load.v1.BulkRWResponse.WritePolicyResponse.create:type_name -> load.v1.CreatePolicyResponse
-	23, // 20: load.v1.BulkRWResponse.WritePolicyResponse.update:type_name -> load.v1.UpdatePolicyResponse
-	24, // 21: load.v1.BulkRWResponse.WritePolicyResponse.delete:type_name -> load.v1.DeletePolicyResponse
-	25, // 22: load.v1.BulkRWResponse.ReadDataResponse.resp:type_name -> load.v1.GetDataResponse
-	2,  // 23: load.v1.BulkRWResponse.ReadDataResponse.errors:type_name -> load.v1.ErrorList
-	26, // 24: load.v1.BulkRWResponse.ReadPolicyResponse.resp:type_name -> load.v1.GetPolicyResponse
-	2,  // 25: load.v1.BulkRWResponse.ReadPolicyResponse.errors:type_name -> load.v1.ErrorList
+	3,  // 0: load.v1.BulkRWRequest.writes_policy:type_name -> load.v1.BulkRWRequest.WritePolicyRequest
+	4,  // 1: load.v1.BulkRWRequest.writes_data:type_name -> load.v1.BulkRWRequest.WriteDataRequest
+	5,  // 2: load.v1.BulkRWRequest.reads_policy:type_name -> load.v1.BulkRWRequest.ReadPolicyRequest
+	6,  // 3: load.v1.BulkRWRequest.reads_data:type_name -> load.v1.BulkRWRequest.ReadDataRequest
+	7,  // 4: load.v1.BulkRWResponse.writes_policy:type_name -> load.v1.BulkRWResponse.WritePolicyResponse
+	8,  // 5: load.v1.BulkRWResponse.writes_data:type_name -> load.v1.BulkRWResponse.WriteDataResponse
+	9,  // 6: load.v1.BulkRWResponse.reads_policy:type_name -> load.v1.BulkRWResponse.ReadPolicyResponse
+	10, // 7: load.v1.BulkRWResponse.reads_data:type_name -> load.v1.BulkRWResponse.ReadDataResponse
+	11, // 8: load.v1.BulkRWRequest.WritePolicyRequest.create:type_name -> load.v1.CreatePolicyRequest
+	12, // 9: load.v1.BulkRWRequest.WritePolicyRequest.update:type_name -> load.v1.UpdatePolicyRequest
+	13, // 10: load.v1.BulkRWRequest.WritePolicyRequest.delete:type_name -> load.v1.DeletePolicyRequest
+	14, // 11: load.v1.BulkRWRequest.WriteDataRequest.create:type_name -> load.v1.CreateDataRequest
+	15, // 12: load.v1.BulkRWRequest.WriteDataRequest.update:type_name -> load.v1.UpdateDataRequest
+	16, // 13: load.v1.BulkRWRequest.WriteDataRequest.delete:type_name -> load.v1.DeleteDataRequest
+	17, // 14: load.v1.BulkRWRequest.ReadPolicyRequest.req:type_name -> load.v1.GetPolicyRequest
+	18, // 15: load.v1.BulkRWRequest.ReadDataRequest.req:type_name -> load.v1.GetDataRequest
+	19, // 16: load.v1.BulkRWResponse.WritePolicyResponse.create:type_name -> load.v1.CreatePolicyResponse
+	20, // 17: load.v1.BulkRWResponse.WritePolicyResponse.update:type_name -> load.v1.UpdatePolicyResponse
+	21, // 18: load.v1.BulkRWResponse.WritePolicyResponse.delete:type_name -> load.v1.DeletePolicyResponse
+	22, // 19: load.v1.BulkRWResponse.WriteDataResponse.create:type_name -> load.v1.CreateDataResponse
+	23, // 20: load.v1.BulkRWResponse.WriteDataResponse.update:type_name -> load.v1.UpdateDataResponse
+	24, // 21: load.v1.BulkRWResponse.WriteDataResponse.delete:type_name -> load.v1.DeleteDataResponse
+	25, // 22: load.v1.BulkRWResponse.ReadPolicyResponse.resp:type_name -> load.v1.GetPolicyResponse
+	2,  // 23: load.v1.BulkRWResponse.ReadPolicyResponse.errors:type_name -> load.v1.ErrorList
+	26, // 24: load.v1.BulkRWResponse.ReadDataResponse.resp:type_name -> load.v1.GetDataResponse
+	2,  // 25: load.v1.BulkRWResponse.ReadDataResponse.errors:type_name -> load.v1.ErrorList
 	0,  // 26: load.v1.BulkService.BulkRW:input_type -> load.v1.BulkRWRequest
 	1,  // 27: load.v1.BulkService.BulkRW:output_type -> load.v1.BulkRWResponse
 	27, // [27:28] is the sub-list for method output_type
@@ -1083,18 +1092,6 @@ func file_load_v1_bulk_proto_init() {
 			}
 		}
 		file_load_v1_bulk_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BulkRWRequest_WriteDataRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_load_v1_bulk_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*BulkRWRequest_WritePolicyRequest); i {
 			case 0:
 				return &v.state
@@ -1106,8 +1103,8 @@ func file_load_v1_bulk_proto_init() {
 				return nil
 			}
 		}
-		file_load_v1_bulk_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BulkRWRequest_ReadDataRequest); i {
+		file_load_v1_bulk_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*BulkRWRequest_WriteDataRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1118,7 +1115,7 @@ func file_load_v1_bulk_proto_init() {
 				return nil
 			}
 		}
-		file_load_v1_bulk_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+		file_load_v1_bulk_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*BulkRWRequest_ReadPolicyRequest); i {
 			case 0:
 				return &v.state
@@ -1130,8 +1127,8 @@ func file_load_v1_bulk_proto_init() {
 				return nil
 			}
 		}
-		file_load_v1_bulk_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BulkRWResponse_WriteDataResponse); i {
+		file_load_v1_bulk_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*BulkRWRequest_ReadDataRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1142,7 +1139,7 @@ func file_load_v1_bulk_proto_init() {
 				return nil
 			}
 		}
-		file_load_v1_bulk_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+		file_load_v1_bulk_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*BulkRWResponse_WritePolicyResponse); i {
 			case 0:
 				return &v.state
@@ -1154,8 +1151,20 @@ func file_load_v1_bulk_proto_init() {
 				return nil
 			}
 		}
+		file_load_v1_bulk_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*BulkRWResponse_WriteDataResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 		file_load_v1_bulk_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BulkRWResponse_ReadDataResponse); i {
+			switch v := v.(*BulkRWResponse_ReadPolicyResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1167,7 +1176,7 @@ func file_load_v1_bulk_proto_init() {
 			}
 		}
 		file_load_v1_bulk_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BulkRWResponse_ReadPolicyResponse); i {
+			switch v := v.(*BulkRWResponse_ReadDataResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1180,24 +1189,24 @@ func file_load_v1_bulk_proto_init() {
 		}
 	}
 	file_load_v1_bulk_proto_msgTypes[3].OneofWrappers = []interface{}{
-		(*BulkRWRequest_WriteDataRequest_Create)(nil),
-		(*BulkRWRequest_WriteDataRequest_Update)(nil),
-		(*BulkRWRequest_WriteDataRequest_Delete)(nil),
-	}
-	file_load_v1_bulk_proto_msgTypes[4].OneofWrappers = []interface{}{
 		(*BulkRWRequest_WritePolicyRequest_Create)(nil),
 		(*BulkRWRequest_WritePolicyRequest_Update)(nil),
 		(*BulkRWRequest_WritePolicyRequest_Delete)(nil),
 	}
-	file_load_v1_bulk_proto_msgTypes[7].OneofWrappers = []interface{}{
-		(*BulkRWResponse_WriteDataResponse_Create)(nil),
-		(*BulkRWResponse_WriteDataResponse_Update)(nil),
-		(*BulkRWResponse_WriteDataResponse_Delete)(nil),
+	file_load_v1_bulk_proto_msgTypes[4].OneofWrappers = []interface{}{
+		(*BulkRWRequest_WriteDataRequest_Create)(nil),
+		(*BulkRWRequest_WriteDataRequest_Update)(nil),
+		(*BulkRWRequest_WriteDataRequest_Delete)(nil),
 	}
-	file_load_v1_bulk_proto_msgTypes[8].OneofWrappers = []interface{}{
+	file_load_v1_bulk_proto_msgTypes[7].OneofWrappers = []interface{}{
 		(*BulkRWResponse_WritePolicyResponse_Create)(nil),
 		(*BulkRWResponse_WritePolicyResponse_Update)(nil),
 		(*BulkRWResponse_WritePolicyResponse_Delete)(nil),
+	}
+	file_load_v1_bulk_proto_msgTypes[8].OneofWrappers = []interface{}{
+		(*BulkRWResponse_WriteDataResponse_Create)(nil),
+		(*BulkRWResponse_WriteDataResponse_Update)(nil),
+		(*BulkRWResponse_WriteDataResponse_Delete)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
