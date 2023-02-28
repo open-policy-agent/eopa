@@ -110,8 +110,15 @@ from browser: http://localhost:3000/load
 Setting the tag version will trigger the .github/workflows/push-tags.yaml action; which will publish 'load' release and 'load' containers to https://github.com/StyraInc/load
 
 ```
+# always on main!
 git checkout main
+# make sure our copy of `main` is up-to-date
+git pull
+# check the current tag/release
+git tag -l --sort -version:refname | head -n 1
+# create tag +1
 git tag v0.100.1
+# push
 git push origin v0.100.1
 ```
 
