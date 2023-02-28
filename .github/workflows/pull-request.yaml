@@ -142,7 +142,7 @@ jobs:
           INPUT_PUBLISH_BRANCH: benchmarks
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
         timeout-minutes: 10
-        if: github.ref != 'refs/heads/main' # do not run for commits on main
+        if: github.ref != 'refs/heads/main' && github.actor != 'dependabot[bot]'
 
   test-e2e:
     name: Test E2E
