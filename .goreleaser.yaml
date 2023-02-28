@@ -51,6 +51,7 @@ brews:
   - tap:
       owner: StyraInc
       name: homebrew-packages
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
     url_template: >-
       https://github.com/StyraInc/load/releases/download/{{ .Tag }}/{{ .ProjectName }}_{{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64

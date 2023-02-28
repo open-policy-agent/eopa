@@ -48,6 +48,7 @@ jobs:
         run: make release-ci
         env:
           HOSTNAME: github.actions.local
+          TAP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
 
   kopush:
