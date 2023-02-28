@@ -11,6 +11,7 @@ import (
 	"github.com/open-policy-agent/opa/util"
 
 	bjson "github.com/styrainc/load-private/pkg/json"
+	"github.com/styrainc/load-private/pkg/plugins/data/git"
 	"github.com/styrainc/load-private/pkg/plugins/data/http"
 	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
 	"github.com/styrainc/load-private/pkg/plugins/data/ldap"
@@ -25,6 +26,7 @@ var dataPluginRegistery = map[string]plugins.Factory{
 	http.Name:  http.Factory(),
 	okta.Name:  okta.Factory(),
 	ldap.Name:  ldap.Factory(),
+	git.Name:   git.Factory(),
 } // type -> plugin
 
 // Data plugin

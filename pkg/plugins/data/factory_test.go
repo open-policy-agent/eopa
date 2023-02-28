@@ -15,6 +15,7 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 
 	"github.com/styrainc/load-private/pkg/plugins/data"
+	"github.com/styrainc/load-private/pkg/plugins/data/git"
 	"github.com/styrainc/load-private/pkg/plugins/data/http"
 	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
 	"github.com/styrainc/load-private/pkg/plugins/data/ldap"
@@ -487,12 +488,82 @@ ldap.placeholder:
 				PrivateKey:       "ldap/testdata/client-key.pem",
 			}),
 		},
+		{
+			note: "git basic auth",
+			config: `
+git.placeholder:
+  type: git
+  url: https://git.example.com
+  file_path: data.json
+  username: git
+  password: secret
+  polling_interval: 1m
+`,
+			checks: isConfig(t, git.Name, "git.placeholder", git.Config{
+				URL:      "https://git.example.com",
+				FilePath: "data.json",
+				Username: "git",
+				Password: "secret",
+				Interval: "1m",
+			}),
+		},
+		{
+			note: "git token auth",
+			config: `
+git.placeholder:
+  type: git
+  url: https://git.example.com
+  file_path: data.json
+  token: secret
+  polling_interval: 1m
+`,
+			checks: isConfig(t, git.Name, "git.placeholder", git.Config{
+				URL:      "https://git.example.com",
+				FilePath: "data.json",
+				Token:    "secret",
+				Interval: "1m",
+			}),
+		},
+		{
+			note: "git private key as file without passphrase",
+			config: `
+git.placeholder:
+  type: git
+  url: https://git.example.com
+  file_path: data.json
+  private_key: git/testdata/no-passphrase
+  polling_interval: 1m
+`,
+			checks: isConfig(t, git.Name, "git.placeholder", git.Config{
+				URL:        "https://git.example.com",
+				FilePath:   "data.json",
+				PrivateKey: "git/testdata/no-passphrase",
+				Interval:   "1m",
+			}),
+		},
+		{
+			note: "git private key as file with passphrase",
+			config: `
+git.placeholder:
+  type: git
+  url: https://git.example.com
+  file_path: data.json
+  private_key: git/testdata/foo-passphrase
+  passphrase: foo
+  polling_interval: 1m
+`,
+			checks: isConfig(t, git.Name, "git.placeholder", git.Config{
+				URL:        "https://git.example.com",
+				FilePath:   "data.json",
+				PrivateKey: "git/testdata/foo-passphrase",
+				Passphrase: "foo",
+				Interval:   "1m",
+			}),
+		},
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.note, func(t *testing.T) {
-			t.Parallel()
 			mgr := getTestManager()
 			config, err := data.Factory().Validate(mgr, []byte(tc.config))
 			if tc.checks != nil {
@@ -554,6 +625,14 @@ ldap.test:
     - ldaps://example.com
   base_dn: "dc=example,dc=com"
   filter: "(objectclass=*)"
+`,
+		},
+		{
+			name: "git",
+			config: `
+git.test:
+  type: git
+  url: https://git.example.com
 `,
 		},
 	} {

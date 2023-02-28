@@ -8,6 +8,7 @@ import (
 	"github.com/sbabiv/xml2map"
 )
 
+// ParseXML decodes a given xml stream to go representation
 func ParseXML(r io.Reader) (ret any, rerr error) {
 	defer func() {
 		if r := recover(); r != nil {
