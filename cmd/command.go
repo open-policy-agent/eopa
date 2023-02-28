@@ -24,14 +24,15 @@ func LoadCommand(license *License) *cobra.Command {
 		Short: "Styra Load",
 
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if license == nil {
+				return
+			}
 			switch cmd.CalledAs() {
 			case "eval", "run":
-				if license != nil {
-					go func() {
-						// do the license validate and activate asynchronously; so user doesn't have to wait
-						license.ValidateLicense(key, token, func(code int, err error) { os.Exit(code) })
-					}()
-				}
+				go func() {
+					// do the license validate and activate asynchronously; so user doesn't have to wait
+					license.ValidateLicense(key, token, func(code int, err error) { os.Exit(code) })
+				}()
 			}
 		},
 	}

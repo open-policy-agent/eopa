@@ -24,14 +24,14 @@ func showExp(online bool, expiry time.Time) {
 }
 
 func LicenseCmd(license *License, key *string, token *string) *cobra.Command {
-	license.logger.SetOutput(io.Discard)
-
 	return &cobra.Command{
 		Use:   "license",
 		Short: "License status",
 		RunE: func(c *cobra.Command, args []string) error {
 			c.SilenceErrors = true
 			c.SilenceUsage = true
+
+			license.logger.SetOutput(io.Discard) // suppress ValidateLicense logging messages
 
 			fmt.Printf("Validating license...\n")
 

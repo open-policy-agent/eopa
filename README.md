@@ -105,6 +105,16 @@ npm run start
 ```
 from browser: http://localhost:3000/load
 
+### Release Load
+
+Setting the tag version will trigger the .github/workflows/push-tags.yaml action; which will publish 'load' release and 'load' containers to https://github.com/StyraInc/load
+
+```
+git tag v0.100.1
+git push origin v0.100.1
+```
+
+
 ### Permission denied when running 'load'
 
 If you get "permission denied: ./load"
