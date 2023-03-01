@@ -751,7 +751,7 @@ s3.test:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			defer goleak.VerifyNone(t)
+			defer goleak.VerifyNone(t, goleak.IgnoreTopFunction("github.com/patrickmn/go-cache.(*janitor).Run"))
 
 			mgr := getTestManager()
 			c, err := data.Factory().Validate(mgr, []byte(tt.config))

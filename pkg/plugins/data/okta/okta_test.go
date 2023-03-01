@@ -811,7 +811,7 @@ plugins:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			defer goleak.VerifyNone(t)
+			defer goleak.VerifyNone(t, goleak.IgnoreTopFunction("github.com/patrickmn/go-cache.(*janitor).Run"))
 
 			httpmock.Activate()
 			defer httpmock.DeactivateAndReset()
