@@ -20,6 +20,7 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
 	"github.com/styrainc/load-private/pkg/plugins/data/ldap"
 	"github.com/styrainc/load-private/pkg/plugins/data/okta"
+	"github.com/styrainc/load-private/pkg/plugins/data/s3"
 	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
@@ -560,6 +561,76 @@ git.placeholder:
 				Interval:   "1m",
 			}),
 		},
+		{
+			note: "s3 scheme",
+			config: `
+s3.placeholder:
+  type: s3
+  url: s3://bucket/path
+  access_id: foo
+  secret: bar
+  polling_interval: 1m
+`,
+			checks: isConfig(t, s3.Name, "s3.placeholder", s3.Config{
+				URL:      "s3://bucket/path",
+				AccessID: "foo",
+				Secret:   "bar",
+				Interval: "1m",
+				Region:   "us-east-1",
+			}),
+		},
+		{
+			note: "gs scheme",
+			config: `
+s3.placeholder:
+  type: s3
+  url: gs://bucket/path
+  access_id: foo
+  secret: bar
+  polling_interval: 1m
+`,
+			checks: isConfig(t, s3.Name, "s3.placeholder", s3.Config{
+				URL:      "gs://bucket/path",
+				AccessID: "foo",
+				Secret:   "bar",
+				Interval: "1m",
+				Region:   "auto",
+			}),
+		},
+		{
+			note: "no scheme equals to s3",
+			config: `
+s3.placeholder:
+  type: s3
+  url: bucket/path
+  access_id: foo
+  secret: bar
+  polling_interval: 1m
+`,
+			checks: isConfig(t, s3.Name, "s3.placeholder", s3.Config{
+				URL:      "s3://bucket/path",
+				AccessID: "foo",
+				Secret:   "bar",
+				Interval: "1m",
+			}),
+		},
+		{
+			note: "bucket only",
+			config: `
+s3.placeholder:
+  type: s3
+  url: bucket
+  access_id: foo
+  secret: bar
+  polling_interval: 1m
+`,
+			checks: isConfig(t, s3.Name, "s3.placeholder", s3.Config{
+				URL:      "s3://bucket",
+				AccessID: "foo",
+				Secret:   "bar",
+				Interval: "1m",
+			}),
+		},
 	}
 
 	for _, tc := range tests {
@@ -633,6 +704,16 @@ ldap.test:
 git.test:
   type: git
   url: https://git.example.com
+`,
+		},
+		{
+			name: "s3",
+			config: `
+s3.test:
+  type: s3
+  url: s3://test-bucket/test-file
+  access_id: foo
+  secret: bar
 `,
 		},
 	} {

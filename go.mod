@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/OneOfOne/xxhash v1.2.8
+	github.com/aws/aws-sdk-go v1.44.211
 	github.com/docker/docker v20.10.21+incompatible
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-billy/v5 v5.4.1
@@ -87,6 +88,7 @@ require (
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/keygen-sh/go-update v1.0.0 // indirect

@@ -16,17 +16,19 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
 	"github.com/styrainc/load-private/pkg/plugins/data/ldap"
 	"github.com/styrainc/load-private/pkg/plugins/data/okta"
+	"github.com/styrainc/load-private/pkg/plugins/data/s3"
 	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
 const Name = "data"
 
-var dataPluginRegistery = map[string]plugins.Factory{
+var dataPluginRegistry = map[string]plugins.Factory{
 	kafka.Name: kafka.Factory(),
 	http.Name:  http.Factory(),
 	okta.Name:  okta.Factory(),
 	ldap.Name:  ldap.Factory(),
 	git.Name:   git.Factory(),
+	s3.Name:    s3.Factory(),
 } // type -> plugin
 
 // Data plugin
@@ -136,7 +138,7 @@ func dataPluginFromConfig(cfg json.RawMessage) (plugins.Factory, string, error) 
 	if err := util.Unmarshal(cfg, &t); err != nil {
 		return nil, "", err
 	}
-	dp, ok := dataPluginRegistery[t.Type]
+	dp, ok := dataPluginRegistry[t.Type]
 	if !ok {
 		return nil, "", fmt.Errorf("data plugin not found: %s", t.Type)
 	}

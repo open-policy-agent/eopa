@@ -130,7 +130,7 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 		return nil, err
 	}
 
-	c.config = append(c.config, okta.WithUserAgentExtra(pkg.GetUserAgent()), okta.WithCache(false))
+	c.config = append(c.config, okta.WithUserAgentExtra(pkg.GetUserAgent()), okta.WithCacheManager(okta.NewNoOpCache()))
 
 	return c, nil
 }
