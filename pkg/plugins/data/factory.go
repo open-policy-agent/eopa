@@ -4,9 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/util"
 )
+
+type PathOverlapError struct {
+	a, b ast.Ref // overlapping paths
+}
+
+func NewPathOverlapError(a, b ast.Ref) *PathOverlapError {
+	return &PathOverlapError{a: a, b: b}
+}
+
+func (p *PathOverlapError) Error() string {
+	return fmt.Sprintf("overlapping data paths: %q and %q", p.a, p.b)
+}
 
 type factory struct{}
 
@@ -27,6 +40,29 @@ func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 	return p
 }
 
+// check plugin path overlaps
+//
+//	plug and plug.suffix; overlap
+func checkOverlappingPaths(data map[string]DataPlugin, path string) error {
+	poe := &PathOverlapError{}
+
+	var err error
+	poe.a, err = ast.ParseRef(path)
+	if err != nil {
+		return err
+	}
+	for key := range data {
+		poe.b, err = ast.ParseRef(key)
+		if err != nil {
+			return err
+		}
+		if poe.a.HasPrefix(poe.b) || poe.b.HasPrefix(poe.a) {
+			return poe
+		}
+	}
+	return nil
+}
+
 func (factory) Validate(manager *plugins.Manager, config []byte) (interface{}, error) {
 	parsedConfig := Config{
 		DataPlugins: make(map[string]DataPlugin),
@@ -36,8 +72,11 @@ func (factory) Validate(manager *plugins.Manager, config []byte) (interface{}, e
 		return nil, err
 	}
 
-	// TODO(sr): check path overlaps
 	for path, dpConfig := range initial {
+		if err := checkOverlappingPaths(parsedConfig.DataPlugins, path); err != nil {
+			return nil, err
+		}
+
 		dp, t, err := dataPluginFromConfig(dpConfig)
 		if err != nil {
 			return nil, err

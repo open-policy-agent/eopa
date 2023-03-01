@@ -3,6 +3,7 @@ package data_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.uber.org/goleak"
 
+	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 
@@ -258,6 +260,37 @@ kafka.downdates:
 					URLs:              []string{"some.other:8083"},
 					RegoTransformRule: "data.utils.transform_events",
 				})(tb, c, err)
+			},
+		},
+		{
+			note: "bad path",
+			config: `
+"kafka.updates":
+  type: kafka
+  urls:
+  - 127.0.0.1:8083
+  topics:
+  - updates
+  rego_transform: data.utils.transform_events
+"kafka.updates.test":
+  type: kafka
+  urls:
+  - 127.0.0.1:8083
+  topics:
+  - updates
+  rego_transform: data.utils.transform_events
+`,
+			checks: func(tb testing.TB, c any, err error) {
+				var poe *data.PathOverlapError
+				if errors.As(err, &poe) {
+					return
+				}
+				if err == nil {
+					err = errors.New("nil")
+				}
+
+				exp := data.NewPathOverlapError(ast.MustParseRef("kafka.updates"), ast.MustParseRef("kafka.updates.test"))
+				tb.Fatalf("expected error %q, got %q", exp.Error(), err.Error())
 			},
 		},
 		{
