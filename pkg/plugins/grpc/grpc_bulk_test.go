@@ -189,6 +189,62 @@ func TestBulkRW(t *testing.T) {
 				},
 			},
 		},
+		// Policy + empty input.
+		{
+			note: "Empty input for policy",
+			request: &loadv1.BulkRWRequest{
+				WritesPolicy: []*loadv1.BulkRWRequest_WritePolicyRequest{
+					{Req: &loadv1.BulkRWRequest_WritePolicyRequest_Create{Create: &loadv1.CreatePolicyRequest{Path: "/test", Policy: "package test\nz := data.x * data.y\n"}}},
+				},
+				WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
+					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Path: "/x", Data: "2"}}},
+					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Path: "/y", Data: "3"}}},
+				},
+				ReadsData: []*loadv1.BulkRWRequest_ReadDataRequest{
+					{Req: &loadv1.GetDataRequest{Path: "/test/z", Input: ``}},
+				},
+			},
+			expResponse: &loadv1.BulkRWResponse{
+				WritesPolicy: []*loadv1.BulkRWResponse_WritePolicyResponse{
+					{Resp: &loadv1.BulkRWResponse_WritePolicyResponse_Create{Create: &loadv1.CreatePolicyResponse{}}},
+				},
+				WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
+					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
+					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
+				},
+				ReadsData: []*loadv1.BulkRWResponse_ReadDataResponse{
+					{Resp: &loadv1.GetDataResponse{Path: "/test/z", Result: "6"}},
+				},
+			},
+		},
+		// Policy + input.
+		{
+			note: "Miro example - march example",
+			request: &loadv1.BulkRWRequest{
+				WritesPolicy: []*loadv1.BulkRWRequest_WritePolicyRequest{
+					{Req: &loadv1.BulkRWRequest_WritePolicyRequest_Create{Create: &loadv1.CreatePolicyRequest{Path: "/march1", Policy: "package march1\ny := data.k * input.x + data.b\n"}}},
+				},
+				WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
+					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Path: "/k", Data: "2"}}},
+					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Path: "/b", Data: "3"}}},
+				},
+				ReadsData: []*loadv1.BulkRWRequest_ReadDataRequest{
+					{Req: &loadv1.GetDataRequest{Path: "/march1/y", Input: `{"x": 45}`}},
+				},
+			},
+			expResponse: &loadv1.BulkRWResponse{
+				WritesPolicy: []*loadv1.BulkRWResponse_WritePolicyResponse{
+					{Resp: &loadv1.BulkRWResponse_WritePolicyResponse_Create{Create: &loadv1.CreatePolicyResponse{}}},
+				},
+				WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
+					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
+					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
+				},
+				ReadsData: []*loadv1.BulkRWResponse_ReadDataResponse{
+					{Resp: &loadv1.GetDataResponse{Path: "/march1/y", Result: "93"}},
+				},
+			},
+		},
 		// -------------------------------------------------------------------
 		// Error cases
 		// Note(philip): These are not exhaustive, but try to hit the new

@@ -29,17 +29,17 @@ import (
 
 // This is only the JSON-parsing path from OPA's server.readInputPostV1() function.
 func readInputJSON(jstr string) (ast.Value, error) {
-	var request types.DataRequestV1
+	var inputValue any
 	dec := util.NewJSONDecoder(strings.NewReader(jstr))
-	if err := dec.Decode(&request); err != nil && err != io.EOF {
+	if err := dec.Decode(&inputValue); err != nil && err != io.EOF {
 		return nil, fmt.Errorf("body contains malformed input document: %w", err)
 	}
 
-	if request.Input == nil {
+	if inputValue == nil {
 		return nil, nil
 	}
 
-	return ast.InterfaceToValue(*request.Input)
+	return ast.InterfaceToValue(inputValue)
 }
 
 // --------------------------------------------------------
