@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/OneOfOne/xxhash v1.2.8
-	github.com/aws/aws-sdk-go v1.44.211
+	github.com/aws/aws-sdk-go v1.44.212
 	github.com/docker/docker v20.10.21+incompatible
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-billy/v5 v5.4.1
