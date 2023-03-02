@@ -51,6 +51,7 @@ type EvalContext interface {
 	CompiledQuery() ast.Body
 	NDBCache() builtins.NDBCache
 	ParsedInput() ast.Value
+	Metrics() metrics.Metrics
 }
 
 // Enqueue is the quick and dirty entrypoint that the singleton Impact plugin works from
@@ -149,17 +150,18 @@ func (i *Impact) eval(ctx context.Context, ectx EvalContext, rctx *logging.Reque
 	// here:
 	queryT := ectx.CompiledQuery()[0].Operand(0)
 	input := ectx.ParsedInput()
+	mA := ectx.Metrics()
 
 	store := inmem.New()
 	txn := storage.NewTransactionOrDie(ctx, store, storage.WriteParams) // never fails, the store is new
-	m := metrics.New()
+	mB := metrics.New()
 	opts := []func(*rego.Rego){
 		rego.ParsedQuery(ast.NewBody(ast.NewExpr(queryT))),
 		rego.Store(store),
 		rego.Transaction(txn),
 		rego.ParsedBundle(i.job.Bundle().Etag, i.job.Bundle()), // TODO(sr): Etag appropriate?
 		rego.NDBuiltinCache(ectx.NDBCache()),
-		rego.Metrics(m),
+		rego.Metrics(mB),
 	}
 	if input != nil {
 		opts = append(opts, rego.ParsedInput(input))
@@ -193,7 +195,7 @@ func (i *Impact) eval(ctx context.Context, ectx EvalContext, rctx *logging.Reque
 	if len(secondaryResult) == 1 {
 		secRes = secondaryResult[0].Expressions[0].Value
 	}
-	return i.publish(ctx, rctx, queryT.String(), &in, &secRes, &ndbc, m)
+	return i.publish(ctx, rctx, queryT.String(), &in, &primaryResult, &secRes, &ndbc, mA, mB)
 }
 
 func unwrap(exp ast.Value) (any, error) {
@@ -232,20 +234,23 @@ func (i *Impact) equalResults(ctx context.Context, primaryResult any, secondaryR
 }
 
 // TODO(sr): don't let this grow out of hand, flush to controller periodically
-func (i *Impact) publish(ctx context.Context, rctx *logging.RequestContext, query string, input, result *any, ndbc *any, m metrics.Metrics) error {
+func (i *Impact) publish(ctx context.Context, rctx *logging.RequestContext, query string, input, resultA, resultB *any, ndbc *any, mA, mB metrics.Metrics) error {
 	decisionID, _ := logging.DecisionIDFromContext(ctx)
 	res := Result{
 		NodeID:     i.manager.ID,
 		RequestID:  rctx.ReqID,
-		Value:      result,
+		ValueA:     resultA,
+		ValueB:     resultB,
 		Input:      input,
 		Path:       strings.TrimPrefix(strings.TrimPrefix(rctx.ReqPath, "/v1/data/"), "/v0/data/"),
-		Metrics:    m,
+		EvalNSA:    uint64(mA.Timer("regovm_eval").Int64()),
+		EvalNSB:    uint64(mB.Timer("regovm_eval").Int64()),
 		DecisionID: decisionID,
 	}
 	i.job.Result(&res)
 
-	return i.dlog(ctx, rctx, query, input, result, ndbc, m)
+	// DL for resultA has already been published by the primary eval path
+	return i.dlog(ctx, rctx, query, input, resultB, ndbc, mB)
 }
 
 // dlog emits a decision log if DL is available

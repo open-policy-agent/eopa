@@ -49,13 +49,15 @@ type payload struct {
 }
 
 type liaResponse struct {
-	Result     any            `json:"value"`
-	Input      any            `json:"input"`
-	Path       string         `json:"path"`
-	Metrics    map[string]int `json:"metrics"`
-	ReqID      int            `json:"req_id"`
-	DecisionID string         `json:"decision_id"`
-	NodeID     string         `json:"node_id"`
+	Result        any    `json:"value_b"`
+	PrimaryResult any    `json:"value_a"`
+	Input         any    `json:"input"`
+	Path          string `json:"path"`
+	EvalA         int    `json:"eval_ns_a"`
+	EvalB         int    `json:"eval_ns_b"`
+	ReqID         int    `json:"req_id"`
+	DecisionID    string `json:"decision_id"`
+	NodeID        string `json:"node_id"`
 }
 
 // NOTE(sr): These three tests check the following:
@@ -83,8 +85,6 @@ import future.keywords
 p := rand.intn("test", 2)
 `
 	load := loadLoad(t, config, policy)
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 
 	{ // arrange: enable LIA via HTTP call, discard the results
 		path := "testdata/load-bundle.tar.gz"
@@ -116,13 +116,26 @@ p := rand.intn("test", 2)
 				Path:  "test/p",
 				Input: nil,
 			}
-			if diff := cmp.Diff(exp, act, cmpopts.IgnoreFields(liaResponse{}, "Metrics", "NodeID", "DecisionID", "Result")); diff != "" {
+			ignores := cmpopts.IgnoreFields(liaResponse{},
+				"EvalA",
+				"EvalB",
+				"NodeID",
+				"DecisionID",
+				"Result",
+				"PrimaryResult",
+			)
+			if diff := cmp.Diff(exp, act, ignores); diff != "" {
 				t.Errorf("diff: (-want +got):\n%s", diff)
 			}
 			if !slices.Contains([]any{float64(0), float64(1)}, act.Result) {
-				t.Errorf("expected result to be 0 or 1, got %v", act.Result)
+				t.Errorf("expected result B to be 0 or 1, got %v", act.Result)
 			}
-			wg.Done()
+			if !slices.Contains([]any{float64(0), float64(1)}, act.PrimaryResult) {
+				t.Errorf("expected result A to be 0 or 1, got %v", act.PrimaryResult)
+			}
+			if act.EvalB < act.EvalA {
+				t.Errorf("eval timers: expected B: %dns > A: %dns", act.EvalB, act.EvalA)
+			}
 		}()
 	}
 
@@ -184,7 +197,7 @@ p := rand.intn("test", 2)
 	if evalA >= evalB {
 		t.Errorf("expected secondary eval to take longer, got a: %d, b: %d (ns)", evalA, evalB)
 	}
-	wg.Wait()
+	waitForLIAEnd(ctx, t, load.Container.ID)
 }
 
 func TestDecisionLogsSomeDiffs(t *testing.T) {
@@ -206,8 +219,6 @@ import future.keywords
 q := true
 `
 	load := loadLoad(t, config, policy)
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 
 	{ // arrange: enable LIA via HTTP call, discard the results
 		path := "testdata/load-bundle.tar.gz"
@@ -235,14 +246,20 @@ q := true
 				t.Error(err)
 			}
 			exp := liaResponse{
-				ReqID: 4, // 1 is the "ready" check "GET /"; 2 is the LIA req above; 3 is the request with equal results
-				Path:  "test/q",
-				Input: map[string]any{},
+				ReqID:         4, // 1 is the "ready" check "GET /"; 2 is the LIA req above; 3 is the request with equal results
+				Path:          "test/q",
+				Input:         map[string]any{},
+				PrimaryResult: true,
 			}
-			if diff := cmp.Diff(exp, act, cmpopts.IgnoreFields(liaResponse{}, "Metrics", "NodeID", "DecisionID")); diff != "" {
+			ignores := cmpopts.IgnoreFields(liaResponse{},
+				"EvalA",
+				"EvalB",
+				"NodeID",
+				"DecisionID",
+			)
+			if diff := cmp.Diff(exp, act, ignores); diff != "" {
 				t.Errorf("diff: (-want +got):\n%s", diff)
 			}
-			wg.Done()
 		}()
 	}
 
@@ -297,7 +314,7 @@ q := true
 		t.Errorf("expected primary result to be %v, got %v", exp, act)
 	}
 
-	wg.Wait()
+	waitForLIAEnd(ctx, t, load.Container.ID)
 }
 
 func TestDecisionLogsAllDiffsSampling(t *testing.T) {
@@ -385,6 +402,7 @@ q := true
 	}
 
 	wg.Wait()
+	waitForLIAEnd(ctx, t, load.Container.ID)
 }
 
 func loadLoad(t *testing.T, config, policy string) *dockertest.Resource {
@@ -430,7 +448,7 @@ func loadLoad(t *testing.T, config, policy string) *dockertest.Resource {
 		ExposedPorts: []string{"8181/tcp"},
 		Cmd:          strings.Split("run --server --addr :8181 --config-file /config.yml --log-level debug --disable-telemetry /eval.rego", " "),
 	}, func(config *docker.HostConfig) {
-		// config.AutoRemove = true
+		config.AutoRemove = true
 	})
 	if err != nil {
 		t.Fatalf("could not start %s: %s", image, err)
@@ -481,8 +499,6 @@ import future.keywords
 q := true
 `
 	load := loadLoad(t, config, policy)
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 
 	{ // arrange: enable LIA via HTTP call, discard the results
 		path := "testdata/load-bundle.tar.gz"
@@ -495,7 +511,6 @@ q := true
 			t.Fatalf("http request: %v", err)
 		}
 		go func() {
-			defer wg.Done()
 			ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 			defer cancel()
 			_, err := http.DefaultClient.Do(req.WithContext(ctx))
@@ -506,11 +521,11 @@ q := true
 	}
 
 	waitForLIAEnd(ctx, t, load.Container.ID)
-	wg.Wait()
 }
 
 // collectDL either returns `exp` decision log payloads, or calls t.Fatal
 func collectDL(ctx context.Context, t *testing.T, container string, exp int) []payload {
+	t.Helper()
 	for i := 0; i <= 3; i++ {
 		if i != 0 {
 			time.Sleep(100 * time.Millisecond)
@@ -526,6 +541,7 @@ func collectDL(ctx context.Context, t *testing.T, container string, exp int) []p
 }
 
 func retrieveDLs(ctx context.Context, t *testing.T, container string) []payload {
+	t.Helper()
 	stderr := getStderr(ctx, t, container)
 	ms := []payload{}
 	dec := json.NewDecoder(stderr)
@@ -545,14 +561,17 @@ func retrieveDLs(ctx context.Context, t *testing.T, container string) []payload 
 }
 
 func waitForLIAStart(ctx context.Context, t *testing.T, container string) {
+	t.Helper()
 	waitForLog(ctx, t, container, 1, func(s string) bool { return strings.HasPrefix(s, "started live impact analysis") }, 100*time.Millisecond)
 }
 
 func waitForLIAEnd(ctx context.Context, t *testing.T, container string) {
+	t.Helper()
 	waitForLog(ctx, t, container, 1, func(s string) bool { return strings.HasPrefix(s, "stopped live impact analysis") }, time.Second)
 }
 
 func waitForLog(ctx context.Context, t *testing.T, container string, exp int, assert func(string) bool, dur time.Duration) {
+	t.Helper()
 	for i := 0; i <= 3; i++ {
 		if i != 0 {
 			time.Sleep(dur)
@@ -567,6 +586,7 @@ func waitForLog(ctx context.Context, t *testing.T, container string, exp int, as
 }
 
 func retrieveReqCount(ctx context.Context, t *testing.T, container string, assert func(string) bool) int {
+	t.Helper()
 	c := 0
 	stderr := getStderr(ctx, t, container)
 	dec := json.NewDecoder(stderr)
@@ -588,6 +608,7 @@ func retrieveReqCount(ctx context.Context, t *testing.T, container string, asser
 }
 
 func getStderr(ctx context.Context, t *testing.T, container string) io.Reader {
+	t.Helper()
 	buf := bytes.Buffer{}
 	opts := docker.LogsOptions{
 		Context:      ctx,

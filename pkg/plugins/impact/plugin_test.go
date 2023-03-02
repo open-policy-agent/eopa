@@ -85,6 +85,10 @@ func (f *fakeEval) NDBCache() builtins.NDBCache {
 	return f.ndbc
 }
 
+func (*fakeEval) Metrics() metrics.Metrics {
+	return metrics.New()
+}
+
 func pluginMgr(t *testing.T, config string) *plugins.Manager {
 	t.Helper()
 	h := topdown.NewPrintHook(os.Stderr)

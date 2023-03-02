@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/metrics"
 )
 
 type JobID string
@@ -98,15 +97,16 @@ type Result struct {
 	NodeID     string `json:"node_id"`
 	RequestID  uint64 `json:"req_id"`
 	DecisionID string `json:"decision_id"`
-	Value      *any   `json:"value"`
+	ValueA     *any   `json:"value_a"`
+	ValueB     *any   `json:"value_b"`
 	Input      *any   `json:"input"`
 	Path       string `json:"path"`
-	// NDBCache ndbc // TODO(sr): do we need to surface this at all?
-	Metrics metrics.Metrics `json:"metrics"`
+	EvalNSA    uint64 `json:"eval_ns_a"`
+	EvalNSB    uint64 `json:"eval_ns_b"`
 }
 
 func (r *Result) String() string {
-	val, inp := r.Value, r.Input
+	val, inp := r.ValueA, r.Input
 	if val == nil {
 		s := any("<nil>")
 		val = &s
