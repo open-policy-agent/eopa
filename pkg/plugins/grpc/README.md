@@ -5,10 +5,10 @@ The gRPC plugin implements the CRUD handlers for both Policy and Data endpoints 
 ## Running a grpc plugin
 
 ```shell
-load --config-file grpc.plugin run -s -l debug
+load --config-file grpc.yaml run -s -l debug
 ```
 ```yaml
-# grpc.plugin: grpc plugin configuration file:
+# grpc.yaml: grpc plugin configuration file
 plugins:
   grpc:
     addr: ":9090"

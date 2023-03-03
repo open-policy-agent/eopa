@@ -49,6 +49,14 @@ load bundle convert o3.tar.gz o4.tar.gz
 
 load test -b o4.tar.gz
 
+# load with plugins
+$LOAD_EXEC run --config-file build/plugins.yaml -s &
+last_pid=$!
+sleep 1
+curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X PUT localhost:8181/v1/policies/test -d 'package foo allow := x {x = true}'
+curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X POST localhost:8181/v1/data/foo -d '{"input": {}}'
+kill -9 $last_pid
+
 # Data files - correct namespaces
 echo "::group:: Data files - correct namespaces"
 assert_contains "data.namespace | test${PATH_SEPARATOR}cli${PATH_SEPARATOR}smoke${PATH_SEPARATOR}namespace${PATH_SEPARATOR}data.json" "$(load inspect test/cli/smoke)"
@@ -58,8 +66,8 @@ echo "::endgroup::"
 $LOAD_EXEC run -s &
 last_pid=$!
 sleep 1
-curl -X PUT localhost:8181/v1/policies/test -d 'package foo allow := x {x = true}'
-curl -X POST localhost:8181/v1/data/foo -d '{"input": {}}'
+curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X PUT localhost:8181/v1/policies/test -d 'package foo allow := x {x = true}'
+curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X POST localhost:8181/v1/data/foo -d '{"input": {}}'
 kill $last_pid
 
 rm -f o?.tar.gz

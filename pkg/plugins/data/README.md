@@ -1,14 +1,15 @@
 # Data Plugins
 
-The Data plugin API provides a mechanism for reading and writing JSON data that can be imported and used to make policy decisions.
+The Data plugin API provides a service mechanism for reading and writing JSON data.
+This data can be imported and used to make policy decisions.
 
 ## Running a data plugin
 
 ```shell
-load --config-file http.plugin run -s -l debug
+load --config-file http.yaml run -s -l debug
 ```
 ```yaml
-# http.plugin: http plugin configuration file:
+# http.yaml: http plugin configuration file
 plugins:
    data:
      foo.bar: # this is the path to the data once loaded
