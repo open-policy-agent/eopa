@@ -9,7 +9,7 @@ import (
 )
 
 func ReadTLSConfig(insecureSkipVerify bool, certFile, privKeyFile, caCertPath string) (*tls.Config, error) {
-	if !insecureSkipVerify && (certFile == "" || privKeyFile == "") {
+	if !insecureSkipVerify && caCertPath == "" {
 		return nil, nil
 	}
 
@@ -17,25 +17,29 @@ func ReadTLSConfig(insecureSkipVerify bool, certFile, privKeyFile, caCertPath st
 		return &tls.Config{InsecureSkipVerify: true}, nil
 	}
 
-	keyPEMBlock, err := os.ReadFile(privKeyFile)
-	if err != nil {
-		return nil, err
-	}
-	block, _ := pem.Decode(keyPEMBlock)
-	if block == nil {
-		return nil, errors.New("PEM data could not be found")
-	}
+	t := tls.Config{}
 
-	certPEMBlock, err := os.ReadFile(certFile)
-	if err != nil {
-		return nil, err
-	}
+	if certFile != "" && privKeyFile != "" {
+		keyPEMBlock, err := os.ReadFile(privKeyFile)
+		if err != nil {
+			return nil, err
+		}
+		block, _ := pem.Decode(keyPEMBlock)
+		if block == nil {
+			return nil, errors.New("PEM data could not be found")
+		}
 
-	cert, err := tls.X509KeyPair(certPEMBlock, keyPEMBlock)
-	if err != nil {
-		return nil, err
+		certPEMBlock, err := os.ReadFile(certFile)
+		if err != nil {
+			return nil, err
+		}
+
+		cert, err := tls.X509KeyPair(certPEMBlock, keyPEMBlock)
+		if err != nil {
+			return nil, err
+		}
+		t.Certificates = []tls.Certificate{cert}
 	}
-	t := tls.Config{Certificates: []tls.Certificate{cert}}
 
 	if caCertPath != "" {
 		caCert, err := os.ReadFile(caCertPath)

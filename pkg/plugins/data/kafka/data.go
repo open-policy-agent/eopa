@@ -99,8 +99,7 @@ LOOP:
 			pollCtx, done := context.WithTimeout(ctx, 100*time.Millisecond)
 			rs := c.client.PollFetches(pollCtx)
 			done()
-			n := rs.NumRecords()
-			c.log.Debug("fetched %d records", n)
+
 			var merr []error
 			for _, err := range rs.Errors() {
 				if errors.Is(err.Err, context.DeadlineExceeded) {
@@ -112,7 +111,11 @@ LOOP:
 				c.log.Warn("error fetching records: %v", merr)
 				continue
 			}
-			c.transformAndSave(ctx, n, rs.RecordIter())
+			n := rs.NumRecords()
+			if n > 0 {
+				c.log.Debug("fetched %d records", n)
+				c.transformAndSave(ctx, n, rs.RecordIter())
+			}
 		}
 	}
 	close(c.doneExit)

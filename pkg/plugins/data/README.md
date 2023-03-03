@@ -11,23 +11,23 @@ load --config-file http.yaml run -s -l debug
 ```yaml
 # http.yaml: http plugin configuration file
 plugins:
-   data:
-     foo.bar: # this is the path to the data once loaded
-       type: http # required 
-       
-       polling_interval: 10s
-       
-       url: http://example.com/data.json
-       method: GET
-       body: "" # invalid for GET requests
-       headers:
-         Authorization: Bearer <token>
-       timeout: 1s
-       
-       tls_skip_verification: true
-       tls_client_cert: "cert.pem"
-       tls_ca_cert: "ca.pem"
-       tls_client_private_key: "key.pem"
-       
-       follow_redirects: false
+  data:
+    foo.bar: # this is the path to the data once loaded
+      type: http # required
+
+      polling_interval: 10s
+
+      url: http://example.com/data.json
+      method: GET
+      body: "" # invalid for GET requests
+      headers:
+        Authorization: Bearer <token>
+      timeout: 1s
+
+      tls_skip_verification: true
+      tls_client_cert: "cert.pem"
+      tls_ca_cert: "ca.pem"
+      tls_client_private_key: "key.pem"
+
+      follow_redirects: false
 ```
