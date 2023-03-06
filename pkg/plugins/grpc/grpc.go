@@ -48,6 +48,7 @@ type Server struct {
 	runtimeData     *ast.Term
 	ndbCacheEnabled bool
 	store           storage.Store
+
 	loadv1.UnimplementedDataServiceServer
 	loadv1.UnimplementedPolicyServiceServer
 	loadv1.UnimplementedBulkServiceServer

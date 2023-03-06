@@ -3,7 +3,6 @@ package grpc
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -27,7 +26,8 @@ import (
 // parameters, and querying the store. They defer transaction creation /
 // destruction to the caller.
 
-func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.CreatePolicyRequest) (*loadv1.CreatePolicyResponse, error) {
+// preParsedModule is an optional parameter, allowing module parsing to be done elsewhere.
+func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.CreatePolicyRequest, preParsedModule *ast.Module) (*loadv1.CreatePolicyResponse, error) {
 	path := req.GetPath()
 	rawPolicy := req.GetPolicy()
 
@@ -45,14 +45,18 @@ func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transa
 
 	// Parse the incoming Rego module.
 	// m.Timer(metrics.RegoModuleParse).Start()
-	parsedMod, err := ast.ParseModule(path, string(rawPolicy))
-	// m.Timer(metrics.RegoModuleParse).Stop()
-	if err != nil {
-		switch err := err.(type) {
-		case ast.Errors:
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("error(s) occurred while compiling module(s)\n%s", errors.Join(err)))
-		default:
-			return nil, status.Error(codes.InvalidArgument, err.Error())
+	parsedMod := preParsedModule
+	if preParsedModule == nil {
+		var err error
+		parsedMod, err = ast.ParseModule(path, string(rawPolicy))
+		// m.Timer(metrics.RegoModuleParse).Stop()
+		if err != nil {
+			switch err := err.(type) {
+			case ast.Errors:
+				return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("error(s) occurred while compiling module(s): %s", err.Error()))
+			default:
+				return nil, status.Error(codes.InvalidArgument, err.Error())
+			}
 		}
 	}
 
@@ -81,7 +85,7 @@ func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transa
 	// m.Timer(metrics.RegoModuleCompile).Start()
 
 	if c.Compile(modules); c.Failed() {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("error(s) occurred while compiling module(s)\n%s", errors.Join(c.Errors)))
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("error(s) occurred while compiling module(s): %s", c.Errors.Error()))
 	}
 
 	// m.Timer(metrics.RegoModuleCompile).Stop()
@@ -132,7 +136,8 @@ func (s *Server) getPolicyFromRequest(ctx context.Context, txn storage.Transacti
 	return &loadv1.GetPolicyResponse{Path: path, Result: string(policyBytes)}, nil
 }
 
-func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.UpdatePolicyRequest) (*loadv1.UpdatePolicyResponse, error) {
+// preParsedModule is an optional parameter, allowing module parsing to be done elsewhere.
+func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.UpdatePolicyRequest, preParsedModule *ast.Module) (*loadv1.UpdatePolicyResponse, error) {
 	path := req.GetPath()
 	rawPolicy := req.GetPolicy()
 	if err := s.checkPolicyIDScope(ctx, txn, path); err != nil && !storage.IsNotFound(err) {
@@ -149,14 +154,18 @@ func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transa
 
 	// Parse the incoming Rego module.
 	// m.Timer(metrics.RegoModuleParse).Start()
-	parsedMod, err := ast.ParseModule(path, string(rawPolicy))
-	// m.Timer(metrics.RegoModuleParse).Stop()
-	if err != nil {
-		switch err := err.(type) {
-		case ast.Errors:
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("error(s) occurred while compiling module(s)\n%s", errors.Join(err)))
-		default:
-			return nil, status.Error(codes.InvalidArgument, err.Error())
+	parsedMod := preParsedModule
+	if preParsedModule == nil {
+		var err error
+		parsedMod, err = ast.ParseModule(path, string(rawPolicy))
+		// m.Timer(metrics.RegoModuleParse).Stop()
+		if err != nil {
+			switch err := err.(type) {
+			case ast.Errors:
+				return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("error(s) occurred while compiling module(s): %s", err.Error()))
+			default:
+				return nil, status.Error(codes.InvalidArgument, err.Error())
+			}
 		}
 	}
 
@@ -185,7 +194,7 @@ func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transa
 	// m.Timer(metrics.RegoModuleCompile).Start()
 
 	if c.Compile(modules); c.Failed() {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("error(s) occurred while compiling module(s)\n%s", errors.Join(c.Errors)))
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("error(s) occurred while compiling module(s): %s", c.Errors.Error()))
 	}
 
 	// m.Timer(metrics.RegoModuleCompile).Stop()
@@ -219,7 +228,7 @@ func (s *Server) deletePolicyFromRequest(ctx context.Context, txn storage.Transa
 	// m.Timer(metrics.RegoModuleCompile).Start()
 
 	if c.Compile(modules); c.Failed() {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("error(s) occurred while compiling module(s)\n%s", errors.Join(c.Errors)))
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("error(s) occurred while compiling module(s): %s", c.Errors.Error()))
 	}
 
 	// m.Timer(metrics.RegoModuleCompile).Stop()
@@ -245,7 +254,7 @@ func (s *Server) CreatePolicy(ctx context.Context, req *loadv1.CreatePolicyReque
 		return nil, status.Error(codes.Internal, "transaction failed")
 	}
 
-	resp, err := s.createPolicyFromRequest(ctx, txn, req)
+	resp, err := s.createPolicyFromRequest(ctx, txn, req, nil)
 	if err != nil {
 		s.store.Abort(ctx, txn)
 		return nil, err
@@ -279,7 +288,7 @@ func (s *Server) UpdatePolicy(ctx context.Context, req *loadv1.UpdatePolicyReque
 		return nil, status.Error(codes.Internal, "transaction failed")
 	}
 
-	resp, err := s.updatePolicyFromRequest(ctx, txn, req)
+	resp, err := s.updatePolicyFromRequest(ctx, txn, req, nil)
 	if err != nil {
 		s.store.Abort(ctx, txn)
 		return nil, err

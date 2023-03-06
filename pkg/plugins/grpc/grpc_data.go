@@ -49,21 +49,26 @@ func readInputJSON(jstr string) (ast.Value, error) {
 // destruction to the caller.
 
 // Handles all validation and store reads/writes. Transaction commit/abort is handled by the caller.
-func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.CreateDataRequest) (*loadv1.CreateDataResponse, error) {
+// preParsedValue is an optional parameter, allowing JSON parsing to be done elsewhere.
+func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.CreateDataRequest, preParsedValue interface{}) (*loadv1.CreateDataResponse, error) {
 	path := req.GetPath()
 	p, ok := storage.ParsePath(path)
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "invalid path")
 	}
-	val, err := bjson.NewDecoder(strings.NewReader(req.GetData())).Decode()
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
+	val := preParsedValue
+	if preParsedValue == nil {
+		var err error
+		val, err = bjson.NewDecoder(strings.NewReader(req.GetData())).Decode()
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
+		}
 	}
 	if err := s.checkPathScope(ctx, txn, p); err != nil {
 		return nil, err
 	}
 	// Create parent paths as needed in the store.
-	if _, err = s.store.Read(ctx, txn, p); err != nil {
+	if _, err := s.store.Read(ctx, txn, p); err != nil {
 		// Ignore IsNotFound errors. That just means the key doesn't exist yet.
 		if !storage.IsNotFound(err) {
 			return nil, status.Error(codes.Internal, err.Error())
@@ -189,15 +194,19 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 	return &loadv1.GetDataResponse{Path: path, Result: bs}, nil
 }
 
-func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.UpdateDataRequest) (*loadv1.UpdateDataResponse, error) {
+func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.UpdateDataRequest, preParsedValue interface{}) (*loadv1.UpdateDataResponse, error) {
 	path := req.GetPath()
 	p, ok := storage.ParsePath(path)
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "invalid path")
 	}
-	val, err := bjson.NewDecoder(strings.NewReader(req.GetData())).Decode()
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
+	val := preParsedValue
+	if preParsedValue == nil {
+		var err error
+		val, err = bjson.NewDecoder(strings.NewReader(req.GetData())).Decode()
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
+		}
 	}
 	// Write single value to the store:
 	var patchOp storage.PatchOp
@@ -255,7 +264,7 @@ func (s *Server) CreateData(ctx context.Context, req *loadv1.CreateDataRequest) 
 		return nil, status.Error(codes.Internal, "transaction failed")
 	}
 
-	resp, err := s.createDataFromRequest(ctx, txn, req)
+	resp, err := s.createDataFromRequest(ctx, txn, req, nil)
 	if err != nil {
 		s.store.Abort(ctx, txn)
 		return nil, err
@@ -292,7 +301,7 @@ func (s *Server) UpdateData(ctx context.Context, req *loadv1.UpdateDataRequest) 
 		return nil, status.Error(codes.Internal, "transaction failed")
 	}
 
-	resp, err := s.updateDataFromRequest(ctx, txn, req)
+	resp, err := s.updateDataFromRequest(ctx, txn, req, nil)
 	if err != nil {
 		s.store.Abort(ctx, txn)
 		return nil, err
