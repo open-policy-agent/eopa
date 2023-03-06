@@ -346,6 +346,81 @@ kafka.updates:
 			},
 		},
 		{
+			note: "kafka, invalid from",
+			config: `
+kafka.updates:
+  type: kafka
+  urls:
+  - 127.0.0.1:8083
+  topics:
+  - updates
+  rego_transform: data.utils.transform_events
+  from: somewhere
+`,
+			checks: func(tb testing.TB, _ any, err error) {
+				if exp, act := "data plugin kafka (kafka.updates): invalid \"from\" duration \"somewhere\": time: invalid duration \"somewhere\"", err.Error(); exp != act {
+					tb.Errorf("expected error %q, got %q", exp, act)
+				}
+			},
+		},
+		{
+			note: "kafka, from start",
+			config: `
+kafka.updates:
+  type: kafka
+  urls:
+  - 127.0.0.1:8083
+  topics:
+  - updates
+  rego_transform: data.utils.transform_events
+  from: start
+`,
+			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
+				Topics:            []string{"updates"},
+				URLs:              []string{"127.0.0.1:8083"},
+				From:              "start",
+				RegoTransformRule: "data.utils.transform_events",
+			}),
+		},
+		{
+			note: "kafka, from end",
+			config: `
+kafka.updates:
+  type: kafka
+  urls:
+  - 127.0.0.1:8083
+  topics:
+  - updates
+  rego_transform: data.utils.transform_events
+  from: end
+`,
+			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
+				Topics:            []string{"updates"},
+				URLs:              []string{"127.0.0.1:8083"},
+				From:              "end",
+				RegoTransformRule: "data.utils.transform_events",
+			}),
+		},
+		{
+			note: "kafka, from duration",
+			config: `
+kafka.updates:
+  type: kafka
+  urls:
+  - 127.0.0.1:8083
+  topics:
+  - updates
+  rego_transform: data.utils.transform_events
+  from: 1m
+`,
+			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
+				Topics:            []string{"updates"},
+				URLs:              []string{"127.0.0.1:8083"},
+				From:              "1m",
+				RegoTransformRule: "data.utils.transform_events",
+			}),
+		},
+		{
 			note: "http simple",
 			config: `
 http.placeholder:

@@ -189,6 +189,84 @@ transform contains {"op": "add", "path": key, "value": val} if {
 	}
 }
 
+func TestPlainFrom(t *testing.T) {
+	ctx := context.Background()
+	topic := "cipot"
+	config := fmt.Sprintf(`
+plugins:
+  data:
+    kafka.messages:
+      type: kafka
+      urls: [127.0.0.1:19092]
+      topics: [%[1]s]
+      from: 100ms
+      rego_transform: "data.e2e.transform"
+`, topic, "", "")
+
+	transform := `package e2e
+import future.keywords
+transform contains {"op": "add", "path": key, "value": val} if {
+	payload := json.unmarshal(base64.decode(input.value))
+	key := base64.decode(input.key)
+	val := {
+		"value": payload,
+		"headers": input.headers,
+	}
+}
+`
+	store := storeWithPolicy(ctx, t, transform)
+
+	kafka := testRedPanda(t, []string{
+		`--set`, fmt.Sprintf(`redpanda.superusers=["%s"]`, user),
+	})
+	cl, err := kafkaClient(kafka)
+	if err != nil {
+		t.Fatalf("kafka client: %v", err)
+	}
+
+	// record written before we're consuming messages
+	record := &kgo.Record{Topic: topic, Key: []byte("one"), Value: []byte(`{"foo":"baz"}`)}
+	if err := cl.ProduceSync(ctx, record).FirstErr(); err != nil {
+		t.Fatalf("produce messages: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	record2 := &kgo.Record{Topic: topic, Key: []byte("two"), Value: []byte(`{"foo":"bar"}`)}
+	if err := cl.ProduceSync(ctx, record2).FirstErr(); err != nil {
+		t.Fatalf("produce messages: %v", err)
+	}
+	time.Sleep(50 * time.Millisecond)
+
+	mgr := pluginMgr(ctx, t, store, config)
+	if err := mgr.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	waitForStorePath(ctx, t, store, "/kafka/messages/two")
+
+	{
+		act, err := storage.ReadOne(ctx, store, storage.MustParsePath("/kafka/messages/two"))
+		if err != nil {
+			t.Fatalf("read back data: %v", err)
+		}
+		exp := map[string]any{"headers": []any{}, "value": map[string]any{"foo": "bar"}}
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Errorf("data value mismatch (-want +got):\n%s", diff)
+		}
+	}
+
+	{
+		// kafka/messages/one should not be found (older than 100ms)
+		_, err := storage.ReadOne(ctx, store, storage.MustParsePath("/kafka/messages/one"))
+		if err == nil {
+			t.Errorf("unexpected data value found: /kafka/messages/one")
+		}
+		if !storage.IsNotFound(err) {
+			t.Errorf("unexpected error for /kafka/messages/one: %v", err)
+		}
+	}
+}
+
 func TestTLSAndSASL(t *testing.T) {
 	ctx := context.Background()
 	topic := "cipot"

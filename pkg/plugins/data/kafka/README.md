@@ -6,7 +6,7 @@ See #3 for steps to setup AWS MSK.
 ## Running a data plugin
 
 ```shell
-load --config-file kafka.yaml run -s -l debug transform.rego
+load --config-file kafka.yaml run -s -l debug testdata/transform.rego
 ```
 
 ```yaml
@@ -54,7 +54,7 @@ Sample messages:
 Validate results:
 ```
 curl -s localhost:8181/v1/data/kafka/messages
-{"result":{"5c0ba07e":{"name":"Bob","roles":["reports-admin"]},"d9eccc5c":{"name":"Alice","roles":["developer","reports-reader"]}}}
+{"result":{"413adc7a":{"name":"Eve","roles":["database-reader","database-writer"]},"5c0ba07e":{"name":"Bob","roles":["reports-admin"]},"d9eccc5c":{"name":"Alice","roles":["developer","reports-reader"]}}}
 ```
 # Links
 

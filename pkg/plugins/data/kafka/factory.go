@@ -3,6 +3,7 @@ package kafka
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/plugins"
@@ -62,6 +63,19 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 	if c.path, err = utils.AddDataPrefixAndParsePath(c.Path); err != nil {
 		return nil, err
 	}
+
+	switch c.From {
+	case "", "start", "end":
+	default:
+		duration, err := time.ParseDuration(c.From)
+		if err != nil {
+			return nil, fmt.Errorf("invalid \"from\" duration %q: %w", c.From, err)
+		}
+		if duration < 0 {
+			return nil, fmt.Errorf("invalid negative \"from\" duration %q", c.From)
+		}
+	}
+
 	return c, nil
 }
 

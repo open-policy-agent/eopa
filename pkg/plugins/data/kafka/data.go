@@ -50,6 +50,18 @@ func (c *Data) Start(ctx context.Context) error {
 		kgo.WithLogger(c.kgoLogger()),
 		kgo.DialTLSConfig(c.Config.tls), // if it's nil, it stays nil
 	}
+
+	switch c.Config.From {
+	case "":
+	case "start":
+		opts = append(opts, kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()))
+	case "end":
+		opts = append(opts, kgo.ConsumeResetOffset(kgo.NewOffset().AtEnd()))
+	default:
+		duration, _ := time.ParseDuration(c.Config.From)
+		opts = append(opts, kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().Add(-duration).UnixMilli())))
+	}
+
 	if c.Config.sasl != nil {
 		opts = append(opts, kgo.SASL(c.Config.sasl))
 	}
