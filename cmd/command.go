@@ -51,11 +51,8 @@ func LoadCommand(license *License) *cobra.Command {
 		}
 	}
 
-	bundle := Bundle()
-	bundle.AddCommand(Convert())
-	bundle.AddCommand(Dump())
-
-	root.AddCommand(bundle)
+	root.AddCommand(Bundle())
+	root.AddCommand(liaCtl())
 
 	licenseCmd := LicenseCmd(license, &key, &token)
 	addLicenseFlags(licenseCmd, &key, &token)

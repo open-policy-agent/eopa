@@ -14,7 +14,6 @@ const jsonPathWildcard = "*"
 type Path []PathSeg
 
 type InvalidPathError struct {
-	error
 	msg string
 }
 

@@ -56,6 +56,13 @@ func (i *Impact) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
+	// Flush if we can.
+	if err := rc.Flush(); err != nil && !errors.Is(err, http.ErrNotSupported) {
+		returnInternal(w, err)
+		return
+	}
+
 	enc := json.NewEncoder(w)
 	for res := range job.Results() {
 		if err := enc.Encode(res); err != nil {

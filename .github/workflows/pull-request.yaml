@@ -147,7 +147,9 @@ jobs:
   test-e2e:
     name: Test E2E
     runs-on: ubuntu-22.04
-    needs: build
+    needs:
+    - build
+    - goreleaser
     environment: ci
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
@@ -180,14 +182,22 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: image
-      - name: Load image
+      - name: Download release binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries
+          path: dist
+      - name: Load image and binary
         id: load
         run: |
           echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
           echo "bundles=$(pwd)/e2e" >> $GITHUB_OUTPUT
+          echo "binary=$(pwd)/dist/load_linux_amd64_v1/load" >> $GITHUB_OUTPUT
+          chmod +x dist/load_linux_amd64_v1/load
       - run: make e2e
         env:
           IMAGE: ${{ steps.load.outputs.image }}
+          BINARY: ${{ steps.load.outputs.binary }}
           STYRA_LOAD_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
       # If it's a dependabot run, we fetch the token from the environment directly.
       - name: (Dependabot Only) checkout opa-testing-e2e
