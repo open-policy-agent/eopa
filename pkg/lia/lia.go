@@ -10,7 +10,8 @@ import (
 )
 
 type Recorder interface {
-	Record(context.Context) error
+	Record(context.Context) (Report, error)
+	Output(context.Context, Report) error
 }
 
 type rec struct {
@@ -21,9 +22,16 @@ type rec struct {
 	bundlePath string
 	sink       string
 	format     format
+	reportOpts []ReportOption
 }
 
 type Option func(*rec)
+
+func WithReport(rs ...ReportOption) Option {
+	return func(r *rec) {
+		r.reportOpts = rs
+	}
+}
 
 func Addr(s string) Option {
 	return func(r *rec) {
@@ -79,48 +87,49 @@ func New(opts ...Option) Recorder {
 	return &r
 }
 
-func (r *rec) Record(ctx context.Context) error {
+func (r *rec) Record(ctx context.Context) (Report, error) {
 	switch r.format {
 	case json, csv, pretty: // OK
 	case "":
 		r.format = pretty
 	default:
-		return fmt.Errorf(`invalid format: %q (must be "json", "csv" or "pretty")`, r.format)
+		return nil, fmt.Errorf(`invalid format: %q (must be "json", "csv" or "pretty")`, r.format)
 	}
 
 	u, err := url.Parse(r.addr)
 	if err != nil {
-		return fmt.Errorf("parse addr: %w", err)
+		return nil, fmt.Errorf("parse addr: %w", err)
 	}
-
-	output, err := r.output()
-	if err != nil {
-		return fmt.Errorf("prepare output: %w", err)
-	}
-	defer output.Close()
 
 	bndl, err := os.Open(r.bundlePath)
 	if err != nil {
-		return fmt.Errorf("open bundle: %w", err)
+		return nil, fmt.Errorf("open bundle: %w", err)
 	}
 	defer bndl.Close()
 
-	return r.record(ctx, u, output, bndl)
+	return r.record(ctx, u, bndl)
 }
 
-func (r *rec) output() (output io.WriteCloser, err error) {
+func (r *rec) Output(ctx context.Context, rep Report) error {
+	var output io.WriteCloser
+	var err error
 	if r.sink == "-" {
 		output = os.Stdout
 	} else {
-		output, err = os.Open(r.sink)
+		output, err = os.Create(r.sink)
 	}
-	return
-}
-
-func (r *rec) record(ctx context.Context, u *url.URL, output io.Writer, bundle io.Reader) error {
-	report, err := r.httpRequest(ctx, u, bundle)
 	if err != nil {
 		return err
 	}
-	return report.Output(ctx, output, r.format)
+	defer output.Close()
+	return rep.Output(ctx, output, r.format)
+}
+
+func (r *rec) record(ctx context.Context, u *url.URL, bundle io.Reader) (Report, error) {
+	raw, err := r.httpRequest(ctx, u, bundle)
+	if err != nil {
+		return nil, err
+	}
+	// NOTE(sr): We never close raw. It's a short-lived program.
+	return ReportFromReader(ctx, raw, r.reportOpts...)
 }

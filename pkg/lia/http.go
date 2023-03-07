@@ -8,7 +8,7 @@ import (
 	"net/url"
 )
 
-func (r *rec) httpRequest(ctx context.Context, u *url.URL, bndl io.Reader) (Report, error) {
+func (r *rec) httpRequest(ctx context.Context, u *url.URL, bndl io.Reader) (io.ReadCloser, error) {
 	u.Path = "v0/impact"
 
 	req, err := http.NewRequest(http.MethodPost, u.String(), bndl)
@@ -29,5 +29,5 @@ func (r *rec) httpRequest(ctx context.Context, u *url.URL, bndl io.Reader) (Repo
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
 	}
-	return ReportFromReader(ctx, resp.Body)
+	return resp.Body, nil
 }

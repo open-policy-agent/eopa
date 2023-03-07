@@ -17,12 +17,16 @@ type Report interface {
 	ToJSON(context.Context, io.Writer) error
 	ToPretty(context.Context, io.Writer) error
 
+	Count(context.Context) int
+
 	fmt.Stringer
 }
 
 type report struct {
-	db     *sql.DB
-	output *query.Output
+	db      *sql.DB
+	limit   int
+	grouped bool
+	output  *query.Output
 }
 
 func (r *report) String() string {
@@ -53,7 +57,7 @@ func (r *report) Output(ctx context.Context, w io.Writer, fmt format) error {
 	if _, err := r.db.ExecContext(ctx, `SET @@FORMAT TO `+string(fmt)); err != nil {
 		return err
 	}
-	out, err := r.queryOutput(ctx, `SELECT * FROM stdin`)
+	out, err := r.queryOutput(ctx)
 	if err != nil {
 		return err
 	}
@@ -61,9 +65,46 @@ func (r *report) Output(ctx context.Context, w io.Writer, fmt format) error {
 	return err
 }
 
-func (r *report) queryOutput(ctx context.Context, q string) (io.Reader, error) {
+func (r *report) Count(ctx context.Context) int {
 	defer r.reset()
-	if _, err := r.db.ExecContext(ctx, q); err != nil {
+	row := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM STDIN`)
+	var c int
+	_ = row.Scan(&c)
+	return c
+}
+
+func (r *report) queryOutput(ctx context.Context) (io.Reader, error) {
+	defer r.reset()
+	var query string
+	switch {
+	case r.grouped:
+		query = `SELECT
+			path,
+			input,
+			count(*) AS n,
+			AVG(eval_ns_a) AS mean_primary_ns,
+			MEDIAN(eval_ns_a) AS median_primary_ns,
+			MIN(eval_ns_a) AS min_primary_ns,
+			MAX(eval_ns_a) AS max_primary_ns,
+			STDEV(eval_ns_a) AS stddev_primary_ns,
+			VAR(eval_ns_a) AS var_primary_ns,
+			AVG(eval_ns_b) AS mean_secondary_ns,
+			MEDIAN(eval_ns_b) AS median_secondary_ns,
+			MIN(eval_ns_b) AS min_secondary_ns,
+			MAX(eval_ns_b) AS max_secondary_ns,
+			STDEV(eval_ns_b) AS stddev_secondary_ns,
+			VAR(eval_ns_b) AS var_secondary_ns
+		FROM STDIN GROUP BY path, input ORDER BY n DESC`
+		if r.limit > 0 {
+			query += fmt.Sprintf(` LIMIT %d`, r.limit)
+		}
+	default:
+		query = `SELECT * FROM STDIN ORDER BY req_id`
+		if r.limit > 0 {
+			query += fmt.Sprintf(` LIMIT %d`, r.limit)
+		}
+	}
+	if _, err := r.db.ExecContext(ctx, query); err != nil {
 		return nil, err
 	}
 	return &r.output.Buffer, nil
@@ -74,14 +115,31 @@ func (r *report) reset() {
 	csvq.SetOutFile(r.output)
 }
 
+type ReportOption func(*report)
+
+func Limit(n int) ReportOption {
+	return func(r *report) {
+		r.limit = n
+	}
+}
+
+func Grouped(b bool) ReportOption {
+	return func(r *report) {
+		r.grouped = b
+	}
+}
+
 // ReportFromReader reads JSON lines from a reader, and closes it when done if it is
 // an io.ReadCloser (such as resp.Body).
-func ReportFromReader(ctx context.Context, r io.Reader) (Report, error) {
+func ReportFromReader(ctx context.Context, r io.Reader, opts ...ReportOption) (Report, error) {
 	db, err := sql.Open("csvq", "")
 	if err != nil {
 		return nil, err
 	}
 	rep := report{db: db}
+	for _, o := range opts {
+		o(&rep)
+	}
 	rep.reset()
 	stdin := query.NewInput(r)
 
