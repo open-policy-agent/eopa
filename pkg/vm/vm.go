@@ -35,7 +35,7 @@ type (
 	VM struct {
 		executable Executable
 		data       *interface{}
-		ops        DataOperations
+		ops        dataOperations
 	}
 
 	EvalOpts struct {
@@ -155,11 +155,6 @@ func NewVM() *VM {
 
 func (vm *VM) WithExecutable(executable Executable) *VM {
 	vm.executable = executable
-	return vm
-}
-
-func (vm *VM) WithDataOperations(ops DataOperations) *VM {
-	vm.ops = ops
 	return vm
 }
 
@@ -421,8 +416,8 @@ func (s *State) New() State {
 	return newState(s.Globals, s.stats)
 }
 
-func (s *State) ValueOps() DataOperations {
-	return s.Globals.vm.ops
+func (s *State) ValueOps() *dataOperations {
+	return &s.Globals.vm.ops
 }
 
 func (s *State) Func(f int) function {
@@ -474,7 +469,7 @@ func (s *State) Value(v LocalOrConst) Value {
 	case BoolConst:
 		return s.ValueOps().MakeBoolean(bool(v))
 	case StringIndexConst:
-		return s.Globals.vm.executable.Strings().String(s.Globals.vm.ops, v)
+		return s.Globals.vm.executable.Strings().String(&s.Globals.vm.ops, v)
 	}
 
 	return nil
@@ -498,7 +493,7 @@ func (s *State) Set(target Local, source LocalOrConst) {
 
 	case StringIndexConst:
 		s.grow(target)
-		s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(s.Globals.vm.ops, v)}
+		s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(&s.Globals.vm.ops, v)}
 	}
 }
 
@@ -515,7 +510,7 @@ func (s *State) SetFrom(target Local, other *State, source LocalOrConst) {
 
 	case StringIndexConst:
 		s.grow(target)
-		s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(s.Globals.vm.ops, v)}
+		s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(&s.Globals.vm.ops, v)}
 	}
 }
 

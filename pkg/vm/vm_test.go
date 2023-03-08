@@ -38,15 +38,9 @@ func setup(tb testing.TB) ir.Policy {
 }
 
 func testCompiler(tb testing.TB, policy ir.Policy) {
-	ops := &testDataOperations{}
-	_, err := NewCompiler(ops).WithPolicy(&policy).Compile()
-	if err != nil {
+	if _, err := NewCompiler().WithPolicy(&policy).Compile(); err != nil {
 		tb.Fatal(err)
 	}
-}
-
-type testDataOperations struct {
-	DataOperations
 }
 
 func TestCompiler(t *testing.T) {

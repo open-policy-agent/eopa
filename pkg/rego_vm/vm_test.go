@@ -13,7 +13,6 @@ import (
 	"github.com/open-policy-agent/opa/compile"
 	"github.com/open-policy-agent/opa/ir"
 
-	regovm "github.com/styrainc/load-private/pkg/rego_vm/vm"
 	"github.com/styrainc/load-private/pkg/vm"
 )
 
@@ -59,8 +58,7 @@ func loadBundle(tb testing.TB, buffer []byte) *bundle.Bundle {
 func testCompiler(tb testing.TB, policy ir.Policy, input string, query string, result string) {
 	ctx := context.Background()
 
-	ops := regovm.NewDataOperations()
-	executable, err := vm.NewCompiler(ops).WithPolicy(&policy).Compile()
+	executable, err := vm.NewCompiler().WithPolicy(&policy).Compile()
 	if err != nil {
 		tb.Fatal(err)
 	}
@@ -69,7 +67,7 @@ func testCompiler(tb testing.TB, policy ir.Policy, input string, query string, r
 
 	var inp interface{} = ast.MustParseTerm(input)
 
-	nvm := vm.NewVM().WithDataOperations(ops).WithExecutable(executable)
+	nvm := vm.NewVM().WithExecutable(executable)
 	v, err := nvm.Eval(ctx, query, vm.EvalOpts{
 		Input: &inp,
 		Time:  time.Now(),

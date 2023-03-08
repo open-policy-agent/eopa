@@ -11,13 +11,12 @@ import (
 type (
 	Compiler struct {
 		policy        *ir.Policy
-		ops           DataOperations
 		functionIndex map[string]int
 	}
 )
 
-func NewCompiler(ops DataOperations) *Compiler {
-	return &Compiler{ops: ops, functionIndex: make(map[string]int)}
+func NewCompiler() *Compiler {
+	return &Compiler{functionIndex: make(map[string]int)}
 }
 
 func (c *Compiler) WithPolicy(policy *ir.Policy) *Compiler {

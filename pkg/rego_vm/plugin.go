@@ -7,7 +7,6 @@ import (
 
 	bjson "github.com/styrainc/load-private/pkg/json"
 	"github.com/styrainc/load-private/pkg/plugins/impact"
-	regovm "github.com/styrainc/load-private/pkg/rego_vm/vm"
 	inmem "github.com/styrainc/load-private/pkg/store"
 	"github.com/styrainc/load-private/pkg/vm"
 
@@ -51,14 +50,13 @@ func (*vmp) PrepareForEval(ctx context.Context, policy *ir.Policy, store storage
 		data = bjson.MustNew(blob)
 	}
 
-	ops := regovm.NewDataOperations()
-	executable, err := vm.NewCompiler(ops).WithPolicy(policy).Compile()
+	executable, err := vm.NewCompiler().WithPolicy(policy).Compile()
 	if err != nil {
 		return nil, err
 	}
 
 	return &vme{
-		vm: vm.NewVM().WithDataOperations(ops).WithDataJSON(data).WithExecutable(executable),
+		vm: vm.NewVM().WithDataJSON(data).WithExecutable(executable),
 	}, nil
 }
 

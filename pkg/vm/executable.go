@@ -237,7 +237,7 @@ func (strings) Write(strings []string) []byte {
 	return d
 }
 
-func (s strings) String(ops DataOperations, i StringIndexConst) Value {
+func (s strings) String(ops *dataOperations, i StringIndexConst) Value {
 	if n := getUint32(s, 0); uint32(i) >= n {
 		panic("corrupted binary")
 	}
