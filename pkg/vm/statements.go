@@ -3,6 +3,8 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	gostrings "strings"
 	"unsafe"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -102,6 +104,10 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return memberWithKeyBuiltin(state, args)
 	case ast.ObjectGet.Name:
 		return objectGetBuiltin(state, args)
+	case ast.StartsWith.Name:
+		return stringsStartsWithBuiltin(state, args)
+	case ast.Sprintf.Name:
+		return stringsSprintfBuiltin(state, args)
 	}
 
 	bctx := topdown.BuiltinContext{
@@ -318,6 +324,118 @@ func objectGetBuiltinKey(state *State, obj, key, def Value) error {
 	} else {
 		state.SetValue(Unused, def)
 	}
+	state.SetReturn(Unused)
+	return nil
+}
+
+func stringsStartsWithBuiltin(state *State, args []Value) error {
+	if isUnset(args[0]) || isUnset(args[1]) {
+		return nil
+	}
+
+	s, err := builtinStringOperand(state, args[0], 1)
+	if err != nil {
+		return err
+	}
+
+	prefix, err := builtinStringOperand(state, args[1], 2)
+	if err != nil {
+		return err
+	}
+
+	result := state.ValueOps().FromInterface(gostrings.HasPrefix(s, prefix))
+	state.SetValue(Unused, result)
+	state.SetReturn(Unused)
+	return nil
+}
+
+func builtinStringOperand(state *State, value Value, pos int) (string, error) {
+	v, err := state.ValueOps().ToInterface(state.Globals.Ctx, value)
+	if err != nil {
+		v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
+		if err != nil {
+			return "", err
+		}
+
+		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+			Code:    topdown.TypeErr,
+			Message: builtins.NewOperandTypeErr(pos, v, "string").Error(),
+		})
+
+		return "", err
+	}
+
+	s, ok := v.(string)
+	if !ok {
+		v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
+		if err != nil {
+			return "", err
+		}
+
+		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+			Code:    topdown.TypeErr,
+			Message: builtins.NewOperandTypeErr(pos, v, "string").Error(),
+		})
+		return "", nil
+	}
+
+	return s, nil
+}
+
+func stringsSprintfBuiltin(state *State, args []Value) error {
+	if isUnset(args[0]) || isUnset(args[1]) {
+		return nil
+	}
+
+	s, err := builtinStringOperand(state, args[0], 1)
+	if err != nil {
+		return err
+	}
+
+	v, err := state.ValueOps().ToAST(state.Globals.Ctx, args[1])
+	if err != nil {
+		return err
+	}
+
+	astArr, ok := v.(*ast.Array)
+	if !ok {
+		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+			Code:    topdown.TypeErr,
+			Message: builtins.NewOperandTypeErr(2, v, "array").Error(),
+		})
+
+		return nil
+	}
+
+	// Prefer allocating a fixed size slice, to keep it in stack.
+
+	var a []interface{}
+	if n := astArr.Len(); n <= 4 {
+		a = make([]interface{}, n, 4)
+	} else {
+		a = make([]interface{}, n)
+	}
+
+	for i := range a {
+		switch v := astArr.Elem(i).Value.(type) {
+		case ast.Number:
+			if n, ok := v.Int(); ok {
+				a[i] = n
+			} else if b, ok := new(big.Int).SetString(v.String(), 10); ok {
+				a[i] = b
+			} else if f, ok := v.Float64(); ok {
+				a[i] = f
+			} else {
+				a[i] = v.String()
+			}
+		case ast.String:
+			a[i] = string(v)
+		default:
+			a[i] = astArr.Elem(i).String()
+		}
+	}
+
+	state.SetValue(Unused, state.ValueOps().MakeString(fmt.Sprintf(s, a...)))
 	state.SetReturn(Unused)
 	return nil
 }
