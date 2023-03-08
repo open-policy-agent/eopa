@@ -5,7 +5,8 @@ import (
 	"math/big"
 	gostrings "strings"
 
-	"github.com/open-policy-agent/opa/ast"
+	fjson "github.com/styrainc/load-private/pkg/json"
+
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
 )
@@ -159,13 +160,13 @@ func stringsSprintfBuiltin(state *State, args []Value) error {
 		return err
 	}
 
-	v, err := state.ValueOps().ToAST(state.Globals.Ctx, args[1])
-	if err != nil {
-		return err
-	}
-
-	astArr, ok := v.(*ast.Array)
+	astArr, ok := args[1].(fjson.Array)
 	if !ok {
+		v, err := state.ValueOps().ToAST(state.Globals.Ctx, args[1])
+		if err != nil {
+			return err
+		}
+
 		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
 			Code:    topdown.TypeErr,
 			Message: builtins.NewOperandTypeErr(2, v, "array").Error(),
@@ -184,21 +185,33 @@ func stringsSprintfBuiltin(state *State, args []Value) error {
 	}
 
 	for i := range a {
-		switch v := astArr.Elem(i).Value.(type) {
-		case ast.Number:
-			if n, ok := v.Int(); ok {
+		elem := astArr.Value(i)
+		switch v := elem.(type) {
+		case fjson.Float:
+			gn := v.Value()
+			if n, err := gn.Int64(); err == nil {
 				a[i] = n
-			} else if b, ok := new(big.Int).SetString(v.String(), 10); ok {
+			} else if b, ok := new(big.Int).SetString(gn.String(), 10); ok {
 				a[i] = b
-			} else if f, ok := v.Float64(); ok {
+			} else if f, err := gn.Float64(); err == nil {
 				a[i] = f
 			} else {
-				a[i] = v.String()
+				a[i] = gn.String()
 			}
-		case ast.String:
-			a[i] = string(v)
+		case fjson.String:
+			a[i] = v.Value()
+		case fjson.Array, fjson.Object, *Object, *Set:
+			// TODO: Object, Set have no String() implementation at the moment, whereas fjson.Array/fjson.Object
+			// String()'s produce slightly different output from their AST versions.
+			c, err := state.ValueOps().ToAST(state.Globals.Ctx, elem)
+			if err != nil {
+				return err
+			}
+
+			a[i] = c.String()
+
 		default:
-			a[i] = astArr.Elem(i).String()
+			a[i] = v.String()
 		}
 	}
 
@@ -208,22 +221,7 @@ func stringsSprintfBuiltin(state *State, args []Value) error {
 }
 
 func builtinStringOperand(state *State, value Value, pos int) (string, error) {
-	v, err := state.ValueOps().ToInterface(state.Globals.Ctx, value)
-	if err != nil {
-		v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
-		if err != nil {
-			return "", err
-		}
-
-		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
-			Code:    topdown.TypeErr,
-			Message: builtins.NewOperandTypeErr(pos, v, "string").Error(),
-		})
-
-		return "", err
-	}
-
-	s, ok := v.(string)
+	s, ok := value.(fjson.String)
 	if !ok {
 		v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
 		if err != nil {
@@ -237,5 +235,5 @@ func builtinStringOperand(state *State, value Value, pos int) (string, error) {
 		return "", nil
 	}
 
-	return s, nil
+	return s.Value(), nil
 }
