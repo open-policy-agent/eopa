@@ -238,10 +238,6 @@ func (strings) Write(strings []string) []byte {
 }
 
 func (s strings) String(ops *dataOperations, i StringIndexConst) Value {
-	if n := getUint32(s, 0); uint32(i) >= n {
-		panic("corrupted binary")
-	}
-
 	stringOffset := getOffsetIndex(s, 4, int(i))
 	return ops.MakeString(getString(s, stringOffset))
 }
@@ -252,9 +248,7 @@ func (f functions) Len() int {
 
 func (f functions) Function(i int) function {
 	offset := getOffsetIndex(f, 4, i)
-	l := getUint32(f, offset)
-
-	return function(f[offset : offset+l])
+	return function(f[offset:])
 }
 
 func (function) Write(name string, index int, params []Local, ret Local, blocks []byte, path []string) []byte {
@@ -417,9 +411,7 @@ func (p plans) Len() int {
 
 func (p plans) Plan(i int) plan {
 	offset := getOffsetIndex(p, 4, i)
-	l := getUint32(p, offset)
-
-	return plan(p[offset : offset+l])
+	return plan(p[offset:])
 }
 
 func (plan) Write(name string, blocks []byte) []byte {
@@ -488,8 +480,7 @@ func (b blocks) Len() int {
 
 func (b blocks) Block(i int) block {
 	offset := getOffsetIndex(b, 8, i)
-	l := getUint32(b, offset)
-	return block(b[offset : offset+l])
+	return block(b[offset:])
 }
 
 func (block) Write(stmts [][]byte) []byte {
@@ -531,8 +522,7 @@ func (s statements) Len() int {
 
 func (s statements) Statement(i int) statement {
 	offset := getOffsetIndex(s, 8, i)
-	l := getUint32(s, offset)
-	return statement(s[offset : offset+l])
+	return statement(s[offset:])
 }
 
 func (s statement) Type() uint32 {
