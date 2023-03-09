@@ -66,11 +66,11 @@ echo "::endgroup::"
 
 # Test server mode (requires a license): load run -s
 echo "::group:: server mode - smoke test"
-$LOAD_EXEC run -s &
+$LOAD_EXEC run -s --addr ":8182" &
 last_pid=$!
 sleep 2
-curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X PUT localhost:8181/v1/policies/test -d 'package foo allow := x {x = true}'
-curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X POST localhost:8181/v1/data/foo -d '{"input": {}}'
+curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X PUT localhost:8182/v1/policies/test -d 'package foo allow := x {x = true}'
+curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X POST localhost:8182/v1/data/foo -d '{"input": {}}'
 kill $last_pid
 echo "::endgroup::"
 
