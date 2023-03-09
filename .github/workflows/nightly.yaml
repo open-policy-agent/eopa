@@ -52,7 +52,7 @@ jobs:
         # Equivalent to:
         # $ trivy image $IMAGE
       - name: Run Trivy scan on image
-        uses: aquasecurity/trivy-action@0.9.1
+        uses: aquasecurity/trivy-action@0.9.2
         with:
           image-ref: ${{ steps.load.outputs.image }}
           format: table
@@ -71,7 +71,7 @@ jobs:
       # Equivalent to:
       # $ trivy fs .
       - name: Run Trivy scan on repo
-        uses: aquasecurity/trivy-action@0.9.1
+        uses: aquasecurity/trivy-action@0.9.2
         with:
           scan-type: fs
           format: table
