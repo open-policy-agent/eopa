@@ -88,7 +88,7 @@ type (
 
 	Locals struct {
 		registers  *registersList
-		data       map[Local]struct{}
+		data       bitset
 		ret        Local // function return value
 		retDefined bool
 	}
@@ -382,14 +382,57 @@ func (vm *VM) runtime(ctx context.Context, v interface{}) (*ast.Term, error) {
 	return ast.NewTerm(runtime), nil
 }
 
+type bitset struct {
+	base uint64
+	rest []bool
+}
+
+const baseBits = 64
+
+func (b *bitset) set(i int, v bool) {
+	if i < baseBits {
+		if v {
+			b.base |= (1 << i)
+		} else {
+			b.base &= ^(1 << i)
+		}
+		return
+	}
+
+	i -= baseBits
+
+	if l := len(b.rest); l <= i {
+		if !v {
+			return
+		}
+
+		b.rest = append(b.rest, make([]bool, i-l+1)...)
+	}
+
+	b.rest[i] = v
+}
+
+func (b *bitset) isSet(i int) bool {
+	if i < baseBits {
+		return (b.base & (1 << i)) > 0
+	}
+
+	i -= baseBits
+
+	if l := len(b.rest); l <= i {
+		return false
+	}
+
+	return b.rest[i]
+}
+
 func newState(globals *Globals, stats *Statistics) State {
 	s := State{
 		Globals: globals,
-		locals: Locals{
-			data: map[Local]struct{}{Data: {}},
-		},
-		stats: stats,
+		locals:  Locals{},
+		stats:   stats,
 	}
+	s.locals.data.set(int(Data), true)
 	s.locals.registers = s.Globals.registersPool.Get().(*registersList)
 
 	if globals.Input != nil {
@@ -516,12 +559,11 @@ func (s *State) SetValue(target Local, value Value) {
 }
 
 func (s *State) SetData(l Local) {
-	s.locals.data[l] = struct{}{}
+	s.locals.data.set(int(l), true)
 }
 
 func (s *State) IsData(l Local) bool {
-	_, ok := s.locals.data[l]
-	return ok
+	return s.locals.data.isSet(int(l))
 }
 
 func (s *State) DataGet(ctx context.Context, value, key interface{}) (interface{}, bool, error) {
@@ -541,7 +583,7 @@ func (s *State) DataGet(ctx context.Context, value, key interface{}) (interface{
 
 func (s *State) Unset(target Local) {
 	s.findReg(target).registers[int(target)%registersSize] = definedValue{false, nil}
-	delete(s.locals.data, target)
+	s.locals.data.set(int(target), false)
 }
 
 func (s *State) MemoizePush() {
