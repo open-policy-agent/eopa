@@ -21,13 +21,13 @@ import (
 	"github.com/open-policy-agent/opa/util"
 )
 
-// To support the Transaction service, we have to do a bit of creative
+// To support the Bulk service, we have to do a bit of creative
 // refactoring here: all of the interesting low-level work for each
 // operation is done in a dedicated helper function, allowing transaction
 // management to be deferred to the gRPC handler functions. This means
-// that we can use these helper functions in the transaction service too.
+// that we can use these helper functions in the Bulk service too.
 
-// This is only the JSON-parsing path from OPA's server.readInputPostV1() function.
+// This is adapted from the JSON-parsing path in the OPA server.readInputPostV1() function.
 func readInputJSON(jstr string) (ast.Value, error) {
 	var inputValue any
 	dec := util.NewJSONDecoder(strings.NewReader(jstr))
@@ -64,9 +64,11 @@ func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transact
 			return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
 		}
 	}
+
 	if err := s.checkPathScope(ctx, txn, p); err != nil {
 		return nil, err
 	}
+
 	// Create parent paths as needed in the store.
 	if _, err := s.store.Read(ctx, txn, p); err != nil {
 		// Ignore IsNotFound errors. That just means the key doesn't exist yet.
@@ -79,6 +81,7 @@ func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transact
 			}
 		}
 	}
+
 	// Write a single value to the store.
 	if err := s.store.Write(ctx, txn, storage.AddOp, p, val); err != nil {
 		if storage.IsNotFound(err) {
@@ -208,7 +211,6 @@ func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transact
 			return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
 		}
 	}
-	// Write single value to the store:
 	var patchOp storage.PatchOp
 	op := req.GetOp()
 	switch op {
@@ -223,15 +225,19 @@ func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transact
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "invalid op: %v", op)
 	}
+
 	if err := s.checkPathScope(ctx, txn, p); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	// Write single value to the store:
 	if err := s.store.Write(ctx, txn, patchOp, p, val); err != nil {
 		if storage.IsNotFound(err) {
 			return nil, status.Error(codes.NotFound, err.Error())
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
 	return &loadv1.UpdateDataResponse{}, nil
 }
 
@@ -245,6 +251,7 @@ func (s *Server) deleteDataFromRequest(ctx context.Context, txn storage.Transact
 	if err := s.checkPathScope(ctx, txn, p); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
 	if err := s.store.Write(ctx, txn, storage.RemoveOp, p, nil); err != nil {
 		if storage.IsNotFound(err) {
 			return nil, status.Error(codes.NotFound, err.Error())
@@ -258,6 +265,8 @@ func (s *Server) deleteDataFromRequest(ctx context.Context, txn storage.Transact
 // --------------------------------------------------------
 // Top-level gRPC API request handlers
 
+// Creates or overwrites a data document, creating any necessary containing documents to make the path valid.
+// Equivalent to the Data REST API's PUT method.
 func (s *Server) CreateData(ctx context.Context, req *loadv1.CreateDataRequest) (*loadv1.CreateDataResponse, error) {
 	txn, err := s.store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext(), Write: true})
 	if err != nil {
@@ -278,7 +287,8 @@ func (s *Server) CreateData(ctx context.Context, req *loadv1.CreateDataRequest) 
 	return resp, nil
 }
 
-// Note(philip): This one is tricky, because the caller could ask for a virtual document, implying an eval.
+// Retrieves/evaluates a document requiring input.
+// Equivalent to the Data REST API's GET (with Input) method.
 func (s *Server) GetData(ctx context.Context, req *loadv1.GetDataRequest) (*loadv1.GetDataResponse, error) {
 	// decisionID := s.generateDecisionID()
 	// ctx := logging.WithDecisionID(r.Context(), decisionID)
@@ -294,6 +304,7 @@ func (s *Server) GetData(ctx context.Context, req *loadv1.GetDataRequest) (*load
 	return s.getDataFromRequest(ctx, txn, req)
 }
 
+// Creates/Updates/Deletes a document. Roughly equivalent to the Data REST API's PATCH method.
 func (s *Server) UpdateData(ctx context.Context, req *loadv1.UpdateDataRequest) (*loadv1.UpdateDataResponse, error) {
 	// Start a transaction, so that we can do reads/writes.
 	txn, err := s.store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext(), Write: true})
@@ -315,6 +326,7 @@ func (s *Server) UpdateData(ctx context.Context, req *loadv1.UpdateDataRequest) 
 	return resp, nil
 }
 
+// Deletes a document. Equivalent to the Data REST API's DELETE method.
 func (s *Server) DeleteData(ctx context.Context, req *loadv1.DeleteDataRequest) (*loadv1.DeleteDataResponse, error) {
 	// Start a transaction, so that we can do reads/writes.
 	txn, err := s.store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext(), Write: true})

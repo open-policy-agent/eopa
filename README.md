@@ -14,8 +14,9 @@ Install using brew or directly from download page.
 - [Docker](https://docs.docker.com/desktop/install/mac-install/)
 - Make: `xcode-select --install`
 - [goreleaser](https://goreleaser.com): `brew install goreleaser`
-- [protobuf](https://developers.google.com/protocol-buffers): see pkg/grpc/README.md
+- [protobuf](https://developers.google.com/protocol-buffers): see `pkg/grpc/README.md`
 - [bufbuild](https://buf.build/)
+- [grpcurl](https://github.com/fullstorydev/grpcurl): `brew install grpcurl`
 
 ### Optional:
 - [goreleaser-cross](https://github.com/goreleaser/goreleaser-cross): `make release` (1.5GB)
@@ -26,30 +27,31 @@ Build with `make build`, run with `make run`, publish with `make push`.
 
 ## Directories
 
-- bin: built binaries
-- build: additional build scripts
-- cmd: cobra command CLI
-- e2e: end-to-end tests
-- pkg: load source
-- test: smoke tests data
+- `bin`: built binaries
+- `build`: additional build scripts
+- `cmd`: cobra command CLI
+- `e2e`: end-to-end tests
+- `pkg`: load source
+- `proto`: protobuf sources
+- `test`: smoke tests data
 
 ## Files
 
-- Makefile: toplevel make
-- main.go: golang main
-- go.mod, go.sum: golang module configuration: 'make update'
-- .goreleaser.yaml, .goreleaser-wasm.yaml: goreleaser build scripts
-- .golangci.yaml, .golangci-optional.yml: golang lint configuration
-- .github/workflows: github actions
-- .ko.yaml: ko-build
+- `Makefile`: top-level make
+- `main.go`: golang main
+- `go.mod`, `go.sum`: golang module configuration: 'make update'
+- `.goreleaser.yaml`, `.goreleaser-wasm.yaml`: goreleaser build scripts
+- `.golangci.yaml`, `.golangci-optional.yml`: golang lint configuration
+- `.github/workflows`: github actions
+- `.ko.yaml`: ko-build
 
 ## Common make targets
 
-- make: build load
-- make fmt: go fmt
-- make update: update module configuration
-- make test: run unittests
-- make check: run linter
+- `make`: build load
+- `make fmt`: go fmt
+- `make update`: update module configuration
+- `make test`: run unittests
+- `make check`: run linter
 
 ## FAQ
 
@@ -63,19 +65,19 @@ Let's assume an update from OPA 0.49.0 to 0.50.0:
 
 First, we update the fork:
 
-1. push `main` from github.com/open-policy-agent/opa to the fork github.com/StyraInc/opa
-2. push the latest version tag (v0.50.0) from github.com/open-policy-agent/opa to the fork (NB the post-tag action on the fork always fails)
+1. push `main` from `github.com/open-policy-agent/opa` to the fork `github.com/StyraInc/opa`
+2. push the latest version tag (v0.50.0) from `github.com/open-policy-agent/opa` to the fork (NB: the post-tag action on the fork always fails)
 3. checkout the previous fork branch, e.g. `load-0.49`
-4. `git rebase v0.50.0` -- rebase ontop of the latest release tag
-5. name the branch `load-0.50` and push it to the fork github.com/StyraInc/opa
+4. `git rebase v0.50.0` -- rebase on top of the latest release tag
+5. name the branch `load-0.50` and push it to the fork `github.com/StyraInc/opa`
 
 Then we update the reference in Load:
 
-1. Update it in go.mod: `GOPRIVATE=github.com/StyraInc go get github.com/open-policy-agent/opa@v0.50.0` (NB this has no consequences except for version-tag bookkeeping)
+1. Update it in `go.mod`: `GOPRIVATE=github.com/StyraInc go get github.com/open-policy-agent/opa@v0.50.0` (NB: this has no consequences except for version-tag bookkeeping)
 2. Update `load-xx` in the `update` target of the Makefile
 3. Run `make update`.
-4. Bump the OPA version number in the README.md badge at the top
-5. Commit the changes and push a PR to github.com/StyraInc/load-private.
+4. Bump the OPA version number in the `README.md` badge at the top
+5. Commit the changes and push a PR to `github.com/StyraInc/load-private`.
 
 ### Can't build locally: private github repo
 

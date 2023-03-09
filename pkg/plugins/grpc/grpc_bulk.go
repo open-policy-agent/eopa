@@ -19,29 +19,21 @@ import (
 // BulkRW implements a fixed-structure, one-off transaction format.
 // During execution, the handler performs the following operations in order:
 //   - Open write transaction on the store.
+//     -- Parse Policy payloads in parallel.
 //     -- Write all Policy update requests sequentially to the store.
+//     -- Parse all Data JSON payloads in parallel.
 //     -- Write all Data update requests sequentially to the store.
 //     -- If any failures occur, return error, abort transaction.
 //   - Commit write transaction.
-//   - Open read transaction on the store.
-//     -- Perform all Policy read operations in arbitrary order.
-//     -- Perform all Data read operations in arbitrary order.
-//   - Abort/commit read transaction.
+//   - Perform all Policy read operations in parallel, with per-request read transactions.
+//   - Perform all Data read operations in parallel, with per-request read transactions.
 //   - Return results to caller.
 //
-// This 2x transaction sequence is expected to improve write performance,
-// since there will be less mutex-wrangling involved overall. The second
-// transaction is used for the reads/query execution stage, because those
-// can take arbitrary amounts of time to complete, and we'd like to not
-// lock up the store for any longer than strictly necessary.
-//
-// There is an opportunity for intra-request parallelism on the Data reads
-// and ad-hoc queries, since we only need to get the results reassembled
-// correctly at the end. A fun option for this might be to allow a
-// max-request-parallelism option for the transaction, which will launch a
-// worker pool of goroutines to chew through the read/query job list. As
-// long as the results are reassembled correctly at the end for returning
-// to the client, this could work nicely.
+// This 1 + many transaction sequence improves write performance, since
+// there is less mutex-wrangling involved overall. The Read operations are
+// run in parallel to allow for greater throughput.
+
+// Parsing function for individual Policy write payloads.
 func bulkRWParsePolicyFromRequest(req *loadv1.BulkRWRequest_WritePolicyRequest) (*ast.Module, error) {
 	var path string
 	var rawPolicy string
@@ -73,6 +65,7 @@ func bulkRWParsePolicyFromRequest(req *loadv1.BulkRWRequest_WritePolicyRequest) 
 	return parsedMod, nil
 }
 
+// Parsing function for individual Data write payloads.
 // Returns a bjson.BJSON under-the-hood.
 func bulkRWParseDataFromRequest(req *loadv1.BulkRWRequest_WriteDataRequest) (interface{}, error) {
 	var data string
@@ -97,6 +90,7 @@ func bulkRWParseDataFromRequest(req *loadv1.BulkRWRequest_WriteDataRequest) (int
 	return val, nil
 }
 
+// BulkRW endpoint handler.
 func (s *Server) BulkRW(ctx context.Context, req *loadv1.BulkRWRequest) (*loadv1.BulkRWResponse, error) {
 	out := loadv1.BulkRWResponse{}
 	// Open initial write transaction.
@@ -265,7 +259,7 @@ func (s *Server) BulkRW(ctx context.Context, req *loadv1.BulkRWRequest) (*loadv1
 	}
 	// Open read transaction(s).
 	{
-		// Process policy reads sequentially.
+		// Process policy reads in parallel.
 		// We skip all allocs / worker pool creation if no policy reads are required.
 		readsPolicy := req.GetReadsPolicy()
 		if len(readsPolicy) > 0 {
@@ -305,7 +299,7 @@ func (s *Server) BulkRW(ctx context.Context, req *loadv1.BulkRWRequest) (*loadv1
 			}
 		}
 
-		// Process data reads sequentially.
+		// Process data reads in parallel.
 		// We skip all allocs / worker pool creation if no data reads are required.
 		readsData := req.GetReadsData()
 		if len(readsData) > 0 {

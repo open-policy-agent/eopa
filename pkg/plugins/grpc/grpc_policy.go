@@ -14,11 +14,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// To support the Transaction service, we have to do a bit of creative
+// To support the Bulk service, we have to do a bit of creative
 // refactoring here: all of the interesting low-level work for each
 // operation is done in a dedicated helper function, allowing transaction
 // management to be deferred to the gRPC handler functions. This means
-// that we can use these helper functions in the transaction service too.
+// that we can use these helper functions in the Bulk service too.
 
 // --------------------------------------------------------
 // Low-level request handlers
@@ -185,7 +185,7 @@ func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transa
 
 	modules[path] = parsedMod
 
-	// Make new compiler
+	// Make new compiler.
 	c := ast.NewCompiler().
 		// SetErrorLimit(s.errLimit).
 		WithPathConflictsCheck(storage.NonEmpty(ctx, s.store, txn)).
