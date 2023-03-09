@@ -237,15 +237,18 @@ func (strings) Write(strings []string) []byte {
 	return d
 }
 
+//go:inline
 func (s strings) String(ops *dataOperations, i StringIndexConst) Value {
 	stringOffset := getOffsetIndex(s, 4, int(i))
 	return ops.MakeString(getString(s, stringOffset))
 }
 
+//go:inline
 func (f functions) Len() int {
 	return int(getUint32(f, 0))
 }
 
+//go:inline
 func (f functions) Function(i int) function {
 	offset := getOffsetIndex(f, 4, i)
 	return function(f[offset:])
@@ -287,10 +290,12 @@ func (function) Write(name string, index int, params []Local, ret Local, blocks 
 	return d
 }
 
+//go:inline
 func (f function) IsBuiltin() bool {
 	return getUint32(f, 4) == typeBuiltin
 }
 
+//go:inline
 func (f function) Name() string {
 	offset := getOffsetIndex(f, 8, 0)
 	return getString(f, offset)
@@ -306,6 +311,7 @@ func (f function) Params() []Local {
 	return getLocalArray(f, offset)
 }
 
+//go:inline
 func (f function) ParamsLen() uint32 {
 	offset := getOffsetIndex(f, 8, 2)
 	return getUint32(f, offset)
@@ -323,6 +329,7 @@ func (f function) ParamsIter(fcn func(i uint32, arg Local) error) error {
 	return nil
 }
 
+//go:inline
 func (f function) Return() Local {
 	offset := getOffsetIndex(f, 8, 3)
 	return getLocal(f, offset)
@@ -333,6 +340,7 @@ func (f function) Path() []string {
 	return getStringArray(f, offset)
 }
 
+//go:inline
 func (f function) PathLen() uint32 {
 	offset := getOffsetIndex(f, 8, 4)
 	return getUint32(f, offset)
@@ -352,6 +360,7 @@ func (f function) PathIter(fcn func(i uint32, arg string) error) error {
 	return nil
 }
 
+//go:inline
 func (f function) Blocks() blocks {
 	offset := getOffsetIndex(f, 8, 5)
 	return blocks(f[offset:])
@@ -373,10 +382,12 @@ func (builtin) Write(name string, relation bool) []byte {
 	return d
 }
 
+//go:inline
 func (b builtin) Name() string {
 	return getString(b, 9)
 }
 
+//go:inline
 func (b builtin) Relation() bool {
 	return getBool(b, 8)
 }
@@ -474,10 +485,12 @@ func (blocks) Write(blocks [][]byte) []byte {
 	return d
 }
 
+//go:inline
 func (b blocks) Len() int {
 	return int(getUint32(b, 4))
 }
 
+//go:inline
 func (b blocks) Block(i int) block {
 	offset := getOffsetIndex(b, 8, i)
 	return block(b[offset:])
@@ -512,19 +525,23 @@ func (block) Write(stmts [][]byte) []byte {
 	return d
 }
 
+//go:inline
 func (b block) Statements() statements {
 	return statements(b)
 }
 
+//go:inline
 func (s statements) Len() int {
 	return int(getUint32(s, 4))
 }
 
+//go:inline
 func (s statements) Statement(i int) statement {
 	offset := getOffsetIndex(s, 8, i)
 	return statement(s[offset:])
 }
 
+//go:inline
 func (s statement) Type() uint32 {
 	return getUint32(s, 4)
 }
@@ -554,10 +571,12 @@ func (a assignInt) Type() uint32 {
 	return getType(a)
 }
 
+//go:inline
 func (a assignInt) Value() int64 {
 	return getInt64(a, 8)
 }
 
+//go:inline
 func (a assignInt) Target() Local {
 	return getLocal(a, 16)
 }
@@ -585,10 +604,12 @@ func (a assignVar) Type() uint32 {
 	return getType(a)
 }
 
+//go:inline
 func (a assignVar) Source() LocalOrConst {
 	return getLocalOrConst(a, 12)
 }
 
+//go:inline
 func (a assignVar) Target() Local {
 	return getLocal(a, 8)
 }
@@ -617,10 +638,12 @@ func (a assignVarOnce) Type() uint32 {
 	return getType(a)
 }
 
+//go:inline
 func (a assignVarOnce) Source() LocalOrConst {
 	return getLocalOrConst(a, 12)
 }
 
+//go:inline
 func (a assignVarOnce) Target() Local {
 	return getLocal(a, 8)
 }
@@ -640,6 +663,7 @@ func (blockStmt) Write(blocks []byte) []byte {
 	return d
 }
 
+//go:inline
 func (b blockStmt) Len() uint32 {
 	return getLen(b)
 }
@@ -648,6 +672,7 @@ func (b blockStmt) Type() uint32 {
 	return getType(b)
 }
 
+//go:inline
 func (b blockStmt) Blocks() blocks {
 	return blocks(b[8:])
 }
@@ -675,6 +700,7 @@ func (b breakStmt) Type() uint32 {
 	return getType(b)
 }
 
+//go:inline
 func (b breakStmt) Index() uint32 {
 	return getUint32(b, 8)
 }
@@ -710,6 +736,7 @@ func (c callDynamic) Args() []Local {
 	return getLocalArray(c, 12)
 }
 
+//go:inline
 func (c callDynamic) ArgsLen() uint32 {
 	return getUint32(c, 12)
 }
@@ -726,6 +753,7 @@ func (c callDynamic) ArgsIter(fcn func(i uint32, arg Local) error) error {
 	return nil
 }
 
+//go:inline
 func (c callDynamic) Result() Local {
 	return getLocal(c, 8)
 }
@@ -735,6 +763,7 @@ func (c callDynamic) Path() []LocalOrConst {
 	return getLocalOrConstArray(c, 12+offset)
 }
 
+//go:inline
 func (c callDynamic) PathLen() uint32 {
 	offset := uint32(getLocalArraySize(c, 12))
 	return getUint32(c, 12+offset)
@@ -778,6 +807,7 @@ func (c call) Type() uint32 {
 	return getType(c)
 }
 
+//go:inline
 func (c call) Func() int {
 	n := getLocalOrConstArraySize(c, 12)
 	return int(getUint32(c, 12+uint32(n)))
@@ -787,6 +817,7 @@ func (c call) Args() []LocalOrConst {
 	return getLocalOrConstArray(c, 12)
 }
 
+//go:inline
 func (c call) ArgsLen() uint32 {
 	return getUint32(c, 12)
 }
@@ -803,6 +834,7 @@ func (c call) ArgsIter(fcn func(i uint32, arg LocalOrConst) error) error {
 	return nil
 }
 
+//go:inline
 func (c call) Result() Local {
 	return getLocal(c, 8)
 }
@@ -833,14 +865,17 @@ func (d dot) Type() uint32 {
 	return getType(d)
 }
 
+//go:inline
 func (d dot) Source() LocalOrConst {
 	return getLocalOrConst(d, 12)
 }
 
+//go:inline
 func (d dot) Key() LocalOrConst {
 	return getLocalOrConst(d, 12+5)
 }
 
+//go:inline
 func (d dot) Target() Local {
 	return getLocal(d, 8)
 }
@@ -870,10 +905,12 @@ func (e equal) Type() uint32 {
 	return getType(e)
 }
 
+//go:inline
 func (e equal) A() LocalOrConst {
 	return getLocalOrConst(e, 8)
 }
 
+//go:inline
 func (e equal) B() LocalOrConst {
 	return getLocalOrConst(e, 8+5)
 }
@@ -902,6 +939,7 @@ func (i isArray) Type() uint32 {
 	return getType(i)
 }
 
+//go:inline
 func (i isArray) Source() LocalOrConst {
 	return getLocalOrConst(i, 8)
 }
@@ -930,6 +968,7 @@ func (i isObject) Type() uint32 {
 	return getType(i)
 }
 
+//go:inline
 func (i isObject) Source() LocalOrConst {
 	return getLocalOrConst(i, 8)
 }
@@ -958,6 +997,7 @@ func (i isDefined) Type() uint32 {
 	return getType(i)
 }
 
+//go:inline
 func (i isDefined) Source() Local {
 	return getLocal(i, 8)
 }
@@ -981,10 +1021,12 @@ func (i isUndefined) Len() uint32 {
 	return getLen(i)
 }
 
+//go:inline
 func (i isUndefined) Type() uint32 {
 	return getType(i)
 }
 
+//go:inline
 func (i isUndefined) Source() Local {
 	return getLocal(i, 8)
 }
@@ -1012,6 +1054,7 @@ func (m makeNull) Type() uint32 {
 	return getType(m)
 }
 
+//go:inline
 func (m makeNull) Target() Local {
 	return getLocal(m, 8)
 }
@@ -1040,10 +1083,12 @@ func (m makeNumberInt) Type() uint32 {
 	return getType(m)
 }
 
+//go:inline
 func (m makeNumberInt) Value() int64 {
 	return getInt64(m, 8)
 }
 
+//go:inline
 func (m makeNumberInt) Target() Local {
 	return getLocal(m, 16)
 }
@@ -1072,10 +1117,12 @@ func (m makeNumberRef) Type() uint32 {
 	return getType(m)
 }
 
+//go:inline
 func (m makeNumberRef) Index() int {
 	return int(getUint32(m, 8))
 }
 
+//go:inline
 func (m makeNumberRef) Target() Local {
 	return getLocal(m, 12)
 }
@@ -1104,10 +1151,12 @@ func (m makeArray) Type() uint32 {
 	return getType(m)
 }
 
+//go:inline
 func (m makeArray) Capacity() int32 {
 	return getInt32(m, 8)
 }
 
+//go:inline
 func (m makeArray) Target() Local {
 	return getLocal(m, 12)
 }
@@ -1131,10 +1180,12 @@ func (m makeObject) Len() uint32 {
 	return getLen(m)
 }
 
+//go:inline
 func (m makeObject) Type() uint32 {
 	return getType(m)
 }
 
+//go:inline
 func (m makeObject) Target() Local {
 	return getLocal(m, 8)
 }
@@ -1158,10 +1209,12 @@ func (m makeSet) Len() uint32 {
 	return getLen(m)
 }
 
+//go:inline
 func (m makeSet) Type() uint32 {
 	return getType(m)
 }
 
+//go:inline
 func (m makeSet) Target() Local {
 	return getLocal(m, 8)
 }
@@ -1190,10 +1243,12 @@ func (n notEqual) Type() uint32 {
 	return getType(n)
 }
 
+//go:inline
 func (n notEqual) A() LocalOrConst {
 	return getLocalOrConst(n, 8)
 }
 
+//go:inline
 func (n notEqual) B() LocalOrConst {
 	return getLocalOrConst(n, 8+5)
 }
@@ -1222,10 +1277,12 @@ func (l lenStmt) Type() uint32 {
 	return getType(l)
 }
 
+//go:inline
 func (l lenStmt) Source() LocalOrConst {
 	return getLocalOrConst(l, 12)
 }
 
+//go:inline
 func (l lenStmt) Target() Local {
 	return getLocal(l, 8)
 }
@@ -1255,10 +1312,12 @@ func (a arrayAppend) Type() uint32 {
 	return getType(a)
 }
 
+//go:inline
 func (a arrayAppend) Value() LocalOrConst {
 	return getLocalOrConst(a, 12)
 }
 
+//go:inline
 func (a arrayAppend) Array() Local {
 	return getLocal(a, 8)
 }
@@ -1287,10 +1346,12 @@ func (s setAdd) Type() uint32 {
 	return getType(s)
 }
 
+//go:inline
 func (s setAdd) Value() LocalOrConst {
 	return getLocalOrConst(s, 12)
 }
 
+//go:inline
 func (s setAdd) Set() Local {
 	return getLocal(s, 8)
 }
@@ -1320,14 +1381,17 @@ func (o objectInsertOnce) Type() uint32 {
 	return getType(o)
 }
 
+//go:inline
 func (o objectInsertOnce) Key() LocalOrConst {
 	return getLocalOrConst(o, 12)
 }
 
+//go:inline
 func (o objectInsertOnce) Value() LocalOrConst {
 	return getLocalOrConst(o, 17)
 }
 
+//go:inline
 func (o objectInsertOnce) Object() Local {
 	return getLocal(o, 8)
 }
@@ -1357,14 +1421,17 @@ func (o objectInsert) Type() uint32 {
 	return getType(o)
 }
 
+//go:inline
 func (o objectInsert) Key() LocalOrConst {
 	return getLocalOrConst(o, 12)
 }
 
+//go:inline
 func (o objectInsert) Value() LocalOrConst {
 	return getLocalOrConst(o, 17)
 }
 
+//go:inline
 func (o objectInsert) Object() Local {
 	return getLocal(o, 8)
 }
@@ -1394,14 +1461,17 @@ func (o objectMerge) Type() uint32 {
 	return getType(o)
 }
 
+//go:inline
 func (o objectMerge) A() Local {
 	return getLocal(o, 8)
 }
 
+//go:inline
 func (o objectMerge) B() Local {
 	return getLocal(o, 12)
 }
 
+//go:inline
 func (o objectMerge) Target() Local {
 	return getLocal(o, 16)
 }
@@ -1451,6 +1521,7 @@ func (n not) Type() uint32 {
 	return getType(n)
 }
 
+//go:inline
 func (n not) Block() block {
 	return block(n[8:])
 }
@@ -1478,6 +1549,7 @@ func (r resetLocal) Type() uint32 {
 	return getType(r)
 }
 
+//go:inline
 func (r resetLocal) Target() Local {
 	return getLocal(r, 8)
 }
@@ -1504,6 +1576,7 @@ func (r resultSetAdd) Type() uint32 {
 	return getType(r)
 }
 
+//go:inline
 func (r resultSetAdd) Value() Local {
 	return getLocal(r, 8)
 }
@@ -1531,6 +1604,7 @@ func (r returnLocal) Type() uint32 {
 	return getType(r)
 }
 
+//go:inline
 func (r returnLocal) Source() Local {
 	return getLocal(r, 8)
 }
@@ -1561,18 +1635,22 @@ func (s scan) Type() uint32 {
 	return getType(s)
 }
 
+//go:inline
 func (s scan) Source() Local {
 	return getLocal(s, 8)
 }
 
+//go:inline
 func (s scan) Key() Local {
 	return getLocal(s, 12)
 }
 
+//go:inline
 func (s scan) Value() Local {
 	return getLocal(s, 16)
 }
 
+//go:inline
 func (s scan) Block() block {
 	return block(s[20:])
 }
@@ -1656,10 +1734,12 @@ func appendBool(d []byte, value bool) []byte {
 	return append(d, byte(0))
 }
 
+//go:inline
 func getBool(data []byte, offset uint32) bool {
 	return data[offset] != 0
 }
 
+//go:inline
 func getOffsetIndex(data []byte, offset uint32, i int) uint32 {
 	return getUint32(data, offset+uint32(i)*4)
 }
@@ -1680,6 +1760,7 @@ func putOffsetIndex(data []byte, offset uint32, i int, value uint32) {
 	binary.BigEndian.PutUint32(data[offset+uint32(i*4):], value)
 }
 
+//go:inline
 func getUint32(data []byte, offset uint32) uint32 {
 	return binary.BigEndian.Uint32(data[offset:])
 }
@@ -1695,6 +1776,7 @@ func putUint32(data []byte, offset uint32, value uint32) uint32 {
 	return 4
 }
 
+//go:inline
 func getInt32(data []byte, offset uint32) int32 {
 	return int32(binary.BigEndian.Uint32(data[offset:]))
 }
@@ -1705,6 +1787,7 @@ func appendInt32(d []byte, value int32) []byte {
 	return append(d, data...)
 }
 
+//go:inline
 func getInt64(data []byte, offset uint32) int64 {
 	return int64(binary.BigEndian.Uint64(data[offset:]))
 }
@@ -1715,15 +1798,18 @@ func appendInt64(d []byte, value int64) []byte {
 	return append(d, data...)
 }
 
+//go:inline
 func getInt32ArrayLen(data []byte, offset uint32) int {
 	n := getUint32(data, offset)
 	return int(n)
 }
 
+//go:inline
 func getInt32ArraySize(data []byte, offset uint32) int {
 	return 4 + 4*getInt32ArrayLen(data, offset)
 }
 
+//go:inline
 func getString(data []byte, offset uint32) string {
 	l := getUint32(data, offset)
 	offset += 4
@@ -1779,10 +1865,12 @@ func getStringArray(data []byte, offset uint32) []string {
 	return a
 }
 
+//go:inline
 func getLen(data []byte) uint32 {
 	return getUint32(data, 0)
 }
 
+//go:inline
 func getType(data []byte) uint32 {
 	return getUint32(data, 4)
 }
@@ -1791,6 +1879,7 @@ func appendLocal(d []byte, local Local) []byte {
 	return appendUint32(d, uint32(local))
 }
 
+//go:inline
 func getLocal(data []byte, offset uint32) Local {
 	return Local(getUint32(data, offset))
 }
@@ -1806,6 +1895,7 @@ func getLocalArray(data []byte, offset uint32) []Local {
 	return a
 }
 
+//go:inline
 func getLocalArraySize(data []byte, offset uint32) int {
 	return getInt32ArraySize(data, offset)
 }
@@ -1893,11 +1983,13 @@ func getLocalOrConstArray(data []byte, offset uint32) []LocalOrConst {
 	return l
 }
 
+//go:inline
 func getLocalOrConstArrayLen(data []byte, offset uint32) int {
 	n := getUint32(data, offset)
 	return int(n)
 }
 
+//go:inline
 func getLocalOrConstArraySize(data []byte, offset uint32) int {
 	return 4 + 5*getLocalOrConstArrayLen(data, offset)
 }
