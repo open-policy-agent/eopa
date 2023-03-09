@@ -124,6 +124,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		NDBuiltinCache:         state.Globals.NDBCache,
 		InterQueryBuiltinCache: state.Globals.InterQueryBuiltinCache,
 		PrintHook:              state.Globals.PrintHook,
+		Capabilities:           state.Globals.Capabilities,
 	}
 
 	// Prefer allocating a fixed size slice, to keep it in stack.

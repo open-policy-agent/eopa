@@ -90,6 +90,7 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		InterQueryBuiltinCache: ectx.InterQueryBuiltinCache(),
 		PrintHook:              ectx.PrintHook(),
 		StrictBuiltinErrors:    ectx.StrictBuiltinErrors(),
+		Capabilities:           ectx.Capabilities(),
 	})
 	ectx.Metrics().Timer(evalTimer).Stop()
 	if err != nil {

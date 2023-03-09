@@ -4,10 +4,18 @@ import (
 	"errors"
 	"os"
 
+	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/cmd"
+
+	_ "github.com/styrainc/load-private/capabilities"
 	loadCmd "github.com/styrainc/load-private/cmd"
+	internal "github.com/styrainc/load-private/internal/cmd"
 	_ "github.com/styrainc/load-private/pkg/rego_vm"
 )
+
+func init() {
+	ast.UpdateCapabilities = internal.LoadExtensions
+}
 
 func main() {
 	// run all deferred functions before os.Exit
@@ -36,3 +44,6 @@ func main() {
 		return
 	}
 }
+
+// Capabilities + built-in metadata file generation:
+//go:generate go run internal/cmd/gencapabilities/main.go capabilities.json

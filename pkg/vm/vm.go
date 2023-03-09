@@ -50,6 +50,7 @@ type (
 		Limits                 *Limits
 		Cache                  builtins.Cache
 		NDBCache               builtins.NDBCache
+		Capabilities           *ast.Capabilities
 	}
 
 	// State holds all the evaluation state and is passed along the statements as the evaluation progresses.
@@ -78,6 +79,7 @@ type (
 		BuiltinErrors          []error
 		NDBCache               builtins.NDBCache
 		registersPool          sync.Pool
+		Capabilities           *ast.Capabilities
 	}
 
 	Limits struct {
@@ -141,6 +143,7 @@ func newGlobals(ctx context.Context, vm *VM, opts EvalOpts, cancel *cancel, runt
 		PrintHook:           opts.PrintHook,
 		StrictBuiltinErrors: opts.StrictBuiltinErrors,
 		NDBCache:            opts.NDBCache,
+		Capabilities:        opts.Capabilities,
 		registersPool: sync.Pool{
 			New: func() any {
 				return new(registersList)

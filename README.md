@@ -105,24 +105,6 @@ npm run start
 ```
 from browser: http://localhost:3000/load
 
-### Release Load
-
-Setting the tag version will trigger the .github/workflows/push-tags.yaml action; which will publish 'load' release and 'load' containers to https://github.com/StyraInc/load
-
-```
-# always on main!
-git checkout main
-# make sure our copy of `main` is up-to-date
-git pull
-# check the current tag/release
-git tag -l --sort -version:refname | head -n 1
-# create tag +1
-git tag v0.100.1
-# push
-git push origin v0.100.1
-```
-
-
 ### Permission denied when running 'load'
 
 If you get "permission denied: ./load"
@@ -136,3 +118,50 @@ If you get "permission denied: ./load"
 ```
 % xattr -d com.apple.quarantine load
 ```
+
+
+## Release Load
+
+Setting the tag version will trigger the .github/workflows/push-tags.yaml action; which will publish 'load' release and 'load' containers to https://github.com/StyraInc/load
+
+### Current version
+
+```
+# check the current tag/release
+git tag -l --sort -version:refname | head -n 1
+```
+
+### Update CHANGELOG.md
+
+```
+# Edit the CHANGELOG.md
+git commit
+git push
+```
+
+### Update capabilities
+
+```
+# create capabilities (tag+1) and submit capabilities
+build/gen-release-patch.sh --version=0.100.1
+# create PR and submit generated file: capabiles/v0.100.1.json
+git add capabilities/v0.100.1.json
+git commit
+git push
+```
+
+### Tag main and trigger push-tag.yaml action
+
+Final step.
+
+```
+# always on main!
+git checkout main
+# make sure our copy of `main` is up-to-date
+git pull
+# create tag +1
+git tag v0.100.1
+# push
+git push origin v0.100.1
+```
+
