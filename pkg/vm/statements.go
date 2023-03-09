@@ -24,7 +24,7 @@ func (p plan) Execute(state *State) error {
 	var err error
 	blocks := p.Blocks()
 
-	for i := 0; i < blocks.Len() && err == nil; i++ {
+	for i, n := 0, blocks.Len(); i < n && err == nil; i++ {
 		_, _, err = blocks.Block(i).Execute(state)
 	}
 
@@ -69,7 +69,7 @@ func (f function) execute(state *State, args []Value) error {
 	err := state.Instr()
 	blocks := f.Blocks()
 
-	for i := 0; i < blocks.Len() && err == nil; i++ {
+	for i, n := 0, blocks.Len(); i < n && err == nil; i++ {
 		_, _, err = blocks.Block(i).Execute(state)
 
 		// TODO: No need to wrap the statements of the last block.
@@ -97,7 +97,9 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 	// Try to use a builtin implementation operating directly with
 	// the internal data types.
 
-	switch builtin.Name() {
+	name := builtin.Name()
+
+	switch name {
 	case ast.Member.Name:
 		return memberBuiltin(state, args)
 	case ast.MemberWithKey.Name:
@@ -149,7 +151,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		a[i] = ast.NewTerm(v)
 	}
 
-	if builtin.Name() == ast.InternalPrint.Name {
+	if name == ast.InternalPrint.Name {
 		bctx.Location = &ast.Location{}
 	}
 
@@ -159,14 +161,14 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		state.SetReturn(Unused)
 	}
 
-	impl := topdown.GetBuiltin(builtin.Name())
+	impl := topdown.GetBuiltin(name)
 	if impl == nil {
-		return fmt.Errorf("builtin not found: %s", builtin.Name())
+		return fmt.Errorf("builtin not found: %s", name)
 	}
 
-	bi, ok := ast.BuiltinMap[builtin.Name()]
+	bi, ok := ast.BuiltinMap[name]
 	if !ok {
-		return fmt.Errorf("builtin not found: %s", builtin.Name())
+		return fmt.Errorf("builtin not found: %s", name)
 	}
 	if bi.IsNondeterministic() && state.Globals.NDBCache != nil {
 		value, ok := state.Globals.NDBCache.Get(bi.Name, ast.NewArray(a...))
@@ -195,7 +197,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 			if value != nil {
 				state.SetValue(Unused, state.ValueOps().FromInterface(value.Value))
 				if state.Globals.NDBCache != nil && bi.IsNondeterministic() {
-					state.Globals.NDBCache.Put(builtin.Name(), ast.NewArray(a...), value.Value)
+					state.Globals.NDBCache.Put(name, ast.NewArray(a...), value.Value)
 				}
 			} else {
 				state.SetValue(Unused, state.ValueOps().MakeArray(0))
@@ -220,7 +222,8 @@ func (b block) Execute(state *State) (bool, uint32, error) {
 	err := state.Instr()
 
 	statements := b.Statements()
-	for i := 0; !stop && err == nil && i < statements.Len(); i++ {
+
+	for i, n := 0, statements.Len(); !stop && err == nil && i < n; i++ {
 		// fmt.Printf("executing %d/%d: %T\n", i, len(b.Statements), b.Statements[i])
 		stop, index, err = statements.Statement(i).Execute(state)
 	}
@@ -366,6 +369,7 @@ func (s scan) Execute(state *State) (bool, uint32, error) {
 	// TODO: Should break index=1 if the source is not iterable?
 
 	source, skey, svalue := s.Source(), s.Key(), s.Value()
+	block := s.Block()
 
 	if err2 := func(f func(key, value interface{}) bool) error {
 		return state.ValueOps().Iter(state.Globals.Ctx, state.Value(source), *noescape(&f))
@@ -373,7 +377,7 @@ func (s scan) Execute(state *State) (bool, uint32, error) {
 		state.SetValue(skey, key)
 		state.SetValue(svalue, value)
 
-		stop, n, err = s.Block().Execute(state)
+		stop, n, err = block.Execute(state)
 		if stop || err != nil {
 			return true
 		}
@@ -399,7 +403,7 @@ func (b blockStmt) Execute(state *State) (bool, uint32, error) {
 	err := state.Instr()
 
 	blocks := b.Blocks()
-	for i := 0; i < blocks.Len() && err == nil && !stop; i++ {
+	for i, m := 0, blocks.Len(); i < m && err == nil && !stop; i++ {
 		stop, n, err = blocks.Block(i).Execute(state)
 	}
 
@@ -420,7 +424,7 @@ func (n not) Execute(state *State) (bool, uint32, error) {
 
 	statements := n.Block().Statements()
 
-	for i := 0; !stop && err == nil && i < statements.Len(); i++ {
+	for i, m := 0, statements.Len(); !stop && err == nil && i < m; i++ {
 		stop, index, err = statements.Statement(i).Execute(state)
 	}
 
@@ -904,7 +908,7 @@ func (with with) Execute(state *State) (bool, uint32, error) {
 	}
 
 	statements := with.Block().Statements()
-	for i := 0; i < statements.Len(); i++ {
+	for i, n := 0, statements.Len(); i < n; i++ {
 		if stop, _, err := statements.Statement(i).Execute(state); err != nil {
 			return false, 0, err
 		} else if stop {
