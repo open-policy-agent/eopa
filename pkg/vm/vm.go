@@ -454,8 +454,7 @@ next:
 func (s *State) IsDefined(v LocalOrConst) bool {
 	switch v := v.(type) {
 	case Local:
-		s.grow(v)
-		return s.locals.findReg(v).registers[int(v)%registersSize].defined
+		return s.findReg(v).registers[int(v)%registersSize].defined
 	default:
 		return true
 	}
@@ -464,8 +463,7 @@ func (s *State) IsDefined(v LocalOrConst) bool {
 func (s *State) Value(v LocalOrConst) Value {
 	switch v := v.(type) {
 	case Local:
-		s.grow(v)
-		return s.locals.findReg(v).registers[int(v)%registersSize].value
+		return s.findReg(v).registers[int(v)%registersSize].value
 	case BoolConst:
 		return s.ValueOps().MakeBoolean(bool(v))
 	case StringIndexConst:
@@ -483,44 +481,35 @@ func (s *State) Return() (Local, bool) {
 func (s *State) Set(target Local, source LocalOrConst) {
 	switch v := source.(type) {
 	case Local:
-		s.grow(target)
-		s.grow(v)
-		s.locals.findReg(target).registers[int(target)%registersSize] = s.locals.findReg(v).registers[int(v)%registersSize]
+		s.findReg(target).registers[int(target)%registersSize] = s.findReg(v).registers[int(v)%registersSize]
 
 	case BoolConst:
-		s.grow(target)
-		s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
+		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
 
 	case StringIndexConst:
-		s.grow(target)
-		s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(&s.Globals.vm.ops, v)}
+		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(&s.Globals.vm.ops, v)}
 	}
 }
 
 func (s *State) SetFrom(target Local, other *State, source LocalOrConst) {
 	switch v := source.(type) {
 	case Local:
-		s.grow(target)
-		other.grow(v)
-		s.locals.findReg(target).registers[int(target)%registersSize] = other.locals.findReg(v).registers[int(v)%registersSize]
+		s.findReg(target).registers[int(target)%registersSize] = other.findReg(v).registers[int(v)%registersSize]
 
 	case BoolConst:
-		s.grow(target)
-		s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
+		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
 
 	case StringIndexConst:
-		s.grow(target)
-		s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(&s.Globals.vm.ops, v)}
+		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(&s.Globals.vm.ops, v)}
 	}
 }
 
 func (s *State) SetReturn(source Local) {
-	s.locals.SetReturn(source)
+	s.locals.SetReturn(source, s.findReg(source).registers[int(source)%registersSize].defined)
 }
 
 func (s *State) SetValue(target Local, value Value) {
-	s.grow(target)
-	s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{true, value}
+	s.findReg(target).registers[int(target)%registersSize] = definedValue{true, value}
 }
 
 func (s *State) SetData(l Local) {
@@ -548,8 +537,7 @@ func (s *State) DataGet(ctx context.Context, value, key interface{}) (interface{
 }
 
 func (s *State) Unset(target Local) {
-	s.grow(target)
-	s.locals.findReg(target).registers[int(target)%registersSize] = definedValue{false, nil}
+	s.findReg(target).registers[int(target)%registersSize] = definedValue{false, nil}
 	delete(s.locals.data, target)
 }
 
@@ -586,21 +574,12 @@ func (s *State) Instr() error {
 	return nil
 }
 
-func (l *Locals) SetReturn(source Local) {
+func (l *Locals) SetReturn(source Local, defined bool) {
 	l.ret = source
-	l.retDefined = l.findReg(source).registers[int(source)%registersSize].defined
+	l.retDefined = defined
 }
 
-func (l *Locals) findReg(target Local) *registersList {
-	buckets := int(target) / registersSize
-	r := l.registers
-	for i := 0; i < buckets; i++ {
-		r = r.next
-	}
-	return r
-}
-
-func (s *State) grow(v Local) {
+func (s *State) findReg(v Local) *registersList {
 	buckets := int(v) / registersSize
 	r := s.locals.registers
 	for i := 0; i < buckets; i++ {
@@ -609,6 +588,8 @@ func (s *State) grow(v Local) {
 		}
 		r = r.next
 	}
+
+	return r
 }
 
 func (l Local) localOrConst()            {}
