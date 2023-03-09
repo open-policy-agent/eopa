@@ -235,7 +235,7 @@ func NewFloat(value gojson.Number) Float {
 }
 
 func NewFloatInt(i int64) Float {
-	return NewFloat(gojson.Number(fmt.Sprintf("%d", i)))
+	return NewFloat(gojson.Number(strconv.FormatInt(i, 10)))
 }
 
 func newFloat(content contentReader, offset int64) Float {
@@ -307,7 +307,7 @@ func (f Float) Add(addition Float) Float {
 	ib, okb := addition.value.Int64()
 
 	if oka == nil && okb == nil {
-		return NewFloat(gojson.Number(fmt.Sprintf("%d", ia+ib)))
+		return NewFloat(gojson.Number(strconv.FormatInt(ia+ib, 10)))
 	}
 
 	fa, oka := f.value.Float64()
@@ -325,7 +325,7 @@ func (f Float) Sub(decrement Float) Float {
 	ib, okb := decrement.value.Int64()
 
 	if oka == nil && okb == nil {
-		return NewFloat(gojson.Number(fmt.Sprintf("%d", ia-ib)))
+		return NewFloat(gojson.Number(strconv.FormatInt(ia-ib, 10)))
 	}
 
 	fa, oka := f.value.Float64()
@@ -343,7 +343,7 @@ func (f Float) Multiply(multiplier Float) Float {
 	ib, okb := multiplier.value.Int64()
 
 	if oka == nil && okb == nil {
-		return NewFloat(gojson.Number(fmt.Sprintf("%d", ia*ib)))
+		return NewFloat(gojson.Number(strconv.FormatInt(ia*ib, 10)))
 	}
 
 	fa, oka := f.value.Float64()
@@ -407,9 +407,9 @@ func Min(a, b Float) Float {
 
 	if oka == nil && okb == nil {
 		if ia < ib {
-			return NewFloat(gojson.Number(fmt.Sprintf("%d", ia)))
+			return NewFloat(gojson.Number(strconv.FormatInt(ia, 10)))
 		}
-		return NewFloat(gojson.Number(fmt.Sprintf("%d", ib)))
+		return NewFloat(gojson.Number(strconv.FormatInt(ib, 10)))
 	}
 
 	fa, oka := a.value.Float64()
@@ -431,9 +431,9 @@ func Max(a, b Float) Float {
 
 	if oka == nil && okb == nil {
 		if ia > ib {
-			return NewFloat(gojson.Number(fmt.Sprintf("%d", ia)))
+			return NewFloat(gojson.Number(strconv.FormatInt(ia, 10)))
 		}
-		return NewFloat(gojson.Number(fmt.Sprintf("%d", ib)))
+		return NewFloat(gojson.Number(strconv.FormatInt(ib, 10)))
 	}
 
 	fa, oka := a.value.Float64()
@@ -450,28 +450,26 @@ func Max(a, b Float) Float {
 }
 
 // String represents a JSON string.
-type String struct {
-	str string
-}
+type String string
 
 func NewString(s string) String {
-	return String{s}
+	return String(s)
 }
 
 func newString(content contentReader, offset int64) String {
 	str, err := content.ReadString(offset)
 	checkError(err)
-	return String{str: str}
+	return String(str)
 }
 
 func newStringInt(content contentReader, offset int64) String {
 	n, err := content.ReadVarInt(offset)
 	checkError(err)
-	return String{fmt.Sprintf("%d", n)}
+	return String(strconv.FormatInt(n, 10))
 }
 
 func (s String) WriteTo(w io.Writer) (int64, error) {
-	return writeStringJSON(w, s.str, true)
+	return writeStringJSON(w, string(s), true)
 }
 
 func (s String) Contents() interface{} {
@@ -479,7 +477,7 @@ func (s String) Contents() interface{} {
 }
 
 func (s String) Value() string {
-	return s.str
+	return string(s)
 }
 
 func (s String) JSON() interface{} {
@@ -487,7 +485,7 @@ func (s String) JSON() interface{} {
 }
 
 func (s String) AST() ast.Value {
-	return ast.String(s.str)
+	return ast.String(s)
 }
 
 func (s String) Extract(ptr string) (Json, error) {
