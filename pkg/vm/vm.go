@@ -562,17 +562,19 @@ func (s *State) MemoizeInsert(idx int, value Value) {
 }
 
 func (s *State) Instr() error {
-	s.stats.EvalInstructions++
-
 	instructions := s.stats.EvalInstructions
 
-	if instructions%32 == 0 && s.Globals.cancel.Cancelled() {
-		return context.Canceled
+	if instructions%32 == 0 {
+		if s.Globals.cancel.Cancelled() {
+			return context.Canceled
+
+		}
+		if instructions > s.Globals.Limits.Instructions {
+			return ErrInstructionsLimitExceeded
+		}
 	}
 
-	if instructions > s.Globals.Limits.Instructions {
-		return ErrInstructionsLimitExceeded
-	}
+	s.stats.EvalInstructions = instructions + 1
 
 	return nil
 }
