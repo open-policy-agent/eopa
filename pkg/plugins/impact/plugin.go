@@ -65,18 +65,17 @@ func Enqueue(ctx context.Context, ectx EvalContext, exp ast.Value) {
 		return // no LIA job running
 	}
 
-	// NOTE(sr): This also serves a device to stop us from looping infinitely:
+	// NOTE(sr): This also serves as a device to stop us from looping infinitely:
 	// When we're calling eval below, it's using the singleton's ctx, not the
 	// incoming one. Any subsequent calls to impact.Enqueue will thus stop here.
-	rctx, ok := logging.FromContext(ctx)
-	if !ok {
-		return
-	}
+	path := liaEnabled(ctx)
 
-	if !singleton.sample(rctx.ReqPath, ectx.CompiledQuery()[0]) {
+	rctx, _ := logging.FromContext(ctx)
+	decisionID, _ := logging.DecisionIDFromContext(ctx)
+
+	if !singleton.sample(path, ectx.CompiledQuery()[0]) {
 		return
 	}
-	decisionID, _ := logging.DecisionIDFromContext(ctx)
 
 	// TODO(sr): think about this:
 	// Go submits a task to be run in the pool. If all goroutines in the pool
@@ -238,14 +237,16 @@ func (i *Impact) publish(ctx context.Context, rctx *logging.RequestContext, quer
 	decisionID, _ := logging.DecisionIDFromContext(ctx)
 	res := Result{
 		NodeID:     i.manager.ID,
-		RequestID:  rctx.ReqID,
 		ValueA:     resultA,
 		ValueB:     resultB,
 		Input:      input,
-		Path:       strings.TrimPrefix(strings.TrimPrefix(rctx.ReqPath, "/v1/data/"), "/v0/data/"),
 		EvalNSA:    uint64(mA.Timer("regovm_eval").Int64()),
 		EvalNSB:    uint64(mB.Timer("regovm_eval").Int64()),
 		DecisionID: decisionID,
+	}
+	if rctx != nil {
+		res.RequestID = rctx.ReqID
+		res.Path = strings.TrimPrefix(strings.TrimPrefix(rctx.ReqPath, "/v1/data/"), "/v0/data/")
 	}
 	i.job.Result(&res)
 
@@ -259,16 +260,19 @@ func (i *Impact) dlog(ctx context.Context, rctx *logging.RequestContext, query s
 		return nil
 	}
 	decisionID, _ := logging.DecisionIDFromContext(ctx)
-	return i.dl.Log(ctx, &server.Info{
-		RequestID:      rctx.ReqID,
+	info := server.Info{
 		Results:        result,
 		Input:          input,
-		Path:           strings.TrimPrefix(strings.TrimPrefix(rctx.ReqPath, "/v1/data/"), "/v0/data/"),
 		NDBuiltinCache: ndbc,
 		Timestamp:      time.Now(),
 		Metrics:        m,
 		DecisionID:     decisionID,
-	})
+	}
+	if rctx != nil {
+		info.RequestID = rctx.ReqID
+		info.Path = strings.TrimPrefix(strings.TrimPrefix(rctx.ReqPath, "/v1/data/"), "/v0/data/")
+	}
+	return i.dl.Log(ctx, &info)
 }
 
 func (i *Impact) StartJob(ctx context.Context, j Job) error {

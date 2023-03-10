@@ -371,7 +371,18 @@ q := true
 	}
 }
 
-func loadLoad(t *testing.T, config, policy string, silent bool) (*exec.Cmd, *bytes.Buffer) {
+func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *bytes.Buffer) {
+	var silent bool
+	logLevel := "debug"
+	for _, o := range opts {
+		switch o := o.(type) {
+		case bool:
+			silent = o
+		case errorLogging:
+			logLevel = "error"
+		}
+	}
+
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
 	confPath := filepath.Join(dir, "config.yml")
@@ -383,7 +394,7 @@ func loadLoad(t *testing.T, config, policy string, silent bool) (*exec.Cmd, *byt
 		t.Fatalf("write config: %v", err)
 	}
 
-	load := exec.Command(binary(), strings.Split("run --server --addr localhost:18181 --config-file "+confPath+" --log-level debug --disable-telemetry "+policyPath, " ")...)
+	load := exec.Command(binary(), strings.Split("run --server --addr localhost:18181 --config-file "+confPath+" --log-level "+logLevel+" --disable-telemetry "+policyPath, " ")...)
 	load.Stderr = &buf
 	load.Env = append(load.Environ(),
 		"STYRA_LOAD_LICENSE_TOKEN="+os.Getenv("STYRA_LOAD_LICENSE_TOKEN"),
@@ -458,6 +469,67 @@ q := true
 	waitForLIAEnd(ctx, t, loadOut)
 	if testing.Verbose() {
 		t.Logf("liactl output:\n%s", ctlOut.String())
+	}
+}
+
+type errorLogging struct{}
+
+func TestStillWorksWithoutDecisionLogsAndErrorLogging(t *testing.T) {
+	const count = 100
+	ctx := context.Background()
+	config := `
+plugins:
+  impact_analysis:
+`
+	policy := `
+package test
+import future.keywords
+
+q := true
+`
+	load, _ := loadLoad(t, config, policy, true, errorLogging{})
+	if err := load.Start(); err != nil {
+		t.Fatal(err)
+	}
+	// NOTE(sr): In this test, we have no side-channel to know if LIA is enabled, or stopped.
+	// So we'll be gracious with waiting times, and very loose in our assertions.
+	time.Sleep(time.Second)
+
+	ctl, ctlOut := loadCtl(t, "http://127.0.0.1:18181", "testdata/load-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
+	ctl.Stderr = os.Stderr
+	if err := ctl.Start(); err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i < count; i++ { // act: evaluate the policy via the v1 data API, provide empty input, many times
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+		in := `{"input": {}}`
+		req, err := http.NewRequest("POST", "http://localhost:18181/v1/data/test/q", strings.NewReader(in))
+		if err != nil {
+			t.Fatalf("http request: %v", err)
+		}
+		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if exp, act := 200, resp.StatusCode; exp != act {
+			t.Fatalf("expected status %d, got %d", exp, act)
+		}
+	}
+
+	ctl.Wait()
+	if testing.Verbose() {
+		t.Logf("liactl output:\n%s", ctlOut.String())
+	}
+
+	act := []liaResponse{}
+	if err := json.NewDecoder(ctlOut).Decode(&act); err != nil {
+		t.Error(err)
+	}
+	if exp, act := 50, len(act); exp > act {
+		t.Fatalf("expected >=%d diffs, got %d", exp, act)
 	}
 }
 

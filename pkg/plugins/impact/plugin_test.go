@@ -48,9 +48,9 @@ plugins:
 	}
 
 	{ // fake a request
-		ctx := logging.NewContext(ctx, &logging.RequestContext{
+		ctx := impact.Enable(logging.NewContext(ctx, &logging.RequestContext{
 			ReqPath: "/v1/data/x",
-		})
+		}), "/v1/data/x")
 		ectx := fakeEval{
 			body:  ast.MustParseBody("data.x = y"),
 			input: ast.Boolean(true),

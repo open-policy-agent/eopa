@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/styrainc/load-private/pkg/plugins/bundle"
 	"github.com/styrainc/load-private/pkg/plugins/data"
 	"github.com/styrainc/load-private/pkg/plugins/discovery"
@@ -293,6 +294,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	bundleApi.RegisterActivator("_load", a)
 	params.rt.BundleActivatorPlugin = "_load"
 
+	params.rt.Router = loadRouter()
+
 	rt, err := runtime.NewRuntime(ctx, params.rt)
 	if err != nil {
 		return nil, err
@@ -349,4 +352,10 @@ func loadCertPool(tlsCACertFile string) (*x509.CertPool, error) {
 		return nil, fmt.Errorf("failed to parse CA cert %q", tlsCACertFile)
 	}
 	return pool, nil
+}
+
+func loadRouter() *mux.Router {
+	m := mux.NewRouter()
+	m.Use(impact.HTTPMiddleware)
+	return m
 }

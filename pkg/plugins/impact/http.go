@@ -128,3 +128,32 @@ func bundleFromReader(ctx context.Context, rd io.ReadCloser) (*bundle.Bundle, er
 		WithBundleLazyLoadingMode(true).
 		AsBundle(path)
 }
+
+type mw struct {
+	next http.Handler
+}
+
+func HTTPMiddleware(next http.Handler) http.Handler {
+	return &mw{next: next}
+}
+
+func (m *mw) Flush() {
+	if f, ok := m.next.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+type lia struct{}
+
+func Enable(ctx context.Context, path string) context.Context {
+	return context.WithValue(ctx, lia{}, path)
+}
+
+func liaEnabled(ctx context.Context) string {
+	path, _ := ctx.Value(lia{}).(string)
+	return path
+}
+
+func (m *mw) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	m.next.ServeHTTP(w, r.WithContext(Enable(r.Context(), r.URL.Path)))
+}
