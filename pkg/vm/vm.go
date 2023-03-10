@@ -33,9 +33,11 @@ var (
 
 type (
 	VM struct {
-		executable Executable
-		data       *interface{}
-		ops        dataOperations
+		executable   Executable
+		data         *interface{}
+		ops          dataOperations
+		mu           sync.RWMutex
+		stringsCache []Value
 	}
 
 	EvalOpts struct {
@@ -158,6 +160,7 @@ func NewVM() *VM {
 
 func (vm *VM) WithExecutable(executable Executable) *VM {
 	vm.executable = executable
+	vm.stringsCache = make([]Value, executable.Strings().Len())
 	return vm
 }
 
@@ -382,6 +385,25 @@ func (vm *VM) runtime(ctx context.Context, v interface{}) (*ast.Term, error) {
 	return ast.NewTerm(runtime), nil
 }
 
+func (vm *VM) getCachedString(i StringIndexConst) (Value, bool) {
+	vm.mu.RLock()
+	defer vm.mu.RUnlock()
+
+	if int(i) >= len(vm.stringsCache) {
+		return nil, false
+	}
+
+	value := vm.stringsCache[int(i)]
+	return value, value != nil
+}
+
+func (vm *VM) setCachedString(i StringIndexConst, value Value) {
+	vm.mu.Lock()
+	defer vm.mu.Unlock()
+
+	vm.stringsCache[int(i)] = value
+}
+
 type bitset struct {
 	base uint64
 	rest []bool
@@ -513,7 +535,7 @@ func (s *State) Value(v LocalOrConst) Value {
 	case BoolConst:
 		return s.ValueOps().MakeBoolean(bool(v))
 	case StringIndexConst:
-		return s.Globals.vm.executable.Strings().String(&s.Globals.vm.ops, v)
+		return s.Globals.vm.executable.Strings().String(s.Globals.vm, v)
 	}
 
 	return nil
@@ -533,7 +555,7 @@ func (s *State) Set(target Local, source LocalOrConst) {
 		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
 
 	case StringIndexConst:
-		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(&s.Globals.vm.ops, v)}
+		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(s.Globals.vm, v)}
 	}
 }
 
@@ -546,7 +568,7 @@ func (s *State) SetFrom(target Local, other *State, source LocalOrConst) {
 		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
 
 	case StringIndexConst:
-		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(&s.Globals.vm.ops, v)}
+		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(s.Globals.vm, v)}
 	}
 }
 

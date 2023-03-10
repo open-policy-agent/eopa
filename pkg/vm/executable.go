@@ -215,6 +215,10 @@ func (e Executable) Plans() plans {
 	return plans(e[headerLength+offset:])
 }
 
+func (s strings) Len() int {
+	return int(getUint32(s, 0))
+}
+
 func (strings) Write(strings []string) []byte {
 	n := len(strings)
 	l := 4 + appendOffsetSize(n)
@@ -238,9 +242,15 @@ func (strings) Write(strings []string) []byte {
 }
 
 //go:inline
-func (s strings) String(ops *dataOperations, i StringIndexConst) Value {
+func (s strings) String(vm *VM, i StringIndexConst) Value {
+	if s, ok := vm.getCachedString(i); ok {
+		return s
+	}
+
 	stringOffset := getOffsetIndex(s, 4, int(i))
-	return ops.MakeString(getString(s, stringOffset))
+	v := vm.ops.MakeString(getString(s, stringOffset))
+	vm.setCachedString(i, v)
+	return v
 }
 
 //go:inline
