@@ -163,14 +163,7 @@ func (*dataOperations) CopyShallow(value interface{}) interface{} {
 	case fjson.String:
 		return v
 	case fjson.Array:
-		n := v.Len()
-		values := make([]fjson.File, 0, n)
-		for i := 0; i < n; i++ {
-			values = append(values, v.Iterate(i))
-		}
-		arr := fjson.NewArray(values...)
-
-		return arr
+		return v.Clone(false)
 	case *Object:
 		obj := NewObject()
 		v.Iter(func(key, value fjson.Json) bool {
@@ -181,12 +174,7 @@ func (*dataOperations) CopyShallow(value interface{}) interface{} {
 		return obj
 
 	case fjson.Object:
-		obj := NewObject()
-		for i, key := range v.Names() {
-			obj.Insert(fjson.NewString(key), v.Iterate(i))
-		}
-
-		return obj
+		return v.Clone(false)
 	case *Set:
 		set := NewSet()
 		v.Iter(func(v fjson.Json) bool {
