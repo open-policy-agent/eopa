@@ -23,6 +23,9 @@ type rec struct {
 	sink       string
 	format     format
 	reportOpts []ReportOption
+
+	tlsCACert, tlsCert, tlsKey string
+	tlsSkip                    bool
 }
 
 type Option func(*rec)
@@ -36,6 +39,15 @@ func WithReport(rs ...ReportOption) Option {
 func Addr(s string) Option {
 	return func(r *rec) {
 		r.addr = s
+	}
+}
+
+func TLS(caCert, cert, key string, skip bool) Option {
+	return func(r *rec) {
+		r.tlsSkip = skip
+		r.tlsCACert = caCert
+		r.tlsCert = cert
+		r.tlsKey = key
 	}
 }
 

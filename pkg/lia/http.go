@@ -6,7 +6,20 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/styrainc/load-private/pkg/plugins/data/utils"
 )
+
+func (r *rec) client() (*http.Client, error) {
+	tlsConf, err := utils.ReadTLSConfig(r.tlsSkip, r.tlsCert, r.tlsKey, r.tlsCACert)
+	if err != nil {
+		return nil, err
+	}
+	return &http.Client{Transport: &http.Transport{
+		Proxy:           http.ProxyFromEnvironment,
+		TLSClientConfig: tlsConf,
+	}}, nil
+}
 
 func (r *rec) httpRequest(ctx context.Context, u *url.URL, bndl io.Reader) (io.ReadCloser, error) {
 	u.Path = "v0/impact"
@@ -22,7 +35,12 @@ func (r *rec) httpRequest(ctx context.Context, u *url.URL, bndl io.Reader) (io.R
 	req.URL.RawQuery = q.Encode()
 
 	req = req.WithContext(ctx)
-	resp, err := http.DefaultClient.Do(req)
+
+	cl, err := r.client()
+	if err != nil {
+		return nil, err
+	}
+	resp, err := cl.Do(req)
 	if err != nil {
 		return nil, err
 	}

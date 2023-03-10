@@ -352,7 +352,6 @@ q := true
 		t.Errorf("expected sample count to be +/- ~10%% of %d, got %d", count, act)
 	}
 
-	// 	wg.Wait()
 	waitForLIAEnd(ctx, t, loadOut)
 	ctl.Wait()
 	if testing.Verbose() {
@@ -371,8 +370,11 @@ q := true
 	}
 }
 
+type extra string
+
 func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *bytes.Buffer) {
 	var silent bool
+	var extraArgs string
 	logLevel := "debug"
 	for _, o := range opts {
 		switch o := o.(type) {
@@ -380,6 +382,8 @@ func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *byt
 			silent = o
 		case errorLogging:
 			logLevel = "error"
+		case extra:
+			extraArgs = string(o)
 		}
 	}
 
@@ -394,7 +398,18 @@ func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *byt
 		t.Fatalf("write config: %v", err)
 	}
 
-	load := exec.Command(binary(), strings.Split("run --server --addr localhost:18181 --config-file "+confPath+" --log-level "+logLevel+" --disable-telemetry "+policyPath, " ")...)
+	args := []string{
+		"run",
+		"--server",
+		"--addr", "localhost:18181",
+		"--config-file", confPath,
+		"--log-level", logLevel,
+		"--disable-telemetry",
+	}
+	if extraArgs != "" {
+		args = append(args, strings.Split(extraArgs, " ")...)
+	}
+	load := exec.Command(binary(), append(args, policyPath)...)
 	load.Stderr = &buf
 	load.Env = append(load.Environ(),
 		"STYRA_LOAD_LICENSE_TOKEN="+os.Getenv("STYRA_LOAD_LICENSE_TOKEN"),
@@ -454,6 +469,48 @@ q := true
 	waitForLog(ctx, t, loadOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	ctl, ctlOut := loadCtl(t, "http://127.0.0.1:18181", "testdata/load-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
+	ctl.Stderr = os.Stderr
+	if err := ctl.Start(); err != nil {
+		t.Fatal(err)
+	}
+
+	waitForLIAStart(ctx, t, loadOut)
+
+	// abort CLI call
+	if err := ctl.Process.Signal(os.Interrupt); err != nil {
+		t.Fatal(err)
+	}
+
+	waitForLIAEnd(ctx, t, loadOut)
+	if testing.Verbose() {
+		t.Logf("liactl output:\n%s", ctlOut.String())
+	}
+}
+
+func TestTLSCommunication(t *testing.T) {
+	ctx := context.Background()
+
+	config := `
+decision_logs:
+  console: true
+plugins:
+  impact_analysis:
+    decision_logs: true
+`
+	policy := `
+package test
+import future.keywords
+
+q := true
+`
+	load, loadOut := loadLoad(t, config, policy, false, extra(`--tls-ca-cert-file testdata/tls/ca.pem --tls-cert-file testdata/tls/server-cert.pem --tls-private-key-file testdata/tls/server-key.pem`))
+	if err := load.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waitForLog(ctx, t, loadOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+
+	ctl, ctlOut := loadCtl(t, "https://127.0.0.1:18181", "testdata/load-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals "+
+		"--tls-ca-cert-file testdata/tls/ca.pem --tls-cert-file testdata/tls/client-cert.pem --tls-private-key-file testdata/tls/client-key.pem")
 	ctl.Stderr = os.Stderr
 	if err := ctl.Start(); err != nil {
 		t.Fatal(err)

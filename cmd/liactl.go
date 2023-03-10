@@ -19,19 +19,22 @@ func liaCtl() *cobra.Command {
 	return cmd
 }
 
-// TODO(sr): add TLS related arguments
 // flag names
 const (
-	addr     = "addr"
-	duration = "duration"
-	equals   = "equals"
-	rate     = "sample-rate"
-	bndl     = "bundle"
-	output   = "output"
-	format   = "format"
-	limit    = "limit"
-	group    = "group"
-	failAny  = "fail-any"
+	addr      = "addr"
+	duration  = "duration"
+	equals    = "equals"
+	rate      = "sample-rate"
+	bndl      = "bundle"
+	output    = "output"
+	format    = "format"
+	limit     = "limit"
+	group     = "group"
+	failAny   = "fail-any"
+	tlsSkip   = "tls-skip-verification"
+	tlsCACert = "tls-ca-cert-file"
+	tlsCert   = "tls-cert-file"
+	tlsKey    = "tls-private-key-file"
 )
 
 func record() *cobra.Command {
@@ -46,6 +49,10 @@ func record() *cobra.Command {
 			c.SilenceUsage = true
 
 			host, _ := c.Flags().GetString(addr)
+			tlsCACert, _ := c.Flags().GetString(tlsCACert)
+			tlsCert, _ := c.Flags().GetString(tlsCert)
+			tlsKey, _ := c.Flags().GetString(tlsKey)
+			tlsSkip, _ := c.Flags().GetBool(tlsSkip)
 			dur, _ := c.Flags().GetDuration(duration)
 			eq, _ := c.Flags().GetBool(equals)
 			rate, _ := c.Flags().GetFloat64(rate)
@@ -62,6 +69,7 @@ func record() *cobra.Command {
 
 			rec := lia.New(
 				lia.Addr(host),
+				lia.TLS(tlsCACert, tlsCert, tlsKey, tlsSkip),
 				lia.Duration(dur),
 				lia.Equals(eq),
 				lia.Rate(rate),
@@ -90,6 +98,11 @@ func record() *cobra.Command {
 	c.Flags().Bool(equals, false, `Include equal results (e.g. for assessing performance differences)`)
 	c.Flags().Float64(rate, 0.1, "Sample rate of evaluations to include (e.g. 0.1 for 10%, or 1 for all requests)")
 	c.Flags().StringP(bndl, "b", "", "Path to bundle to use for secondary evaluation")
+	// TLS
+	c.Flags().Bool(tlsSkip, false, "Skip TLS verification when connecting to Load")
+	c.Flags().String(tlsCACert, "", "TLS CA cert path")
+	c.Flags().String(tlsCert, "", "TLS client cert path")
+	c.Flags().String(tlsKey, "", "TLS key path")
 
 	// report options
 	c.Flags().Int(limit, 0, "Limit report to N rows (if grouped, ordered by count descending)")
