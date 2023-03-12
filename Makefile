@@ -19,7 +19,7 @@ GOOS := $(shell go env GOOS)
 # default KO_DEFAULTBASEIMAGE = cgr.dev/chainguard/static
 KO_DEBUG_IMAGE ?= cgr.dev/chainguard/busybox:latest
 
-KO_BUILD := ko build . --sbom=none --image-label org.opencontainers.image.source=https://github.com/StyraInc/load
+KO_BUILD := ko build . --image-label org.opencontainers.image.source=https://github.com/StyraInc/load
 KO_BUILD_LOCAL := $(KO_BUILD) --base-import-paths --local
 KO_BUILD_DEPLOY := $(KO_BUILD) --bare --platform=linux/amd64,linux/arm64
 
