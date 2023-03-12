@@ -3,9 +3,11 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/styrainc/load-private/pkg/lia"
 )
@@ -75,21 +77,20 @@ func record() *cobra.Command {
 				lia.Rate(rate),
 				lia.Output(out, format),
 				lia.BundlePath(bndl),
+				lia.Fail(fail),
 				lia.WithReport(
 					lia.Grouped(grouped),
 					lia.Limit(limit),
 				),
 			)
-			rep, err := rec.Record(ctx)
-			if err != nil {
-				return err
-			}
-			if fail {
-				if c := rep.Count(ctx); c > 0 {
-					return fmt.Errorf("expected 0 results, got %d", c)
+			if !interactive() {
+				rep, err := rec.Run(ctx)
+				if err != nil {
+					return err
 				}
+				return rec.Output(ctx, rep)
 			}
-			return rec.Output(ctx, rep)
+			return lia.TUI(ctx, rec)
 		},
 	}
 	// Load connectivity and LIA request options
@@ -113,4 +114,8 @@ func record() *cobra.Command {
 	c.Flags().StringP(output, "o", "-", `write report to file, "-" means stdout`)
 	c.Flags().StringP(format, "f", "pretty", `output format: "json", "csv", or "pretty")`)
 	return c
+}
+
+func interactive() bool {
+	return term.IsTerminal(int(os.Stdout.Fd()))
 }

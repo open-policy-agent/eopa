@@ -10,8 +10,12 @@ import (
 )
 
 type Recorder interface {
-	Record(context.Context) (Report, error)
+	Run(context.Context) (Report, error)
 	Output(context.Context, Report) error
+
+	ToStdout() bool
+	Duration() time.Duration
+	Format() format
 }
 
 type rec struct {
@@ -19,6 +23,7 @@ type rec struct {
 	rate       float64
 	dur        time.Duration
 	equals     bool
+	failIfAny  bool
 	bundlePath string
 	sink       string
 	format     format
@@ -63,9 +68,23 @@ func Duration(d time.Duration) Option {
 	}
 }
 
+func (r *rec) Duration() time.Duration {
+	return r.dur
+}
+
+func (r *rec) Format() format {
+	return r.format
+}
+
 func Equals(b bool) Option {
 	return func(r *rec) {
 		r.equals = b
+	}
+}
+
+func Fail(b bool) Option {
+	return func(r *rec) {
+		r.failIfAny = b
 	}
 }
 
@@ -100,14 +119,6 @@ func New(opts ...Option) Recorder {
 }
 
 func (r *rec) Record(ctx context.Context) (Report, error) {
-	switch r.format {
-	case json, csv, pretty: // OK
-	case "":
-		r.format = pretty
-	default:
-		return nil, fmt.Errorf(`invalid format: %q (must be "json", "csv" or "pretty")`, r.format)
-	}
-
 	u, err := url.Parse(r.addr)
 	if err != nil {
 		return nil, fmt.Errorf("parse addr: %w", err)
@@ -119,10 +130,23 @@ func (r *rec) Record(ctx context.Context) (Report, error) {
 	}
 	defer bndl.Close()
 
-	return r.record(ctx, u, bndl)
+	raw, err := r.httpRequest(ctx, u, bndl)
+	if err != nil {
+		return nil, err
+	}
+	// NOTE(sr): We never close raw. It's a short-lived program.
+	return ReportFromReader(ctx, raw, r.reportOpts...)
 }
 
 func (r *rec) Output(ctx context.Context, rep Report) error {
+	switch r.format {
+	case json, csv, pretty: // OK
+	case "":
+		r.format = pretty
+	default:
+		return fmt.Errorf(`invalid format: %q (must be "json", "csv" or "pretty")`, r.format)
+	}
+
 	var output io.WriteCloser
 	var err error
 	if r.sink == "-" {
@@ -137,11 +161,19 @@ func (r *rec) Output(ctx context.Context, rep Report) error {
 	return rep.Output(ctx, output, r.format)
 }
 
-func (r *rec) record(ctx context.Context, u *url.URL, bundle io.Reader) (Report, error) {
-	raw, err := r.httpRequest(ctx, u, bundle)
+func (r *rec) ToStdout() bool {
+	return r.sink == "-"
+}
+
+func (r *rec) Run(ctx context.Context) (Report, error) {
+	rep, err := r.Record(ctx)
 	if err != nil {
 		return nil, err
 	}
-	// NOTE(sr): We never close raw. It's a short-lived program.
-	return ReportFromReader(ctx, raw, r.reportOpts...)
+	if r.failIfAny {
+		if c := rep.Count(ctx); c > 0 {
+			return nil, fmt.Errorf("expected 0 results, got %d", c)
+		}
+	}
+	return rep, nil
 }
