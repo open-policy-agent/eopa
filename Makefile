@@ -109,7 +109,7 @@ check:
 	golangci-lint run -v
 
 update:
-	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@load-0.49
+	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@load-0.50
 	go mod tidy
 
 # ci-smoke-test
