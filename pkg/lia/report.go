@@ -99,7 +99,7 @@ func (r *report) queryOutput(ctx context.Context) (io.Reader, error) {
 			query += fmt.Sprintf(` LIMIT %d`, r.limit)
 		}
 	default:
-		query = `SELECT * FROM STDIN ORDER BY req_id`
+		query = `SELECT * FROM STDIN`
 		if r.limit > 0 {
 			query += fmt.Sprintf(` LIMIT %d`, r.limit)
 		}

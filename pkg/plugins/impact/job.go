@@ -95,8 +95,8 @@ func (j *job) Results() <-chan *Result {
 
 type Result struct {
 	NodeID     string `json:"node_id"`
-	RequestID  uint64 `json:"req_id"`
-	DecisionID string `json:"decision_id"`
+	RequestID  uint64 `json:"req_id,omitempty"`
+	DecisionID string `json:"decision_id,omitempty"`
 	ValueA     *any   `json:"value_a"`
 	ValueB     *any   `json:"value_b"`
 	Input      *any   `json:"input"`

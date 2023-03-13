@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/mux"
 	"go.uber.org/goleak"
 
-	"github.com/gorilla/mux"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/metrics"

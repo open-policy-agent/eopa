@@ -69,6 +69,9 @@ func Enqueue(ctx context.Context, ectx EvalContext, exp ast.Value) {
 	// When we're calling eval below, it's using the singleton's ctx, not the
 	// incoming one. Any subsequent calls to impact.Enqueue will thus stop here.
 	path := liaEnabled(ctx)
+	if path == "" {
+		return
+	}
 
 	rctx, _ := logging.FromContext(ctx)
 	decisionID, _ := logging.DecisionIDFromContext(ctx)
@@ -87,7 +90,7 @@ func Enqueue(ctx context.Context, ectx EvalContext, exp ast.Value) {
 		ctx, cancel := context.WithTimeout(singleton.ctx, 5*time.Second)
 		defer cancel()
 		ctx = logging.WithDecisionID(ctx, decisionID)
-		if err := singleton.eval(ctx, ectx, rctx, exp); err != nil {
+		if err := singleton.eval(ctx, ectx, rctx, dropDataPrefix(path), exp); err != nil {
 			singleton.log.Warn("live impact analysis: %v", err)
 		}
 	})
@@ -143,7 +146,7 @@ func (i *Impact) Reconfigure(_ context.Context, cfg any) {
 
 // We'll evaluate at the configured sampling rate, with a different set of policies (TBD).
 // TODO: cache PrepareForEval?
-func (i *Impact) eval(ctx context.Context, ectx EvalContext, rctx *logging.RequestContext, exp ast.Value) error {
+func (i *Impact) eval(ctx context.Context, ectx EvalContext, rctx *logging.RequestContext, path string, exp ast.Value) error {
 	// NOTE(sr): While rego.New() could take much more complex things, we know that the queries
 	// we're interested in have been generated from API calls. That allows for some simpler moves
 	// here:
@@ -194,7 +197,7 @@ func (i *Impact) eval(ctx context.Context, ectx EvalContext, rctx *logging.Reque
 	if len(secondaryResult) == 1 {
 		secRes = secondaryResult[0].Expressions[0].Value
 	}
-	return i.publish(ctx, rctx, queryT.String(), &in, &primaryResult, &secRes, &ndbc, mA, mB)
+	return i.publish(ctx, rctx, path, queryT.String(), &in, &primaryResult, &secRes, &ndbc, mA, mB)
 }
 
 func unwrap(exp ast.Value) (any, error) {
@@ -233,10 +236,11 @@ func (i *Impact) equalResults(ctx context.Context, primaryResult any, secondaryR
 }
 
 // TODO(sr): don't let this grow out of hand, flush to controller periodically
-func (i *Impact) publish(ctx context.Context, rctx *logging.RequestContext, query string, input, resultA, resultB *any, ndbc *any, mA, mB metrics.Metrics) error {
+func (i *Impact) publish(ctx context.Context, rctx *logging.RequestContext, path, query string, input, resultA, resultB *any, ndbc *any, mA, mB metrics.Metrics) error {
 	decisionID, _ := logging.DecisionIDFromContext(ctx)
 	res := Result{
 		NodeID:     i.manager.ID,
+		Path:       path,
 		ValueA:     resultA,
 		ValueB:     resultB,
 		Input:      input,
@@ -246,7 +250,7 @@ func (i *Impact) publish(ctx context.Context, rctx *logging.RequestContext, quer
 	}
 	if rctx != nil {
 		res.RequestID = rctx.ReqID
-		res.Path = strings.TrimPrefix(strings.TrimPrefix(rctx.ReqPath, "/v1/data/"), "/v0/data/")
+		res.Path = dropDataPrefix(rctx.ReqPath)
 	}
 	i.job.Result(&res)
 
@@ -270,7 +274,7 @@ func (i *Impact) dlog(ctx context.Context, rctx *logging.RequestContext, query s
 	}
 	if rctx != nil {
 		info.RequestID = rctx.ReqID
-		info.Path = strings.TrimPrefix(strings.TrimPrefix(rctx.ReqPath, "/v1/data/"), "/v0/data/")
+		info.Path = dropDataPrefix(rctx.ReqPath)
 	}
 	return i.dl.Log(ctx, &info)
 }
@@ -290,4 +294,8 @@ func (i *Impact) StartJob(ctx context.Context, j Job) error {
 	i.job = j
 	i.log.Info("started live impact analysis job %s", j.ID())
 	return nil
+}
+
+func dropDataPrefix(p string) string {
+	return strings.TrimPrefix(strings.TrimPrefix(p, "/v1/data/"), "/v0/data/")
 }
