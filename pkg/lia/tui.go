@@ -93,7 +93,7 @@ func l(m tea.Msg) {
 	if !debug {
 		return
 	}
-	log.Printf("received %v %[1]T", m)
+	log.Printf("received %T %[1]v", m)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -120,16 +120,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case outputMsg:
 		l(msg)
 		m.reportBuf = msg.buf
-		return m, tea.Quit
+		return m, nil
 
 	case doneMsg:
 		l(msg)
-		return m, tea.Sequence(m.progress.SetPercent(1), tea.Quit)
+		return m, nil
 
 	case tickMsg:
-		delta := time.Time(msg).Sub(m.begin).Milliseconds() // time spent already
-		cmd := m.progress.SetPercent(float64(delta) / float64(m.rec.Duration().Milliseconds()))
-		return m, tea.Batch(tickCmd(), cmd)
+		l(msg)
+		if time.Time(msg).After(m.begin.Add(m.rec.Duration())) {
+			return m, tea.Quit
+		}
+		return m, tickCmd()
 
 	case progress.FrameMsg: // FrameMsg is sent when the progress bar wants to animate itself
 		progressModel, cmd := m.progress.Update(msg)
@@ -156,7 +158,8 @@ func (m model) View() string {
 		return pad + "Uploading bundle...\n"
 
 	default:
-		return pad + m.progress.View() + "\nPress Ctrl+C to cancel"
+		delta := float64(time.Since(m.begin)) / float64(m.rec.Duration())
+		return pad + m.progress.ViewAs(float64(delta)) + "\nPress Ctrl+C to cancel"
 	}
 }
 
