@@ -3,6 +3,8 @@ package vm
 import (
 	"encoding/binary"
 	"math"
+	"reflect"
+	"unsafe"
 
 	"github.com/OneOfOne/xxhash"
 	"github.com/open-policy-agent/opa/util"
@@ -18,6 +20,8 @@ const (
 	typeHashArray  = 4
 	typeHashObject = 5
 	typeHashSet    = 6
+
+	maxInt32 int32 = (1<<31 - 1)
 )
 
 func hash(value interface{}) uint64 {
@@ -125,5 +129,7 @@ func hashImpl(value interface{}, hasher *xxhash.XXHash64) {
 
 func hashString(value fjson.String, hasher *xxhash.XXHash64) {
 	hasher.Write([]byte{typeHashString})
-	hasher.Write([]byte(value.Value()))
+
+	ss := (*reflect.StringHeader)(unsafe.Pointer(&value))
+	hasher.Write((*[maxInt32]byte)(unsafe.Pointer(ss.Data))[:len(value):len(value)])
 }
