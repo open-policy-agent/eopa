@@ -7,7 +7,6 @@ import (
 	"unsafe"
 
 	"github.com/OneOfOne/xxhash"
-	"github.com/open-policy-agent/opa/util"
 
 	fjson "github.com/styrainc/load-private/pkg/json"
 )
@@ -30,7 +29,7 @@ func hash(value interface{}) uint64 {
 	return hasher.Sum64()
 }
 
-func intHash(v util.T) int {
+func intHash(v T) int {
 	return int(hash(v))
 }
 
@@ -129,6 +128,10 @@ func hashImpl(value interface{}, hasher *xxhash.XXHash64) {
 
 func hashString(value fjson.String, hasher *xxhash.XXHash64) {
 	hasher.Write([]byte{typeHashString})
+
+	if len(value) == 0 {
+		return
+	}
 
 	ss := (*reflect.StringHeader)(unsafe.Pointer(&value))
 	hasher.Write((*[maxInt32]byte)(unsafe.Pointer(ss.Data))[:len(value):len(value)])

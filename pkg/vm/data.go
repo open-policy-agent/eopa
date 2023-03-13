@@ -12,7 +12,6 @@ import (
 	fjson "github.com/styrainc/load-private/pkg/json"
 
 	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/util"
 )
 
 var (
@@ -711,11 +710,11 @@ func (o *dataOperations) ToInterface(ctx context.Context, v interface{}) (interf
 
 type Set struct {
 	fjson.Json
-	set *util.HashMap
+	set *HashMap
 }
 
 func NewSet() *Set {
-	return &Set{set: util.NewHashMap(equalT, intHash)}
+	return &Set{set: NewHashMap(equalOp, intHash)}
 }
 
 func (s *Set) Add(v fjson.Json) {
@@ -731,8 +730,8 @@ func (s *Set) Get(k fjson.Json) (fjson.Json, bool) {
 }
 
 func (s *Set) Iter(iter func(v fjson.Json) bool) bool {
-	return s.set.Iter(func(v, _ util.T) bool {
-		return iter(v.(fjson.Json))
+	return s.set.Iter(func(v, _ T) bool {
+		return iter(v)
 	})
 }
 
@@ -760,11 +759,11 @@ func (s *Set) Equal(y *Set) bool {
 
 type Object struct {
 	fjson.Json
-	obj *util.HashMap
+	obj *HashMap
 }
 
 func NewObject() *Object {
-	return &Object{obj: util.NewHashMap(equalT, intHash)}
+	return &Object{obj: NewHashMap(equalOp, intHash)}
 }
 
 func (o *Object) Insert(k, v fjson.Json) {
@@ -773,15 +772,15 @@ func (o *Object) Insert(k, v fjson.Json) {
 
 func (o *Object) Get(k fjson.Json) (fjson.Json, bool) {
 	if v, ok := o.obj.Get(k); ok {
-		return v.(fjson.Json), true
+		return v, true
 	}
 
 	return nil, false
 }
 
 func (o *Object) Iter(iter func(k, v fjson.Json) bool) bool {
-	return o.obj.Iter(func(k, v util.T) bool {
-		return iter(k.(fjson.Json), v.(fjson.Json))
+	return o.obj.Iter(func(k, v T) bool {
+		return iter(k, v)
 	})
 }
 
@@ -796,7 +795,7 @@ func (o *Object) Equal(other interface{}) bool {
 		}
 
 		eq := true
-		o.Iter(func(k, va fjson.Json) bool {
+		o.obj.Iter(func(k, va T) bool {
 			s, ok := k.(fjson.String)
 			if !ok {
 				eq = false
@@ -869,10 +868,6 @@ func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
 	}
 
 	return nil, ErrInvalidData
-}
-
-func equalT(a, b util.T) bool {
-	return equalOp(a.(fjson.Json), b.(fjson.Json))
 }
 
 func equalOp(a, b fjson.Json) bool {
