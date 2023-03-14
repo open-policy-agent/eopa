@@ -696,7 +696,7 @@ func loadBundleFromDisk(path, name string, src *opa_bundle.Source) (*bundle.Bund
 		}
 		defer f.Close()
 
-		r := bundle.NewReader(f)
+		r := bundle.NewReader(f).WithLazyLoadingMode(true)
 
 		b, err := r.Read()
 		if err != nil {
@@ -779,7 +779,7 @@ func (fl *fileLoader) oneShot(ctx context.Context) {
 			return
 		}
 		defer f.Close()
-		reader = bundle.NewReader(f)
+		reader = bundle.NewReader(f).WithLazyLoadingMode(true)
 	}
 
 	b, err := reader.
