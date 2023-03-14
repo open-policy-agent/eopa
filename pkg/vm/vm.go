@@ -623,20 +623,19 @@ func (s *State) MemoizeInsert(idx int, value Value) {
 	s.Globals.memoize[len(s.Globals.memoize)-1][idx] = value
 }
 
-func (s *State) Instr() error {
+func (s *State) Instr(i int64) error {
 	instructions := s.stats.EvalInstructions
 
-	if instructions%32 == 0 {
-		if s.Globals.cancel.Cancelled() {
-			return context.Canceled
+	if s.Globals.cancel.Cancelled() {
+		return context.Canceled
 
-		}
-		if instructions > s.Globals.Limits.Instructions {
-			return ErrInstructionsLimitExceeded
-		}
+	}
+	if instructions > s.Globals.Limits.Instructions {
+		// TODO: Consider using context.WithCancelCause.
+		return ErrInstructionsLimitExceeded
 	}
 
-	s.stats.EvalInstructions = instructions + 1
+	s.stats.EvalInstructions = instructions + i
 
 	return nil
 }

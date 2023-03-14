@@ -25,7 +25,9 @@ func (p plan) Execute(state *State) error {
 	blocks := p.Blocks()
 
 	for i, n := 0, blocks.Len(); i < n && err == nil; i++ {
-		_, _, err = blocks.Block(i).Execute(state)
+		if err = state.Instr(1); err == nil {
+			_, _, err = blocks.Block(i).Execute(state)
+		}
 	}
 
 	return err
@@ -66,7 +68,7 @@ func (f function) execute(state *State, args []Value) error {
 		return nil
 	})
 
-	err := state.Instr()
+	var err error
 	blocks := f.Blocks()
 
 	for i, n := 0, blocks.Len(); i < n && err == nil; i++ {
@@ -90,10 +92,6 @@ func (f function) execute(state *State, args []Value) error {
 }
 
 func (builtin builtin) Execute(state *State, args []Value) error {
-	if err := state.Instr(); err != nil {
-		return err
-	}
-
 	// Try to use a builtin implementation operating directly with
 	// the internal data types.
 
@@ -219,17 +217,34 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 func (b block) Execute(state *State) (bool, uint32, error) {
 	var stop bool
 	var index uint32
-	err := state.Instr()
+	var err error
 
 	statements := b.Statements()
+	var instr int64
 
 	for i, n := 0, statements.Len(); !stop && err == nil && i < n; i++ {
+		// Check for context cancellation and instruction
+		// limit breach every 32th statement.
+		if i%32 == 0 {
+			err = state.Instr(instr)
+			instr = 0
+
+			if err != nil {
+				break
+			}
+		}
+
 		// fmt.Printf("executing %d/%d: %T\n", i, len(b.Statements), b.Statements[i])
 		stop, index, err = statements.Statement(i).Execute(state)
+		instr++
 	}
+
+	err2 := state.Instr(instr)
 
 	if err != nil {
 		return false, 0, err
+	} else if err2 != nil {
+		return false, 0, err2
 	}
 
 	if stop {
@@ -319,19 +334,15 @@ func (s statement) Execute(state *State) (bool, uint32, error) {
 }
 
 func (nop) Execute(state *State) (bool, uint32, error) {
-	return false, 0, state.Instr()
+	return false, 0, nil
 }
 
 func (a assignInt) Execute(state *State) (bool, uint32, error) {
 	state.SetValue(a.Target(), state.ValueOps().MakeNumberInt(a.Value()))
-	return false, 0, state.Instr()
+	return false, 0, nil
 }
 
 func (a assignVarOnce) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	target, source := a.Target(), a.Source()
 
 	if defined := state.IsDefined(target); defined {
@@ -354,14 +365,10 @@ func (a assignVarOnce) Execute(state *State) (bool, uint32, error) {
 
 func (a assignVar) Execute(state *State) (bool, uint32, error) {
 	state.Set(a.Target(), a.Source())
-	return false, 0, state.Instr()
+	return false, 0, nil
 }
 
 func (s scan) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	var stop bool
 	var n uint32
 	var err error
@@ -400,7 +407,7 @@ func (s scan) Execute(state *State) (bool, uint32, error) {
 func (b blockStmt) Execute(state *State) (bool, uint32, error) {
 	var stop bool
 	var n uint32
-	err := state.Instr()
+	var err error
 
 	blocks := b.Blocks()
 	for i, m := 0, blocks.Len(); i < m && err == nil && !stop; i++ {
@@ -414,13 +421,13 @@ func (b blockStmt) Execute(state *State) (bool, uint32, error) {
 }
 
 func (b breakStmt) Execute(state *State) (bool, uint32, error) {
-	return true, b.Index(), state.Instr()
+	return true, b.Index(), nil
 }
 
 func (n not) Execute(state *State) (bool, uint32, error) {
 	var stop bool
 	var index uint32
-	err := state.Instr()
+	var err error
 
 	statements := n.Block().Statements()
 
@@ -445,14 +452,10 @@ func (n not) Execute(state *State) (bool, uint32, error) {
 
 func (r returnLocal) Execute(state *State) (bool, uint32, error) {
 	state.SetReturn(r.Source())
-	return false, 0, state.Instr()
+	return false, 0, nil
 }
 
 func (call callDynamic) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	inner := state.New()
 	defer releaseState(state.Globals, &inner)
 
@@ -560,10 +563,6 @@ func externalCall(state *State, path []string, args []Value) (interface{}, bool,
 }
 
 func (call call) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	// Prefer allocating a fixed size slice, to keep it in stack.
 
 	var args []Value
@@ -604,10 +603,6 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 }
 
 func (d dot) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	source, key, target := d.Source(), d.Key(), d.Target()
 
 	if !state.IsDefined(source) || !state.IsDefined(key) {
@@ -643,10 +638,6 @@ func (d dot) Execute(state *State) (bool, uint32, error) {
 }
 
 func (e equal) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	a, b := e.A(), e.B()
 	definedA, definedB := state.IsDefined(a), state.IsDefined(b)
 
@@ -673,10 +664,6 @@ func (ne notEqual) Execute(state *State) (bool, uint32, error) {
 }
 
 func (i isArray) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	source := i.Source()
 	if defined := state.IsDefined(source); !defined {
 		return true, 0, nil
@@ -690,10 +677,6 @@ func (i isArray) Execute(state *State) (bool, uint32, error) {
 }
 
 func (i isObject) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	source := i.Source()
 	if defined := state.IsDefined(source); !defined {
 		return true, 0, nil
@@ -708,48 +691,44 @@ func (i isObject) Execute(state *State) (bool, uint32, error) {
 }
 
 func (i isDefined) Execute(state *State) (bool, uint32, error) {
-	return !state.IsDefined(i.Source()), 0, state.Instr()
+	return !state.IsDefined(i.Source()), 0, nil
 }
 
 func (i isUndefined) Execute(state *State) (bool, uint32, error) {
-	return state.IsDefined(i.Source()), 0, state.Instr()
+	return state.IsDefined(i.Source()), 0, nil
 }
 
 func (m makeNull) Execute(state *State) (bool, uint32, error) {
 	state.SetValue(m.Target(), state.ValueOps().MakeNull())
-	return false, 0, state.Instr()
+	return false, 0, nil
 }
 
 func (m makeNumberInt) Execute(state *State) (bool, uint32, error) {
 	state.SetValue(m.Target(), state.ValueOps().MakeNumberInt(m.Value()))
-	return false, 0, state.Instr()
+	return false, 0, nil
 }
 
 func (m makeNumberRef) Execute(state *State) (bool, uint32, error) {
 	state.SetValue(m.Target(), state.ValueOps().MakeNumberRef(state.Value(StringIndexConst(m.Index()))))
-	return false, 0, state.Instr()
+	return false, 0, nil
 }
 
 func (m makeArray) Execute(state *State) (bool, uint32, error) {
 	state.SetValue(m.Target(), state.ValueOps().MakeArray(m.Capacity()))
-	return false, 0, state.Instr()
+	return false, 0, nil
 }
 
 func (m makeSet) Execute(state *State) (bool, uint32, error) {
 	state.SetValue(m.Target(), state.ValueOps().MakeSet())
-	return false, 0, state.Instr()
+	return false, 0, nil
 }
 
 func (m makeObject) Execute(state *State) (bool, uint32, error) {
 	state.SetValue(m.Target(), state.ValueOps().MakeObject())
-	return false, 0, state.Instr()
+	return false, 0, nil
 }
 
 func (l lenStmt) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	n, err := state.ValueOps().Len(state.Globals.Ctx, state.Value(l.Source()))
 	if err == nil {
 		state.SetValue(l.Target(), n)
@@ -759,10 +738,6 @@ func (l lenStmt) Execute(state *State) (bool, uint32, error) {
 }
 
 func (a arrayAppend) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	array, value := a.Array(), a.Value()
 	arr, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(array), state.Value(value))
 	if err != nil {
@@ -774,19 +749,11 @@ func (a arrayAppend) Execute(state *State) (bool, uint32, error) {
 }
 
 func (s setAdd) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	err := state.ValueOps().SetAdd(state.Globals.Ctx, state.Value(s.Set()), state.Value(s.Value()))
 	return false, 0, err
 }
 
 func (o objectInsertOnce) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	ops := state.ValueOps()
 
 	key, value, object := state.Value(o.Key()), state.Value(o.Value()), state.Value(o.Object())
@@ -806,20 +773,12 @@ func (o objectInsertOnce) Execute(state *State) (bool, uint32, error) {
 }
 
 func (o objectInsert) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	key, value, object := state.Value(o.Key()), state.Value(o.Value()), state.Value(o.Object())
 	err := state.ValueOps().ObjectInsert(state.Globals.Ctx, object, key, value)
 	return false, 0, err
 }
 
 func (o objectMerge) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	ca, cb, target := o.A(), o.B(), o.Target()
 
 	if !state.IsDefined(ca) {
@@ -858,14 +817,10 @@ func (o objectMerge) Execute(state *State) (bool, uint32, error) {
 
 func (r resetLocal) Execute(state *State) (bool, uint32, error) {
 	state.Unset(r.Target())
-	return false, 0, state.Instr()
+	return false, 0, nil
 }
 
 func (r resultSetAdd) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	value := r.Value()
 	if !state.IsDefined(value) {
 		return false, 0, nil
@@ -876,10 +831,6 @@ func (r resultSetAdd) Execute(state *State) (bool, uint32, error) {
 }
 
 func (with with) Execute(state *State) (bool, uint32, error) {
-	if err := state.Instr(); err != nil {
-		return false, 0, err
-	}
-
 	state.MemoizePush()
 	defer state.MemoizePop()
 
