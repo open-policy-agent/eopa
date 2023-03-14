@@ -1,5 +1,9 @@
 ## Changelog
 
+### v0.101.1
+
+ * Fixed a hang triggered by sending the gRPC `BulkRW` endpoint multiple blank messages in sequence.
+
 ### v0.101.0
 
 * Updated the internal OPA version to v0.50.0.
