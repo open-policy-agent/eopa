@@ -40,7 +40,12 @@ func NewHashMap(eq func(T, T) bool, hash func(T) int) *HashMap {
 
 // Copy returns a shallow copy of this HashMap.
 func (h *HashMap) Copy() *HashMap {
-	cpy := NewHashMap(h.eq, h.hash)
+	cpy := &HashMap{
+		eq:    h.eq,
+		hash:  h.hash,
+		table: make(map[int]*hashEntry, len(h.table)),
+		size:  0,
+	}
 	h.Iter(func(k, v T) bool {
 		cpy.Put(k, v)
 		return false
@@ -138,12 +143,19 @@ func (h *HashMap) Put(k T, v T) {
 }
 
 func (h *HashMap) String() string {
-	var buf []string
+	var b gostrings.Builder
+	b.WriteRune('{')
+	i := 0
 	h.Iter(func(k T, v T) bool {
-		buf = append(buf, fmt.Sprintf("%v: %v", k, v))
+		if i > 0 {
+			b.WriteString(", ")
+		}
+
+		b.WriteString(fmt.Sprintf("%v: %v", k, v))
 		return false
 	})
-	return "{" + gostrings.Join(buf, ", ") + "}"
+	b.WriteRune('}')
+	return b.String()
 }
 
 // Update returns a new HashMap with elements from the other HashMap put into this HashMap.

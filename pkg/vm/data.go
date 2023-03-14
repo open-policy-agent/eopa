@@ -710,19 +710,19 @@ func (o *dataOperations) ToInterface(ctx context.Context, v interface{}) (interf
 
 type Set struct {
 	fjson.Json
-	set *HashMap
+	set *HashSet
 }
 
 func NewSet() *Set {
-	return &Set{set: NewHashMap(equalOp, intHash)}
+	return &Set{set: NewHashSet(equalOp, intHash)}
 }
 
 func (s *Set) Add(v fjson.Json) {
-	s.set.Put(v, fjson.NewNull())
+	s.set.Put(v)
 }
 
 func (s *Set) Get(k fjson.Json) (fjson.Json, bool) {
-	if _, ok := s.set.Get(k); ok {
+	if ok := s.set.Get(k); ok {
 		return k, true
 	}
 
@@ -730,9 +730,7 @@ func (s *Set) Get(k fjson.Json) (fjson.Json, bool) {
 }
 
 func (s *Set) Iter(iter func(v fjson.Json) bool) bool {
-	return s.set.Iter(func(v, _ T) bool {
-		return iter(v)
-	})
+	return s.set.Iter(iter)
 }
 
 func (s *Set) Len() int {
