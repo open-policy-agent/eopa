@@ -251,10 +251,10 @@ func (s *Server) BulkRW(ctx context.Context, req *loadv1.BulkRWRequest) (*loadv1
 					return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("unknown type for data write request at index: %d", i))
 				}
 			}
-			if err := s.store.Commit(ctx, txn); err != nil {
-				s.store.Abort(ctx, txn)
-				return nil, err
-			}
+		}
+		if err := s.store.Commit(ctx, txn); err != nil {
+			s.store.Abort(ctx, txn)
+			return nil, err
 		}
 	}
 	// Open read transaction(s).

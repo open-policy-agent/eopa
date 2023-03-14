@@ -330,3 +330,124 @@ func TestBulkRW(t *testing.T) {
 		}
 	}
 }
+
+// Sequential request / response tests.
+// Note(philip): These tests have been introduced because of a bug found in
+// the v0.100.8 release by Miro, where a write transaction was opened, but
+// potentially never closed, causing Load to hang indefinitely.
+func TestBulkRWSeq(t *testing.T) {
+	type BulkRWSeqStep struct {
+		request     *loadv1.BulkRWRequest
+		expResponse *loadv1.BulkRWResponse
+		expErr      error
+	}
+	tests := []struct {
+		note        string
+		storeData   string
+		storePolicy map[string]string
+		steps       []BulkRWSeqStep
+	}{
+		{
+			// Inspired by a bug Miro found in the v0.100.8 release.
+			note: "Multiple empty requests",
+			steps: []BulkRWSeqStep{
+				{
+					request:     &loadv1.BulkRWRequest{},
+					expResponse: &loadv1.BulkRWResponse{},
+				},
+				{
+					request:     &loadv1.BulkRWRequest{},
+					expResponse: &loadv1.BulkRWResponse{},
+				},
+				{
+					request:     &loadv1.BulkRWRequest{},
+					expResponse: &loadv1.BulkRWResponse{},
+				},
+			},
+		},
+		{
+			note: "Multiple data writes",
+			steps: []BulkRWSeqStep{
+				{
+					request: &loadv1.BulkRWRequest{
+						WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
+							{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Path: "/a", Data: "27"}}},
+						},
+					},
+					expResponse: &loadv1.BulkRWResponse{
+						WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
+							{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
+						},
+					},
+				},
+				{
+					request: &loadv1.BulkRWRequest{
+						WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
+							{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Path: "/a", Data: "28"}}},
+						},
+					},
+					expResponse: &loadv1.BulkRWResponse{
+						WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
+							{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
+						},
+					},
+				},
+				{
+					request: &loadv1.BulkRWRequest{
+						WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
+							{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Path: "/a", Data: "29"}}},
+						},
+					},
+					expResponse: &loadv1.BulkRWResponse{
+						WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
+							{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		// We do the full setup/teardown for every test, or else we'd get
+		// collisions between testcases due to statefulness.
+		{
+			storeData := "{}"
+			if tc.storeData != "" {
+				storeData = tc.storeData
+			}
+			var storePolicyMap map[string]string
+			if tc.storePolicy != nil {
+				storePolicyMap = tc.storePolicy
+			}
+			listener := setupTest(t, storeData, storePolicyMap)
+			ctx := context.Background()
+			conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				t.Fatalf("Failed to dial bufnet: %v", err)
+			}
+			defer conn.Close()
+			client := loadv1.NewBulkServiceClient(conn)
+
+			// Run each test's steps in sequence on the live service instance.
+			for _, step := range tc.steps {
+				resp, err := client.BulkRW(ctx, step.request)
+				if err != nil {
+					// No error expected? Fail test.
+					if step.expErr == nil {
+						t.Fatalf("[%s] Unexpected error: %v", tc.note, err)
+					}
+					// Error expected? Was it the right one?
+					if !strings.Contains(err.Error(), step.expErr.Error()) {
+						t.Fatalf("[%s] Expected error: %v, got: %v", tc.note, step.expErr, err)
+					}
+				}
+				// Check value equality of expected vs actual response.
+				if !cmp.Equal(step.expResponse, resp, protocmp.Transform()) {
+					fmt.Println("Diff:\n", cmp.Diff(step.expResponse, resp, protocmp.Transform()))
+					t.Fatalf("[%s] Expected:\n%v\n\nGot:\n%v", tc.note, step.expResponse, resp)
+				}
+			}
+		}
+	}
+}
