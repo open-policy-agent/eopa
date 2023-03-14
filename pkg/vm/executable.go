@@ -265,31 +265,27 @@ func (f functions) Function(i int) function {
 }
 
 func (function) Write(name string, index int, params []Local, ret Local, blocks []byte, path []string) []byte {
-	l := 4 + 4 + appendOffsetSize(6) + appendStringSize(name) + 4 + appendLocalArraySize(params) + 4 + appendStringArraySize(path) + len(blocks)
+	l := 4 + 4 + appendOffsetSize(4) + appendStringSize(name) + 4 + appendLocalArraySize(params) + 4 + appendStringArraySize(path) + len(blocks)
 	d := make([]byte, 0, l)
 
-	offset := uint32(8)
+	offset := uint32(16)
 	lengthOffset := uint32(0)
 	d = appendUint32(d, 0) // Length
 	d = appendUint32(d, typeFunction)
-	d = appendOffsetIndex(d, 6)
+	d = appendInt32(d, int32(index))
+	d = appendLocal(d, ret)
+	d = appendOffsetIndex(d, 4)
 
 	putOffsetIndex(d, offset, 0, uint32(len(d)))
-	d = appendString(d, name)
-
-	putOffsetIndex(d, offset, 1, uint32(len(d)))
-	d = appendInt32(d, int32(index))
-
-	putOffsetIndex(d, offset, 2, uint32(len(d)))
 	d = appendLocalArray(d, params)
 
-	putOffsetIndex(d, offset, 3, uint32(len(d)))
-	d = appendLocal(d, ret)
+	putOffsetIndex(d, offset, 1, uint32(len(d)))
+	d = appendString(d, name)
 
-	putOffsetIndex(d, offset, 4, uint32(len(d)))
+	putOffsetIndex(d, offset, 2, uint32(len(d)))
 	d = appendStringArray(d, path)
 
-	putOffsetIndex(d, offset, 5, uint32(len(d)))
+	putOffsetIndex(d, offset, 3, uint32(len(d)))
 	d = append(d, blocks...)
 
 	if l != len(d) {
@@ -307,28 +303,25 @@ func (f function) IsBuiltin() bool {
 
 //go:inline
 func (f function) Name() string {
-	offset := getOffsetIndex(f, 8, 0)
+	offset := getOffsetIndex(f, 16, 1)
 	return getString(f, offset)
 }
 
 func (f function) Index() int {
-	offset := getOffsetIndex(f, 8, 1)
-	return int(getInt32(f, offset))
+	return int(getInt32(f, 8))
 }
 
 func (f function) Params() []Local {
-	offset := getOffsetIndex(f, 8, 2)
-	return getLocalArray(f, offset)
+	return getLocalArray(f, uint32(16+appendOffsetSize(4)))
 }
 
 //go:inline
 func (f function) ParamsLen() uint32 {
-	offset := getOffsetIndex(f, 8, 2)
-	return getUint32(f, offset)
+	return getUint32(f, uint32(16+appendOffsetSize(4)))
 }
 
 func (f function) ParamsIter(fcn func(i uint32, arg Local) error) error {
-	offset := getOffsetIndex(f, 8, 2)
+	offset := uint32(16 + appendOffsetSize(4))
 	n := getUint32(f, offset)
 
 	for i := uint32(0); i < n; i++ {
@@ -341,23 +334,22 @@ func (f function) ParamsIter(fcn func(i uint32, arg Local) error) error {
 
 //go:inline
 func (f function) Return() Local {
-	offset := getOffsetIndex(f, 8, 3)
-	return getLocal(f, offset)
+	return getLocal(f, 12)
 }
 
 func (f function) Path() []string {
-	offset := getOffsetIndex(f, 8, 4)
+	offset := getOffsetIndex(f, 16, 2)
 	return getStringArray(f, offset)
 }
 
 //go:inline
 func (f function) PathLen() uint32 {
-	offset := getOffsetIndex(f, 8, 4)
+	offset := getOffsetIndex(f, 16, 2)
 	return getUint32(f, offset)
 }
 
 func (f function) PathIter(fcn func(i uint32, arg string) error) error {
-	offset := getOffsetIndex(f, 8, 4)
+	offset := getOffsetIndex(f, 16, 2)
 	data := f[offset:]
 
 	n := getUint32(data, 0)
@@ -372,7 +364,7 @@ func (f function) PathIter(fcn func(i uint32, arg string) error) error {
 
 //go:inline
 func (f function) Blocks() blocks {
-	offset := getOffsetIndex(f, 8, 5)
+	offset := getOffsetIndex(f, 16, 3)
 	return blocks(f[offset:])
 }
 
@@ -592,7 +584,7 @@ func (a assignInt) Target() Local {
 }
 
 func (assignVar) Write(source LocalOrConst, target Local) []byte {
-	l := 4 + 4 + 4 + 5
+	l := 4 + 4 + 4 + 4
 	d := make([]byte, 0, l)
 	d = appendUint32(d, 0) // Length placeholder.
 	d = appendUint32(d, typeStatementAssignVar)
@@ -625,7 +617,7 @@ func (a assignVar) Target() Local {
 }
 
 func (assignVarOnce) Write(source LocalOrConst, target Local) []byte {
-	l := 4 + 4 + 4 + 5
+	l := 4 + 4 + 4 + 4
 	d := make([]byte, 0, l)
 	d = appendUint32(d, 0) // Length placeholder.
 	d = appendUint32(d, typeStatementAssignVarOnce)
@@ -784,7 +776,7 @@ func (c callDynamic) PathIter(fcn func(i uint32, arg LocalOrConst) error) error 
 	n := getUint32(c, offset)
 
 	for i := uint32(0); i < n; i++ {
-		if err := fcn(i, getLocalOrConst(c, offset+4+i*5)); err != nil {
+		if err := fcn(i, getLocalOrConst(c, offset+4+i*4)); err != nil {
 			return err
 		}
 	}
@@ -798,8 +790,8 @@ func (call) Write(index int, args []LocalOrConst, result Local) []byte {
 	d = appendUint32(d, 0) // Length placeholder.
 	d = appendUint32(d, typeStatementCall)
 	d = appendLocal(d, result)
-	d = appendLocalOrConstArray(d, args)
 	d = appendUint32(d, uint32(index))
+	d = appendLocalOrConstArray(d, args)
 
 	if l != len(d) {
 		panic(fmt.Sprintf("call %d %d", l, len(d)))
@@ -819,25 +811,24 @@ func (c call) Type() uint32 {
 
 //go:inline
 func (c call) Func() int {
-	n := getLocalOrConstArraySize(c, 12)
-	return int(getUint32(c, 12+uint32(n)))
+	return int(getUint32(c, 12))
 }
 
 func (c call) Args() []LocalOrConst {
-	return getLocalOrConstArray(c, 12)
+	return getLocalOrConstArray(c, 16)
 }
 
 //go:inline
 func (c call) ArgsLen() uint32 {
-	return getUint32(c, 12)
+	return getUint32(c, 16)
 }
 
 func (c call) ArgsIter(fcn func(i uint32, arg LocalOrConst) error) error {
-	offset := uint32(12)
+	offset := uint32(16)
 	n := getUint32(c, offset)
 
 	for i := uint32(0); i < n; i++ {
-		if err := fcn(i, getLocalOrConst(c, offset+4+i*5)); err != nil {
+		if err := fcn(i, getLocalOrConst(c, offset+4+i*4)); err != nil {
 			return err
 		}
 	}
@@ -850,7 +841,7 @@ func (c call) Result() Local {
 }
 
 func (dot) Write(source LocalOrConst, key LocalOrConst, target Local) []byte {
-	l := 4 + 4 + 4 + 5 + 5
+	l := 4 + 4 + 4 + 4 + 4
 	d := make([]byte, 0, l)
 
 	d = appendUint32(d, 0) // Length placeholder.
@@ -882,7 +873,7 @@ func (d dot) Source() LocalOrConst {
 
 //go:inline
 func (d dot) Key() LocalOrConst {
-	return getLocalOrConst(d, 12+5)
+	return getLocalOrConst(d, 12+4)
 }
 
 //go:inline
@@ -891,7 +882,7 @@ func (d dot) Target() Local {
 }
 
 func (equal) Write(aa LocalOrConst, bb LocalOrConst) []byte {
-	l := 4 + 4 + 5 + 5
+	l := 4 + 4 + 4 + 4
 	d := make([]byte, 0, l)
 
 	d = appendUint32(d, 0) // Length placeholder.
@@ -922,11 +913,11 @@ func (e equal) A() LocalOrConst {
 
 //go:inline
 func (e equal) B() LocalOrConst {
-	return getLocalOrConst(e, 8+5)
+	return getLocalOrConst(e, 8+4)
 }
 
 func (isArray) Write(source LocalOrConst) []byte {
-	l := 4 + 4 + 5
+	l := 4 + 4 + 4
 	d := make([]byte, 0, l)
 
 	d = appendUint32(d, 0) // Length placeholder.
@@ -955,7 +946,7 @@ func (i isArray) Source() LocalOrConst {
 }
 
 func (isObject) Write(source LocalOrConst) []byte {
-	l := 4 + 4 + 5
+	l := 4 + 4 + 4
 	d := make([]byte, 0, l)
 
 	d = appendUint32(d, 0) // Length placeholder.
@@ -1230,7 +1221,7 @@ func (m makeSet) Target() Local {
 }
 
 func (notEqual) Write(aa LocalOrConst, bb LocalOrConst) []byte {
-	l := 4 + 4 + 5 + 5
+	l := 4 + 4 + 4 + 4
 	d := make([]byte, 0, l)
 	d = appendUint32(d, 0) // Length placeholder.
 	d = appendUint32(d, typeStatementNotEqual)
@@ -1260,11 +1251,11 @@ func (n notEqual) A() LocalOrConst {
 
 //go:inline
 func (n notEqual) B() LocalOrConst {
-	return getLocalOrConst(n, 8+5)
+	return getLocalOrConst(n, 8+4)
 }
 
 func (lenStmt) Write(source LocalOrConst, target Local) []byte {
-	l := 4 + 4 + 4 + 5
+	l := 4 + 4 + 4 + 4
 	d := make([]byte, 0, l)
 	d = appendUint32(d, 0) // Length placeholder.
 	d = appendUint32(d, typeStatementLen)
@@ -1298,7 +1289,7 @@ func (l lenStmt) Target() Local {
 }
 
 func (arrayAppend) Write(value LocalOrConst, array Local) []byte {
-	l := 4 + 4 + 4 + 5
+	l := 4 + 4 + 4 + 4
 	d := make([]byte, 0, l)
 
 	d = appendUint32(d, 0) // Length placeholder.
@@ -1333,7 +1324,7 @@ func (a arrayAppend) Array() Local {
 }
 
 func (setAdd) Write(value LocalOrConst, set Local) []byte {
-	l := 4 + 4 + 4 + 5
+	l := 4 + 4 + 4 + 4
 	d := make([]byte, 0, l)
 	d = appendUint32(d, 0) // Length placeholder.
 	d = appendUint32(d, typeStatementSetAdd)
@@ -1367,7 +1358,7 @@ func (s setAdd) Set() Local {
 }
 
 func (objectInsertOnce) Write(key, value LocalOrConst, obj Local) []byte {
-	l := 4 + 4 + 4 + 5 + 5
+	l := 4 + 4 + 4 + 4 + 4
 	d := make([]byte, 0, l)
 	d = appendUint32(d, 0) // Length placeholder.
 	d = appendUint32(d, typeStatementObjectInsertOnce)
@@ -1398,7 +1389,7 @@ func (o objectInsertOnce) Key() LocalOrConst {
 
 //go:inline
 func (o objectInsertOnce) Value() LocalOrConst {
-	return getLocalOrConst(o, 17)
+	return getLocalOrConst(o, 16)
 }
 
 //go:inline
@@ -1407,7 +1398,7 @@ func (o objectInsertOnce) Object() Local {
 }
 
 func (objectInsert) Write(key, value LocalOrConst, obj Local) []byte {
-	l := 4 + 4 + 4 + 5 + 5
+	l := 4 + 4 + 4 + 4 + 4
 	d := make([]byte, 0, l)
 	d = appendUint32(d, 0) // Length placeholder.
 	d = appendUint32(d, typeStatementObjectInsert)
@@ -1438,7 +1429,7 @@ func (o objectInsert) Key() LocalOrConst {
 
 //go:inline
 func (o objectInsert) Value() LocalOrConst {
-	return getLocalOrConst(o, 17)
+	return getLocalOrConst(o, 16)
 }
 
 //go:inline
@@ -1666,13 +1657,13 @@ func (s scan) Block() block {
 }
 
 func (with) Write(local Local, path []int, value LocalOrConst, block []byte) []byte {
-	l := 4 + 4 + 4 + appendIntArraySize(path) + 5 + len(block)
+	l := 4 + 4 + 4 + 4 + appendIntArraySize(path) + len(block)
 	d := make([]byte, 0, l)
 	d = appendUint32(d, 0) // Length placeholder.
 	d = appendUint32(d, typeStatementWith)
 	d = appendLocal(d, local)
-	d = appendIntArray(d, path)
 	d = appendLocalOrConst(d, value)
+	d = appendIntArray(d, path)
 	d = append(d, block...)
 
 	if l != len(d) {
@@ -1696,7 +1687,7 @@ func (w with) Local() Local {
 }
 
 func (w with) Path() []int {
-	offset := uint32(12)
+	offset := uint32(16)
 	n := getUint32(w, offset)
 
 	a := make([]int, 0, n)
@@ -1708,12 +1699,12 @@ func (w with) Path() []int {
 }
 
 func (w with) PathLen() uint32 {
-	offset := uint32(12)
+	offset := uint32(16)
 	return getUint32(w, offset)
 }
 
 func (w with) PathIter(fcn func(i uint32, arg int) error) error {
-	offset := uint32(12)
+	offset := uint32(16)
 	n := getUint32(w, offset)
 
 	for i := uint32(0); i < n; i++ {
@@ -1725,13 +1716,12 @@ func (w with) PathIter(fcn func(i uint32, arg int) error) error {
 }
 
 func (w with) Value() LocalOrConst {
-	n := getInt32ArraySize(w, 12)
-	return getLocalOrConst(w, 12+uint32(n))
+	return getLocalOrConst(w, 12)
 }
 
 func (w with) Block() block {
-	n := getInt32ArraySize(w, 12)
-	return block(w[12+int(n)+5:])
+	n := getInt32ArraySize(w, 16)
+	return block(w[12+int(n)+4:])
 }
 
 // Primitive types
@@ -1941,41 +1931,47 @@ const (
 )
 
 func appendLocalOrConst(d []byte, lc LocalOrConst) []byte {
+	var t, w uint32
+
 	switch v := lc.(type) {
 	case Local:
-		d = append(d, localType)
-		return appendUint32(d, uint32(v))
+		t = localType
+		w = uint32(v)
 
 	case BoolConst:
-		var t uint32
+		t = boolConstType
 		if v {
-			t = 1
+			w = 1
 		}
-		d = append(d, boolConstType)
-		return appendUint32(d, uint32(t))
 
 	case StringIndexConst:
-		d = append(d, stringIndexConstType)
-		return appendUint32(d, uint32(v))
+		t = stringIndexConstType
+		w = uint32(v)
 
 	default:
 		panic("unsupported local or const")
 	}
+
+	return appendUint32(d, t<<24|w)
 }
 
 func getLocalOrConst(data []byte, offset uint32) LocalOrConst {
-	switch data[offset] {
+	v := getUint32(data, offset)
+	t := v >> 24
+	v = v & 0xffffff
+
+	switch t {
 	case localType:
-		return Local(getUint32(data[offset:], 1))
+		return Local(v)
 
 	case boolConstType:
-		if v := getUint32(data[offset:], 1); v == 0 {
+		if v == 0 {
 			return BoolConst(false)
 		}
 		return BoolConst(true)
 
 	case stringIndexConstType:
-		return StringIndexConst(getUint32(data[offset:], 1))
+		return StringIndexConst(v)
 
 	default:
 		panic("unsupported local or const")
@@ -1987,7 +1983,7 @@ func getLocalOrConstArray(data []byte, offset uint32) []LocalOrConst {
 
 	l := make([]LocalOrConst, 0, n)
 	for i := uint32(0); i < n; i++ {
-		l = append(l, getLocalOrConst(data, offset+4+i*5))
+		l = append(l, getLocalOrConst(data, offset+4+i*4))
 	}
 
 	return l
@@ -2001,11 +1997,11 @@ func getLocalOrConstArrayLen(data []byte, offset uint32) int {
 
 //go:inline
 func getLocalOrConstArraySize(data []byte, offset uint32) int {
-	return 4 + 5*getLocalOrConstArrayLen(data, offset)
+	return 4 + 4*getLocalOrConstArrayLen(data, offset)
 }
 
 func appendLocalOrConstArraySize(l []LocalOrConst) int {
-	return 4 + 5*len(l)
+	return 4 + 4*len(l)
 }
 
 func appendLocalOrConstArray(d []byte, l []LocalOrConst) []byte {
