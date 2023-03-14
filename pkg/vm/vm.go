@@ -68,7 +68,7 @@ type (
 		Limits                 Limits
 		memoize                []map[int]Value
 		Ctx                    context.Context
-		ResultSet              Value
+		ResultSet              *Set
 		Input                  *interface{}
 		Metrics                metrics.Metrics
 		Time                   time.Time
@@ -340,8 +340,6 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 			if opts.StrictBuiltinErrors && len(globals.BuiltinErrors) > 0 {
 				return nil, false, false, globals.BuiltinErrors[0]
 			}
-
-			result = vm.ops.FromInterface(result)
 
 			var m interface{}
 			if err := vm.ops.Iter(ctx, result, func(_, v interface{}) bool {

@@ -343,43 +343,43 @@ func (*dataOperations) IsObject(ctx context.Context, v interface{}) (bool, error
 	}
 }
 
-func (*dataOperations) MakeArray(capacity int32) interface{} {
+func (*dataOperations) MakeArray(capacity int32) fjson.Array {
 	return fjson.NewArray()
 }
 
-func (*dataOperations) MakeBoolean(v bool) interface{} {
+func (*dataOperations) MakeBoolean(v bool) fjson.Bool {
 	return fjson.NewBool(v)
 }
 
-func (*dataOperations) MakeObject() interface{} {
+func (*dataOperations) MakeObject() *Object {
 	return NewObject()
 }
 
-func (*dataOperations) MakeNull() interface{} {
+func (*dataOperations) MakeNull() fjson.Null {
 	return fjson.NewNull()
 }
 
-func (*dataOperations) MakeNumberFloat(f float64) interface{} {
+func (*dataOperations) MakeNumberFloat(f float64) fjson.Float {
 	return fjson.NewFloat(gojson.Number(strconv.FormatFloat(f, 'g', -1, 64)))
 }
 
-func (*dataOperations) MakeNumberInt(i int64) interface{} {
+func (*dataOperations) MakeNumberInt(i int64) fjson.Float {
 	return fjson.NewFloat(gojson.Number(strconv.FormatInt(i, 10)))
 }
 
-func (*dataOperations) MakeNumberRef(n interface{}) interface{} {
+func (*dataOperations) MakeNumberRef(n interface{}) fjson.Float {
 	return fjson.NewFloat(gojson.Number(n.(fjson.String).Value()))
 }
 
-func (*dataOperations) MakeSet() interface{} {
+func (*dataOperations) MakeSet() *Set {
 	return NewSet()
 }
 
-func (*dataOperations) MakeString(v string) interface{} {
+func (*dataOperations) MakeString(v string) fjson.String {
 	return fjson.NewString(v)
 }
 
-func (o *dataOperations) Len(ctx context.Context, v interface{}) (interface{}, error) {
+func (o *dataOperations) Len(ctx context.Context, v interface{}) (fjson.Float, error) {
 	switch v := v.(type) {
 	case fjson.Array:
 		return o.MakeNumberInt(int64(v.Len())), nil
@@ -394,13 +394,13 @@ func (o *dataOperations) Len(ctx context.Context, v interface{}) (interface{}, e
 	case IterNamespace:
 		obj, err := castJSON(ctx, v)
 		if err != nil {
-			return nil, err
+			return o.MakeNumberInt(0), err
 		}
 
 		return o.MakeNumberInt(int64(obj.(fjson.Object).Len())), nil
 	default:
 		if _, err := castJSON(ctx, v); err != nil {
-			return nil, err
+			return o.MakeNumberInt(0), err
 		}
 
 		return o.MakeNumberInt(0), nil
