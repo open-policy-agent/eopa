@@ -56,14 +56,12 @@ func loadBundle(tb testing.TB, buffer []byte) *bundle.Bundle {
 }
 
 func testCompiler(tb testing.TB, policy ir.Policy, input string, query string, result string) {
-	ctx := context.Background()
-
 	executable, err := vm.NewCompiler().WithPolicy(&policy).Compile()
 	if err != nil {
 		tb.Fatal(err)
 	}
 
-	_, ctx = vm.WithStatistics(ctx)
+	s, ctx := vm.WithStatistics(context.Background())
 
 	var inp interface{} = ast.MustParseTerm(input)
 
@@ -74,6 +72,9 @@ func testCompiler(tb testing.TB, policy ir.Policy, input string, query string, r
 	})
 	if err != nil {
 		tb.Fatal(err)
+	}
+	if b, ok := tb.(*testing.B); ok {
+		b.ReportMetric(float64(s.EvalInstructions), "instr/op")
 	}
 	if result == "" {
 		return
