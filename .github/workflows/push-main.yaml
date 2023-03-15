@@ -29,8 +29,9 @@ jobs:
       - name: (Dependabot Only) Override GH Token Env Var
         if: ${{ github.actor == 'dependabot[bot]' }}
         id: override_gh_api_token
-        run:
+        run: |
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+          echo "GITHUB_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_TOKEN
       - uses: open-policy-agent/setup-opa@v2
 
       - name: Check out code
