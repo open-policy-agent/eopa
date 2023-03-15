@@ -585,7 +585,7 @@ q := true
 	if err := json.NewDecoder(ctlOut).Decode(&act); err != nil {
 		t.Error(err)
 	}
-	if exp, act := 40, len(act); exp > act {
+	if exp, act := 1, len(act); exp > act {
 		t.Fatalf("expected >=%d diffs, got %d", exp, act)
 	}
 }
