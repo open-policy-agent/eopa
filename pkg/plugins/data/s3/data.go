@@ -20,6 +20,7 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 
 	"github.com/styrainc/load-private/pkg/plugins/data/utils"
+	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
 const (
@@ -74,7 +75,6 @@ func (c *Data) Start(ctx context.Context) error {
 	}); err != nil {
 		return err
 	}
-
 	c.doneExit = make(chan struct{})
 	go c.loop(ctx)
 	return nil
@@ -98,6 +98,15 @@ func (c *Data) Reconfigure(ctx context.Context, next any) {
 	}
 	c.Config = next.(Config)
 	c.Start(ctx)
+}
+
+// dataPlugin accessors
+func (c *Data) Name() string {
+	return Name
+}
+
+func (c *Data) Path() storage.Path {
+	return c.Config.path
 }
 
 func (c *Data) loop(ctx context.Context) {
@@ -139,7 +148,7 @@ func (c *Data) poll(ctx context.Context) error {
 		return nil
 	}
 
-	if err := storage.WriteOne(ctx, c.manager.Store, storage.ReplaceOp, c.Config.path, results); err != nil {
+	if err := inmem.WriteUnchecked(ctx, c.manager.Store, storage.ReplaceOp, c.Config.path, results); err != nil {
 		return fmt.Errorf("writing data to %+v failed: %w", c.Config.path, err)
 	}
 

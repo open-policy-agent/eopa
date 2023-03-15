@@ -321,6 +321,34 @@ plugins:
 	}
 }
 
+func TestS3Owned(t *testing.T) {
+	config := `
+plugins:
+  data:         
+    s3.placeholder:
+      type: s3 
+      url: s3://test-aws-s3-plugin/ds-test.json
+      access_id: foo
+      secret: bar
+`
+	defer goleak.VerifyNone(t)
+
+	ctx := context.Background()
+	store := inmem.New()
+	mgr := pluginMgr(t, store, config)
+
+	if err := mgr.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer mgr.Stop(ctx)
+
+	// test owned path
+	err := storage.WriteOne(ctx, mgr.Store, storage.AddOp, storage.MustParsePath("/s3/placeholder"), map[string]any{"foo": "bar"})
+	if err == nil || err.Error() != `path "/s3/placeholder" is owned by plugin "s3"` {
+		t.Errorf("owned check failed, got %v", err)
+	}
+}
+
 func pluginMgr(t *testing.T, store storage.Store, config string) *plugins.Manager {
 	t.Helper()
 	h := topdown.NewPrintHook(os.Stderr)

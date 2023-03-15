@@ -17,6 +17,8 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
+
+	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
 const Name = "kafka"
@@ -97,6 +99,15 @@ func (c *Data) Reconfigure(ctx context.Context, next any) {
 	}
 	c.Config = next.(Config)
 	c.Start(ctx)
+}
+
+// dataPlugin accessors
+func (c *Data) Name() string {
+	return Name
+}
+
+func (c *Data) Path() storage.Path {
+	return c.Config.path
 }
 
 func (c *Data) loop(ctx context.Context) {
@@ -181,7 +192,7 @@ func (c *Data) transformAndSave(ctx context.Context, n int, iter *kgo.FetchesRec
 		}
 		for i := range results {
 			op, path, value := results[i].op, results[i].path, results[i].value
-			if err := c.manager.Store.Write(ctx, txn, op, path, value); err != nil {
+			if err := c.manager.Store.(inmem.WriterUnchecked).WriteUnchecked(ctx, txn, op, path, value); err != nil {
 				return err
 			}
 		}

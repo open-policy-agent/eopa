@@ -252,6 +252,48 @@ plugins:
 	}
 }
 
+func TestHTTPOwned(t *testing.T) {
+	config := `
+plugins:
+  data:
+    http.placeholder:
+      type: http
+      url: %[1]s
+`
+	handler := func(tb testing.TB) http.HandlerFunc {
+		return func(writer http.ResponseWriter, request *http.Request) {
+			writer.Write([]byte(`
+{
+  "userId": 1,
+  "id": 1,
+  "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+}`,
+			))
+		}
+	}
+
+	defer goleak.VerifyNone(t)
+
+	srv := httptest.NewServer(handler(t))
+	defer srv.Close()
+	ctx := context.Background()
+	cfg := fmt.Sprintf(config, srv.URL)
+
+	store := inmem.New()
+	mgr := pluginMgr(t, store, cfg)
+
+	if err := mgr.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer mgr.Stop(ctx)
+
+	// test owned path
+	err := storage.WriteOne(ctx, mgr.Store, storage.AddOp, storage.MustParsePath("/http/placeholder"), map[string]any{"foo": "bar"})
+	if err == nil || err.Error() != `path "/http/placeholder" is owned by plugin "http"` {
+		t.Errorf("owned check failed, got %v", err)
+	}
+}
+
 func pluginMgr(t *testing.T, store storage.Store, config string) *plugins.Manager {
 	t.Helper()
 	h := topdown.NewPrintHook(os.Stderr)

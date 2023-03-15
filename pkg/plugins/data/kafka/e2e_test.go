@@ -126,6 +126,47 @@ transform contains {"op": "add", "path": key, "value": val} if {
 	}
 }
 
+func TestKafkaOwned(t *testing.T) {
+	ctx := context.Background()
+	topic := "cipot"
+	config := fmt.Sprintf(`
+plugins:
+  data:
+    kafka.messages:
+      type: kafka
+      urls: [localhost:19092]
+      topics: [%[1]s]
+      rego_transform: "data.e2e.transform"
+`, topic)
+
+	transform := `package e2e
+import future.keywords
+transform contains {"op": "add", "path": key, "value": val} if {
+	print(input)
+	payload := json.unmarshal(base64.decode(input.value))
+	key := base64.decode(input.key)
+	val := {
+		"value": payload,
+		"headers": input.headers,
+	}
+}
+`
+	store := storeWithPolicy(ctx, t, transform)
+	mgr := pluginMgr(ctx, t, store, config)
+
+	testKafka(t)
+
+	if err := mgr.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	// test owned path
+	err := storage.WriteOne(ctx, mgr.Store, storage.AddOp, storage.MustParsePath("/kafka/messages"), map[string]any{"foo": "bar"})
+	if err == nil || err.Error() != `path "/kafka/messages" is owned by plugin "kafka"` {
+		t.Errorf("owned check failed, got %v", err)
+	}
+}
+
 func TestKafkaTransforms(t *testing.T) {
 	ctx := context.Background()
 	kafka := testKafka(t)

@@ -38,12 +38,20 @@ type Data struct {
 	plugins map[string]plugins.Plugin
 }
 
+type dataPlugin interface {
+	plugins.Plugin
+	Name() string
+	Path() storage.Path
+}
+
 // Start starts the data plugins that have been configured.
 func (c *Data) Start(ctx context.Context) error {
 	for i := range c.plugins {
 		if err := c.plugins[i].Start(ctx); err != nil {
 			return err
 		}
+		dp := c.plugins[i].(dataPlugin)
+		c.manager.Store.(inmem.DataPlugins).RegisterDataPlugin(dp.Name(), dp.Path())
 	}
 	c.manager.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateOK})
 	return nil
@@ -53,6 +61,9 @@ func (c *Data) Start(ctx context.Context) error {
 func (c *Data) Stop(ctx context.Context) {
 	for i := range c.plugins {
 		c.plugins[i].Stop(ctx)
+
+		dp := c.plugins[i].(dataPlugin)
+		c.manager.Store.(inmem.DataPlugins).RegisterDataPlugin(dp.Name(), nil)
 	}
 	c.manager.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateNotReady})
 }
@@ -75,7 +86,7 @@ func (c *Data) Reconfigure(ctx context.Context, cfg interface{}) {
 				continue // keep this data
 			}
 			path := strings.Split(ref, ".")
-			if err := c.manager.Store.Write(ctx, txn, storage.RemoveOp, path, nil); err != nil {
+			if err := c.manager.Store.(inmem.WriterUnchecked).WriteUnchecked(ctx, txn, storage.RemoveOp, path, nil); err != nil {
 				return err
 			}
 
@@ -106,11 +117,15 @@ func (c *Data) Reconfigure(ctx context.Context, cfg interface{}) {
 						break
 					}
 				}
-				if err := c.manager.Store.Write(ctx, txn, storage.RemoveOp, path[:i], nil); err != nil {
+				if err := c.manager.Store.(inmem.WriterUnchecked).WriteUnchecked(ctx, txn, storage.RemoveOp, path[:i], nil); err != nil {
 					return err
 				}
 			}
 			c.plugins[ref].Stop(ctx)
+
+			dp := c.plugins[ref].(dataPlugin)
+			c.manager.Store.(inmem.DataPlugins).RegisterDataPlugin(dp.Name(), nil)
+
 			delete(c.plugins, ref)
 		}
 		return nil
@@ -119,6 +134,9 @@ func (c *Data) Reconfigure(ctx context.Context, cfg interface{}) {
 	}
 	for path := range c.plugins {
 		c.plugins[path].Reconfigure(ctx, nextCfg[path].Config)
+
+		dp := c.plugins[path].(dataPlugin)
+		c.manager.Store.(inmem.DataPlugins).RegisterDataPlugin(dp.Name(), dp.Path())
 	}
 }
 

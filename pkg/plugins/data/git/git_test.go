@@ -220,6 +220,37 @@ plugins:
 	}
 }
 
+func TestGitOwned(t *testing.T) {
+	config := `
+plugins:
+  data:
+    git.placeholder:
+      type: git
+      url: %s
+      polling_interval: 10s
+      file_path: data.json
+`
+	defer goleak.VerifyNone(t)
+
+	dir := t.TempDir()
+	cfg := fmt.Sprintf(config, dir)
+
+	ctx := context.Background()
+	store := inmem.New()
+	mgr := pluginMgr(t, store, cfg)
+
+	if err := mgr.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer mgr.Stop(ctx)
+
+	// test owned path
+	err := storage.WriteOne(ctx, mgr.Store, storage.AddOp, storage.MustParsePath("/git/placeholder"), map[string]any{"foo": "bar"})
+	if err == nil || err.Error() != `path "/git/placeholder" is owned by plugin "git"` {
+		t.Errorf("owned check failed, got %v", err)
+	}
+}
+
 func pluginMgr(t *testing.T, store storage.Store, config string) *plugins.Manager {
 	t.Helper()
 	h := topdown.NewPrintHook(os.Stderr)

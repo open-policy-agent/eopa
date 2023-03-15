@@ -15,6 +15,7 @@ import (
 
 	"github.com/styrainc/load-private/pkg"
 	"github.com/styrainc/load-private/pkg/plugins/data/utils"
+	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
 const (
@@ -63,6 +64,15 @@ func (c *Data) Reconfigure(ctx context.Context, next any) {
 	}
 	c.Config = next.(Config)
 	c.Start(ctx)
+}
+
+// dataPlugin accessors
+func (c *Data) Name() string {
+	return Name
+}
+
+func (c *Data) Path() storage.Path {
+	return c.Config.path
 }
 
 func (c *Data) loop(ctx context.Context) {
@@ -169,7 +179,7 @@ func (c *Data) poll(ctx context.Context, body io.ReadSeeker, eTag string, client
 		c.log.Warn("cannot decode response: %v", err)
 		return ""
 	}
-	if err := storage.WriteOne(ctx, c.manager.Store, storage.ReplaceOp, c.Config.path, data); err != nil {
+	if err := inmem.WriteUnchecked(ctx, c.manager.Store, storage.ReplaceOp, c.Config.path, data); err != nil {
 		c.log.Error("writing data to %+v failed: %v", c.Config.path, err)
 		return ""
 	}

@@ -29,6 +29,7 @@ import (
 	"github.com/styrainc/load-private/pkg/store/internal/merge"
 
 	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/tester"
 )
@@ -37,12 +38,21 @@ type BJSONReader interface {
 	ReadBJSON(context.Context, storage.Transaction, storage.Path) (bjson.Json, error)
 }
 
+type WriterUnchecked interface {
+	WriteUnchecked(context.Context, storage.Transaction, storage.PatchOp, storage.Path, interface{}) error
+}
+
+type DataPlugins interface {
+	RegisterDataPlugin(name string, path storage.Path)
+}
+
 // New returns an empty in-memory store.
 func New() storage.Store {
 	return &store{
-		data:     bjson.NewObject(nil),
-		triggers: map[*handle]storage.TriggerConfig{},
-		policies: map[string][]byte{},
+		data:        bjson.NewObject(nil),
+		triggers:    map[*handle]storage.TriggerConfig{},
+		policies:    map[string][]byte{},
+		dataPlugins: map[string]storage.Path{},
 	}
 }
 
@@ -89,10 +99,24 @@ type store struct {
 	data     bjson.Json                        // raw data
 	policies map[string][]byte                 // raw policies
 	triggers map[*handle]storage.TriggerConfig // registered triggers
+
+	dataPluginsMutex sync.Mutex
+	dataPlugins      map[string]storage.Path // data plugins
 }
 
 type handle struct {
 	db *store
+}
+
+func (db *store) RegisterDataPlugin(name string, path storage.Path) {
+	db.dataPluginsMutex.Lock()
+	defer db.dataPluginsMutex.Unlock()
+
+	if path == nil {
+		delete(db.dataPlugins, name)
+	} else {
+		db.dataPlugins[name] = path
+	}
 }
 
 func (db *store) NewTransaction(_ context.Context, params ...storage.TransactionParams) (storage.Transaction, error) {
@@ -301,7 +325,7 @@ func (db *store) ReadBJSON(_ context.Context, txn storage.Transaction, path stor
 	return u.(bjson.Json), nil
 }
 
-func (db *store) Write(_ context.Context, txn storage.Transaction, op storage.PatchOp, path storage.Path, value interface{}) error {
+func (db *store) WriteUnchecked(_ context.Context, txn storage.Transaction, op storage.PatchOp, path storage.Path, value interface{}) error {
 	underlying, err := db.underlying(txn)
 	if err != nil {
 		return err
@@ -310,7 +334,39 @@ func (db *store) Write(_ context.Context, txn storage.Transaction, op storage.Pa
 	if !ok {
 		v = bjson.MustNew(value)
 	}
+
 	return underlying.Write(op, path, v.Clone(true).(bjson.Json))
+}
+
+func (db *store) checkDataPlugins(path storage.Path) error {
+	db.dataPluginsMutex.Lock()
+	defer db.dataPluginsMutex.Unlock()
+
+	for name, plugin := range db.dataPlugins {
+		if path.HasPrefix(plugin) {
+			return types.BadRequestErr(fmt.Sprintf("path %q is owned by plugin %q", path.String(), name))
+		}
+	}
+	return nil
+}
+
+func (db *store) Write(ctx context.Context, txn storage.Transaction, op storage.PatchOp, path storage.Path, value interface{}) error {
+	// check dataplugins path
+	if len(path) != 0 && db.dataPlugins != nil {
+		if err := db.checkDataPlugins(path); err != nil {
+			return err
+		}
+	}
+
+	return db.WriteUnchecked(ctx, txn, op, path, value)
+}
+
+// WriteUnchecked is a convenience function to invoke the write unchecked.
+// It will create a new Transaction to perform the write with, and clean up after itself
+func WriteUnchecked(ctx context.Context, store storage.Store, op storage.PatchOp, path storage.Path, value interface{}) error {
+	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
+		return store.(WriterUnchecked).WriteUnchecked(ctx, txn, op, path, value)
+	})
 }
 
 func (h *handle) Unregister(_ context.Context, txn storage.Transaction) {

@@ -20,6 +20,7 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 
 	"github.com/styrainc/load-private/pkg/plugins/data/utils"
+	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
 const (
@@ -83,6 +84,15 @@ func (c *Data) Reconfigure(ctx context.Context, next any) {
 	c.Start(ctx)
 }
 
+// dataPlugin accessors
+func (c *Data) Name() string {
+	return Name
+}
+
+func (c *Data) Path() storage.Path {
+	return c.Config.path
+}
+
 func (c *Data) loop(ctx context.Context) {
 	timer := time.NewTimer(0) // zero timer is needed to execute immediately for first time
 
@@ -128,7 +138,7 @@ func (c *Data) poll(ctx context.Context) error {
 		return err
 	}
 
-	if err := storage.WriteOne(ctx, c.manager.Store, storage.ReplaceOp, c.Config.path, results); err != nil {
+	if err := inmem.WriteUnchecked(ctx, c.manager.Store, storage.ReplaceOp, c.Config.path, results); err != nil {
 		return fmt.Errorf("writing data to %+v failed: %w", c.Config.path, err)
 	}
 

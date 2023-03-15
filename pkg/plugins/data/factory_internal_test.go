@@ -123,7 +123,7 @@ kafka.updates:
 		ctx := context.Background()
 
 		// setup some extra data
-		if err := storage.WriteOne(ctx, mgr.Store, storage.AddOp, []string{}, map[string]any{"something": map[string]any{"else": true}}); err != nil {
+		if err := inmem.WriteUnchecked(ctx, mgr.Store, storage.AddOp, []string{}, map[string]any{"something": map[string]any{"else": true}}); err != nil {
 			t.Fatalf("Setup store: %v", err)
 		}
 
@@ -132,7 +132,7 @@ kafka.updates:
 		}
 		defer dp.Stop(ctx)
 
-		if err := storage.WriteOne(ctx, mgr.Store, storage.AddOp, storage.MustParsePath("/kafka/updates"), map[string]any{"foo": "bar"}); err != nil {
+		if err := inmem.WriteUnchecked(ctx, mgr.Store, storage.AddOp, storage.MustParsePath("/kafka/updates"), map[string]any{"foo": "bar"}); err != nil {
 			t.Fatalf("Setup store: %v", err)
 		}
 		prev, err := storage.ReadOne(ctx, mgr.Store, []string{})
@@ -177,7 +177,7 @@ kafka.updates:
 		ctx := context.Background()
 
 		// setup some extra data
-		if err := storage.WriteOne(ctx, mgr.Store, storage.AddOp, []string{}, map[string]any{"kafka": map[string]any{"else": true}}); err != nil {
+		if err := inmem.WriteUnchecked(ctx, mgr.Store, storage.AddOp, []string{}, map[string]any{"kafka": map[string]any{"else": true}}); err != nil {
 			t.Fatalf("Setup store: %v", err)
 		}
 
@@ -185,7 +185,7 @@ kafka.updates:
 			t.Fatalf("Start: %v", err)
 		}
 		defer dp.Stop(ctx)
-		if err := storage.WriteOne(ctx, mgr.Store, storage.AddOp, storage.MustParsePath("/kafka/updates"), map[string]any{"foo": "bar"}); err != nil {
+		if err := inmem.WriteUnchecked(ctx, mgr.Store, storage.AddOp, storage.MustParsePath("/kafka/updates"), map[string]any{"foo": "bar"}); err != nil {
 			t.Fatalf("Setup store: %v", err)
 		}
 		prev, err := storage.ReadOne(ctx, mgr.Store, []string{})

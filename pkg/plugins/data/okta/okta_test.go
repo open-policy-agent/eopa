@@ -840,6 +840,37 @@ plugins:
 	}
 }
 
+func TestOKTAOwned(t *testing.T) {
+	config := `
+plugins:
+  data:
+    okta.placeholder:
+      type: okta
+      url: https://okta.local
+      token: test-token
+      users: true
+      groups: true
+      roles: true
+      apps: true
+`
+	defer goleak.VerifyNone(t, goleak.IgnoreTopFunction("github.com/patrickmn/go-cache.(*janitor).Run"))
+
+	ctx := context.Background()
+	store := inmem.New()
+	mgr := pluginMgr(t, store, config)
+
+	if err := mgr.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer mgr.Stop(ctx)
+
+	// test owned path
+	err := storage.WriteOne(ctx, mgr.Store, storage.AddOp, storage.MustParsePath("/okta/placeholder"), map[string]any{"foo": "bar"})
+	if err == nil || err.Error() != `path "/okta/placeholder" is owned by plugin "okta"` {
+		t.Errorf("owned check failed, got %v", err)
+	}
+}
+
 func pluginMgr(t *testing.T, store storage.Store, config string) *plugins.Manager {
 	t.Helper()
 	h := topdown.NewPrintHook(os.Stderr)

@@ -135,6 +135,53 @@ plugins:
 	}
 }
 
+func TestLDAPOwned(t *testing.T) {
+	var (
+		searchResult    *goldap.SearchResult
+		convertedResult []any
+	)
+	if err := json.Unmarshal(searchData, &searchResult); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(convertedData, &convertedResult); err != nil {
+		t.Fatal(err)
+	}
+
+	config := `
+plugins:
+  data:         
+    ldap.placeholder:
+      type: ldap        
+      urls:                     
+        - ldaps://example.com
+      base_dn: "dc=example,dc=com"
+      filter: "(objectclass=*)"
+      username: test
+      password: testpswd
+`
+	defer goleak.VerifyNone(t)
+	client := &mocks.Client{}
+
+	ctx := ldap.WithClient(context.Background(), client)
+
+	client.On("Start")
+	client.On("Close")
+
+	store := inmem.New()
+	mgr := pluginMgr(t, store, config)
+
+	if err := mgr.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer mgr.Stop(ctx)
+
+	// test owned path
+	err := storage.WriteOne(ctx, mgr.Store, storage.AddOp, storage.MustParsePath("/ldap/placeholder"), map[string]any{"foo": "bar"})
+	if err == nil || err.Error() != `path "/ldap/placeholder" is owned by plugin "ldap"` {
+		t.Errorf("owned check failed, got %v", err)
+	}
+}
+
 func pluginMgr(t *testing.T, store storage.Store, config string) *plugins.Manager {
 	t.Helper()
 	h := topdown.NewPrintHook(os.Stderr)
