@@ -3,6 +3,7 @@ package vm
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"unsafe"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -218,9 +219,10 @@ func (b block) Execute(state *State) (bool, uint32, error) {
 	var stop bool
 	var index uint32
 	var err error
+	var instr int64
 
 	statements := b.Statements()
-	var instr int64
+	statement := statements.Statement()
 
 	for i, n := 0, statements.Len(); !stop && err == nil && i < n; i++ {
 		// Check for context cancellation and instruction
@@ -235,7 +237,9 @@ func (b block) Execute(state *State) (bool, uint32, error) {
 		}
 
 		// fmt.Printf("executing %d/%d: %T\n", i, len(b.Statements), b.Statements[i])
-		stop, index, err = statements.Statement(i).Execute(state)
+		var size int
+		stop, index, size, err = statement.Execute(state)
+		statement = statement[size:]
 		instr++
 	}
 
@@ -260,77 +264,85 @@ func (b block) Execute(state *State) (bool, uint32, error) {
 	return false, 0, nil
 }
 
-func (s statement) Execute(state *State) (bool, uint32, error) {
-	switch s.Type() {
+func (s statement) Execute(state *State) (bool, uint32, int, error) {
+	var stop bool
+	var index uint32
+	var err error
+
+	t, size := s.Type()
+
+	switch t {
 	case typeStatementArrayAppend:
-		return arrayAppend(s).Execute(state)
+		stop, index, err = arrayAppend(s).Execute(state)
 	case typeStatementAssignInt:
-		return assignInt(s).Execute(state)
+		stop, index, err = assignInt(s).Execute(state)
 	case typeStatementAssignVar:
-		return assignVar(s).Execute(state)
+		stop, index, err = assignVar(s).Execute(state)
 	case typeStatementAssignVarOnce:
-		return assignVarOnce(s).Execute(state)
+		stop, index, err = assignVarOnce(s).Execute(state)
 	case typeStatementBlockStmt:
-		return blockStmt(s).Execute(state)
+		stop, index, err = blockStmt(s).Execute(state)
 	case typeStatementBreakStmt:
-		return breakStmt(s).Execute(state)
+		stop, index, err = breakStmt(s).Execute(state)
 	case typeStatementCall:
-		return call(s).Execute(state)
+		stop, index, err = call(s).Execute(state)
 	case typeStatementCallDynamic:
-		return callDynamic(s).Execute(state)
+		stop, index, err = callDynamic(s).Execute(state)
 	case typeStatementDot:
-		return dot(s).Execute(state)
+		stop, index, err = dot(s).Execute(state)
 	case typeStatementEqual:
-		return equal(s).Execute(state)
+		stop, index, err = equal(s).Execute(state)
 	case typeStatementIsArray:
-		return isArray(s).Execute(state)
+		stop, index, err = isArray(s).Execute(state)
 	case typeStatementIsDefined:
-		return isDefined(s).Execute(state)
+		stop, index, err = isDefined(s).Execute(state)
 	case typeStatementIsObject:
-		return isObject(s).Execute(state)
+		stop, index, err = isObject(s).Execute(state)
 	case typeStatementIsUndefined:
-		return isUndefined(s).Execute(state)
+		stop, index, err = isUndefined(s).Execute(state)
 	case typeStatementLen:
-		return lenStmt(s).Execute(state)
+		stop, index, err = lenStmt(s).Execute(state)
 	case typeStatementMakeArray:
-		return makeArray(s).Execute(state)
+		stop, index, err = makeArray(s).Execute(state)
 	case typeStatementMakeNull:
-		return makeNull(s).Execute(state)
+		stop, index, err = makeNull(s).Execute(state)
 	case typeStatementMakeNumberInt:
-		return makeNumberInt(s).Execute(state)
+		stop, index, err = makeNumberInt(s).Execute(state)
 	case typeStatementMakeNumberRef:
-		return makeNumberRef(s).Execute(state)
+		stop, index, err = makeNumberRef(s).Execute(state)
 	case typeStatementMakeObject:
-		return makeObject(s).Execute(state)
+		stop, index, err = makeObject(s).Execute(state)
 	case typeStatementMakeSet:
-		return makeSet(s).Execute(state)
+		stop, index, err = makeSet(s).Execute(state)
 	case typeStatementNop:
-		return nop(s).Execute(state)
+		stop, index, err = nop(s).Execute(state)
 	case typeStatementNot:
-		return not(s).Execute(state)
+		stop, index, err = not(s).Execute(state)
 	case typeStatementNotEqual:
-		return notEqual(s).Execute(state)
+		stop, index, err = notEqual(s).Execute(state)
 	case typeStatementObjectInsert:
-		return objectInsert(s).Execute(state)
+		stop, index, err = objectInsert(s).Execute(state)
 	case typeStatementObjectInsertOnce:
-		return objectInsertOnce(s).Execute(state)
+		stop, index, err = objectInsertOnce(s).Execute(state)
 	case typeStatementObjectMerge:
-		return objectMerge(s).Execute(state)
+		stop, index, err = objectMerge(s).Execute(state)
 	case typeStatementResetLocal:
-		return resetLocal(s).Execute(state)
+		stop, index, err = resetLocal(s).Execute(state)
 	case typeStatementResultSetAdd:
-		return resultSetAdd(s).Execute(state)
+		stop, index, err = resultSetAdd(s).Execute(state)
 	case typeStatementReturnLocal:
-		return returnLocal(s).Execute(state)
+		stop, index, err = returnLocal(s).Execute(state)
 	case typeStatementScan:
-		return scan(s).Execute(state)
+		stop, index, err = scan(s).Execute(state)
 	case typeStatementSetAdd:
-		return setAdd(s).Execute(state)
+		stop, index, err = setAdd(s).Execute(state)
 	case typeStatementWith:
-		return with(s).Execute(state)
+		stop, index, err = with(s).Execute(state)
 	default:
-		panic(fmt.Sprintf("unsupported statement: %v", s.Type()))
+		panic("unsupported statement: " + strconv.Itoa(int(t)))
 	}
+
+	return stop, index, size, err
 }
 
 func (nop) Execute(state *State) (bool, uint32, error) {
@@ -430,9 +442,12 @@ func (n not) Execute(state *State) (bool, uint32, error) {
 	var err error
 
 	statements := n.Block().Statements()
+	statement := statements.Statement()
 
 	for i, m := 0, statements.Len(); !stop && err == nil && i < m; i++ {
-		stop, index, err = statements.Statement(i).Execute(state)
+		var size int
+		stop, index, size, err = statement.Execute(state)
+		statement = statement[size:]
 	}
 
 	if err != nil {
@@ -444,7 +459,7 @@ func (n not) Execute(state *State) (bool, uint32, error) {
 			return false, 0, nil
 		}
 
-		return true, index - 1, err
+		return true, index - 1, nil
 	}
 
 	return true, 0, nil
@@ -859,12 +874,17 @@ func (with with) Execute(state *State) (bool, uint32, error) {
 	}
 
 	statements := with.Block().Statements()
+	statement := statements.Statement()
+
 	for i, n := 0, statements.Len(); i < n; i++ {
-		if stop, _, err := statements.Statement(i).Execute(state); err != nil {
+		stop, _, size, err := statement.Execute(state)
+		if err != nil {
 			return false, 0, err
 		} else if stop {
 			return stop, 0, nil
 		}
+
+		statement = statement[size:]
 	}
 
 	return false, 0, nil
