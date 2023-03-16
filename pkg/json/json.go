@@ -531,6 +531,7 @@ type Array interface {
 	Iterable
 
 	Append(element ...File)
+	AppendSingle(element File)
 	Slice(i, j int) Array
 	Value(i int) Json
 	WriteI(w io.Writer, i int, written *int64) error
@@ -555,6 +556,10 @@ func (a ArrayBinary) Contents() interface{} {
 }
 
 func (a ArrayBinary) Append(element ...File) {
+	panic("json: unsupported append")
+}
+
+func (a ArrayBinary) AppendSingle(element File) {
 	panic("json: unsupported append")
 }
 
@@ -697,6 +702,10 @@ func (a *ArraySlice) Contents() interface{} {
 
 func (a *ArraySlice) Append(elements ...File) {
 	a.elements = append(a.elements, elements...)
+}
+
+func (a *ArraySlice) AppendSingle(element File) {
+	a.elements = append(a.elements, element)
 }
 
 func (a *ArraySlice) Slice(i, j int) Array {

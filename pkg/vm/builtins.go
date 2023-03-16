@@ -12,7 +12,7 @@ import (
 )
 
 func memberBuiltin(state *State, args []Value) error {
-	if isUnset(args[0]) || isUnset(args[1]) {
+	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
 		return nil
 	}
 
@@ -27,13 +27,12 @@ func memberBuiltin(state *State, args []Value) error {
 		return err
 	}
 
-	state.SetValue(Unused, state.ValueOps().MakeBoolean(found))
-	state.SetReturn(Unused)
+	state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(found))
 	return nil
 }
 
 func memberWithKeyBuiltin(state *State, args []Value) error {
-	if isUnset(args[0]) || isUnset(args[1]) || isUnset(args[2]) {
+	if isUndefinedType(args[0]) || isUndefinedType(args[1]) || isUndefinedType(args[2]) {
 		return nil
 	}
 
@@ -50,13 +49,12 @@ func memberWithKeyBuiltin(state *State, args []Value) error {
 		}
 	}
 
-	state.SetValue(Unused, state.ValueOps().MakeBoolean(eq))
-	state.SetReturn(Unused)
+	state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(eq))
 	return nil
 }
 
 func objectGetBuiltin(state *State, args []Value) error {
-	if isUnset(args[0]) || isUnset(args[1]) || isUnset(args[2]) {
+	if isUndefinedType(args[0]) || isUndefinedType(args[1]) || isUndefinedType(args[2]) {
 		return nil
 	}
 	obj, path, def := args[0], args[1], args[2]
@@ -90,8 +88,7 @@ func objectGetBuiltin(state *State, args []Value) error {
 		return err
 	}
 	if eq {
-		state.SetValue(Unused, obj)
-		state.SetReturn(Unused)
+		state.SetReturnValue(Unused, obj)
 		return nil
 	}
 
@@ -107,11 +104,10 @@ func objectGetBuiltin(state *State, args []Value) error {
 	}
 
 	if found {
-		state.SetValue(Unused, obj)
+		state.SetReturnValue(Unused, obj)
 	} else {
-		state.SetValue(Unused, def)
+		state.SetReturnValue(Unused, def)
 	}
-	state.SetReturn(Unused)
 	return nil
 }
 
@@ -121,16 +117,15 @@ func objectGetBuiltinKey(state *State, obj, key, def Value) error {
 		return err
 	}
 	if found {
-		state.SetValue(Unused, val)
+		state.SetReturnValue(Unused, val)
 	} else {
-		state.SetValue(Unused, def)
+		state.SetReturnValue(Unused, def)
 	}
-	state.SetReturn(Unused)
 	return nil
 }
 
 func stringsStartsWithBuiltin(state *State, args []Value) error {
-	if isUnset(args[0]) || isUnset(args[1]) {
+	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
 		return nil
 	}
 
@@ -145,13 +140,12 @@ func stringsStartsWithBuiltin(state *State, args []Value) error {
 	}
 
 	result := state.ValueOps().FromInterface(gostrings.HasPrefix(s, prefix))
-	state.SetValue(Unused, result)
-	state.SetReturn(Unused)
+	state.SetReturnValue(Unused, result)
 	return nil
 }
 
 func stringsSprintfBuiltin(state *State, args []Value) error {
-	if isUnset(args[0]) || isUnset(args[1]) {
+	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
 		return nil
 	}
 
@@ -215,8 +209,7 @@ func stringsSprintfBuiltin(state *State, args []Value) error {
 		}
 	}
 
-	state.SetValue(Unused, state.ValueOps().MakeString(fmt.Sprintf(s, a...)))
-	state.SetReturn(Unused)
+	state.SetReturnValue(Unused, state.ValueOps().MakeString(fmt.Sprintf(s, a...)))
 	return nil
 }
 

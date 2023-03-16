@@ -132,23 +132,23 @@ func (*dataOperations) Call(ctx context.Context, value interface{}, args []*inte
 	return nil, false, false, nil
 }
 
-func (*dataOperations) ArrayAppend(ctx context.Context, array interface{}, value interface{}) (interface{}, error) {
+func (*dataOperations) ArrayAppend(ctx context.Context, array interface{}, value interface{}) error {
 	jvalue, err := castJSON(ctx, value)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	switch a := array.(type) {
 	case fjson.Array:
-		a.Append(jvalue)
-		return a, nil
+		// Using singular version avoids an allocation to construct slice of arguments.
+		a.AppendSingle(jvalue)
 	default:
 		if _, err := castJSON(ctx, array); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return array, nil
+	return nil
 }
 
 func (*dataOperations) CopyShallow(value interface{}) interface{} {

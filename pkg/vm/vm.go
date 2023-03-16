@@ -89,20 +89,14 @@ type (
 	}
 
 	Locals struct {
-		registers  *registersList
-		data       bitset
-		ret        Local // function return value
-		retDefined bool
+		registers *registersList
+		data      bitset
+		ret       Local // function return value
 	}
 
 	registersList struct {
 		next      *registersList // linked list of sync.Pool objects
-		registers [registersSize]definedValue
-	}
-
-	definedValue struct {
-		defined bool
-		value   Value
+		registers [registersSize]Value
 	}
 
 	Value interface{}
@@ -128,7 +122,7 @@ const (
 )
 
 // registersSize: tradeoff between pre-allocating too much and not enough; tested values 4, 8 and 16
-const registersSize int = 16
+const registersSize int = 32
 
 func newGlobals(ctx context.Context, vm *VM, opts EvalOpts, cancel *cancel, runtime *ast.Term, input *interface{}) *Globals {
 	return &Globals{
@@ -148,7 +142,11 @@ func newGlobals(ctx context.Context, vm *VM, opts EvalOpts, cancel *cancel, runt
 		Capabilities:        opts.Capabilities,
 		registersPool: sync.Pool{
 			New: func() any {
-				return new(registersList)
+				l := new(registersList)
+				for i := range l.registers {
+					l.registers[i] = undefined()
+				}
+				return l
 			},
 		},
 	}
@@ -221,7 +219,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (Value, erro
 			globals.InterQueryBuiltinCache = opts.InterQueryBuiltinCache
 
 			state := newState(globals, StatisticsGet(ctx))
-			defer releaseState(globals, &state)
+			defer state.Release()
 			if err := plan.Execute(&state); err != nil {
 				return nil, err
 			}
@@ -278,18 +276,18 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				var v Value = *opts.Input
 				args[0] = v
 			} else {
-				args[0] = unset()
+				args[0] = undefined()
 			}
 
 			if vm.data != nil {
 				var v Value = *vm.data
 				args[1] = v
 			} else {
-				args[1] = unset()
+				args[1] = undefined()
 			}
 
 			state := newState(globals, StatisticsGet(ctx))
-			defer releaseState(globals, &state)
+			defer state.Release()
 			if err := f.Execute(&state, args); err != nil {
 				return nil, false, false, err
 			}
@@ -449,7 +447,7 @@ func (b *bitset) isSet(i int) bool {
 func newState(globals *Globals, stats *Statistics) State {
 	s := State{
 		Globals: globals,
-		locals:  Locals{},
+		locals:  Locals{ret: -1},
 		stats:   stats,
 	}
 	s.locals.data.set(int(Data), true)
@@ -465,16 +463,16 @@ func newState(globals *Globals, stats *Statistics) State {
 	return s
 }
 
-func releaseState(globals *Globals, state *State) {
-	p := state.locals.registers
+func (s *State) Release() {
+	p := s.locals.registers
 	var next *registersList
 	for ; p != nil; p = next {
 		for i := range p.registers {
-			p.registers[i] = definedValue{} // release Values
+			p.registers[i] = undefined() // release Values
 		}
 		next = p.next
 		p.next = nil
-		globals.registersPool.Put(p) //nolint: staticcheck
+		s.Globals.registersPool.Put(p) //nolint: staticcheck
 	}
 }
 
@@ -520,7 +518,7 @@ next:
 func (s *State) IsDefined(v LocalOrConst) bool {
 	switch v := v.(type) {
 	case Local:
-		return s.findReg(v).registers[int(v)%registersSize].defined
+		return !isUndefinedType(s.findReg(v).registers[int(v)%registersSize])
 	default:
 		return true
 	}
@@ -529,7 +527,7 @@ func (s *State) IsDefined(v LocalOrConst) bool {
 func (s *State) Value(v LocalOrConst) Value {
 	switch v := v.(type) {
 	case Local:
-		return s.findReg(v).registers[int(v)%registersSize].value
+		return s.findReg(v).registers[int(v)%registersSize]
 	case BoolConst:
 		return s.ValueOps().MakeBoolean(bool(v))
 	case StringIndexConst:
@@ -541,7 +539,8 @@ func (s *State) Value(v LocalOrConst) Value {
 
 // Return returns the variable holding the function result.
 func (s *State) Return() (Local, bool) {
-	return s.locals.ret, s.locals.retDefined
+	ret := s.locals.ret
+	return ret, ret >= 0
 }
 
 func (s *State) Set(target Local, source LocalOrConst) {
@@ -550,32 +549,24 @@ func (s *State) Set(target Local, source LocalOrConst) {
 		s.findReg(target).registers[int(target)%registersSize] = s.findReg(v).registers[int(v)%registersSize]
 
 	case BoolConst:
-		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
+		s.findReg(target).registers[int(target)%registersSize] = s.Globals.vm.ops.MakeBoolean(bool(v))
 
 	case StringIndexConst:
-		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(s.Globals.vm, v)}
-	}
-}
-
-func (s *State) SetFrom(target Local, other *State, source LocalOrConst) {
-	switch v := source.(type) {
-	case Local:
-		s.findReg(target).registers[int(target)%registersSize] = other.findReg(v).registers[int(v)%registersSize]
-
-	case BoolConst:
-		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.ops.MakeBoolean(bool(v))}
-
-	case StringIndexConst:
-		s.findReg(target).registers[int(target)%registersSize] = definedValue{true, s.Globals.vm.executable.Strings().String(s.Globals.vm, v)}
+		s.findReg(target).registers[int(target)%registersSize] = s.Globals.vm.executable.Strings().String(s.Globals.vm, v)
 	}
 }
 
 func (s *State) SetReturn(source Local) {
-	s.locals.SetReturn(source, s.findReg(source).registers[int(source)%registersSize].defined)
+	s.locals.SetReturn(source, !isUndefinedType(s.findReg(source).registers[int(source)%registersSize]))
+}
+
+func (s *State) SetReturnValue(source Local, value Value) {
+	s.locals.SetReturn(source, true)
+	s.SetValue(source, value)
 }
 
 func (s *State) SetValue(target Local, value Value) {
-	s.findReg(target).registers[int(target)%registersSize] = definedValue{true, value}
+	s.findReg(target).registers[int(target)%registersSize] = value
 }
 
 func (s *State) SetData(l Local) {
@@ -602,7 +593,7 @@ func (s *State) DataGet(ctx context.Context, value, key interface{}) (interface{
 }
 
 func (s *State) Unset(target Local) {
-	s.findReg(target).registers[int(target)%registersSize] = definedValue{false, nil}
+	s.findReg(target).registers[int(target)%registersSize] = undefined()
 	s.locals.data.set(int(target), false)
 }
 
@@ -641,8 +632,11 @@ func (s *State) Instr(i int64) error {
 }
 
 func (l *Locals) SetReturn(source Local, defined bool) {
-	l.ret = source
-	l.retDefined = defined
+	if defined {
+		l.ret = source
+	} else {
+		l.ret = -1
+	}
 }
 
 func (s *State) findReg(v Local) *registersList {

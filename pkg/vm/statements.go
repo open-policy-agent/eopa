@@ -10,15 +10,15 @@ import (
 	"github.com/open-policy-agent/opa/topdown"
 )
 
-type unsetValue struct{}
+type undefinedValue struct{}
 
-func isUnset(v Value) bool {
-	_, ok := v.(unsetValue)
+func isUndefinedType(v Value) bool {
+	_, ok := v.(undefinedValue)
 	return ok
 }
 
-func unset() Value {
-	return unsetValue{}
+func undefined() Value {
+	return undefinedValue{}
 }
 
 func (p plan) Execute(state *State) error {
@@ -48,9 +48,8 @@ func (f function) execute(state *State, args []Value) error {
 	memoize := f.ParamsLen() == 2
 	if memoize {
 		if value, ok := state.MemoizeGet(index); ok {
-			if !isUnset(value) {
-				state.SetValue(ret, value)
-				state.SetReturn(ret)
+			if !isUndefinedType(value) {
+				state.SetReturnValue(ret, value)
 			}
 			// else {
 			// undefined return
@@ -61,11 +60,7 @@ func (f function) execute(state *State, args []Value) error {
 	}
 
 	f.ParamsIter(func(i uint32, arg Local) error {
-		if !isUnset(args[i]) {
-			state.SetValue(arg, args[i])
-		} else {
-			state.Unset(arg)
-		}
+		state.SetValue(arg, args[i])
 		return nil
 	})
 
@@ -83,7 +78,7 @@ func (f function) execute(state *State, args []Value) error {
 		if local, defined := state.Return(); defined {
 			value = state.Value(local)
 		} else {
-			value = unset()
+			value = undefined()
 		}
 
 		state.MemoizeInsert(index, value)
@@ -138,7 +133,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 	}
 
 	for i := range args {
-		if isUnset(args[i]) {
+		if isUndefinedType(args[i]) {
 			return nil
 		}
 
@@ -156,8 +151,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 
 	relation := builtin.Relation()
 	if relation {
-		state.SetValue(Unused, state.ValueOps().MakeArray(0))
-		state.SetReturn(Unused)
+		state.SetReturnValue(Unused, state.ValueOps().MakeArray(0))
 	}
 
 	impl := topdown.GetBuiltin(name)
@@ -173,8 +167,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		value, ok := state.Globals.NDBCache.Get(bi.Name, ast.NewArray(a...))
 		// NOTE(sr): Nondet builtins currently aren't relations, and don't return void.
 		if ok {
-			state.SetValue(Unused, state.ValueOps().FromInterface(value))
-			state.SetReturn(Unused)
+			state.SetReturnValue(Unused, state.ValueOps().FromInterface(value))
 			return nil
 		}
 	}
@@ -185,23 +178,21 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 			*noescape(&f))
 	}(&a, func(value *ast.Term) error {
 		if relation {
-			arr, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(Unused), state.ValueOps().FromInterface(value.Value))
-			if err != nil {
+			if err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(Unused), state.ValueOps().FromInterface(value.Value)); err != nil {
 				return err
 			}
-
-			state.SetValue(Unused, arr)
 		} else {
 			// topdown print returns iter(nil)
+			var ret Value
 			if value != nil {
-				state.SetValue(Unused, state.ValueOps().FromInterface(value.Value))
+				ret = state.ValueOps().FromInterface(value.Value)
 				if state.Globals.NDBCache != nil && bi.IsNondeterministic() {
 					state.Globals.NDBCache.Put(name, ast.NewArray(a...), value.Value)
 				}
 			} else {
-				state.SetValue(Unused, state.ValueOps().MakeArray(0))
+				ret = state.ValueOps().MakeArray(0)
 			}
-			state.SetReturn(Unused)
+			state.SetReturnValue(Unused, ret)
 		}
 		return nil
 	}); err != nil {
@@ -357,12 +348,14 @@ func (a assignInt) Execute(state *State) (bool, uint32, error) {
 func (a assignVarOnce) Execute(state *State) (bool, uint32, error) {
 	target, source := a.Target(), a.Source()
 
-	if defined := state.IsDefined(target); defined {
-		if !state.IsDefined(source) {
+	targetValue := state.Value(target)
+	if !isUndefinedType(targetValue) {
+		sourceValue := state.Value(source)
+		if isUndefinedType(sourceValue) {
 			return false, 0, ErrVarAssignConflict
 		}
 
-		if eq, err := state.ValueOps().Equal(state.Globals.Ctx, state.Value(source), state.Value(target)); err != nil {
+		if eq, err := state.ValueOps().Equal(state.Globals.Ctx, sourceValue, targetValue); err != nil {
 			return false, 0, err
 		} else if !eq {
 			return false, 0, ErrVarAssignConflict
@@ -472,25 +465,16 @@ func (r returnLocal) Execute(state *State) (bool, uint32, error) {
 
 func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 	inner := state.New()
-	defer releaseState(state.Globals, &inner)
+	defer inner.Release()
 
 	args := make([]Value, call.ArgsLen())
 	call.ArgsIter(func(i uint32, arg Local) error {
-		if state.IsDefined(arg) {
-			v := state.Value(arg)
-			args[i] = v
-		} else {
-			args[i] = unset()
-		}
+		args[i] = state.Value(arg)
 		return nil
 	})
 
 	path := make([]string, call.PathLen())
 	if err := call.PathIter(func(i uint32, arg LocalOrConst) error {
-		if !state.IsDefined(arg) {
-			panic("undefined call dynamic path")
-		}
-
 		s, err := state.ValueOps().ToAST(state.Globals.Ctx, state.Value(arg))
 		if err != nil {
 			return err
@@ -529,7 +513,8 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 		return true, 3, nil
 	}
 
-	state.SetFrom(call.Result(), &inner, result)
+	resultValue := inner.Value(result)
+	state.SetValue(call.Result(), resultValue)
 	return false, 0, nil
 }
 
@@ -545,7 +530,7 @@ func externalCall(state *State, path []string, args []Value) (interface{}, bool,
 	data := state.Value(Data)
 	a := make([]*interface{}, len(args))
 	for i := range a {
-		if !isUnset(args[i]) {
+		if !isUndefinedType(args[i]) {
 			var v interface{} = args[i]
 			a[i] = &v
 		}
@@ -587,17 +572,12 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 		args = make([]Value, n)
 	}
 	call.ArgsIter(func(i uint32, arg LocalOrConst) error {
-		if state.IsDefined(arg) {
-			v := state.Value(arg)
-			args[i] = v
-		} else {
-			args[i] = unset()
-		}
+		args[i] = state.Value(arg)
 		return nil
 	})
 
 	inner := state.New()
-	defer releaseState(state.Globals, &inner)
+	defer inner.Release()
 
 	if err := func(args *[]Value, inner *State) error {
 		return state.Func(call.Func()).Execute(
@@ -613,20 +593,30 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 		return true, 0, nil
 	}
 
-	state.SetFrom(call.Result(), &inner, result)
+	resultValue := inner.Value(result)
+	state.SetValue(call.Result(), resultValue)
 	return false, 0, nil
 }
 
 func (d dot) Execute(state *State) (bool, uint32, error) {
-	source, key, target := d.Source(), d.Key(), d.Target()
+	source := d.Source()
 
-	if !state.IsDefined(source) || !state.IsDefined(key) {
+	switch source.(type) {
+	case BoolConst, StringIndexConst: // can't dot these
+		return true, 0, nil
+	}
+
+	sourceValue := state.Value(source)
+	target := d.Target()
+
+	if isUndefinedType(sourceValue) {
 		state.Unset(target)
 		return true, 0, nil
 	}
 
-	switch source.(type) {
-	case BoolConst, StringIndexConst: // can't dot these
+	keyValue := state.Value(d.Key())
+	if isUndefinedType(keyValue) {
+		state.Unset(target)
 		return true, 0, nil
 	}
 
@@ -637,7 +627,7 @@ func (d dot) Execute(state *State) (bool, uint32, error) {
 		get = state.DataGet
 	}
 
-	if value, ok, err := get(state.Globals.Ctx, state.Value(src), state.Value(key)); err != nil {
+	if value, ok, err := get(state.Globals.Ctx, sourceValue, keyValue); err != nil {
 		return false, 0, err
 	} else if ok {
 		state.SetValue(target, value)
@@ -654,14 +644,15 @@ func (d dot) Execute(state *State) (bool, uint32, error) {
 
 func (e equal) Execute(state *State) (bool, uint32, error) {
 	a, b := e.A(), e.B()
-	definedA, definedB := state.IsDefined(a), state.IsDefined(b)
+	aValue, bValue := state.Value(a), state.Value(b)
+	definedA, definedB := !isUndefinedType(aValue), !isUndefinedType(bValue)
 
 	switch {
 	case !definedA && !definedB:
 		return false, 0, nil
 
 	case definedA && definedB:
-		eq, err := state.ValueOps().Equal(state.Globals.Ctx, state.Value(a), state.Value(b))
+		eq, err := state.ValueOps().Equal(state.Globals.Ctx, aValue, bValue)
 		if err != nil {
 			return false, 0, err
 		}
@@ -680,11 +671,12 @@ func (ne notEqual) Execute(state *State) (bool, uint32, error) {
 
 func (i isArray) Execute(state *State) (bool, uint32, error) {
 	source := i.Source()
-	if defined := state.IsDefined(source); !defined {
+	sourceValue := state.Value(source)
+	if defined := !isUndefinedType(sourceValue); !defined {
 		return true, 0, nil
 	}
 
-	is, err := state.ValueOps().IsArray(state.Globals.Ctx, state.Value(source))
+	is, err := state.ValueOps().IsArray(state.Globals.Ctx, sourceValue)
 	if err != nil {
 		return false, 0, err
 	}
@@ -693,11 +685,12 @@ func (i isArray) Execute(state *State) (bool, uint32, error) {
 
 func (i isObject) Execute(state *State) (bool, uint32, error) {
 	source := i.Source()
-	if defined := state.IsDefined(source); !defined {
+	sourceValue := state.Value(source)
+	if defined := !isUndefinedType(sourceValue); !defined {
 		return true, 0, nil
 	}
 
-	is, err := state.ValueOps().IsObject(state.Globals.Ctx, state.Value(source))
+	is, err := state.ValueOps().IsObject(state.Globals.Ctx, sourceValue)
 	if err != nil {
 		return false, 0, err
 	}
@@ -754,12 +747,10 @@ func (l lenStmt) Execute(state *State) (bool, uint32, error) {
 
 func (a arrayAppend) Execute(state *State) (bool, uint32, error) {
 	array, value := a.Array(), a.Value()
-	arr, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(array), state.Value(value))
-	if err != nil {
+	if err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(array), state.Value(value)); err != nil {
 		return false, 0, err
 	}
 
-	state.SetValue(array, arr)
 	return false, 0, nil
 }
 
@@ -795,18 +786,18 @@ func (o objectInsert) Execute(state *State) (bool, uint32, error) {
 
 func (o objectMerge) Execute(state *State) (bool, uint32, error) {
 	ca, cb, target := o.A(), o.B(), o.Target()
+	a, b := state.Value(ca), state.Value(cb)
 
-	if !state.IsDefined(ca) {
+	if isUndefinedType(a) {
 		state.Set(target, cb)
 		return false, 0, nil
 	}
 
-	if !state.IsDefined(cb) {
+	if isUndefinedType(b) {
 		state.Set(target, ca)
 		return false, 0, nil
 	}
 
-	a, b := state.Value(ca), state.Value(cb)
 	ops := state.ValueOps()
 
 	if isObject, err := ops.IsObject(state.Globals.Ctx, a); err != nil {
@@ -837,11 +828,12 @@ func (r resetLocal) Execute(state *State) (bool, uint32, error) {
 
 func (r resultSetAdd) Execute(state *State) (bool, uint32, error) {
 	value := r.Value()
-	if !state.IsDefined(value) {
+	valueValue := state.Value(value)
+	if isUndefinedType(valueValue) {
 		return false, 0, nil
 	}
 
-	err := state.ValueOps().SetAdd(state.Globals.Ctx, state.Globals.ResultSet, state.Value(value))
+	err := state.ValueOps().SetAdd(state.Globals.Ctx, state.Globals.ResultSet, valueValue)
 	return false, 0, err
 }
 
@@ -851,13 +843,9 @@ func (with with) Execute(state *State) (bool, uint32, error) {
 
 	local, wvalue := with.Local(), with.Value()
 
-	defined, value := state.IsDefined(local), state.Value(local)
+	value := state.Value(local)
 	defer func() {
-		if defined {
-			state.SetValue(local, value)
-		} else {
-			state.Unset(local)
-		}
+		state.SetValue(local, value)
 	}()
 
 	pathLen := with.PathLen()
@@ -894,9 +882,10 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 	ops := state.ValueOps()
 
 	var ok bool
-	if state.IsDefined(original) {
+	originalValue := state.Value(original)
+	if !isUndefinedType(originalValue) {
 		var err error
-		ok, err = ops.IsObject(state.Globals.Ctx, state.Value(original))
+		ok, err = ops.IsObject(state.Globals.Ctx, originalValue)
 		if err != nil {
 			return nil, err
 		}
@@ -904,7 +893,7 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 
 	var result Value
 	if ok {
-		result = ops.CopyShallow(state.Value(original))
+		result = ops.CopyShallow(originalValue)
 	} else {
 		result = ops.MakeObject()
 	}
