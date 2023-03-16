@@ -36,7 +36,6 @@ jobs:
         with:
           go-version-file: go.mod
           check-latest: true
-          cache: true
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Install GoReleaser
@@ -81,7 +80,6 @@ jobs:
         with:
           go-version-file: go.mod
           check-latest: true
-          cache: true
 
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/

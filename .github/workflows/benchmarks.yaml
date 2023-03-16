@@ -26,7 +26,6 @@ jobs:
           go-version-file: load/go.mod
           cache-dependency-path: load/go.sum
           check-latest: true
-          cache: true
       - name: Check out "benchmarks" branch
         uses: actions/checkout@v3
         with:

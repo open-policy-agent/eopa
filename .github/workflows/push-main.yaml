@@ -31,7 +31,7 @@ jobs:
         id: override_gh_api_token
         run: |
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
-          echo "GITHUB_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_TOKEN
+          echo "GITHUB_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
 
       - name: Check out code
@@ -43,7 +43,6 @@ jobs:
         with:
           go-version-file: go.mod
           check-latest: true
-          cache: true
 
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/

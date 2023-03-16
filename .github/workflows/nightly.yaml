@@ -20,7 +20,6 @@ jobs:
         with:
           go-version-file: go.mod
           check-latest: true
-          cache: true
       - uses: open-policy-agent/setup-opa@v2
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
