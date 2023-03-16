@@ -21,7 +21,7 @@ jobs:
         with:
           fetch-depth: 0
           path: load
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version-file: load/go.mod
           cache-dependency-path: load/go.sum

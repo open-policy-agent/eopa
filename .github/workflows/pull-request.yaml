@@ -42,7 +42,7 @@ jobs:
         run: go install github.com/jordanlewis/gcassert/cmd/gcassert@latest
         working-directory: /tmp
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
           check-latest: true
@@ -104,7 +104,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: load
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version-file: load/go.mod
           cache-dependency-path: load/go.sum
@@ -171,7 +171,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
           check-latest: true
@@ -252,7 +252,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
           check-latest: true
@@ -300,7 +300,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
           check-latest: true
@@ -392,7 +392,7 @@ jobs:
         uses: actions/checkout@v3
       # Note(philip): We set up the Go SDK, so that we can build/install
       # grpcurl from source across all supported platforms.
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
           go-version: 'stable'
           check-latest: true
