@@ -23,14 +23,16 @@ const (
 	maxInt32 int32 = (1<<31 - 1)
 )
 
+// hashable is for testing purposes, to allow hash function customization.
+type hashable interface {
+	Equal(other hashable) bool
+	Hash() uint64
+}
+
 func hash(value interface{}) uint64 {
 	hasher := xxhash.New64()
 	hashImpl(value, hasher)
 	return hasher.Sum64()
-}
-
-func intHash(v T) int {
-	return int(hash(v))
 }
 
 func hashImpl(value interface{}, hasher *xxhash.XXHash64) {
@@ -119,6 +121,11 @@ func hashImpl(value interface{}, hasher *xxhash.XXHash64) {
 
 		b := make([]byte, 8)
 		binary.BigEndian.PutUint64(b, m)
+		hasher.Write(b)
+
+	case hashable:
+		b := make([]byte, 8)
+		binary.BigEndian.PutUint64(b, value.Hash())
 		hasher.Write(b)
 
 	default:

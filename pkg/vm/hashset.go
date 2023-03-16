@@ -12,17 +12,13 @@ type hashSetEntry struct {
 
 // HashSet represents a key/value map.
 type HashSet struct {
-	eq    func(T, T) bool
-	hash  func(T) int
 	table map[int]*hashSetEntry
 	size  int
 }
 
 // NewHashSet returns a new empty HashSet.
-func NewHashSet(eq func(T, T) bool, hash func(T) int) *HashSet {
+func NewHashSet() *HashSet {
 	return &HashSet{
-		eq:    eq,
-		hash:  hash,
 		table: make(map[int]*hashSetEntry),
 		size:  0,
 	}
@@ -31,8 +27,6 @@ func NewHashSet(eq func(T, T) bool, hash func(T) int) *HashSet {
 // Copy returns a shallow copy of this HashSet.
 func (h *HashSet) Copy() *HashSet {
 	cpy := &HashSet{
-		eq:    h.eq,
-		hash:  h.hash,
 		table: make(map[int]*hashSetEntry, len(h.table)),
 		size:  0,
 	}
@@ -152,4 +146,12 @@ func (h *HashSet) Update(other *HashSet) *HashSet {
 		return false
 	})
 	return updated
+}
+
+func (h *HashSet) hash(v T) int {
+	return int(hash(v))
+}
+
+func (h *HashSet) eq(a, b T) bool {
+	return equalOp(a, b)
 }

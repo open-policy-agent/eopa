@@ -22,17 +22,13 @@ type hashEntry struct {
 
 // HashMap represents a key/value map.
 type HashMap struct {
-	eq    func(T, T) bool
-	hash  func(T) int
 	table map[int]*hashEntry
 	size  int
 }
 
 // NewHashMap returns a new empty HashMap.
-func NewHashMap(eq func(T, T) bool, hash func(T) int) *HashMap {
+func NewHashMap() *HashMap {
 	return &HashMap{
-		eq:    eq,
-		hash:  hash,
 		table: make(map[int]*hashEntry),
 		size:  0,
 	}
@@ -41,8 +37,6 @@ func NewHashMap(eq func(T, T) bool, hash func(T) int) *HashMap {
 // Copy returns a shallow copy of this HashMap.
 func (h *HashMap) Copy() *HashMap {
 	cpy := &HashMap{
-		eq:    h.eq,
-		hash:  h.hash,
 		table: make(map[int]*hashEntry, len(h.table)),
 		size:  0,
 	}
@@ -168,4 +162,12 @@ func (h *HashMap) Update(other *HashMap) *HashMap {
 		return false
 	})
 	return updated
+}
+
+func (h *HashMap) hash(v T) int {
+	return int(hash(v))
+}
+
+func (h *HashMap) eq(a, b T) bool {
+	return equalOp(a, b)
 }

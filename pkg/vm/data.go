@@ -714,7 +714,7 @@ type Set struct {
 }
 
 func NewSet() *Set {
-	return &Set{set: NewHashSet(equalOp, intHash)}
+	return &Set{set: NewHashSet()}
 }
 
 func (s *Set) Add(v fjson.Json) {
@@ -761,7 +761,7 @@ type Object struct {
 }
 
 func NewObject() *Object {
-	return &Object{obj: NewHashMap(equalOp, intHash)}
+	return &Object{obj: NewHashMap()}
 }
 
 func (o *Object) Insert(k, v fjson.Json) {
@@ -928,6 +928,13 @@ func equalOp(a, b fjson.Json) bool {
 
 	case *Set:
 		if y, ok := b.(*Set); ok {
+			return x.Equal(y)
+		}
+
+		return false
+
+	case hashable:
+		if y, ok := b.(hashable); ok {
 			return x.Equal(y)
 		}
 

@@ -7,7 +7,6 @@ package vm
 
 import (
 	"fmt"
-	"hash/fnv"
 	"reflect"
 	"testing"
 
@@ -47,16 +46,8 @@ func TestHashMapOverwrite(t *testing.T) {
 }
 
 func TestHashMapIter(t *testing.T) {
-	m := NewHashMap(func(a, b T) bool {
-		n1 := a.(fjson.Float)
-		n2 := b.(fjson.Float)
-		return n1 == n2
-	}, func(v fjson.Json) int {
-		n := v.(fjson.Float)
-		f, _ := n.Value().Float64()
-		return int(f)
-	})
-	keys := []fjson.Float{fjson.NewFloat("1"), fjson.NewFloat("2"), fjson.NewFloat("1.4")}
+	m := NewHashMap()
+	keys := []fjson.Json{testHashType{fjson.NewFloat("1"), 1}, testHashType{fjson.NewFloat("2"), 2}, testHashType{fjson.NewFloat("1.4"), 1}}
 	value := str("")
 	for _, k := range keys {
 		m.Put(k, value)
@@ -67,7 +58,7 @@ func TestHashMapIter(t *testing.T) {
 	}
 	results := map[float64]string{}
 	m.Iter(func(k fjson.Json, v fjson.Json) bool {
-		f, _ := k.(fjson.Float).Value().Float64()
+		f, _ := k.(testHashType).Json.(fjson.Float).Value().Float64()
 		results[f] = v.(fjson.String).Value()
 		return false
 	})
@@ -173,18 +164,27 @@ func TestHashMapString(t *testing.T) {
 }
 
 func stringHashMap() *HashMap {
-	return NewHashMap(func(a, b fjson.Json) bool {
-		s1 := a.(fjson.String)
-		s2 := b.(fjson.String)
-		return s1 == s2
-	}, func(v fjson.Json) int {
-		s := v.(fjson.String)
-		h := fnv.New64a()
-		h.Write([]byte(s))
-		return int(h.Sum64())
-	})
+	return NewHashMap()
 }
 
 func str(s string) fjson.String {
 	return fjson.NewString(s)
+}
+
+type testHashType struct {
+	fjson.Json
+	hash uint64
+}
+
+func (t testHashType) Hash() uint64 {
+	return t.hash
+}
+
+func (t testHashType) Equal(other hashable) bool {
+	h, ok := other.(testHashType)
+	if !ok {
+		return false
+	}
+
+	return t.Json.Compare(h.Json) == 0
 }

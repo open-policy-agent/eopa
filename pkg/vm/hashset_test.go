@@ -2,7 +2,6 @@ package vm
 
 import (
 	"fmt"
-	"hash/fnv"
 	"reflect"
 	"testing"
 
@@ -38,16 +37,8 @@ func TestHashSetOverwrite(t *testing.T) {
 }
 
 func TestHashSetIter(t *testing.T) {
-	m := NewHashSet(func(a, b T) bool {
-		n1 := a.(fjson.Float)
-		n2 := b.(fjson.Float)
-		return n1 == n2
-	}, func(v fjson.Json) int {
-		n := v.(fjson.Float)
-		f, _ := n.Value().Float64()
-		return int(f)
-	})
-	keys := []fjson.Float{fjson.NewFloat("1"), fjson.NewFloat("2"), fjson.NewFloat("1.4")}
+	m := NewHashSet()
+	keys := []fjson.Json{testHashType{fjson.NewFloat("1"), 1}, testHashType{fjson.NewFloat("2"), 2}, testHashType{fjson.NewFloat("1.4"), 1}}
 	for _, k := range keys {
 		m.Put(k)
 	}
@@ -57,7 +48,7 @@ func TestHashSetIter(t *testing.T) {
 	}
 	results := map[float64]struct{}{}
 	m.Iter(func(k fjson.Json) bool {
-		f, _ := k.(fjson.Float).Value().Float64()
+		f, _ := k.(testHashType).Json.(fjson.Float).Value().Float64()
 		results[f] = struct{}{}
 		return false
 	})
@@ -151,14 +142,5 @@ func TestHashSetString(t *testing.T) {
 }
 
 func stringHashSet() *HashSet {
-	return NewHashSet(func(a, b fjson.Json) bool {
-		s1 := a.(fjson.String)
-		s2 := b.(fjson.String)
-		return s1 == s2
-	}, func(v fjson.Json) int {
-		s := v.(fjson.String)
-		h := fnv.New64a()
-		h.Write([]byte(s))
-		return int(h.Sum64())
-	})
+	return NewHashSet()
 }
