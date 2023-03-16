@@ -37,21 +37,25 @@ func LoadCommand(license *License) *cobra.Command {
 		},
 	}
 
+	// add OPA commands to root
 	opa := cmd.Command(brand)
 	for _, c := range opa.Commands() {
 		switch c.Name() {
 		case "run":
 			addLicenseFlags(c, &key, &token)
-			root.AddCommand(Run(c, brand))
+			root.AddCommand(initRun(c, brand)) // wrap OPA run
 		case "eval":
 			addLicenseFlags(c, &key, &token)
 			root.AddCommand(c)
+		case "version":
+			root.AddCommand(initVersion()) // override version
 		default:
 			root.AddCommand(c)
 		}
 	}
 
-	root.AddCommand(Bundle())
+	// New Load commands
+	root.AddCommand(initBundle())
 	root.AddCommand(liaCtl())
 
 	licenseCmd := LicenseCmd(license, &key, &token)

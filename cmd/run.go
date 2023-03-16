@@ -29,7 +29,7 @@ import (
 const defaultBindAddress = "localhost:8181"
 
 // Run provides the CLI entrypoint for the `run` subcommand
-func Run(opa *cobra.Command, brand string) *cobra.Command {
+func initRun(opa *cobra.Command, brand string) *cobra.Command {
 	// Only override Run, so we keep the args and usage texts
 	opa.RunE = func(c *cobra.Command, args []string) error {
 		c.SilenceErrors = true
