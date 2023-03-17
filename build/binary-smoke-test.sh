@@ -45,8 +45,10 @@ echo '{"yay": "bar"}' | load eval --format pretty --bundle o2.tar.gz -I data.tes
 load build --output o3.tar.gz test/cli/smoke
 github_actions_group assert_contains '/test/cli/smoke/test.rego' "$(tar -tf o3.tar.gz /test/cli/smoke/test.rego)"
 
-load bundle convert o3.tar.gz o4.tar.gz
+# Verify load bjson
+load bundle convert test/cli/smoke/golden-bundle.tar.gz o4.tar.gz
 
+load exec --bundle o4.tar.gz --decision test/result test/cli/smoke/input.json
 load eval -b o4.tar.gz data
 load bench -b o4.tar.gz data --metrics
 load test -b o4.tar.gz
