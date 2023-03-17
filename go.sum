@@ -46,8 +46,8 @@ github.com/OneOfOne/xxhash v1.2.8 h1:31czK/TI9sNkxIKfaUfGlU47BAxQ0ztGgd9vPyqimf8
 github.com/OneOfOne/xxhash v1.2.8/go.mod h1:eZbhyaAYD41SGSSsnmcpxVoRiQ/MPUTjUdIIOT9Um7Q=
 github.com/ProtonMail/go-crypto v0.0.0-20230217124315-7d5c6f04bbb8 h1:wPbRQzjjwFc0ih8puEVAOFGELsn1zoIIYdxvML7mDxA=
 github.com/ProtonMail/go-crypto v0.0.0-20230217124315-7d5c6f04bbb8/go.mod h1:I0gYDMZ6Z5GRU7l58bNFSkPTFN6Yl12dsUlAZ8xy98g=
-github.com/StyraInc/opa v0.49.1-0.20230313090554-a85f5f3f09e0 h1:90H2KZ4wK0TfTPlUVc/upxjVyQgi6v72njtnQihORiA=
-github.com/StyraInc/opa v0.49.1-0.20230313090554-a85f5f3f09e0/go.mod h1:9jKfDk0L5b9rnhH4M0nq10cGHbYOxqygxzTT3dsvhec=
+github.com/StyraInc/opa v0.49.1-0.20230317125107-ff0b3d6aada1 h1:4qbP4Q/SAorLObq7/Eq+p8znOvEXsEJ/sFGi5inaWFg=
+github.com/StyraInc/opa v0.49.1-0.20230317125107-ff0b3d6aada1/go.mod h1:9jKfDk0L5b9rnhH4M0nq10cGHbYOxqygxzTT3dsvhec=
 github.com/acomagu/bufpipe v1.0.4 h1:e3H4WUzM3npvo5uv95QuJM3cQspFNtFBzvJ2oNjKIDQ=
 github.com/acomagu/bufpipe v1.0.4/go.mod h1:mxdxdup/WdsKVreO5GpW4+M/1CE2sMG4jeGJ2sYmHc4=
 github.com/agnivade/levenshtein v1.1.1 h1:QY8M92nrzkmr798gCo3kmMyqXFzdQVpxLlGPRBij0P8=

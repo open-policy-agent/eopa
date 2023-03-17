@@ -47,7 +47,17 @@ github_actions_group assert_contains '/test/cli/smoke/test.rego' "$(tar -tf o3.t
 
 load bundle convert o3.tar.gz o4.tar.gz
 
+load eval -b o4.tar.gz data
+load bench -b o4.tar.gz data --metrics
 load test -b o4.tar.gz
+load check -b o4.tar.gz
+load deps -b o4.tar.gz data
+load build -b o4.tar.gz -o o5.tar.gz
+
+# Data files - correct namespaces
+echo "::group:: Data files - correct namespaces"
+assert_contains "data.namespace | test${PATH_SEPARATOR}cli${PATH_SEPARATOR}smoke${PATH_SEPARATOR}namespace${PATH_SEPARATOR}data.json" "$(load inspect test/cli/smoke)"
+echo "::endgroup::"
 
 # load with plugins
 echo "::group:: plugins - smoke test"
@@ -57,11 +67,6 @@ sleep 2
 curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X PUT localhost:8181/v1/policies/test -d 'package foo allow := x {x = true}'
 curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X POST localhost:8181/v1/data/foo -d '{"input": {}}'
 kill $last_pid
-echo "::endgroup::"
-
-# Data files - correct namespaces
-echo "::group:: Data files - correct namespaces"
-assert_contains "data.namespace | test${PATH_SEPARATOR}cli${PATH_SEPARATOR}smoke${PATH_SEPARATOR}namespace${PATH_SEPARATOR}data.json" "$(load inspect test/cli/smoke)"
 echo "::endgroup::"
 
 # Test server mode (requires a license): load run -s

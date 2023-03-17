@@ -7,9 +7,12 @@ import (
 	"github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/loader"
 	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/rego"
-	"github.com/open-policy-agent/opa/tester"
 )
+
+func init() {
+	// file system json loader (load json or bjson)
+	loader.RegisterExtension(".json", loadJSON)
+}
 
 type CustomLoader struct{}
 
@@ -27,11 +30,13 @@ func (*CustomLoader) Load(_ context.Context, m metrics.Metrics, paths []string) 
 		}
 		bundles[path] = bndl
 	}
-
 	return bundles, nil
 }
 
-func init() {
-	rego.RegisterBundleLoader(&CustomLoader{})
-	tester.RegisterBundleLoader(&CustomLoader{})
+func loadJSON(path string, bs []byte, m metrics.Metrics) (interface{}, error) {
+	r, err := BjsonFromBinary(bs)
+	if err != nil {
+		return nil, err
+	}
+	return r.JSON(), nil
 }

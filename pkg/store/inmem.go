@@ -28,10 +28,9 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/bundle"
 	"github.com/styrainc/load-private/pkg/store/internal/merge"
 
-	"github.com/open-policy-agent/opa/rego"
+	bundleApi "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/tester"
 )
 
 type BJSONReader interface {
@@ -517,6 +516,5 @@ func (db *store) NonEmpty(ctx context.Context, txn storage.Transaction) func([]s
 }
 
 func init() {
-	rego.RegisterStore(New())
-	tester.RegisterStore(New())
+	bundleApi.RegisterStore(New)
 }

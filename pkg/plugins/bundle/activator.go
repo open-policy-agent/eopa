@@ -18,9 +18,7 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	bundleApi "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/tester"
 	"github.com/open-policy-agent/opa/util"
 	"github.com/styrainc/load-private/pkg/internal/json/patch"
 )
@@ -980,6 +978,5 @@ func LegacyReadRevisionFromStore(ctx context.Context, store storage.Store, txn s
 }
 
 func init() {
-	rego.RegisterBundleActivator(&CustomActivator{})
-	tester.RegisterBundleActivator(&CustomActivator{})
+	bundleApi.RegisterBundleActivator(&CustomActivator{})
 }

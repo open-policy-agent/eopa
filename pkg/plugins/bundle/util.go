@@ -12,13 +12,15 @@ import (
 // the passed byte slice. If the byte slice is a vanilla bundle's content, it'll
 // be converted.
 func BjsonFromBinary(bs []byte) (bjson.Json, error) {
-	if bs[0] == byte('{') {
-		var v interface{}
-		err := util.NewJSONDecoder(bytes.NewReader(bs)).Decode(&v)
-		if err != nil {
-			return nil, err
-		}
-		return bjson.New(v)
+	if bs[0] < 32 { // non-printable (BJSON)
+		return bjson.NewFromBinary(bs)
 	}
-	return bjson.NewFromBinary(bs)
+
+	// JSON (ascii)
+	var v interface{}
+	err := util.NewJSONDecoder(bytes.NewReader(bs)).Decode(&v)
+	if err != nil {
+		return nil, err
+	}
+	return bjson.New(v)
 }
