@@ -19,7 +19,21 @@ var (
 	ErrIllegalIter            = errors.New("illegal iteration") // Illegal iteration over persisted table detected.
 	_              fjson.Json = &Set{}
 	_              fjson.Json = &Object{}
+
+	// prebuilt types are not stored as their specific types to keep them allocated as ready for interface{}.
+
+	prebuiltTrue  fjson.Json = fjson.NewBool(true)
+	prebuiltFalse fjson.Json = fjson.NewBool(false)
+	prebuiltNull  fjson.Json = fjson.NewNull()
+	prebuiltZero  fjson.Json = fjson.NewFloatInt(0)
+	prebuiltInts  [256]fjson.Json
 )
+
+func init() {
+	for i := range prebuiltInts {
+		prebuiltInts[i] = fjson.NewFloatInt(int64(i))
+	}
+}
 
 type (
 	dataOperations struct{}
@@ -347,23 +361,35 @@ func (*dataOperations) MakeArray(capacity int32) fjson.Array {
 	return fjson.NewArray()
 }
 
-func (*dataOperations) MakeBoolean(v bool) fjson.Bool {
-	return fjson.NewBool(v)
+func (*dataOperations) MakeBoolean(v bool) fjson.Json {
+	if v {
+		return prebuiltTrue
+	}
+
+	return prebuiltFalse
 }
 
 func (*dataOperations) MakeObject() *Object {
 	return NewObject()
 }
 
-func (*dataOperations) MakeNull() fjson.Null {
-	return fjson.NewNull()
+func (*dataOperations) MakeNull() fjson.Json {
+	return prebuiltNull
 }
 
 func (*dataOperations) MakeNumberFloat(f float64) fjson.Float {
 	return fjson.NewFloat(gojson.Number(strconv.FormatFloat(f, 'g', -1, 64)))
 }
 
-func (*dataOperations) MakeNumberInt(i int64) fjson.Float {
+func (o *dataOperations) MakeNumberZero() fjson.Json {
+	return prebuiltZero
+}
+
+func (o *dataOperations) MakeNumberInt(i int64) fjson.Json {
+	if i >= 0 && i < int64(len(prebuiltInts)) {
+		return prebuiltInts[i]
+	}
+
 	return fjson.NewFloat(gojson.Number(strconv.FormatInt(i, 10)))
 }
 
@@ -379,7 +405,7 @@ func (*dataOperations) MakeString(v string) fjson.String {
 	return fjson.NewString(v)
 }
 
-func (o *dataOperations) Len(ctx context.Context, v interface{}) (fjson.Float, error) {
+func (o *dataOperations) Len(ctx context.Context, v interface{}) (fjson.Json, error) {
 	switch v := v.(type) {
 	case fjson.Array:
 		return o.MakeNumberInt(int64(v.Len())), nil
@@ -394,16 +420,16 @@ func (o *dataOperations) Len(ctx context.Context, v interface{}) (fjson.Float, e
 	case IterNamespace:
 		obj, err := castJSON(ctx, v)
 		if err != nil {
-			return o.MakeNumberInt(0), err
+			return o.MakeNumberZero(), err
 		}
 
 		return o.MakeNumberInt(int64(obj.(fjson.Object).Len())), nil
 	default:
 		if _, err := castJSON(ctx, v); err != nil {
-			return o.MakeNumberInt(0), err
+			return o.MakeNumberZero(), err
 		}
 
-		return o.MakeNumberInt(0), nil
+		return o.MakeNumberZero(), nil
 	}
 }
 

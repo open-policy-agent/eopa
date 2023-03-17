@@ -83,7 +83,7 @@ func objectGetBuiltin(state *State, args []Value) error {
 	if err != nil {
 		return err
 	}
-	eq, err := state.ValueOps().Equal(state.Globals.Ctx, len, state.ValueOps().MakeNumberInt(0))
+	eq, err := state.ValueOps().Equal(state.Globals.Ctx, len, state.ValueOps().MakeNumberZero())
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func stringsStartsWithBuiltin(state *State, args []Value) error {
 		return err
 	}
 
-	result := state.ValueOps().FromInterface(gostrings.HasPrefix(s, prefix))
+	result := state.ValueOps().MakeBoolean(gostrings.HasPrefix(s, prefix))
 	state.SetReturnValue(Unused, result)
 	return nil
 }
