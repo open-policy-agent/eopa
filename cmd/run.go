@@ -9,13 +9,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/styrainc/load-private/pkg/plugins/bundle"
-	"github.com/styrainc/load-private/pkg/plugins/data"
-	"github.com/styrainc/load-private/pkg/plugins/discovery"
-	"github.com/styrainc/load-private/pkg/plugins/grpc"
-	"github.com/styrainc/load-private/pkg/plugins/impact"
-	inmem "github.com/styrainc/load-private/pkg/store"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -23,6 +16,13 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/runtime"
 	"github.com/open-policy-agent/opa/server"
+
+	"github.com/styrainc/load-private/pkg/plugins/bundle"
+	"github.com/styrainc/load-private/pkg/plugins/data"
+	"github.com/styrainc/load-private/pkg/plugins/discovery"
+	"github.com/styrainc/load-private/pkg/plugins/grpc"
+	"github.com/styrainc/load-private/pkg/plugins/impact"
+	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
 // default bind address if --addr (-a) was not provided in CLI args
@@ -218,6 +218,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 		return nil, err
 	}
 	p.rt.DiagnosticAddrs = &d
+	p.rt.ConfigOverrides = append(p.rt.ConfigOverrides, "labels.type=load")
 
 	return &p, nil
 }
