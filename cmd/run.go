@@ -219,7 +219,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 		return nil, err
 	}
 	p.rt.DiagnosticAddrs = &d
-	p.rt.ConfigOverrides = append(p.rt.ConfigOverrides, "labels.type=load")
+	p.rt.ConfigOverrides = append(p.rt.ConfigOverrides, "labels.type=styra-load")
 
 	return &p, nil
 }
