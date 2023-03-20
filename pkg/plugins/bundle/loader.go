@@ -6,12 +6,13 @@ import (
 
 	"github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/loader"
+	"github.com/open-policy-agent/opa/loader/extension"
 	"github.com/open-policy-agent/opa/metrics"
 )
 
 func init() {
 	// file system json loader (load json or bjson)
-	loader.RegisterExtension(".json", loadJSON)
+	extension.RegisterExtension(".json", loadJSON)
 }
 
 type CustomLoader struct{}
@@ -33,7 +34,7 @@ func (*CustomLoader) Load(_ context.Context, m metrics.Metrics, paths []string) 
 	return bundles, nil
 }
 
-func loadJSON(path string, bs []byte, m metrics.Metrics) (interface{}, error) {
+func loadJSON(bs []byte) (interface{}, error) {
 	r, err := BjsonFromBinary(bs)
 	if err != nil {
 		return nil, err

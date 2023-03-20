@@ -20,6 +20,15 @@ load() {
     github_actions_group $LOAD_EXEC $args
 }
 
+cleanup() {
+    rm -f o?.tar.gz
+    rm -f .signatures.json
+    rm -f public_key.pem private_key.pem
+    rm -rf builddir
+}
+
+trap "cleanup" ERR
+
 # assert_contains checks if the actual string contains the expected string.
 assert_contains() {
     local expected="$1"
@@ -31,6 +40,7 @@ assert_contains() {
 }
 
 load version
+load license
 load eval -t $TARGET 'time.now_ns()'
 load eval --format pretty --bundle test/cli/smoke/golden-bundle.tar.gz --input test/cli/smoke/input.json data.test.result --fail
 load exec --bundle test/cli/smoke/golden-bundle.tar.gz --decision test/result test/cli/smoke/input.json
@@ -41,6 +51,8 @@ echo '{"yay": "bar"}' | load eval --format pretty --bundle o1.tar.gz -I data.tes
 load build --optimize 2 --output o2.tar.gz  test/cli/smoke/data.yaml test/cli/smoke/test.rego
 echo '{"yay": "bar"}' | load eval --format pretty --bundle o2.tar.gz -I data.test.result --fail
 
+load parse test/cli/smoke/test.rego
+
 # Tar paths 
 load build --output o3.tar.gz test/cli/smoke
 github_actions_group assert_contains '/test/cli/smoke/test.rego' "$(tar -tf o3.tar.gz /test/cli/smoke/test.rego)"
@@ -50,11 +62,33 @@ load bundle convert test/cli/smoke/golden-bundle.tar.gz o4.tar.gz
 
 load exec --bundle o4.tar.gz --decision test/result test/cli/smoke/input.json
 load eval -b o4.tar.gz data
-load bench -b o4.tar.gz data --metrics
 load test -b o4.tar.gz
 load check -b o4.tar.gz
 load deps -b o4.tar.gz data
-load build -b o4.tar.gz -o o5.tar.gz
+load inspect -a o4.tar.gz
+load fmt -d o4.tar.gz
+load bench -b o4.tar.gz data --metrics
+
+# Verify sign/validation
+echo "::group:: sign/verification"
+openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
+openssl rsa -pubout -in private_key.pem -out public_key.pem
+
+mkdir -p builddir
+pushd builddir
+tar xzf ../o4.tar.gz
+popd
+
+load sign --signing-key private_key.pem --bundle builddir/
+cp .signatures.json builddir/.
+
+load build --bundle --signing-key private_key.pem --verification-key public_key.pem builddir/ -o o5.tar.gz
+
+$LOAD_EXEC run -s --addr ":8183" -b o5.tar.gz --verification-key=public_key.pem &
+last_pid=$!
+sleep 2
+kill $last_pid
+echo "::endgroup::"
 
 # Data files - correct namespaces
 echo "::group:: Data files - correct namespaces"
@@ -91,4 +125,4 @@ grpcurl -d '{"path": "/foo"}' -plaintext localhost:9090 load.v1.DataService/GetD
 kill $last_pid
 echo "::endgroup::"
 
-rm -f o?.tar.gz
+cleanup

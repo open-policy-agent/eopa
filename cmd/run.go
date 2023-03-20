@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/pflag"
 
 	bundleApi "github.com/open-policy-agent/opa/bundle"
+	"github.com/open-policy-agent/opa/keys"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/runtime"
 	"github.com/open-policy-agent/opa/server"
@@ -283,6 +284,12 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 
 	params.rt.SkipBundleVerification = params.skipBundleVerify
 
+	bvc, err := buildVerificationConfig(params.pubKey, params.pubKeyID, params.algorithm, params.scope, params.excludeVerifyFiles)
+	if err != nil {
+		return nil, err
+	}
+	params.rt.BundleVerificationConfig = bvc
+
 	params.rt.Store = inmem.New()
 
 	params.rt.SkipPluginRegistration = true
@@ -359,4 +366,17 @@ func loadRouter() *mux.Router {
 	m := mux.NewRouter()
 	m.Use(impact.HTTPMiddleware)
 	return m
+}
+
+func buildVerificationConfig(pubKey, pubKeyID, alg, scope string, excludeFiles []string) (*bundleApi.VerificationConfig, error) {
+	if pubKey == "" {
+		return nil, nil
+	}
+
+	keyConfig, err := keys.NewKeyConfig(pubKey, alg, scope)
+	if err != nil {
+		return nil, err
+	}
+	bs, err := bundleApi.NewVerificationConfig(map[string]*keys.Config{pubKeyID: keyConfig}, pubKeyID, scope, excludeFiles), nil
+	return bs, err
 }
