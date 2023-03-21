@@ -180,4 +180,9 @@ require (
 	oras.land/oras-go/v2 v2.0.0 // indirect
 )
 
+// glog's init function does a lookup of the current user, and that can be quite
+// expensive on windows. We only need glog as a third-party dependency (of badger),
+// and badger only calls it to die with a log messsage.
+replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
+
 replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.50.3-0.20230321131654-3bb222ad9b8a
