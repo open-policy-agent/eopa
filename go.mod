@@ -20,7 +20,7 @@ require (
 	github.com/mithrandie/csvq v1.17.11
 	github.com/mithrandie/csvq-driver v1.6.9
 	github.com/okta/okta-sdk-golang/v3 v3.0.1
-	github.com/open-policy-agent/opa v0.50.0
+	github.com/open-policy-agent/opa v0.50.2
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/rs/zerolog v1.29.0
@@ -180,4 +180,4 @@ require (
 	oras.land/oras-go/v2 v2.0.0 // indirect
 )
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.49.1-0.20230320155649-c7b0d1906b7f
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.50.3-0.20230321131654-3bb222ad9b8a
