@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"P\":\"\u2028\xe2\u2028\x8a\u2028\"}")

@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"\":26,\"\xba\xa5-\x9a\xf1\x8c\xdd7c\":6,\"e\":1}")

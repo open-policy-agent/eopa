@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("[1,6e7,8e7,3]")

@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("\"\xef2384185791015625//\xd3-\xc1v\"")

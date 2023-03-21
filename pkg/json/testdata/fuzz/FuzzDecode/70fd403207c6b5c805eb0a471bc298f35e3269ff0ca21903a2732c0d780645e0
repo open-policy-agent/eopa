@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("[5e-551,5e-2225]")

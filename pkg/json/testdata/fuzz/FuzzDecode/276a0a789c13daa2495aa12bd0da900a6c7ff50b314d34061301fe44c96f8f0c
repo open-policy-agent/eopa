@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"S\":\"\xb9\xb9\x853971type not a pointer: 59X97\x8a\xe7\x85\xe4\xc9\"}")

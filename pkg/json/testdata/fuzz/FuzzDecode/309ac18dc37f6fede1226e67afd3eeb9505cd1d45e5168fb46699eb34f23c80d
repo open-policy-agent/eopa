@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"a\":null,\"\":null,\"\":null,\"C\":null,\"C\":null,\"\":null,\"\":null,\"\":null,\"C\":null,\"C\":null,\"\":null,\"\":null,\"\":null,\"\":null,\"C\":null,\"\":null,\"C\":null,\"C\":null,\"\":null,\"\":null,\"\":null,\"C\":null}")

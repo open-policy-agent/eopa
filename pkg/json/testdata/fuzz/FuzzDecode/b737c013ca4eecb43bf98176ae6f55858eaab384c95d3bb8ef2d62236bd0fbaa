@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\t\"Lv\": 2,\n\t\n\t\t\"x\": 4,\n\t\t\t\"Leela\": 5,\n\t\t\"LEVEL1B\": 6,\n\t\t\t\"e\":{\n\t\t\t\t\t\t\"\":12\n\t\t\t},\n\t\t\t\"Loop\": 13,\n\t\t\t\"Loo2\": 14,\n\t\t\"X\": 5,\n\t\t\"Y\": 16,\n\t\t\t\"Z\": 17\n\t}\n")

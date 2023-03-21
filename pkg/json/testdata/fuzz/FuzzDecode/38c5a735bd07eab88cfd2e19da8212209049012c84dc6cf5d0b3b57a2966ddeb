@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("\"g-clef: \\uD834\\uDD1E\"\n")

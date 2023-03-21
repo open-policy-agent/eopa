@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"G\":[0e338,0e48,0e45]}")

@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"F\":[3e1,5e9]}")

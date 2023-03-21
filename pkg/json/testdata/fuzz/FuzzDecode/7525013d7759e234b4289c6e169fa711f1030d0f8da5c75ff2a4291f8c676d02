@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"a\":-2,\"o\":-2}")

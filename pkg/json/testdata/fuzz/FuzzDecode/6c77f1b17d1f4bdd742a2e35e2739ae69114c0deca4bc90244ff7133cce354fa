@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("[1, -689651238e7, \t\t3]\n")

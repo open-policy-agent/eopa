@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("[5e47,5e47,5e47,22e47,5e47]")

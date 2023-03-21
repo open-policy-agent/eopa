@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"F\":\"\\r\\r\\r\\r\\r\\r\\rr\"}")

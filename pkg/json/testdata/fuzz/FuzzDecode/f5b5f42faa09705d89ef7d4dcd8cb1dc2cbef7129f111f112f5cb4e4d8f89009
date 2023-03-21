@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("\t \"a\\u1234\" \n\n\n")

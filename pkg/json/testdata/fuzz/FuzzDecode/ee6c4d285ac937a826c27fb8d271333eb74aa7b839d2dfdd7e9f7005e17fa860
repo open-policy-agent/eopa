@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\n\t\t\t\"Level0\": 1,\n\t\t\t\"Level1b\": 2,\n\t\t\t\"Level1c\": 3,\n\t\t\t\"x\": 4,\n\t\t\t\"Level1a\": 5,\n\t\t\t\"LEVEL1B\": 6,\n\t\t\t\"e\": {\n\t\t\t\t\"Level1a\": 8,\n\t\t\t\t\"Level1b\": 9,\n\t\t\t\t\"Level1c\": 10,\n\t\t\t\t\"Level1d\": 11,\n\t\t\t\t\"x\": 12\n\t\t\t},\n\t\t\t\"Loop1\": 13,\n\t\t\t\"Loop2\": 14,\n\t\t\t\"X\": 15,\n\t\t\t\"Y\": 16,\n\t\t\t\"Z\": 17\n\t\t}\n")

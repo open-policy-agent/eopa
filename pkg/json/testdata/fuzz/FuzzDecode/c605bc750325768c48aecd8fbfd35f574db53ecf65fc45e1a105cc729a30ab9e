@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"2009-11-10T23:00:00Z\": \"hello world\"}\n")

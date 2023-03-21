@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("\"\\uDbDD\\uDDED\\uD9ED\\uDDED\\uD9ED\\uDEDD\\uD9ED\\uDDED\\uD9ED\\uDEDD\"")

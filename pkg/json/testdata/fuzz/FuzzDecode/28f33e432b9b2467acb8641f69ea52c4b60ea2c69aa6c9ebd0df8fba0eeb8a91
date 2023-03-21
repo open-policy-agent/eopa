@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"S\":\"\xb9\x85\xe4M\xc9o\"}")

@@ -90,3 +90,21 @@ jobs:
 
       - run: go install golang.org/x/vuln/cmd/govulncheck@latest
       - run: govulncheck ./...
+
+  fuzzer:
+    name: Go Fuzzer
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+          check-latest: true
+      - run: make fuzz
+      - name: Dump crashers
+        if: ${{ failure() }}
+        run: |
+          cd pkg/json/testdata/fuzz
+          git add -A
+          git diff HEAD

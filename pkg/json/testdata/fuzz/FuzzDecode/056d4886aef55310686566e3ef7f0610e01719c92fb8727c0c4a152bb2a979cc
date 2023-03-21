@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"F\":\"b5D7EaTob5D7EaTob5D7EaTo\"}")

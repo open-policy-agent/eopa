@@ -24,6 +24,7 @@ KO_BUILD_LOCAL := $(KO_BUILD) --base-import-paths --local
 KO_BUILD_DEPLOY := $(KO_BUILD) --bare --platform=linux/amd64,linux/arm64
 
 BUILD_DIR := $(shell echo `pwd`)
+FUZZ_TIME ?= 30m
 
 # LOAD_VERSION: strip 'v' from tag
 export LOAD_VERSION := $(shell git describe --abbrev=0 --tags | sed s/^v//)
@@ -92,7 +93,7 @@ release-wasm:
 	docker run --rm -v $$(PWD):/cwd -w /cwd ghcr.io/goreleaser/goreleaser-cross:v1.19 release -f .goreleaser-wasm.yaml --snapshot --skip-publish --rm-dist
 
 # utilities
-.PHONY: test e2e benchmark fmt check update
+.PHONY: test e2e benchmark fmt check fuzz update
 test:
 	go test ./...
 
@@ -107,6 +108,9 @@ fmt:
 
 check:
 	golangci-lint run -v
+
+fuzz:
+	go test ./pkg/json -fuzz FuzzDecode -fuzztime ${FUZZ_TIME} -v -run '^$$'
 
 update:
 	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@load-0.50.2
