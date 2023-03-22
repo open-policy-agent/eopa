@@ -44,7 +44,7 @@ builds:
         #
         # note: environment variables required for signing
         #   QUILL_SIGN_P12, QUILL_SIGN_PASSWORD
-        - cmd: quill sign "{{ .Path }}" -vv
+        - cmd: quill sign-and-notarize "{{ .Path }}" -vv
           # if we don't want to sign snapshots, signing is beneficial if you do
           # download the snapshot/pr build from the GHA artifact.
           # cmd: quill sign "{{ .Path }}" --ad-hoc={{ .IsSnapshot }} -vv

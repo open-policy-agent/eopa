@@ -234,6 +234,9 @@ jobs:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
       QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }} # base64 encoded contents
       QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }} # p12 password
+      QUILL_NOTARY_KEY: ${{ secrets.QUILL_NOTARY_KEY }}
+      QUILL_NOTARY_KEY_ID: ${{ secrets.QUILL_NOTARY_KEY_ID }}
+      QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }} 
     steps:
       - name: (Dependabot Only) Generate GitHub App Token
         if: ${{ github.actor == 'dependabot[bot]' }}
