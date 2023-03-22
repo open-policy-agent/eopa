@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var brand = "Load"
+const brand = "Load"
 
 func addLicenseFlags(c *cobra.Command, key *string, token *string) {
 	c.Flags().StringVar(key, "license-key", "", "Location of file containing STYRA_LOAD_LICENSE_KEY")
@@ -46,7 +46,9 @@ func LoadCommand(license *License) *cobra.Command {
 			root.AddCommand(initRun(c, brand)) // wrap OPA run
 		case "eval":
 			addLicenseFlags(c, &key, &token)
-			root.AddCommand(c)
+			var evalInstrLimit int64
+			c.Flags().Int64Var(&evalInstrLimit, "instruction-limit", 100_000_000, "set instruction limit for VM")
+			root.AddCommand(evalWrap(c, &evalInstrLimit))
 		case "version":
 			root.AddCommand(initVersion()) // override version
 		default:

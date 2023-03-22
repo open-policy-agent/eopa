@@ -4,6 +4,7 @@ package rego_vm
 import (
 	"context"
 	"crypto/rand"
+	"sync"
 
 	bjson "github.com/styrainc/load-private/pkg/json"
 	"github.com/styrainc/load-private/pkg/plugins/impact"
@@ -22,6 +23,16 @@ const Name = "rego_target_vm"
 
 func init() {
 	rego.RegisterPlugin(Name, &vmp{})
+}
+
+var limits *vm.Limits
+var limitsMtx sync.Mutex
+
+// SetLimits allows changing the *vm.Limits passed to the VM with EvalOpts.
+func SetLimits(instr int64) {
+	limitsMtx.Lock()
+	limits = &vm.Limits{Instructions: instr}
+	limitsMtx.Unlock()
 }
 
 type vmp struct{}
@@ -91,6 +102,7 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		PrintHook:              ectx.PrintHook(),
 		StrictBuiltinErrors:    ectx.StrictBuiltinErrors(),
 		Capabilities:           ectx.Capabilities(),
+		Limits:                 limits,
 	})
 	ectx.Metrics().Timer(evalTimer).Stop()
 	if err != nil {
