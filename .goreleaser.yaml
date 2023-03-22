@@ -1,11 +1,13 @@
 project_name: load
+
+env:
+  - CGO_ENABLED=0
+
 builds:
-  - env:
-      - CGO_ENABLED=0
+  - id: linux-windows-build
     goos:
       - linux
       - windows
-      - darwin
     goarch:
       - amd64
       - arm64
@@ -20,6 +22,34 @@ builds:
       - -X github.com/open-policy-agent/opa/version.AltVersion={{.Env.OPA_VERSION}}
       - -X github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=https://load-telemetry.corp.styra.com
       - -X github.com/open-policy-agent/opa/version.Hostname=github.actions.local
+  - id: darwin-build
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser
+      - -X github.com/open-policy-agent/opa/version.Program=Load
+      - -X "github.com/open-policy-agent/opa/version.AltProgram=Open Policy Agent"
+      - -X github.com/open-policy-agent/opa/version.Version={{.Env.LOAD_VERSION}}
+      - -X github.com/open-policy-agent/opa/version.AltVersion={{.Env.OPA_VERSION}}
+      - -X github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=https://load-telemetry.corp.styra.com
+      - -X github.com/open-policy-agent/opa/version.Hostname=github.actions.local
+    hooks:
+      post:
+        # The binary is signed and notarized when running a production release,
+        # but for snapshot builds notarization is skipped and only ad-hoc
+        # signing is performed (not cryptographic material is needed).
+        #
+        # note: environment variables required for signing
+        #   QUILL_SIGN_P12, QUILL_SIGN_PASSWORD
+        - cmd: quill sign "{{ .Path }}" -vv
+          # if we don't want to sign snapshots, signing is beneficial if you do
+          # download the snapshot/pr build from the GHA artifact.
+          # cmd: quill sign "{{ .Path }}" --ad-hoc={{ .IsSnapshot }} -vv
+          env:
+            - QUILL_LOG_FILE=/tmp/quill-{{ .Target }}.log
 
 archives:
   - id: binary

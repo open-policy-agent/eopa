@@ -190,8 +190,8 @@ jobs:
         run: |
           echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
           echo "bundles=$(pwd)/e2e" >> $GITHUB_OUTPUT
-          echo "binary=$(pwd)/dist/load_linux_amd64_v1/load" >> $GITHUB_OUTPUT
-          chmod +x dist/load_linux_amd64_v1/load
+          echo "binary=$(pwd)/dist/linux-windows-build_linux_amd64_v1/load" >> $GITHUB_OUTPUT
+          chmod +x dist/linux-windows-build_linux_amd64_v1/load
       - run: make e2e
         env:
           IMAGE: ${{ steps.load.outputs.image }}
@@ -232,6 +232,8 @@ jobs:
     environment: ci
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
+      QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }} # base64 encoded contents
+      QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }} # p12 password
     steps:
       - name: (Dependabot Only) Generate GitHub App Token
         if: ${{ github.actor == 'dependabot[bot]' }}
@@ -260,6 +262,10 @@ jobs:
         uses: goreleaser/goreleaser-action@v4
         with:
           install-only: true
+      - name: Install anchore/quill (macos signing)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/quill/main/install.sh |\
+          sh -s -- -b /usr/local/bin
       - name: Make GoReleaser
         run: make release
         env:
@@ -271,7 +277,7 @@ jobs:
           name: binaries
           path: |
             dist/checksums.txt
-            dist/load_*/*
+            dist/*build_*/*
 
   build:
     name: Ko Build
@@ -357,14 +363,14 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            exec: dist/load_linux_amd64_v1/load
+            exec: dist/linux-windows-build_linux_amd64_v1/load
           - os: ubuntu-22.04
-            exec: dist/load_linux_arm64/load
+            exec: dist/linux-windows-build_linux_arm64/load
             arch: arm64
           - os: macos-latest
-            exec: dist/load_darwin_amd64_v1/load
+            exec: dist/darwin-build_darwin_amd64_v1/load
           - os: windows-latest
-            exec: dist/load_windows_amd64_v1/load.exe
+            exec: dist/linux-windows-build_windows_amd64_v1/load.exe
 
     steps:
       - name: (Dependabot Only) Generate GitHub App Token
