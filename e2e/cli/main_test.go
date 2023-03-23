@@ -4,27 +4,23 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestEvalInstructionLimit(t *testing.T) {
-	data := strings.Builder{}
-	data.WriteString(`{"xs": [`)
-	for i := 0; i <= 1000; i++ {
-		if i != 0 {
-			data.WriteRune(',')
-		}
-		data.WriteString(`{"a": 1, "b": 2}`)
-	}
-	data.WriteString(`]}`)
+	data := largeJSON()
 
 	t.Run("limit=1", func(t *testing.T) {
-		load := loadEval(t, "1", data.String())
+		load := loadEval(t, "1", data)
 		out, err := load.Output()
 		if err == nil {
 			t.Fatalf("expected error, got output: %s", string(out))
@@ -46,10 +42,85 @@ func TestEvalInstructionLimit(t *testing.T) {
 	})
 
 	t.Run("limit=10000", func(t *testing.T) {
-		load := loadEval(t, "10000", data.String())
+		load := loadEval(t, "10000", data)
 		_, err := load.Output()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
+		}
+	})
+}
+
+func TestRunInstructionLimit(t *testing.T) {
+	data := largeJSON()
+	policy := `package test
+p { data.xs[_] }`
+	ctx := context.Background()
+
+	t.Run("limit=1", func(t *testing.T) {
+		load, loadOut := loadRun(t, "1", policy, data)
+		if err := load.Start(); err != nil {
+			t.Fatal(err)
+		}
+		waitForLog(ctx, t, loadOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+		req, err := http.NewRequest("POST", "http://localhost:38181/v1/data/test/p", nil)
+		if err != nil {
+			t.Fatalf("http request: %v", err)
+		}
+		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if exp, act := http.StatusInternalServerError, resp.StatusCode; exp != act {
+			t.Fatalf("expected status %d, got %d", exp, act)
+		}
+		output := struct {
+			Code    string
+			Message string
+		}{}
+		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
+			t.Fatal(err)
+		}
+		if exp, act := "instructions limit exceeded", output.Message; exp != act {
+			t.Fatalf("expected message %q, got %q", exp, act)
+		}
+		if exp, act := "internal_error", output.Code; exp != act {
+			t.Fatalf("expected code %q, got %q", exp, act)
+		}
+	})
+
+	t.Run("limit=10000", func(t *testing.T) {
+		load, loadOut := loadRun(t, "10000", policy, data)
+		if err := load.Start(); err != nil {
+			t.Fatal(err)
+		}
+		waitForLog(ctx, t, loadOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+		req, err := http.NewRequest("POST", "http://localhost:38181/v1/data/test/p", nil)
+		if err != nil {
+			t.Fatalf("http request: %v", err)
+		}
+		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if exp, act := http.StatusOK, resp.StatusCode; exp != act {
+			t.Fatalf("expected status %d, got %d", exp, act)
+		}
+		output := struct {
+			Result any
+		}{}
+		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
+			t.Fatal(err)
+		}
+		if exp, act := true, output.Result; exp != act {
+			t.Fatalf("expected result %v, got %v", exp, act)
 		}
 	})
 }
@@ -63,10 +134,105 @@ func loadEval(t *testing.T, limit, data string) *exec.Cmd {
 	return exec.Command(binary(), strings.Split("eval --instruction-limit "+limit+" --data "+dataPath+" data.xs[_]", " ")...)
 }
 
+func loadRun(t *testing.T, limit, policy, data string) (*exec.Cmd, *bytes.Buffer) {
+	logLevel := "debug"
+	buf := bytes.Buffer{}
+	dir := t.TempDir()
+	policyPath := filepath.Join(dir, "eval.rego")
+	if err := os.WriteFile(policyPath, []byte(policy), 0x777); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	dataPath := filepath.Join(dir, "data.json")
+	if err := os.WriteFile(dataPath, []byte(data), 0x777); err != nil {
+		t.Fatalf("write data: %v", err)
+	}
+
+	args := []string{
+		"run",
+		"--server",
+		"--addr", "localhost:38181",
+		"--log-level", logLevel,
+		"--disable-telemetry",
+		"--instruction-limit", limit,
+		dataPath,
+		policyPath,
+	}
+	load := exec.Command(binary(), args...)
+	load.Stderr = &buf
+	load.Env = append(load.Environ(),
+		"STYRA_LOAD_LICENSE_TOKEN="+os.Getenv("STYRA_LOAD_LICENSE_TOKEN"),
+		"STYRA_LOAD_LICENSE_KEY="+os.Getenv("STYRA_LOAD_LICENSE_KEY"),
+	)
+
+	t.Cleanup(func() {
+		if load.Process == nil {
+			return
+		}
+		if err := load.Process.Signal(os.Interrupt); err != nil {
+			panic(err)
+		}
+		load.Wait()
+		if testing.Verbose() {
+			t.Logf("load output:\n%s", buf.String())
+		}
+	})
+
+	return load, &buf
+}
+
 func binary() string {
 	bin := os.Getenv("BINARY")
 	if bin == "" {
 		return "load"
 	}
 	return bin
+}
+
+func largeJSON() string {
+	data := strings.Builder{}
+	data.WriteString(`{"xs": [`)
+	for i := 0; i <= 1000; i++ {
+		if i != 0 {
+			data.WriteRune(',')
+		}
+		data.WriteString(`{"a": 1, "b": 2}`)
+	}
+	data.WriteString(`]}`)
+	return data.String()
+}
+
+func waitForLog(ctx context.Context, t *testing.T, rdr io.Reader, exp int, assert func(string) bool, dur time.Duration) {
+	t.Helper()
+	for i := 0; i <= 3; i++ {
+		if i != 0 {
+			time.Sleep(dur)
+		}
+		if act := retrieveMsg(ctx, t, rdr, assert); act == exp {
+			return
+		} else if i == 3 {
+			t.Fatalf("expected %d requests, got %d", exp, act)
+		}
+	}
+	return
+}
+
+func retrieveMsg(ctx context.Context, t *testing.T, rdr io.Reader, assert func(string) bool) int {
+	t.Helper()
+	c := 0
+	dec := json.NewDecoder(rdr)
+	for {
+		m := struct {
+			Msg string `json:"msg"`
+		}{}
+		if err := dec.Decode(&m); err != nil {
+			if err == io.EOF {
+				break
+			}
+			t.Fatalf("decode console logs: %v", err)
+		}
+		if assert(m.Msg) {
+			c++
+		}
+	}
+	return c
 }
