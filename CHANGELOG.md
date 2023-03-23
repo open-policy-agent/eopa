@@ -1,5 +1,11 @@
 ## Changelog
 
+
+### v0.102.1, v0.102.2
+
+These releases have been release engineering fixes to sort out macos binary signing
+of published executables.
+
 ### v0.102.0
 
 * `load eval` now has a CLI flag for changing the instruction limit.
