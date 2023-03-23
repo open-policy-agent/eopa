@@ -1,5 +1,8 @@
 ## Changelog
 
+### v0.102.3
+
+* Fix `load bundle convert` regression
 
 ### v0.102.1, v0.102.2
 
