@@ -11,7 +11,8 @@ func Dump() *cobra.Command {
 		Use:   "dump",
 		Short: "Dump binary bundle data",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(c *cobra.Command, args []string) error {
+			c.SilenceUsage = true
 			return convert.DumpData(args[0])
 		},
 	}

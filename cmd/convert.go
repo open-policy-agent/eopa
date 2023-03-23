@@ -11,7 +11,8 @@ func Convert() *cobra.Command {
 		Use:   "convert",
 		Short: "Convert OPA bundle to binary bundle",
 		Args:  cobra.ExactArgs(2),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(c *cobra.Command, args []string) error {
+			c.SilenceUsage = true
 			return convert.BundleFile(args[0], args[1])
 		},
 	}
