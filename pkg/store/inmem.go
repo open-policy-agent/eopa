@@ -174,7 +174,7 @@ func (db *store) Truncate(ctx context.Context, txn storage.Transaction, params s
 					return err
 				}
 
-				merged, ok := merge.InterfaceMaps(mergedData, bjson.MustNew(obj).(bjson.Object))
+				merged, ok := merge.InterfaceMaps(mergedData, obj)
 				if !ok {
 					return fmt.Errorf("failed to insert data file from path %s", filepath.Join(key...))
 				}

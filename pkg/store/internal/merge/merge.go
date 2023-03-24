@@ -27,22 +27,27 @@ func InterfaceMaps(a, b bjson.Object) (bjson.Object, bool) {
 
 func merge(a, b bjson.Object) bjson.Object {
 
-	for _, k := range b.Names() {
+	ac := make(map[string]bjson.File, a.Len())
 
-		add := b.Value(k)
-		exist := a.Value(k)
+	for i, k := range a.Names() {
+		ac[k] = a.Iterate(i)
+	}
+
+	for i, k := range b.Names() {
+		add := b.Iterate(i)
+		exist := ac[k]
 		if exist == nil {
-			a.Set(k, add)
+			ac[k] = add
 			continue
 		}
 
 		existObj := exist.(bjson.Object)
 		addObj := add.(bjson.Object)
 
-		a.Set(k, merge(existObj, addObj))
+		ac[k] = merge(existObj, addObj)
 	}
 
-	return a
+	return bjson.NewObject(ac)
 }
 
 func hasConflicts(a, b bjson.Object) bool {

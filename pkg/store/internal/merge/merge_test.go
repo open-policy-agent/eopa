@@ -32,10 +32,6 @@ func TestMergeDocs(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		aInitialJson, err := bjson.NewDecoder(strings.NewReader(tc.a)).Decode()
-		if err != nil {
-			panic(err)
-		}
 
 		bJson, err := bjson.NewDecoder(strings.NewReader(tc.b)).Decode()
 		if err != nil {
@@ -43,7 +39,6 @@ func TestMergeDocs(t *testing.T) {
 		}
 
 		a := aJson.(bjson.Object)
-		aInitial := aInitialJson.(bjson.Object)
 		b := bJson.(bjson.Object)
 
 		if len(tc.c) == 0 {
@@ -51,10 +46,6 @@ func TestMergeDocs(t *testing.T) {
 			c, ok := InterfaceMaps(a, b)
 			if ok {
 				t.Errorf("Expected merge(%v,%v) == false but got: %v", a, b, c)
-			}
-
-			if !reflect.DeepEqual(a, aInitial) {
-				t.Errorf("Expected conflicting merge to not mutate a (%v) but got a: %v", aInitial, a)
 			}
 
 		} else {
@@ -68,10 +59,6 @@ func TestMergeDocs(t *testing.T) {
 			c, ok := InterfaceMaps(a, b)
 			if !ok || !reflect.DeepEqual(c, expected) {
 				t.Errorf("Expected merge(%v, %v) == %v but got: %v (ok: %v)", a, b, expected, c, ok)
-			}
-
-			if reflect.DeepEqual(a, aInitial) || !reflect.DeepEqual(a, c) {
-				t.Errorf("Expected merge to mutate a (%v) but got %v", aInitial, a)
 			}
 		}
 	}
