@@ -3,8 +3,6 @@ package bundle
 import (
 	"bytes"
 
-	"github.com/open-policy-agent/opa/util"
-
 	bjson "github.com/styrainc/load-private/pkg/json"
 )
 
@@ -17,10 +15,5 @@ func BjsonFromBinary(bs []byte) (bjson.Json, error) {
 	}
 
 	// JSON (ascii)
-	var v interface{}
-	err := util.NewJSONDecoder(bytes.NewReader(bs)).Decode(&v)
-	if err != nil {
-		return nil, err
-	}
-	return bjson.New(v)
+	return bjson.NewDecoder(bytes.NewReader(bs)).Decode()
 }
