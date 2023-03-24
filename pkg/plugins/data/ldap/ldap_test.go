@@ -136,17 +136,6 @@ plugins:
 }
 
 func TestLDAPOwned(t *testing.T) {
-	var (
-		searchResult    *goldap.SearchResult
-		convertedResult []any
-	)
-	if err := json.Unmarshal(searchData, &searchResult); err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal(convertedData, &convertedResult); err != nil {
-		t.Fatal(err)
-	}
-
 	config := `
 plugins:
   data:         
@@ -161,11 +150,14 @@ plugins:
 `
 	defer goleak.VerifyNone(t)
 	client := &mocks.Client{}
+	defer client.AssertExpectations(t)
 
 	ctx := ldap.WithClient(context.Background(), client)
 
-	client.On("Start")
-	client.On("Close")
+	client.On("Start").Maybe()
+	client.On("Close").Maybe()
+	client.On("SimpleBind", goldap.NewSimpleBindRequest("test", "testpswd", nil)).Return(&goldap.SimpleBindResult{}, nil).Maybe()
+	client.On("Search", tmock.AnythingOfType("*ldap.SearchRequest")).Return(nil, nil).Maybe()
 
 	store := inmem.New()
 	mgr := pluginMgr(t, store, config)
