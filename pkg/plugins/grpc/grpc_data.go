@@ -2,15 +2,13 @@ package grpc
 
 import (
 	"context"
-	"fmt"
-	"io"
-	"strings"
 
 	bjson "github.com/styrainc/load-private/pkg/json"
 	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
@@ -18,7 +16,6 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
-	"github.com/open-policy-agent/opa/util"
 )
 
 // To support the Bulk service, we have to do a bit of creative
@@ -26,21 +23,6 @@ import (
 // operation is done in a dedicated helper function, allowing transaction
 // management to be deferred to the gRPC handler functions. This means
 // that we can use these helper functions in the Bulk service too.
-
-// This is adapted from the JSON-parsing path in the OPA server.readInputPostV1() function.
-func readInputJSON(jstr string) (ast.Value, error) {
-	var inputValue any
-	dec := util.NewJSONDecoder(strings.NewReader(jstr))
-	if err := dec.Decode(&inputValue); err != nil && err != io.EOF {
-		return nil, fmt.Errorf("body contains malformed input document: %w", err)
-	}
-
-	if inputValue == nil {
-		return nil, nil
-	}
-
-	return ast.InterfaceToValue(inputValue)
-}
 
 // --------------------------------------------------------
 // Low-level request handlers
@@ -59,7 +41,9 @@ func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transact
 	val := preParsedValue
 	if preParsedValue == nil {
 		var err error
-		val, err = bjson.NewDecoder(strings.NewReader(req.GetData())).Decode()
+
+		// val, err = bjson.NewDecoder(strings.NewReader(req.GetData())).Decode()
+		val, err = bjson.New(req.GetData().AsInterface())
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
 		}
@@ -95,8 +79,8 @@ func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transact
 func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.GetDataRequest) (*loadv1.GetDataResponse, error) {
 	path := req.GetPath()
 
-	rawInput := req.GetInput()
-	input, err := readInputJSON(rawInput)
+	rawInput := req.GetInput().AsMap()
+	input, err := ast.InterfaceToValue(rawInput)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid input")
 	}
@@ -188,13 +172,21 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 	}
 
 	resultValue := &rs[0].Expressions[0].Value
-
 	bjsonItem, err := bjson.New(resultValue)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	bs := bjsonItem.String()
-	return &loadv1.GetDataResponse{Path: path, Result: bs}, nil
+	// Convert through interface{} to correctly return to using numeric types.
+	var interfaceHop interface{}
+	if err := bjson.Unmarshal(bjsonItem, &interfaceHop); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	// Note(philip): We can't do `structpb.NewValue(bjsonItem.JSON())`, because json.Number fails to auto-convert.
+	bv, err := structpb.NewValue(interfaceHop)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &loadv1.GetDataResponse{Path: path, Result: bv}, nil
 }
 
 func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.UpdateDataRequest, preParsedValue interface{}) (*loadv1.UpdateDataResponse, error) {
@@ -206,7 +198,8 @@ func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transact
 	val := preParsedValue
 	if preParsedValue == nil {
 		var err error
-		val, err = bjson.NewDecoder(strings.NewReader(req.GetData())).Decode()
+		// val, err = bjson.NewDecoder(strings.NewReader(req.GetData())).Decode()
+		val, err = bjson.New(req.GetData().AsInterface())
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
 		}

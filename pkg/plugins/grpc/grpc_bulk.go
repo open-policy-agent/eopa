@@ -3,7 +3,6 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/storage"
@@ -14,6 +13,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // BulkRW implements a fixed-structure, one-off transaction format.
@@ -68,7 +68,7 @@ func bulkRWParsePolicyFromRequest(req *loadv1.BulkRWRequest_WritePolicyRequest) 
 // Parsing function for individual Data write payloads.
 // Returns a bjson.BJSON under-the-hood.
 func bulkRWParseDataFromRequest(req *loadv1.BulkRWRequest_WriteDataRequest) (interface{}, error) {
-	var data string
+	var data *structpb.Value
 
 	switch x := req.GetReq().(type) {
 	case *loadv1.BulkRWRequest_WriteDataRequest_Create:
@@ -82,7 +82,8 @@ func bulkRWParseDataFromRequest(req *loadv1.BulkRWRequest_WriteDataRequest) (int
 		return nil, nil
 	}
 
-	val, err := bjson.NewDecoder(strings.NewReader(data)).Decode()
+	// val, err := bjson.NewDecoder(strings.NewReader(data)).Decode()
+	val, err := bjson.New(data.AsInterface())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
 	}

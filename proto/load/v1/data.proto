@@ -1,6 +1,8 @@
 syntax = "proto3";
 package load.v1;
 
+import "google/protobuf/struct.proto";
+
 // PatchOp allows specifying a subset ofcan perform a subset of JSON-Patch operations, namely
 // "add", "remove", and "replace".
 enum PatchOp {
@@ -17,7 +19,7 @@ enum PatchOp {
 // [Data REST API Create/Overwrite method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-overwrite-a-document).
 message CreateDataRequest {
   string path = 1;
-  string data = 2; // json string, like "{\"foo\":true}"
+  google.protobuf.Value data = 2; // json value, like {"foo":true}
 }
 
 message CreateDataResponse {
@@ -35,12 +37,12 @@ message CreateDataResponse {
 // in the input field directly.
 message GetDataRequest {
   string path = 1;
-  string input = 2; // JSON string, like "{\"foo\":true}"
+  google.protobuf.Struct input = 2; // json object, like {"foo":true}
 }
 
 message GetDataResponse {
   string path = 1;
-  string result = 2; // JSON string, like "{\"foo\":true}"
+  google.protobuf.Value result = 2; // json value, like {"foo":true}
 }
 
 // UpdateDataRequest looks up the document by path, and then attempts to
@@ -53,7 +55,7 @@ message GetDataResponse {
 message UpdateDataRequest {
   string path = 1;
   PatchOp op = 2; // If unspecified, defaults to "overwrite/replace".
-  string data = 3; // JSON value to be patched in, like "{\"foo\":true}"
+  google.protobuf.Value data = 3; // JSON value to be patched in, like {"foo":true}
 }
 
 message UpdateDataResponse {

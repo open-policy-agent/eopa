@@ -23,6 +23,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const bufSize = 1024 * 1024
@@ -127,7 +128,7 @@ func TestCreateData(t *testing.T) {
 
 	// Create new data store item.
 	{
-		_, err := client.CreateData(ctx, &loadv1.CreateDataRequest{Path: "/a", Data: "27"})
+		_, err := client.CreateData(ctx, &loadv1.CreateDataRequest{Path: "/a", Data: structpb.NewNumberValue(27)})
 		if err != nil {
 			t.Fatalf("CreateData failed: %v", err)
 		}
@@ -143,7 +144,7 @@ func TestCreateData(t *testing.T) {
 			t.Fatalf("Expected /a, got: %v", path)
 		}
 		data := resp.GetResult()
-		if string(data) != "27" {
+		if data.GetNumberValue() != 27 {
 			t.Fatalf("Expected 27, got: %v", data)
 		}
 	}
@@ -172,7 +173,7 @@ func TestGetDataBaseDocument(t *testing.T) {
 			t.Fatalf("Expected /a, got: %v", path)
 		}
 		data := resp.GetResult()
-		if string(data) != "27" {
+		if data.GetNumberValue() != 27 {
 			t.Fatalf("Expected 27, got: %v", data)
 		}
 	}
@@ -191,7 +192,7 @@ func TestUpdateData(t *testing.T) {
 
 	// Update the data item.
 	{
-		_, err := client.UpdateData(ctx, &loadv1.UpdateDataRequest{Path: "/a", Op: loadv1.PatchOp_PATCH_OP_REPLACE, Data: "4"})
+		_, err := client.UpdateData(ctx, &loadv1.UpdateDataRequest{Path: "/a", Op: loadv1.PatchOp_PATCH_OP_REPLACE, Data: structpb.NewNumberValue(4)})
 		if err != nil {
 			t.Fatalf("UpdateData failed: %v", err)
 		}
@@ -207,7 +208,7 @@ func TestUpdateData(t *testing.T) {
 			t.Fatalf("Expected /a, got: %v", path)
 		}
 		data := resp.GetResult()
-		if string(data) != "4" {
+		if data.GetNumberValue() != 4 {
 			t.Fatalf("Expected 4, got: %v", data)
 		}
 	}
@@ -242,7 +243,7 @@ func TestDeleteData(t *testing.T) {
 			t.Fatalf("Expected /a, got: %v", path)
 		}
 		data := resp.GetResult()
-		if string(data) != "" {
+		if data.GetStringValue() != "" {
 			t.Fatalf("Expected \"\", got: %v", data)
 		}
 	}
