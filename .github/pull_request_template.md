@@ -5,5 +5,3 @@
 ### :athletic_shoe: How to test
 
 ### :chains: Related Resources
-
-STY-
