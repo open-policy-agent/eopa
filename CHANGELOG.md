@@ -1,5 +1,11 @@
 ## Changelog
 
+### v0.102.4
+
+* Fix `--disable-telemetry` being ignored for `load run --server`.
+* Use `google.protobuf.Value` and `google.protobuf.Struct` in the gRPC API instead of raw JSON strings.
+* Further performance improvements to the Rego VM and bundle loading.
+
 ### v0.102.3
 
 * Fix `load bundle convert` regression
