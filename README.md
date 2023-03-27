@@ -17,6 +17,8 @@ Install using brew or directly from download page.
 - [protobuf](https://developers.google.com/protocol-buffers): see `pkg/grpc/README.md`
 - [bufbuild](https://buf.build/)
 - [grpcurl](https://github.com/fullstorydev/grpcurl): `brew install grpcurl`
+- [quill](https://github.com/anchore/quill): `curl -sSfL https://raw.githubusercontent.com/anchore/quill/main/install.sh | sh -s -- -b /usr/local/bin`
+
 
 ### Optional:
 - [goreleaser-cross](https://github.com/goreleaser/goreleaser-cross): `make release` (1.5GB)
@@ -121,6 +123,28 @@ If you get "permission denied: ./load"
 % xattr -d com.apple.quarantine load
 ```
 
+### MacOS signing locally (`make release`)
+
+Follow the instruction to create an Apple developer certificate (P12) and notary on the [Quill README.md](https://github.com/anchore/quill).
+
+Set up the following environment variables, and perform a `make release`:
+
+```
+      QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }} # base64 encoded contents
+      QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }} # p12 password
+      QUILL_NOTARY_KEY: ${{ secrets.QUILL_NOTARY_KEY }}
+      QUILL_NOTARY_KEY_ID: ${{ secrets.QUILL_NOTARY_KEY_ID }}
+      QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
+```
+
+### MacOS sign-and-notarize failure
+
+You can safely ignore the error, or set up Quill as described above.
+
+```
+  ⨯ release failed after 5s error=post hook failed: failed to run 'quill sign-and-notarize /Users/kevin/src/github.com/styrainc/load-private/dist/darwin-build_darwin_amd64_v1/load -vv': exit status 1
+make: *** [release] Error 1
+```
 
 ## Release Load
 

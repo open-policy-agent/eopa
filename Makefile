@@ -120,7 +120,7 @@ update:
 #    called by github action
 #    run locally:
 #      make release
-#      make ci-smoke-test BINARY=dist/load_darwin_amd64_v1/load
+#      make ci-smoke-test BINARY=dist/darwin-build_darwin_amd64_v1/load
 #
 .PHONY: ci-smoke-test
 ci-smoke-test:

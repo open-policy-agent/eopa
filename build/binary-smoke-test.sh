@@ -59,9 +59,9 @@ github_actions_group assert_contains '/test/cli/smoke/test.rego' "$(tar -tf o3.t
 
 # Verify load bjson
 load bundle convert test/cli/smoke/golden-bundle.tar.gz o4.tar.gz
+load eval --bundle o4.tar.gz --input test/cli/smoke/input.json data.test.result --fail
 
 load exec --bundle o4.tar.gz --decision test/result test/cli/smoke/input.json
-load eval -b o4.tar.gz data
 load test -b o4.tar.gz
 load check -b o4.tar.gz
 load deps -b o4.tar.gz data
