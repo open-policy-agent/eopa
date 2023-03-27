@@ -824,10 +824,10 @@ func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
 
 	switch v := v.(type) {
 	case IterableObject:
-		obj := fjson.NewObject(nil)
+		obj := NewObject()
 		var err error
 		v.Iter(ctx, func(k, v interface{}) bool {
-			obj.Set(k.(fjson.String).Value(), v.(fjson.Json))
+			obj.Insert(ctx, k.(fjson.String), v.(fjson.Json))
 			return false
 		})
 		if err != nil {

@@ -1094,7 +1094,8 @@ func (o ObjectBinary) Serialize(cache *encodingCache, buffer *bytes.Buffer, base
 }
 
 type ObjectMap struct {
-	properties []objectEntry
+	internedKeys *[]string
+	values       []interface{}
 }
 
 type objectEntry struct {
@@ -1103,15 +1104,43 @@ type objectEntry struct {
 }
 
 func NewObject(properties map[string]File) Object {
-	p := make([]objectEntry, 0, len(properties))
+	return NewObject2(properties, nil)
+}
 
-	for name, property := range properties {
-		p = append(p, objectEntry{name, property})
+func NewObject2(properties map[string]File, interning map[interface{}]*[]string) Object {
+	keys := make([]string, len(properties))
+	values := make([]interface{}, len(properties))
+
+	i := 0
+	for key, value := range properties {
+		keys[i] = key
+		values[i] = value
+		i++
 	}
 
-	sort.Slice(p, func(i, j int) bool { return p[i].name < p[j].name })
+	sort.Sort(&keyValueSlices{keys, values})
 
-	return &ObjectMap{p}
+	obj := &ObjectMap{nil, values}
+	obj.internedKeys = obj.intern(keys, interning)
+	return obj
+}
+
+type keyValueSlices struct {
+	keys   []string
+	values []interface{}
+}
+
+func (kv *keyValueSlices) Len() int {
+	return len(kv.keys)
+}
+
+func (kv *keyValueSlices) Less(i, j int) bool {
+	return kv.keys[i] < kv.keys[j]
+}
+
+func (kv *keyValueSlices) Swap(i, j int) {
+	kv.keys[i], kv.keys[j] = kv.keys[j], kv.keys[i]
+	kv.values[i], kv.values[j] = kv.values[j], kv.values[i]
 }
 
 func (o *ObjectMap) WriteTo(w io.Writer) (int64, error) {
@@ -1120,12 +1149,12 @@ func (o *ObjectMap) WriteTo(w io.Writer) (int64, error) {
 		return written, err
 	}
 
-	for i := range o.properties {
+	for i, key := range o.keys() {
 		if err := writeValueSeparator(w, i, &written); err != nil {
 			return written, err
 		}
 
-		if data, err := marshalStringJSON(o.properties[i].name, true); err != nil {
+		if data, err := marshalStringJSON(key, true); err != nil {
 			return written, err
 		} else if err := writeSafe(w, data, &written); err != nil {
 			return written, err
@@ -1135,7 +1164,7 @@ func (o *ObjectMap) WriteTo(w io.Writer) (int64, error) {
 			return written, err
 		}
 
-		if err := writeToSafe(w, o.properties[i].value.(File), &written); err != nil {
+		if err := writeToSafe(w, o.values[i].(File), &written); err != nil {
 			return written, err
 		}
 	}
@@ -1149,12 +1178,7 @@ func (o *ObjectMap) Contents() interface{} {
 }
 
 func (o *ObjectMap) Names() []string {
-	names := make([]string, len(o.properties))
-	for i := range o.properties {
-		names[i] = o.properties[i].name
-	}
-
-	return names
+	return o.keys()
 }
 
 func (o *ObjectMap) Set(name string, value Json) (Object, bool) {
@@ -1164,15 +1188,22 @@ func (o *ObjectMap) Set(name string, value Json) (Object, bool) {
 func (o *ObjectMap) setImpl(name string, value File) (Object, bool) {
 	i, ok := o.find(name)
 	if ok {
-		o.properties[i] = objectEntry{name, value}
+		o.values[i] = value
 		return o, false
 	}
 
-	properties := make([]objectEntry, len(o.properties)+1)
-	copy(properties, o.properties[0:i])
-	properties[i] = objectEntry{name, value}
-	copy(properties[i+1:], o.properties[i:])
-	o.properties = properties
+	curr := o.keys()
+	keys := make([]string, len(curr)+1)
+	copy(keys, curr[0:i])
+	keys[i] = name
+	copy(keys[i+1:], curr[i:])
+	o.internedKeys = o.intern(keys, nil) // No interning.
+
+	values := make([]interface{}, len(o.values)+1)
+	copy(values, o.values[0:i])
+	values[i] = value
+	copy(values[i+1:], o.values[i:])
+	o.values = values
 	return o, false
 }
 
@@ -1191,13 +1222,14 @@ func (o *ObjectMap) Value(name string) Json {
 
 func (o *ObjectMap) find(name string) (int, bool) {
 	// golang sort.Search implementation embedded here to assist compiler in inlining.
-	i, j := 0, len(o.properties)
+	keys := o.keys()
+	i, j := 0, len(keys)
 	for i < j {
 		h := int(uint(i+j) >> 1) // avoid overflow when computing h
 		// i ≤ h < j
 
 		// begin f(h):
-		ret := o.properties[h].name >= name
+		ret := keys[h] >= name
 		// end f(h)
 
 		if !ret {
@@ -1207,7 +1239,7 @@ func (o *ObjectMap) find(name string) (int, bool) {
 		}
 	}
 
-	return i, i < len(o.properties) && o.properties[i].name == name
+	return i, i < len(keys) && keys[i] == name
 }
 
 func (o *ObjectMap) valueImpl(name string) File {
@@ -1216,30 +1248,37 @@ func (o *ObjectMap) valueImpl(name string) File {
 		return nil
 	}
 
-	return o.properties[i].value.(File)
+	return o.values[i].(File)
 }
 
 func (o *ObjectMap) Iterate(i int) Json {
-	return o.properties[i].value.(Json)
+	return o.values[i].(Json)
 }
 
 func (o *ObjectMap) RemoveIdx(i int) Json {
-	if i < 0 || i >= len(o.properties) {
+	if i < 0 || i >= len(o.values) {
 		panic("json: index out of range")
 	}
 
-	properties := make([]objectEntry, len(o.properties)-1)
-	copy(properties, o.properties[0:i])
-	copy(properties[i:], o.properties[i+1:])
-	return &ObjectMap{properties}
+	curr := o.keys()
+	keys := make([]string, len(curr)-1)
+	copy(keys, curr[0:i])
+	copy(keys[i:], curr[i+1:])
+
+	values := make([]interface{}, len(o.values)-1)
+	copy(values, o.values[0:i])
+	copy(values[i:], o.values[i+1:])
+
+	return &ObjectMap{o.intern(keys, nil), values} // No interning.
 }
 
 func (o *ObjectMap) SetIdx(i int, j File) Json {
-	if i < 0 || i >= len(o.properties) {
+	keys := o.keys()
+	if i < 0 || i >= len(keys) {
 		panic("json: index out of range")
 	}
 
-	o.properties[i].value = j
+	o.values[i] = j
 	return o
 }
 
@@ -1252,15 +1291,16 @@ func (o *ObjectMap) Remove(name string) Object {
 }
 
 func (o *ObjectMap) Len() int {
-	return len(o.properties)
+	return len(o.values)
 }
 
 func (o *ObjectMap) JSON() interface{} {
-	object := make(map[string]interface{}, len(o.properties))
-	for i := range o.properties {
-		j, ok := o.properties[i].value.(Json)
+	keys := o.keys()
+	object := make(map[string]interface{}, len(keys))
+	for i := range keys {
+		j, ok := o.values[i].(Json)
 		if ok {
-			object[o.properties[i].name] = j.JSON()
+			object[keys[i]] = j.JSON()
 		}
 		// else: TODO: Should set the value to nil, to be identical with array processing?
 	}
@@ -1269,12 +1309,13 @@ func (o *ObjectMap) JSON() interface{} {
 }
 
 func (o *ObjectMap) AST() ast.Value {
-	object := make([][2]*ast.Term, 0, len(o.properties))
+	keys := o.keys()
+	object := make([][2]*ast.Term, 0, len(keys))
 
-	for i := range o.properties {
-		j, ok := o.properties[i].value.(Json)
+	for i := range keys {
+		j, ok := o.values[i].(Json)
 		if ok {
-			k := ast.String(o.properties[i].name)
+			k := ast.String(keys[i])
 			object = append(object, [2]*ast.Term{ast.NewTerm(k), ast.NewTerm(j.AST())})
 		}
 		// else: TODO: Should set the value to nil, to be identical with array processing?
@@ -1318,16 +1359,16 @@ func (o *ObjectMap) Walk(state *DecodingState, walker Walker) {
 }
 
 func (o *ObjectMap) Clone(deepCopy bool) File {
-	properties := make([]objectEntry, 0, len(o.properties))
-	for i := range o.properties {
-		v := o.properties[i].value
+	values := make([]interface{}, 0, len(o.values))
+	for i := range o.values {
+		v := o.values[i]
 		if deepCopy {
 			v = v.(File).Clone(true)
 		}
-		properties = append(properties, objectEntry{o.properties[i].name, v})
+		values = append(values, v)
 	}
 
-	return &ObjectMap{properties}
+	return &ObjectMap{o.internedKeys, values}
 }
 
 func (o *ObjectMap) String() string {
@@ -1341,7 +1382,35 @@ func (o *ObjectMap) String() string {
 }
 
 func (o *ObjectMap) Serialize(cache *encodingCache, buffer *bytes.Buffer, base int32) (int32, error) {
-	return serializeObject(o.properties, cache, buffer, base)
+	properties := make([]objectEntry, len(o.values))
+
+	for i, key := range o.keys() {
+		properties[i] = objectEntry{key, o.values[i]}
+	}
+
+	return serializeObject(properties, cache, buffer, base)
+}
+
+func (o *ObjectMap) intern(s []string, keys map[interface{}]*[]string) *[]string {
+	if keys == nil {
+		return &s
+	}
+
+	arr := reflect.New(reflect.ArrayOf(len(s), reflect.TypeOf(""))).Elem()
+	reflect.Copy(arr, reflect.ValueOf(s))
+	cmpVal := arr.Interface()
+
+	p, ok := keys[cmpVal]
+	if ok {
+		return p
+	}
+
+	keys[cmpVal] = &s
+	return &s
+}
+
+func (o *ObjectMap) keys() []string {
+	return *o.internedKeys
 }
 
 // compare compares two JSON values, returning -1, 0, 1 if a is less

@@ -19,11 +19,12 @@ var config = jsoniter.Config{
 // standard package.
 type Decoder struct {
 	strings map[string]string // for string interning.
+	keys    map[interface{}]*[]string
 	iter    *jsoniter.Iterator
 }
 
 func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{strings: make(map[string]string), iter: jsoniter.Parse(config, r, 512)}
+	return &Decoder{strings: make(map[string]string), keys: make(map[interface{}]*[]string), iter: jsoniter.Parse(config, r, 512)}
 }
 
 func (d *Decoder) error() error {
@@ -117,7 +118,7 @@ func (d *Decoder) Decode() (Json, error) {
 			return nil, err
 		}
 
-		return NewObject(properties), nil
+		return NewObject2(properties, d.keys), nil
 	}
 
 	return nil, fmt.Errorf("unexpected value type: %v", valueType)
