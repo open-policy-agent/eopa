@@ -74,8 +74,8 @@ func (d *Decoder) Decode() (Json, error) {
 		return NewBool(v), nil
 
 	case jsoniter.ArrayValue:
-		array := NewArray()
 		var err error
+		var arr []File
 		d.iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
 			v, e := d.Decode()
 			if e != nil {
@@ -83,7 +83,7 @@ func (d *Decoder) Decode() (Json, error) {
 				return false
 			}
 
-			array.Append(v)
+			arr = append(arr, v)
 			return true
 		})
 		if err != nil {
@@ -93,7 +93,9 @@ func (d *Decoder) Decode() (Json, error) {
 			return nil, err
 		}
 
-		return array, nil
+		trimmed := make([]File, len(arr))
+		copy(trimmed, arr)
+		return NewArray2(trimmed), nil
 
 	case jsoniter.ObjectValue:
 		properties := make(map[string]File)

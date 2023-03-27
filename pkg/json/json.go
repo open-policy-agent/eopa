@@ -692,6 +692,10 @@ func NewArray(elements ...File) Array {
 	return &ArraySlice{elements: elements}
 }
 
+func NewArray2(elements []File) Array {
+	return &ArraySlice{elements: elements}
+}
+
 func (a *ArraySlice) WriteTo(w io.Writer) (int64, error) {
 	return writeArrayJSON(w, a)
 }
