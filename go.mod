@@ -17,8 +17,8 @@ require (
 	github.com/jarcoal/httpmock v1.2.0
 	github.com/json-iterator/go v1.1.12
 	github.com/keygen-sh/keygen-go/v2 v2.3.1
-	github.com/mithrandie/csvq v1.17.11
-	github.com/mithrandie/csvq-driver v1.6.9
+	github.com/mithrandie/csvq v1.18.1
+	github.com/mithrandie/csvq-driver v1.7.0
 	github.com/okta/okta-sdk-golang/v3 v3.0.1
 	github.com/open-policy-agent/opa v0.50.2
 	github.com/ory/dockertest v3.3.5+incompatible
@@ -110,7 +110,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/mithrandie/go-file/v2 v2.1.0 // indirect
-	github.com/mithrandie/go-text v1.5.4 // indirect
+	github.com/mithrandie/go-text v1.6.0 // indirect
 	github.com/mithrandie/ternary v1.1.1 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
