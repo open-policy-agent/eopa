@@ -57,7 +57,7 @@ p { data.xs[_] }`
 	ctx := context.Background()
 
 	t.Run("limit=1", func(t *testing.T) {
-		load, loadOut := loadRun(t, "1", policy, data)
+		load, loadOut := loadRun(t, policy, data, "--instruction-limit", "1")
 		if err := load.Start(); err != nil {
 			t.Fatal(err)
 		}
@@ -93,7 +93,7 @@ p { data.xs[_] }`
 	})
 
 	t.Run("limit=10000", func(t *testing.T) {
-		load, loadOut := loadRun(t, "10000", policy, data)
+		load, loadOut := loadRun(t, policy, data, "--instruction-limit", "10000")
 		if err := load.Start(); err != nil {
 			t.Fatal(err)
 		}
@@ -134,7 +134,7 @@ func loadEval(t *testing.T, limit, data string) *exec.Cmd {
 	return exec.Command(binary(), strings.Split("eval --instruction-limit "+limit+" --data "+dataPath+" data.xs[_]", " ")...)
 }
 
-func loadRun(t *testing.T, limit, policy, data string) (*exec.Cmd, *bytes.Buffer) {
+func loadRun(t *testing.T, policy, data string, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
 	logLevel := "debug"
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
@@ -153,10 +153,12 @@ func loadRun(t *testing.T, limit, policy, data string) (*exec.Cmd, *bytes.Buffer
 		"--addr", "localhost:38181",
 		"--log-level", logLevel,
 		"--disable-telemetry",
-		"--instruction-limit", limit,
+	}
+	args = append(args, extraArgs...)
+	args = append(args,
 		dataPath,
 		policyPath,
-	}
+	)
 	load := exec.Command(binary(), args...)
 	load.Stderr = &buf
 	load.Env = append(load.Environ(),
@@ -219,7 +221,18 @@ func waitForLog(ctx context.Context, t *testing.T, rdr io.Reader, exp int, asser
 func retrieveMsg(ctx context.Context, t *testing.T, rdr io.Reader, assert func(string) bool) int {
 	t.Helper()
 	c := 0
-	dec := json.NewDecoder(rdr)
+	// Skip any non-JSON logs coming from CLI arg validation
+	buf := bytes.Buffer{}
+	if _, err := io.Copy(&buf, rdr); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := buf.ReadBytes('{'); err == nil {
+		if err := buf.UnreadByte(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	dec := json.NewDecoder(&buf)
 	for {
 		m := struct {
 			Msg string `json:"msg"`

@@ -64,7 +64,6 @@ type runCmdParams struct {
 	tlsCertRefresh     time.Duration
 	ignore             []string
 	serverMode         bool
-	skipVersionCheck   bool
 	authentication     *pflag.Flag
 	authorization      *pflag.Flag
 	minTLSVersion      *pflag.Flag
@@ -129,6 +128,8 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 	}
 
 	// bools
+	// NOTE(sr): there's two ways to disable telemetry, check both, combine them
+	var skipVersionCheck, disableTelemetry bool
 	for _, f := range []struct {
 		flag  string
 		param *bool
@@ -138,7 +139,8 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 		{"watch", &p.rt.Watch},
 		{"pprof", &p.rt.PprofEnabled},
 		{"bundle", &p.rt.BundleMode},
-		{"skip-version-check", &p.skipVersionCheck},
+		{"skip-version-check", &skipVersionCheck},
+		{"disable-telemetry", &disableTelemetry},
 		{"skip-verify", &p.skipBundleVerify},
 	} {
 		*f.param, err = c.Flags().GetBool(f.flag)
@@ -146,6 +148,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 			return nil, err
 		}
 	}
+	p.rt.EnableVersionCheck = !(disableTelemetry || skipVersionCheck) // either one of these disables
 
 	// ints
 	for _, f := range []struct {
@@ -279,8 +282,6 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	params.rt.Filter = loaderFilter{
 		Ignore: params.ignore,
 	}.Apply
-
-	params.rt.EnableVersionCheck = !params.skipVersionCheck
 
 	params.rt.SkipBundleVerification = params.skipBundleVerify
 
