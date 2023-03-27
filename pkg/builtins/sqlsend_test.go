@@ -6,11 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/compile"
 	"github.com/open-policy-agent/opa/ir"
+	"github.com/open-policy-agent/opa/metrics"
+	"github.com/open-policy-agent/opa/topdown/builtins"
+	"github.com/open-policy-agent/opa/topdown/cache"
 
 	"github.com/styrainc/load-private/pkg/vm"
 )
@@ -19,45 +23,171 @@ func TestSQLSend(t *testing.T) {
 	file := t.TempDir() + "/sqlite3.db"
 	populate(t, file)
 
+	now := time.Now()
+
 	tests := []struct {
-		note   string
-		source string
-		result string
-		error  string
+		note                string
+		source              string
+		result              string
+		error               string
+		doNotResetCache     bool
+		time                time.Time
+		interQueryCacheHits int
 	}{
 		{
 			"missing parameter(s)",
 			`p = resp { sql.send({}, resp)}`,
 			"",
-			`eval_type_error: sql.send: operand 1 missing required request parameters(s): {"data_source_name", "driver", "query"}`},
+			`eval_type_error: sql.send: operand 1 missing required request parameters(s): {"data_source_name", "driver", "query"}`,
+			false,
+			now,
+			0,
+		},
 		{
 			"a single row query",
 			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`, file),
 			`{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
 			"",
+			false,
+			now,
+			0,
 		},
 		{
 			"a multi-row query",
 			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T2"}, resp)}`, file),
 			`{{"result": {"p": {"rows": [["A1", "B1"], ["A2", "B2"]]}}}}`,
 			"",
+			false,
+			now,
+			0,
 		},
 		{
 			"query with args",
 			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1 WHERE KEY = $1", "args": ["A"]}, resp)}`, file),
 			`{{"result": {"p": {"rows": [["B"]]}}}}`,
 			"",
+			false,
+			now,
+			0,
+		},
+		{
+			"intra-query query cache",
+			fmt.Sprintf(`p = [ resp1, resp2 ] {
+sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp1)
+sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp2) # cached
+}`, file, file),
+			`{{"result": {"p": [{"rows": [["B"]]},{"rows": [["B"]]}]}}}`,
+			"",
+			false,
+			now,
+			0,
+		},
+		{
+			"inter-query query cache warmup (default duration)",
+			fmt.Sprintf(`p = resp { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`, file),
+			`{{"result": {"p": {"rows": [["B"]]}}}}`,
+			"",
+			false,
+			now,
+			0,
+		},
+		{
+			"inter-query query cache check (default duration, valid)",
+			fmt.Sprintf(`p = resp { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`, file),
+			`{{"result": {"p": {"rows": [["B"]]}}}}`,
+			"",
+			true, // keep the warmup results
+			now.Add(interQueryCacheDurationDefault - 1),
+			1,
+		},
+		{
+			"inter-query query cache check (default duration, expired)",
+			fmt.Sprintf(`p = resp { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`, file),
+			`{{"result": {"p": {"rows": [["B"]]}}}}`,
+			"",
+			true, // keep the warmup results
+			now.Add(interQueryCacheDurationDefault),
+			0,
+		},
+		{
+			"inter-query query cache warmup (explicit duration)",
+			fmt.Sprintf(`p = resp { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`, file),
+			`{{"result": {"p": {"rows": [["B"]]}}}}`,
+			"",
+			false,
+			now,
+			0,
+		},
+		{
+			"inter-query query cache check (explicit duration, valid)",
+			fmt.Sprintf(`p = resp { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`, file),
+			`{{"result": {"p": {"rows": [["B"]]}}}}`,
+			"",
+			true, // keep the warmup results
+			now.Add(10*time.Second - 1),
+			1,
+		},
+		{
+			"inter-query query cache check (explicit duration, expired)",
+			fmt.Sprintf(`p = resp { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`, file),
+			`{{"result": {"p": {"rows": [["B"]]}}}}`,
+			"",
+			true, // keep the warmup results
+			now.Add(10 * time.Second),
+			0,
+		},
+		{
+			"rows as objects",
+			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T1", "row_object": true}, resp)}`, file),
+			`{{"result": {"p": {"rows": [{"KEY": "A", "VALUE": "B"}]}}}}`,
+			"",
+			false,
+			now,
+			0,
+		},
+		{
+			"error w/o raise",
+			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM NON_EXISTING"}, resp)}`, file),
+			"",
+			"eval_builtin_error: sql.send: SQL logic error: no such table: NON_EXISTING (1)",
+			false,
+			now,
+			0,
+		},
+		{
+			"error with raise",
+			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM NON_EXISTING", "raise_error": false}, resp)}`, file),
+			`{{"result": {"p": {"rows": [], "error": {"code": 1, "message": "SQL logic error: no such table: NON_EXISTING (1)"}}}}}`,
+			"",
+			false,
+			now,
+			0,
 		},
 	}
 
+	var maxSize int64 = 1024 * 1024
+	interQueryCache := cache.NewInterQueryCache(&cache.Config{
+		InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
+			MaxSizeBytes: &maxSize,
+		},
+	})
+
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
-			execute(t, "package t\n"+tc.source, "t", tc.result, tc.error)
+			if !tc.doNotResetCache {
+				interQueryCache = cache.NewInterQueryCache(&cache.Config{
+					InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
+						MaxSizeBytes: &maxSize,
+					},
+				})
+			}
+
+			execute(t, interQueryCache, "package t\n"+tc.source, "t", tc.result, tc.error, tc.time, tc.interQueryCacheHits)
 		})
 	}
 }
 
-func execute(tb testing.TB, module string, query string, expectedResult string, expectedError string) {
+func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string, query string, expectedResult string, expectedError string, time time.Time, expectedInterQueryCacheHits int) {
 	b := &bundle.Bundle{
 		Modules: []bundle.ModuleFile{
 			{
@@ -85,7 +215,14 @@ func execute(tb testing.TB, module string, query string, expectedResult string, 
 	}
 
 	_, ctx := vm.WithStatistics(context.Background())
-	v, err := vm.NewVM().WithExecutable(executable).Eval(ctx, query, vm.EvalOpts{StrictBuiltinErrors: true})
+	metrics := metrics.New()
+	v, err := vm.NewVM().WithExecutable(executable).Eval(ctx, query, vm.EvalOpts{
+		Metrics:                metrics,
+		Time:                   time,
+		Cache:                  builtins.Cache{},
+		InterQueryBuiltinCache: interQueryCache,
+		StrictBuiltinErrors:    true,
+	})
 	if expectedError != "" {
 		if expectedError != err.Error() {
 			tb.Fatalf("unexpected error: %v", err)
@@ -99,6 +236,10 @@ func execute(tb testing.TB, module string, query string, expectedResult string, 
 
 	if t := ast.MustParseTerm(expectedResult); v.Compare(t.Value) != 0 {
 		tb.Fatalf("got %v wanted %v\n", v, expectedResult)
+	}
+
+	if hits := metrics.Counter(sqlSendInterQueryCacheHits).Value().(uint64); hits != uint64(expectedInterQueryCacheHits) {
+		tb.Fatalf("got %v hits, wanted %v\n", hits, expectedInterQueryCacheHits)
 	}
 }
 
