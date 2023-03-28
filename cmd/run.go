@@ -307,6 +307,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 		return nil, err
 	}
 
+	plugins.InitBundles(nil)(rt.Manager) // To release memory holding the init bundles.
+
 	rt.SetDistributedTracingLogging()
 
 	// register the discovery plugin
