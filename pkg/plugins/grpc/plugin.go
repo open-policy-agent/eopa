@@ -25,7 +25,7 @@ type grpcServerPlugin struct {
 	shutdownComplete chan struct{} // Signal channel for when GracefulShutdwon completes.
 }
 
-func (p *grpcServerPlugin) Start(ctx context.Context) error {
+func (p *grpcServerPlugin) Start(context.Context) error {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -44,7 +44,7 @@ func (p *grpcServerPlugin) Start(ctx context.Context) error {
 	return nil
 }
 
-func (p *grpcServerPlugin) Stop(ctx context.Context) {
+func (p *grpcServerPlugin) Stop(context.Context) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 	p.manager.UpdatePluginStatus(PluginName, &plugins.Status{State: plugins.StateNotReady})

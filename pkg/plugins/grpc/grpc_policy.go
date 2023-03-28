@@ -26,7 +26,7 @@ import (
 // parameters, and querying the store. They defer transaction creation /
 // destruction to the caller.
 
-func (s *Server) listPoliciesFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.ListPoliciesRequest) (*loadv1.ListPoliciesResponse, error) {
+func (s *Server) listPoliciesFromRequest(ctx context.Context, txn storage.Transaction, _ *loadv1.ListPoliciesRequest) (*loadv1.ListPoliciesResponse, error) {
 	// Note(philip): We take a similar approach to the OPA REST API's
 	// handler, but we only return the raw policy text at this time, not
 	// the ASTs.

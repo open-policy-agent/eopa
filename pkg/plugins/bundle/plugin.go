@@ -686,7 +686,7 @@ func saveCurrentBundleToDisk(path string, raw io.Reader) (string, error) {
 	return dest.Name(), err
 }
 
-func loadBundleFromDisk(path, name string, src *opa_bundle.Source) (*bundle.Bundle, error) {
+func loadBundleFromDisk(path, name string, _ *opa_bundle.Source) (*bundle.Bundle, error) {
 	bundlePath := filepath.Join(path, name, "bundle.tar.gz")
 
 	if _, err := os.Stat(bundlePath); err == nil {

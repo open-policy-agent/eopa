@@ -648,7 +648,7 @@ func serializeString(v string, cache *encodingCache, buffer *bytes.Buffer, base 
 	return offset
 }
 
-func serializeBool(v bool, cache *encodingCache, buffer *bytes.Buffer, base int32) int32 {
+func serializeBool(v bool, _ *encodingCache, buffer *bytes.Buffer, base int32) int32 {
 	offset := base + int32(buffer.Len())
 
 	t := int32(typeFalse)

@@ -42,7 +42,7 @@ func (b *blobImpl) String() string {
 	return fmt.Sprintf("<%d bytes of binary>", len(b.data))
 }
 
-func (b *blobImpl) Clone(deepCopy bool) File {
+func (b *blobImpl) Clone(bool) File {
 	data := make([]byte, len(b.data))
 	copy(data, b.data)
 	return NewBlob(data)

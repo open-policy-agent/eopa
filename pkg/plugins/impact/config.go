@@ -33,7 +33,7 @@ func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 	return p
 }
 
-func (factory) Validate(manager *plugins.Manager, config []byte) (interface{}, error) {
+func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) {
 	parsedConfig := Config{}
 	if err := util.Unmarshal(config, &parsedConfig); err != nil {
 		return nil, err

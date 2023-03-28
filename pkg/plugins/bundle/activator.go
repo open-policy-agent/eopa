@@ -642,19 +642,11 @@ func erasePolicies(ctx context.Context, store storage.Store, txn storage.Transac
 func writeManifestToStore(opts *bundleApi.ActivateOpts, name string, manifest bundleApi.Manifest) error {
 	// Always write manifests to the named location. If the plugin is in the older style config
 	// then also write to the old legacy unnamed location.
-	if err := WriteManifestToStore(opts.Ctx, opts.Store, opts.Txn, name, manifest); err != nil {
-		return err
-	}
-
-	return nil
+	return WriteManifestToStore(opts.Ctx, opts.Store, opts.Txn, name, manifest)
 }
 
 func writeEtagToStore(opts *bundleApi.ActivateOpts, name, etag string) error {
-	if err := WriteEtagToStore(opts.Ctx, opts.Store, opts.Txn, name, etag); err != nil {
-		return err
-	}
-
-	return nil
+	return WriteEtagToStore(opts.Ctx, opts.Store, opts.Txn, name, etag)
 }
 
 func writeDataAndModules(ctx context.Context, store storage.Store, txn storage.Transaction, txnCtx *storage.Context, bundles map[string]*bundleApi.Bundle, legacy bool) error {

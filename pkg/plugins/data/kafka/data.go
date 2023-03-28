@@ -176,15 +176,15 @@ func (c *Data) transformAndSave(ctx context.Context, n int, iter *kgo.FetchesRec
 	}
 	if err := storage.Txn(ctx, c.manager.Store, storage.WriteParams, func(txn storage.Transaction) error {
 		var results []processed
-		print := bytes.Buffer{}
+		printOut := bytes.Buffer{}
 		for i := range batch {
-			res, err := c.transformOne(ctx, txn, batch[i], &print)
+			res, err := c.transformOne(ctx, txn, batch[i], &printOut)
 			if err != nil {
 				return err
 			}
-			if print.Len() > 0 {
-				c.log.Debug("print(): %s", print.String())
-				print.Reset()
+			if printOut.Len() > 0 {
+				c.log.Debug("printOut(): %s", printOut.String())
+				printOut.Reset()
 			}
 			if res != nil {
 				results = append(results, res...)

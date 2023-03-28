@@ -373,7 +373,7 @@ func storeWithPolicy(ctx context.Context, t *testing.T, transform string) storag
 	return store
 }
 
-func pluginMgr(ctx context.Context, t *testing.T, store storage.Store, config string) *plugins.Manager {
+func pluginMgr(_ context.Context, t *testing.T, store storage.Store, config string) *plugins.Manager {
 	t.Helper()
 	h := topdown.NewPrintHook(os.Stderr)
 	opts := []func(*plugins.Manager){

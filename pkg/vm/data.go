@@ -357,7 +357,7 @@ func (*dataOperations) IsObject(ctx context.Context, v interface{}) (bool, error
 	}
 }
 
-func (*dataOperations) MakeArray(capacity int32) fjson.Array {
+func (*dataOperations) MakeArray(int32) fjson.Array {
 	return fjson.NewArray()
 }
 

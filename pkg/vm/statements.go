@@ -336,7 +336,7 @@ func (s statement) Execute(state *State) (bool, uint32, int, error) {
 	return stop, index, size, err
 }
 
-func (nop) Execute(state *State) (bool, uint32, error) {
+func (nop) Execute(*State) (bool, uint32, error) {
 	return false, 0, nil
 }
 
@@ -425,7 +425,7 @@ func (b blockStmt) Execute(state *State) (bool, uint32, error) {
 	return stop, n, err
 }
 
-func (b breakStmt) Execute(state *State) (bool, uint32, error) {
+func (b breakStmt) Execute(*State) (bool, uint32, error) {
 	return true, b.Index(), nil
 }
 
@@ -917,7 +917,7 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 		if !ok {
 			next = ops.MakeObject()
 			err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
-		} else if isObject, err = ops.IsObject(state.Globals.Ctx, next); err != nil {
+		} else if isObject, err = ops.IsObject(state.Globals.Ctx, next); err != nil { //nolint:revive
 			// Nothing
 		} else if !isObject {
 			next = ops.MakeObject()

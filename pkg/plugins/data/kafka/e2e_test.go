@@ -343,7 +343,7 @@ func testKafka(t *testing.T) *dockertest.Resource {
 	return kafkaResource
 }
 
-func kafkaClient(k *dockertest.Resource, extra ...kgo.Opt) (*kgo.Client, error) {
+func kafkaClient(_ *dockertest.Resource, extra ...kgo.Opt) (*kgo.Client, error) {
 	var logger zerolog.Logger
 	if testing.Verbose() {
 		logger = zerolog.New(os.Stderr)

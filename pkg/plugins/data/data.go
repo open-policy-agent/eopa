@@ -73,7 +73,7 @@ func (c *Data) Reconfigure(ctx context.Context, cfg interface{}) {
 	nextCfg := cfg.(Config).DataPlugins
 	if err := storage.Txn(ctx, c.manager.Store, storage.WriteParams, func(txn storage.Transaction) error {
 		for path, next := range nextCfg {
-			if _, ok := c.config.DataPlugins[path]; ok { // updated path
+			if _, ok := c.config.DataPlugins[path]; ok { //nolint:revive // updated path
 				// Reconfigure done below outside of transaction
 			} else { // new path
 				c.plugins[path] = next.Factory.New(c.manager, next.Config)

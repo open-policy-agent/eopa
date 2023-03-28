@@ -26,7 +26,7 @@ type Job interface {
 	Start(_ context.Context, cleanup func())
 }
 
-func NewJob(ctx context.Context, rate float32, publishEquals bool, bundle *bundle.Bundle, dur time.Duration) Job {
+func NewJob(_ context.Context, rate float32, publishEquals bool, bundle *bundle.Bundle, dur time.Duration) Job {
 	return &job{
 		id:            uuid.New().String(),
 		rate:          rate,

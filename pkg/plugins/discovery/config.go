@@ -71,7 +71,7 @@ func (b *ConfigBuilder) Parse() (*Config, error) {
 		return nil, err
 	}
 
-	return &result, result.validateAndInjectDefaults(b.services, b.keys)
+	return &result, result.validateAndInjectDefaults(b.services)
 }
 
 // ParseConfig returns a valid Config object with defaults injected.
@@ -79,16 +79,10 @@ func ParseConfig(bs []byte, services []string) (*Config, error) {
 	return NewConfigBuilder().WithBytes(bs).WithServices(services).Parse()
 }
 
-func (c *Config) validateAndInjectDefaults(services []string, confKeys map[string]*keys.Config) error {
+func (c *Config) validateAndInjectDefaults(services []string) error {
 
 	if c.Resource == nil && c.Name == nil {
 		return fmt.Errorf("missing required discovery.resource field")
-	}
-
-	// make a copy of the keys map
-	copy := map[string]*keys.Config{}
-	for key, kc := range confKeys {
-		copy[key] = kc
 	}
 
 	if c.Resource != nil {

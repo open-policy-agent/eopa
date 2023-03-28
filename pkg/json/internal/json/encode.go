@@ -461,7 +461,7 @@ func newTypeEncoder(t reflect.Type, allowAddr bool) encoderFunc {
 	}
 }
 
-func invalidValueEncoder(e *encodeState, v reflect.Value, _ encOpts) {
+func invalidValueEncoder(e *encodeState, _ reflect.Value, _ encOpts) {
 	e.WriteString("null")
 }
 

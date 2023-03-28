@@ -140,7 +140,7 @@ func (i *Impact) Stop(context.Context) {
 	i.manager.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateNotReady})
 }
 
-func (i *Impact) Reconfigure(_ context.Context, cfg any) {
+func (i *Impact) Reconfigure(context.Context, any) {
 	// TODO
 }
 
@@ -197,7 +197,7 @@ func (i *Impact) eval(ctx context.Context, ectx EvalContext, rctx *logging.Reque
 	if len(secondaryResult) == 1 {
 		secRes = secondaryResult[0].Expressions[0].Value
 	}
-	return i.publish(ctx, rctx, path, queryT.String(), &in, &primaryResult, &secRes, &ndbc, mA, mB)
+	return i.publish(ctx, rctx, path, &in, &primaryResult, &secRes, &ndbc, mA, mB)
 }
 
 func unwrap(exp ast.Value) (any, error) {
@@ -222,7 +222,7 @@ func unwrap(exp ast.Value) (any, error) {
 }
 
 // TODO(sr): increment some metrics according to the comparison outcomes: diff++, same++
-func (i *Impact) equalResults(ctx context.Context, primaryResult any, secondaryResult rego.ResultSet) bool {
+func (i *Impact) equalResults(_ context.Context, primaryResult any, secondaryResult rego.ResultSet) bool {
 	switch {
 	case primaryResult == nil && len(secondaryResult) > 0: // secondary has result, primary has not
 		return false
@@ -236,7 +236,7 @@ func (i *Impact) equalResults(ctx context.Context, primaryResult any, secondaryR
 }
 
 // TODO(sr): don't let this grow out of hand, flush to controller periodically
-func (i *Impact) publish(ctx context.Context, rctx *logging.RequestContext, path, query string, input, resultA, resultB *any, ndbc *any, mA, mB metrics.Metrics) error {
+func (i *Impact) publish(ctx context.Context, rctx *logging.RequestContext, path string, input, resultA, resultB *any, ndbc *any, mA, mB metrics.Metrics) error {
 	decisionID, _ := logging.DecisionIDFromContext(ctx)
 	res := Result{
 		NodeID:     i.manager.ID,
@@ -255,11 +255,11 @@ func (i *Impact) publish(ctx context.Context, rctx *logging.RequestContext, path
 	i.job.Result(&res)
 
 	// DL for resultA has already been published by the primary eval path
-	return i.dlog(ctx, rctx, query, input, resultB, ndbc, mB)
+	return i.dlog(ctx, rctx, input, resultB, ndbc, mB)
 }
 
 // dlog emits a decision log if DL is available
-func (i *Impact) dlog(ctx context.Context, rctx *logging.RequestContext, query string, input, result *any, ndbc *any, m metrics.Metrics) error {
+func (i *Impact) dlog(ctx context.Context, rctx *logging.RequestContext, input, result *any, ndbc *any, m metrics.Metrics) error {
 	if i.dl == nil {
 		return nil
 	}

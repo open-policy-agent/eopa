@@ -46,10 +46,7 @@ func (decoder *Decoder) UnmarshalObject(f func(property string, decoder *Decoder
 	if err != nil {
 		return err
 	}
-	if err := decoder.error(); err != nil {
-		return err
-	}
-	return nil
+	return decoder.error()
 }
 
 func (decoder *Decoder) UnmarshalArray(f func(decoder *Decoder) error) error {
@@ -61,8 +58,5 @@ func (decoder *Decoder) UnmarshalArray(f func(decoder *Decoder) error) error {
 	if err != nil {
 		return err
 	}
-	if err := decoder.error(); err != nil {
-		return err
-	}
-	return nil
+	return decoder.error()
 }

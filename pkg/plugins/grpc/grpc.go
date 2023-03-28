@@ -265,7 +265,7 @@ func stringPathToDataRef(s string) (r ast.Ref) {
 	return result
 }
 
-func (s *Server) makeRego(ctx context.Context,
+func (s *Server) makeRego(_ context.Context,
 	strictBuiltinErrors bool,
 	txn storage.Transaction,
 	input ast.Value,

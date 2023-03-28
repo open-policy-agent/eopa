@@ -140,7 +140,7 @@ func (n Null) Walk(state *DecodingState, walker Walker) {
 	walker.Nil(state)
 }
 
-func (n Null) Clone(deepCopy bool) File {
+func (n Null) Clone(bool) File {
 	return n
 }
 
@@ -217,7 +217,7 @@ func (b Bool) Walk(state *DecodingState, walker Walker) {
 	walker.Boolean(state, b)
 }
 
-func (b Bool) Clone(deepCopy bool) File {
+func (b Bool) Clone(bool) File {
 	return b
 }
 
@@ -294,7 +294,7 @@ func (f Float) Walk(state *DecodingState, walker Walker) {
 	walker.Number(state, f)
 }
 
-func (f Float) Clone(deepCopy bool) File {
+func (f Float) Clone(bool) File {
 	return f
 }
 
@@ -517,7 +517,7 @@ func (s String) Walk(state *DecodingState, walker Walker) {
 	walker.String(state, s)
 }
 
-func (s String) Clone(deepCopy bool) File {
+func (s String) Clone(bool) File {
 	return s
 }
 
@@ -555,15 +555,15 @@ func (a ArrayBinary) Contents() interface{} {
 	return a.JSON()
 }
 
-func (a ArrayBinary) Append(element ...File) {
+func (ArrayBinary) Append(...File) {
 	panic("json: unsupported append")
 }
 
-func (a ArrayBinary) AppendSingle(element File) {
+func (ArrayBinary) AppendSingle(File) {
 	panic("json: unsupported append")
 }
 
-func (a ArrayBinary) Slice(i, j int) Array {
+func (ArrayBinary) Slice(int, int) Array {
 	// XXX
 	panic("json: unsupported slice")
 }
@@ -608,11 +608,11 @@ func (a ArrayBinary) Iterate(i int) Json {
 	return a.Value(i)
 }
 
-func (a ArrayBinary) RemoveIdx(i int) {
+func (ArrayBinary) RemoveIdx(int) {
 	panic("json: unsupported remove")
 }
 
-func (a ArrayBinary) SetIdx(i int, j File) {
+func (ArrayBinary) SetIdx(int, File) {
 	panic("json: unsupported set")
 }
 
@@ -672,7 +672,7 @@ func (a ArrayBinary) Walk(state *DecodingState, walker Walker) {
 	arrayWalk(a, state, walker)
 }
 
-func (a ArrayBinary) Clone(deepCopy bool) File {
+func (a ArrayBinary) Clone(bool) File {
 	return a
 }
 
@@ -915,7 +915,7 @@ func (o ObjectBinary) Set(name string, value Json) {
 	o.setImpl(name, value)
 }
 
-func (o ObjectBinary) setImpl(name string, value File) {
+func (ObjectBinary) setImpl(string, File) {
 	panic("json: unsupported set")
 }
 
@@ -947,15 +947,15 @@ func (o ObjectBinary) Iterate(i int) Json {
 	return o.Value(names[i])
 }
 
-func (o ObjectBinary) RemoveIdx(i int) {
+func (ObjectBinary) RemoveIdx(int) {
 	panic("json: unsupported remove")
 }
 
-func (o ObjectBinary) SetIdx(i int, j File) {
+func (ObjectBinary) SetIdx(int, File) {
 	panic("json: unsupported set")
 }
 
-func (o ObjectBinary) Remove(name string) {
+func (ObjectBinary) Remove(string) {
 	panic("json: unsupported remove")
 }
 
@@ -1029,7 +1029,7 @@ func (o ObjectBinary) Walk(state *DecodingState, walker Walker) {
 	objectWalk(o, state, walker)
 }
 
-func (o ObjectBinary) Clone(deepCopy bool) File {
+func (o ObjectBinary) Clone(bool) File {
 	return o
 }
 
@@ -1738,9 +1738,8 @@ func unmarshalMap(values reflect.Value) (Json, error) {
 			k := iter.Key()
 			var keyStr string
 
-			if k.Kind() == reflect.Ptr && k.IsNil() {
+			if k.Kind() != reflect.Ptr || k.IsNil() {
 				// consider nil key as "" per golang 1.14, even if implements TextMarshaler.
-			} else {
 				raw, err := k.Interface().(encoding.TextMarshaler).MarshalText()
 				if err != nil {
 					return nil, err

@@ -48,7 +48,7 @@ func Example_read() {
 	decoder.UseNumber()
 
 	if err := decoder.Decode(&data); err != nil {
-		// Handle error.
+		panic(err)
 	}
 
 	// Instantiate the storage layer.
@@ -56,7 +56,7 @@ func Example_read() {
 
 	txn, err := store.NewTransaction(ctx)
 	if err != nil {
-		// Handle error.
+		panic(err)
 	}
 
 	// Cancel transaction because no writes are performed.
@@ -112,7 +112,7 @@ func Example_write() {
 	decoder.UseNumber()
 
 	if err := decoder.Decode(&data); err != nil {
-		// Handle error.
+		panic(err)
 	}
 
 	// Create the new store with the dummy data.
@@ -127,12 +127,12 @@ func Example_write() {
 	// See comment above regarding decoder usage.
 	patch, err := bjson.NewDecoder(strings.NewReader(examplePatch)).Decode()
 	if err != nil {
-		// Handle error.
+		panic(err)
 	}
 
 	txn, err := store.NewTransaction(ctx, storage.WriteParams)
 	if err != nil {
-		// Handle error.
+		panic(err)
 	}
 
 	// Write values into storage and read result.

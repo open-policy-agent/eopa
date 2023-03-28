@@ -79,11 +79,11 @@ func objectGetBuiltin(state *State, args []Value) error {
 		return objectGetBuiltinKey(state, obj, path, def)
 	}
 
-	len, err := state.ValueOps().Len(state.Globals.Ctx, path)
+	length, err := state.ValueOps().Len(state.Globals.Ctx, path)
 	if err != nil {
 		return err
 	}
-	eq, err := state.ValueOps().Equal(state.Globals.Ctx, len, state.ValueOps().MakeNumberZero())
+	eq, err := state.ValueOps().Equal(state.Globals.Ctx, length, state.ValueOps().MakeNumberZero())
 	if err != nil {
 		return err
 	}

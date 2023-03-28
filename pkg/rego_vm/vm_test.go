@@ -32,7 +32,7 @@ func setup(tb testing.TB, b *bundle.Bundle, query string) ir.Policy {
 	return policy
 }
 
-func createBundle(tb testing.TB, rego string) *bundle.Bundle {
+func createBundle(_ testing.TB, rego string) *bundle.Bundle {
 	b := &bundle.Bundle{
 		Modules: []bundle.ModuleFile{
 			{

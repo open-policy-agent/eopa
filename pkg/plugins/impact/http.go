@@ -118,7 +118,7 @@ func jobFromRequest(r *http.Request) (Job, error) {
 	return NewJob(r.Context(), float32(rate), publishEquals, bndl, dur), nil
 }
 
-func bundleFromReader(ctx context.Context, rd io.ReadCloser) (*bundle.Bundle, error) {
+func bundleFromReader(_ context.Context, rd io.ReadCloser) (*bundle.Bundle, error) {
 	defer rd.Close()
 	path := "tmp.tar.gz"
 
