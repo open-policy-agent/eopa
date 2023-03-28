@@ -23,16 +23,8 @@ const (
 // BulkRWRequest allows specifying a fixed-structure, bulk read/write
 // operation. WritePolicy/Data requests are executed sequentially, aborting
 // the entire gRPC call if any requests fail. The ReadPolicy/Data requests
-// are then executed sequentially, but will report errors inline in their
+// are then executed in parallel, but will report errors inline in their
 // responses, instead of aborting the entire gRPC call.
-//
-// Warning: The underlying implementation currently executes exactly two
-// store transactions, one write transaction for all writes, and one read
-// transaction for the sequential reads. Note that for long-running
-// queries, this can cause the server to block pending writes on other
-// threads until this BulkRWRequest completes. The blocking read
-// transaction behavior may change in the future, and should not be
-// relied upon for correct client behavior.
 type BulkRWRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -43,7 +35,7 @@ type BulkRWRequest struct {
 	WritesPolicy []*BulkRWRequest_WritePolicyRequest `protobuf:"bytes,2,rep,name=writes_policy,json=writesPolicy,proto3" json:"writes_policy,omitempty"`
 	WritesData   []*BulkRWRequest_WriteDataRequest   `protobuf:"bytes,3,rep,name=writes_data,json=writesData,proto3" json:"writes_data,omitempty"`
 	// Reads occur second.
-	// Reads may be executed in arbitrary order, but currently are executed in-order.
+	// Reads may be executed in arbitrary order, and are currently executed in parallel.
 	ReadsPolicy []*BulkRWRequest_ReadPolicyRequest `protobuf:"bytes,4,rep,name=reads_policy,json=readsPolicy,proto3" json:"reads_policy,omitempty"`
 	ReadsData   []*BulkRWRequest_ReadDataRequest   `protobuf:"bytes,5,rep,name=reads_data,json=readsData,proto3" json:"reads_data,omitempty"`
 }

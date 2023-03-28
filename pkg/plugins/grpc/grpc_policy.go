@@ -26,6 +26,28 @@ import (
 // parameters, and querying the store. They defer transaction creation /
 // destruction to the caller.
 
+func (s *Server) listPoliciesFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.ListPoliciesRequest) (*loadv1.ListPoliciesResponse, error) {
+	// Note(philip): We take a similar approach to the OPA REST API's
+	// handler, but we only return the raw policy text at this time, not
+	// the ASTs.
+	ids, err := s.store.ListPolicies(ctx, txn)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	policies := make([]*loadv1.Policy, 0, len(ids))
+	for _, id := range ids {
+		bs, err := s.store.GetPolicy(ctx, txn, id)
+		if err != nil {
+			// No need to check for IsNotFound errors; these policies should always exist.
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		policies = append(policies, &loadv1.Policy{Path: id, Text: string(bs)})
+	}
+
+	return &loadv1.ListPoliciesResponse{Results: policies}, nil
+}
+
 // preParsedModule is an optional parameter, allowing module parsing to be done elsewhere.
 func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.CreatePolicyRequest, preParsedModule *ast.Module) (*loadv1.CreatePolicyResponse, error) {
 	path := req.GetPath()
@@ -246,6 +268,17 @@ func (s *Server) deletePolicyFromRequest(ctx context.Context, txn storage.Transa
 // --------------------------------------------------------
 // Top-level gRPC API request handlers
 
+// Lists all stored policy modules. Equivalent to the Policy REST API's List method.
+func (s *Server) ListPolicies(ctx context.Context, req *loadv1.ListPoliciesRequest) (*loadv1.ListPoliciesResponse, error) {
+	txn, err := s.store.NewTransaction(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "transaction failed")
+	}
+	defer s.store.Abort(ctx, txn)
+
+	return s.listPoliciesFromRequest(ctx, txn, req)
+}
+
 // Parses, compiles, and installs a policy. Equivalent to the Policy REST API's PUT method.
 func (s *Server) CreatePolicy(ctx context.Context, req *loadv1.CreatePolicyRequest) (*loadv1.CreatePolicyResponse, error) {
 	// Open a write transaction.
@@ -272,8 +305,7 @@ func (s *Server) CreatePolicy(ctx context.Context, req *loadv1.CreatePolicyReque
 func (s *Server) GetPolicy(ctx context.Context, req *loadv1.GetPolicyRequest) (*loadv1.GetPolicyResponse, error) {
 	txn, err := s.store.NewTransaction(ctx)
 	if err != nil {
-		s.store.Abort(ctx, txn)
-		return nil, err
+		return nil, status.Error(codes.Internal, "transaction failed")
 	}
 	defer s.store.Abort(ctx, txn)
 

@@ -12,6 +12,60 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func TestListPolicies(t *testing.T) {
+	// gRPC server setup/teardown boilerplate.
+	policies := map[string]string{
+		"/a": `package a
+
+x { true }
+y { false }
+`,
+		"/b": `package b
+z := 2
+`,
+		"/c": `package c
+d := 27
+`,
+	}
+	listener := setupTest(t, `{}`, policies)
+	ctx := context.Background()
+	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatalf("Failed to dial bufnet: %v", err)
+	}
+	defer conn.Close()
+	client := loadv1.NewPolicyServiceClient(conn)
+
+	// Fetch the policy.
+	resp, err := client.ListPolicies(ctx, &loadv1.ListPoliciesRequest{})
+	if err != nil {
+		t.Fatalf("ListPolicies failed: %v", err)
+	}
+	// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST.
+	expectedPolicies := map[string]string{
+		"/a": "package a\n\nx { true }\ny { false }\n",
+		"/b": "package b\nz := 2\n",
+		"/c": "package c\nd := 27\n",
+	}
+	results := resp.GetResults()
+	// Check list contents by ensuring correct length, then checking each item.
+	// Note: This will miss the case where an item is repeated every time.
+	if len(results) != 3 {
+		t.Fatalf("Expected list of length 3, actual length: %d, list contents: %v", len(results), results)
+	}
+	for _, result := range results {
+		path := result.GetPath()
+		result := result.GetText()
+		if expectedResult, ok := expectedPolicies[path]; ok {
+			if result != expectedResult {
+				t.Fatalf("Expected %v\n\ngot:\n%v", expectedResult, result)
+			}
+		} else {
+			t.Fatalf("Path '%v' not found in expectedPolicies", path)
+		}
+	}
+}
+
 // Note(philip): This test unfortunately also requires wiring in the GetPolicy
 // method, so that we can check that the value was stored correctly.
 func TestCreatePolicy(t *testing.T) {

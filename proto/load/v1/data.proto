@@ -3,7 +3,7 @@ package load.v1;
 
 import "google/protobuf/struct.proto";
 
-// PatchOp allows specifying a subset ofcan perform a subset of JSON-Patch operations, namely
+// PatchOp allows specifying a subset of JSON-Patch operations, namely
 // "add", "remove", and "replace".
 enum PatchOp {
   PATCH_OP_UNSPECIFIED = 0;

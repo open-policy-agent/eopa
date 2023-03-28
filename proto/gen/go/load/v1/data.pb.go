@@ -21,7 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// PatchOp allows specifying a subset ofcan perform a subset of JSON-Patch operations, namely
+// PatchOp allows specifying a subset of JSON-Patch operations, namely
 // "add", "remove", and "replace".
 type PatchOp int32
 

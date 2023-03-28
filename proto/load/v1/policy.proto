@@ -1,6 +1,26 @@
 syntax = "proto3";
 package load.v1;
 
+// Policy is a thin wrapper type around a Rego policy.
+message Policy {
+  string path = 1;
+  string text = 2;
+}
+
+// ListPoliciesRequest returns the set of stored policies.
+//
+// This is equivalent in functionality to OPA's
+// [Policy REST API List method](https://www.openpolicyagent.org/docs/latest/rest-api/#list-policies).
+//
+// Warning: This request will enumerate *all* policies stored by the Load
+// instance. This can have substantial overheads if the policies are large
+// in size.
+message ListPoliciesRequest {}
+
+message ListPoliciesResponse {
+  repeated Policy results = 2;
+}
+
 // CreatePolicyRequest allows inserting new policy code into the policy
 // store.
 //
@@ -74,6 +94,7 @@ message DeletePolicyRequest {
 message DeletePolicyResponse {}
 
 service PolicyService {
+  rpc ListPolicies(ListPoliciesRequest) returns (ListPoliciesResponse);
   rpc GetPolicy(GetPolicyRequest) returns (GetPolicyResponse);
   rpc CreatePolicy(CreatePolicyRequest) returns (CreatePolicyResponse);
   rpc UpdatePolicy(UpdatePolicyRequest) returns (UpdatePolicyResponse);
