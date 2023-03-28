@@ -1,5 +1,9 @@
 ## Changelog
 
+### v0.102.5
+
+ * This release is a release engineering fix to sort out part of our gRPC documentation system.
+
 ### v0.102.4
 
 * Fix `--disable-telemetry` being ignored for `load run --server`.
@@ -12,7 +16,7 @@
 
 ### v0.102.1, v0.102.2
 
-These releases have been release engineering fixes to sort out macos binary signing
+These releases have been release engineering fixes to sort out MacOS binary signing
 of published executables.
 
 ### v0.102.0
