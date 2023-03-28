@@ -139,7 +139,7 @@ p := rand.intn("test", 2)
 	waitForLIAEnd(ctx, t, loadOut)
 	ctl.Wait()
 	if testing.Verbose() {
-		t.Logf("liactl output:\n%s", ctlOut.String())
+		t.Logf("impact output:\n%s", ctlOut.String())
 	}
 
 	act := []liaResponse{}
@@ -264,7 +264,7 @@ q := true
 	waitForLIAEnd(ctx, t, loadOut)
 	ctl.Wait()
 	if testing.Verbose() {
-		t.Logf("liactl output:\n%s", ctlOut.String())
+		t.Logf("impact output:\n%s", ctlOut.String())
 	}
 
 	act := []liaResponse{}
@@ -355,7 +355,7 @@ q := true
 	waitForLIAEnd(ctx, t, loadOut)
 	ctl.Wait()
 	if testing.Verbose() {
-		t.Logf("liactl output:\n%s", ctlOut.String())
+		t.Logf("impact output:\n%s", ctlOut.String())
 	}
 
 	// count diffs returned to client
@@ -433,7 +433,7 @@ func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *byt
 }
 
 func loadCtl(t *testing.T, addr string, path, extra string) (*exec.Cmd, *bytes.Buffer) {
-	cmd := exec.Command(binary(), strings.Split("liactl record --format json --addr "+addr+" --bundle "+path+" "+extra, " ")...)
+	cmd := exec.Command(binary(), strings.Split("impact record --format json --addr "+addr+" --bundle "+path+" "+extra, " ")...)
 	cmd.Stdout = &bytes.Buffer{}
 	return cmd, cmd.Stdout.(*bytes.Buffer)
 }
@@ -483,7 +483,7 @@ q := true
 
 	waitForLIAEnd(ctx, t, loadOut)
 	if testing.Verbose() {
-		t.Logf("liactl output:\n%s", ctlOut.String())
+		t.Logf("impact output:\n%s", ctlOut.String())
 	}
 }
 
@@ -525,7 +525,7 @@ q := true
 
 	waitForLIAEnd(ctx, t, loadOut)
 	if testing.Verbose() {
-		t.Logf("liactl output:\n%s", ctlOut.String())
+		t.Logf("impact output:\n%s", ctlOut.String())
 	}
 }
 
@@ -578,7 +578,7 @@ q := true
 
 	ctl.Wait()
 	if testing.Verbose() {
-		t.Logf("liactl output:\n%s", ctlOut.String())
+		t.Logf("impact output:\n%s", ctlOut.String())
 	}
 
 	act := []liaResponse{}

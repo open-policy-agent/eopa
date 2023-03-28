@@ -14,8 +14,9 @@ import (
 
 func liaCtl() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "liactl",
-		Short: "Live Impact Analysis control",
+		Use:     "impact",
+		Aliases: []string{"liactl"},
+		Short:   "Live Impact Analysis control",
 	}
 	cmd.AddCommand(record())
 	return cmd
