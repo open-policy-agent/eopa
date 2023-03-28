@@ -176,6 +176,8 @@ jobs:
           check-latest: true
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+      - name: Set up grpcurl
+        run: go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
       - name: Download image tarball
         uses: actions/download-artifact@v3
         with:
@@ -395,16 +397,6 @@ jobs:
         if: matrix.arch == 'arm64'
       - name: Check out code
         uses: actions/checkout@v3
-      # Note(philip): We set up the Go SDK, so that we can build/install
-      # grpcurl from source across all supported platforms.
-      - uses: actions/setup-go@v4
-        with:
-          go-version: 'stable'
-          check-latest: true
-      - name: Setup github api token
-        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      - name: Set up grpcurl
-        run: go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
       - name: Download release binaries
         uses: actions/download-artifact@v3
         with:

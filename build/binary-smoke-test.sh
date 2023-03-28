@@ -95,34 +95,4 @@ echo "::group:: Data files - correct namespaces"
 assert_contains "data.namespace | test${PATH_SEPARATOR}cli${PATH_SEPARATOR}smoke${PATH_SEPARATOR}namespace${PATH_SEPARATOR}data.json" "$(load inspect test/cli/smoke)"
 echo "::endgroup::"
 
-# load with plugins
-echo "::group:: plugins - smoke test"
-$LOAD_EXEC run --config-file build/plugins.yaml -s &
-last_pid=$!
-sleep 2
-curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X PUT localhost:8181/v1/policies/test -d 'package foo allow := x {x = true}'
-curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X POST localhost:8181/v1/data/foo -d '{"input": {}}'
-kill $last_pid
-echo "::endgroup::"
-
-# Test server mode (requires a license): load run -s
-echo "::group:: server mode - smoke test"
-$LOAD_EXEC run -s --addr ":8182" &
-last_pid=$!
-sleep 2
-curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X PUT localhost:8182/v1/policies/test -d 'package foo allow := x {x = true}'
-curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X POST localhost:8182/v1/data/foo -d '{"input": {}}'
-kill $last_pid
-echo "::endgroup::"
-
-# Test server gRPC plugin (requires a license):
-echo "::group:: gRPC plugin - smoke test"
-$LOAD_EXEC run -s --disable-telemetry --set plugins.grpc.addr=localhost:9090 &
-last_pid=$!
-sleep 2
-grpcurl -d '{"path": "/test", "policy": "package foo allow := x {x = true}"}' -plaintext localhost:9090 load.v1.PolicyService/CreatePolicy
-grpcurl -d '{"path": "/foo"}' -plaintext localhost:9090 load.v1.DataService/GetData
-kill $last_pid
-echo "::endgroup::"
-
 cleanup

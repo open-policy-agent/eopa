@@ -12,13 +12,14 @@ import (
 )
 
 func TestRunWithoutTelemetry(t *testing.T) {
+	data, config := `{}`, ``
 	policy := `package test
 p := true`
 	ctx := context.Background()
 
 	for _, flag := range []string{"--disable-telemetry", "--skip-version-check"} {
 		t.Run(flag, func(t *testing.T) {
-			load, loadOut := loadRun(t, policy, "{}", flag)
+			load, loadOut := loadRun(t, policy, data, config, flag)
 			if err := load.Start(); err != nil {
 				t.Fatal(err)
 			}

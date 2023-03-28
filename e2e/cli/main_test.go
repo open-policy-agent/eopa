@@ -52,12 +52,13 @@ func TestEvalInstructionLimit(t *testing.T) {
 
 func TestRunInstructionLimit(t *testing.T) {
 	data := largeJSON()
+	config := ``
 	policy := `package test
 p { data.xs[_] }`
 	ctx := context.Background()
 
 	t.Run("limit=1", func(t *testing.T) {
-		load, loadOut := loadRun(t, policy, data, "--instruction-limit", "1")
+		load, loadOut := loadRun(t, policy, data, config, "--instruction-limit", "1")
 		if err := load.Start(); err != nil {
 			t.Fatal(err)
 		}
@@ -93,7 +94,7 @@ p { data.xs[_] }`
 	})
 
 	t.Run("limit=10000", func(t *testing.T) {
-		load, loadOut := loadRun(t, policy, data, "--instruction-limit", "10000")
+		load, loadOut := loadRun(t, policy, data, config, "--instruction-limit", "10000")
 		if err := load.Start(); err != nil {
 			t.Fatal(err)
 		}
@@ -125,6 +126,26 @@ p { data.xs[_] }`
 	})
 }
 
+// NOTE(sr): This isn't *all* plugins -- the data plugin isn't loading its sub-plugins.
+// But it's most of them.
+func TestRunWithAllPlugins(t *testing.T) {
+	ctx := context.Background()
+	policy := `package test`
+	data := `{}`
+	config := `
+plugins:
+  impact_analysis: {}
+  grpc:
+    addr: "127.0.0.1:9191"
+  data: {}
+`
+	load, loadOut := loadRun(t, policy, data, config)
+	if err := load.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waitForLog(ctx, t, loadOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+}
+
 func loadEval(t *testing.T, limit, data string) *exec.Cmd {
 	dir := t.TempDir()
 	dataPath := filepath.Join(dir, "data.json")
@@ -134,7 +155,7 @@ func loadEval(t *testing.T, limit, data string) *exec.Cmd {
 	return exec.Command(binary(), strings.Split("eval --instruction-limit "+limit+" --data "+dataPath+" data.xs[_]", " ")...)
 }
 
-func loadRun(t *testing.T, policy, data string, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
+func loadRun(t *testing.T, policy, data, config string, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
 	logLevel := "debug"
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
@@ -153,6 +174,13 @@ func loadRun(t *testing.T, policy, data string, extraArgs ...string) (*exec.Cmd,
 		"--addr", "localhost:38181",
 		"--log-level", logLevel,
 		"--disable-telemetry",
+	}
+	if config != "" {
+		configPath := filepath.Join(dir, "config.yml")
+		if err := os.WriteFile(configPath, []byte(config), 0x777); err != nil {
+			t.Fatalf("write config: %v", err)
+		}
+		args = append(args, "--config-file", configPath)
 	}
 	args = append(args, extraArgs...)
 	args = append(args,
@@ -212,7 +240,7 @@ func waitForLog(ctx context.Context, t *testing.T, rdr io.Reader, exp int, asser
 		if act := retrieveMsg(ctx, t, rdr, assert); act == exp {
 			return
 		} else if i == 3 {
-			t.Fatalf("expected %d requests, got %d", exp, act)
+			t.Fatalf("expected %d matching, got %d", exp, act)
 		}
 	}
 	return

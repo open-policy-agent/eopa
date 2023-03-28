@@ -1,8 +1,0 @@
-decision_logs:
-  console: true
-
-plugins:
-  grpc:
-    addr: ":9090"
-
-  impact_analysis:
