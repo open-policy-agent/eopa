@@ -1,0 +1,8 @@
+version: v1
+name: buf.build/styra/load
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - DEFAULT

@@ -100,3 +100,39 @@ jobs:
         env:
           AUTH_RELEASE: ${{ github.ref_name }}
 
+  proto-docs-push:
+    name: Push Protobuf docs to BSR
+    runs-on: ubuntu-22.04
+    environment: ci
+    env:
+      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
+      BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
+    steps:
+      - name: (Dependabot Only) Generate GitHub App Token
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: (Dependabot Only) Override GH Token Env Var
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: override_gh_api_token
+        run:
+          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      # Note(philip): We need to install the `buf` CLI before we can lint our protobuf sources.
+      # The action uses the repo-scoped GITHUB_TOKEN to allow one of its dependencies (Octokit)
+      # to skip Github API rate limits when fetching the latest buf build artifact.
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      # Note(philip): We do not use bufbuild/buf-push-action@v1 here, because that action
+      # always creates docs under the Git commit SHA, and we'd like to have nice semver-style
+      # tag names for releases.
+      - name: Manually publish to BSR
+        run:
+          buf push proto --tag ${{ github.ref_name }}
