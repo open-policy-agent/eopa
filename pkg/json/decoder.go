@@ -18,11 +18,12 @@ var config = jsoniter.Config{
 // Decoder mimics the golang JSON decoder: reading a JSON object out of a byte stream. For simplicity, the Decode() implementation returns the constructed object, instead of taking a pointer as a parameter as the
 // standard package.
 type Decoder struct {
-	iter *jsoniter.Iterator
+	strings map[string]string // for string interning.
+	iter    *jsoniter.Iterator
 }
 
 func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{jsoniter.Parse(config, r, 512)}
+	return &Decoder{strings: make(map[string]string), iter: jsoniter.Parse(config, r, 512)}
 }
 
 func (d *Decoder) error() error {
@@ -46,7 +47,7 @@ func (d *Decoder) Decode() (Json, error) {
 			return nil, err
 		}
 
-		return NewString(v), nil
+		return NewString(d.intern(v)), nil
 
 	case jsoniter.NumberValue:
 		v := d.iter.ReadNumber()
@@ -104,7 +105,7 @@ func (d *Decoder) Decode() (Json, error) {
 				return false
 			}
 
-			properties[field] = v
+			properties[d.intern(field)] = v
 			return true
 		})
 		if err != nil {
@@ -118,4 +119,14 @@ func (d *Decoder) Decode() (Json, error) {
 	}
 
 	return nil, fmt.Errorf("unexpected value type: %v", valueType)
+}
+
+func (d *Decoder) intern(v string) string {
+	if s, ok := d.strings[v]; ok {
+		v = s
+	} else {
+		d.strings[v] = v
+	}
+
+	return v
 }
