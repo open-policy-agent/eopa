@@ -338,8 +338,9 @@ func testVerifyWResources(t *testing.T, c WritableCollections, name string, expe
 		t.Errorf("resource '%s' should exist", name)
 	}
 
-	names := make([]string, 0, len(r.Resources()))
-	for _, resource := range r.Resources() {
+	resources := r.Resources()
+	names := make([]string, 0, len(resources))
+	for _, resource := range resources {
 		names = append(names, resource.Name())
 	}
 
@@ -392,8 +393,9 @@ func testVerifyRResources(t *testing.T, c Collections, name string, expected []s
 		t.Errorf("resource '%s' should exist", name)
 	}
 
-	names := make([]string, 0, len(r.Resources()))
-	for _, resource := range r.Resources() {
+	resources := r.Resources()
+	names := make([]string, 0, len(resources))
+	for _, resource := range resources {
 		names = append(names, resource.Name())
 	}
 
