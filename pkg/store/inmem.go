@@ -433,11 +433,11 @@ func mktree(path []string, value bjson.Json) (bjson.Object, error) {
 
 	dir := bjson.NewObject(nil)
 	for i := len(path) - 1; i > 0; i-- {
-		dir.Set(path[i], value)
+		dir, _ = dir.Set(path[i], value)
 		value = dir
 		dir = bjson.NewObject(nil)
 	}
-	dir.Set(path[0], value)
+	dir, _ = dir.Set(path[0], value)
 
 	return dir, nil
 }

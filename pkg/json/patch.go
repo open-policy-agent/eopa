@@ -300,16 +300,16 @@ func apply(json File, ptr []string, value File, op PatchOp) (File, error) {
 					return nil, fmt.Errorf("json patch: key %s is not found", field)
 				}
 				v = v.Clone(false).(Object)
-				v.Remove(field)
+				v = v.Remove(field)
 			case PatchOpAdd, PatchOpCreate:
 				v = v.Clone(false).(Object)
-				v.setImpl(field, value)
+				v, _ = v.setImpl(field, value)
 			case PatchOpReplace:
 				if m := v.valueImpl(field); m == nil {
 					return nil, fmt.Errorf("json patch: object member '%v' not found", ptr[0])
 				}
 				v = v.Clone(false).(Object)
-				v.setImpl(field, value)
+				v, _ = v.setImpl(field, value)
 			case PatchOpTest:
 				m := v.Value(field)
 				if m == nil {
@@ -336,7 +336,7 @@ func apply(json File, ptr []string, value File, op PatchOp) (File, error) {
 				child = NewObject(nil)
 
 				v = v.Clone(false).(Object)
-				v.setImpl(field, child)
+				v, _ = v.setImpl(field, child)
 			} else {
 				return nil, fmt.Errorf("json patch: key %s is not found", field)
 			}
@@ -346,7 +346,7 @@ func apply(json File, ptr []string, value File, op PatchOp) (File, error) {
 			return nil, err
 		}
 		v = v.Clone(false).(Object)
-		v.setImpl(field, sv)
+		v, _ = v.setImpl(field, sv)
 		return v, nil
 
 	case Array:
@@ -367,14 +367,14 @@ func apply(json File, ptr []string, value File, op PatchOp) (File, error) {
 			switch op {
 			case PatchOpRemove:
 				v = v.Clone(false).(Array)
-				v.RemoveIdx(index)
+				v = v.RemoveIdx(index).(Array)
 			case PatchOpReplace:
 				v = v.Clone(false).(Array)
-				v.SetIdx(index, value)
+				v = v.SetIdx(index, value).(Array)
 			case PatchOpAdd, PatchOpCreate:
 				if index == v.Len() {
 					v = v.Clone(false).(Array)
-					v.Append(value)
+					v = v.Append(value)
 				} else {
 					x := make([]File, v.Len()+1)
 					for i, j := 0, 0; i < len(x); i, j = i+1, j+1 {
@@ -407,7 +407,7 @@ func apply(json File, ptr []string, value File, op PatchOp) (File, error) {
 			return nil, err
 		}
 		v = v.Clone(false).(Array)
-		v.SetIdx(index, sv)
+		v = v.SetIdx(index, sv).(Array)
 		return v, nil
 	}
 

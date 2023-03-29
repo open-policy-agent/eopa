@@ -134,24 +134,24 @@ func (*DataOperations) Call(ctx context.Context, value interface{}, args []*inte
 	return nil, false, false, nil
 }
 
-func (*DataOperations) ArrayAppend(ctx context.Context, array interface{}, value interface{}) error {
+func (*DataOperations) ArrayAppend(ctx context.Context, array interface{}, value interface{}) (interface{}, bool, error) {
 	jvalue, err := castJSON(ctx, value)
 	if err != nil {
-		return err
+		return nil, false, err
 	}
 
 	switch a := array.(type) {
 	case fjson.Array:
 		// Using singular version avoids an allocation to construct slice of arguments.
-		// TODO: Should be able to append any value?
-		a.AppendSingle(jvalue)
+		b, ok := a.AppendSingle(jvalue)
+		return b, ok, nil
 	default:
 		if _, err := castJSON(ctx, array); err != nil {
-			return err
+			return nil, false, err
 		}
 	}
 
-	return nil
+	return array, false, nil
 }
 
 func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (interface{}, error) {
@@ -471,20 +471,20 @@ func (*DataOperations) ObjectGet(ctx context.Context, object, key interface{}) (
 	return nil, false, nil
 }
 
-func (*DataOperations) ObjectInsert(ctx context.Context, object, key, value interface{}) error {
+func (*DataOperations) ObjectInsert(ctx context.Context, object, key, value interface{}) (interface{}, bool, error) {
 	jkey, err := castJSON(ctx, key)
 	if err != nil {
-		return err
+		return nil, false, err
 	}
 
-	switch object := object.(type) {
+	switch o := object.(type) {
 	case *Object:
-		return object.Insert(ctx, jkey, value)
+		return object, false, o.Insert(ctx, jkey, value)
 
 	case fjson.Object:
 		jvalue, err := castJSON(ctx, value)
 		if err != nil {
-			return err
+			return nil, false, err
 		}
 
 		s, ok := jkey.(fjson.String)
@@ -493,13 +493,17 @@ func (*DataOperations) ObjectInsert(ctx context.Context, object, key, value inte
 			panic("not reached")
 		}
 
-		object.Set(s.Value(), jvalue)
+		o, ok = o.Set(s.Value(), jvalue)
+		return o, ok, nil
 
 	default:
-		panic("not reached")
-	}
+		_, err := castJSON(ctx, object)
+		if err != nil {
+			return nil, false, err
+		}
 
-	return nil
+		return object, false, nil
+	}
 }
 
 func (o *DataOperations) ObjectMerge(ctx context.Context, a, b interface{}) (interface{}, error) {

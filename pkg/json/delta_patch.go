@@ -389,11 +389,15 @@ func (d *deltaPatch) apply(patch Patch) error {
 
 					for _, seg := range p[i+1 : len(p)-1] {
 						child := NewObject(nil)
-						parent.Set(seg, child)
+						if _, ok := parent.Set(seg, child); ok {
+							panic("not reached")
+						}
 						parent = child
 					}
 
-					parent.Set(p[len(p)-1], original)
+					if _, ok := parent.Set(p[len(p)-1], original); ok {
+						panic("not reached")
+					}
 					break
 				}
 			}

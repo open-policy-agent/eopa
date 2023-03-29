@@ -186,8 +186,13 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 			if err != nil {
 				return err
 			}
-			if err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(Unused), v); err != nil {
+
+			newArray, ok, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(Unused), v)
+			if err != nil {
 				return err
+			}
+			if ok {
+				state.SetValue(Unused, newArray)
 			}
 		} else {
 			// topdown print returns iter(nil)
@@ -763,10 +768,12 @@ func (l lenStmt) Execute(state *State) (bool, uint32, error) {
 
 func (a arrayAppend) Execute(state *State) (bool, uint32, error) {
 	array, value := a.Array(), a.Value()
-	if err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(array), state.Value(value)); err != nil {
+	newArray, ok, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(array), state.Value(value))
+	if err != nil {
 		return false, 0, err
+	} else if ok {
+		state.SetValue(array, newArray)
 	}
-
 	return false, 0, nil
 }
 
@@ -790,13 +797,19 @@ func (o objectInsertOnce) Execute(state *State) (bool, uint32, error) {
 		}
 	}
 
-	err = ops.ObjectInsert(state.Globals.Ctx, object, key, value)
+	object, ok, err = ops.ObjectInsert(state.Globals.Ctx, object, key, value)
+	if ok && err == nil {
+		state.SetValue(o.Object(), object)
+	}
 	return false, 0, err
 }
 
 func (o objectInsert) Execute(state *State) (bool, uint32, error) {
 	key, value, object := state.Value(o.Key()), state.Value(o.Value()), state.Value(o.Object())
-	err := state.ValueOps().ObjectInsert(state.Globals.Ctx, object, key, value)
+	object, ok, err := state.ValueOps().ObjectInsert(state.Globals.Ctx, object, key, value)
+	if ok && err == nil {
+		state.SetValue(o.Object(), object)
+	}
 	return false, 0, err
 }
 
@@ -934,31 +947,41 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 		}
 
 		var isObject bool
+		nestedBefore := nested
 		if !ok {
 			next = ops.MakeObject()
-			err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
-		} else if isObject, err = ops.IsObject(state.Globals.Ctx, next); err != nil { //nolint:revive
-			// Nothing
+			nested, _, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
+		} else if isObject, err = ops.IsObject(state.Globals.Ctx, next); err != nil {
+			return err
 		} else if !isObject {
 			next = ops.MakeObject()
-			err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
+			nested, _, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
 		} else {
 			next, err = ops.CopyShallow(state.Globals.Ctx, next)
 			if err == nil {
-				err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
+				nested, _, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
 			}
 		}
 
 		if err != nil {
 			return err
 		}
+
+		if nested != nestedBefore {
+			panic("not reached")
+		}
+
 		nested = next
 		return nil
 	}); err != nil {
 		return nil, err
 	}
 
-	err = ops.ObjectInsert(state.Globals.Ctx, nested, state.Value(StringIndexConst(last)), state.Value(value))
+	nestedBefore := nested
+	nested, _, err = ops.ObjectInsert(state.Globals.Ctx, nested, state.Value(StringIndexConst(last)), state.Value(value))
+	if nested != nestedBefore {
+		panic("not reached")
+	}
 	return result, err
 }
 

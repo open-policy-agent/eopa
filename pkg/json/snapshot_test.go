@@ -177,50 +177,6 @@ func TestCollectionsPrepare(t *testing.T) {
 	}
 }
 
-func TestCollectionsRemove(t *testing.T) {
-	w1 := NewCollections()
-	w1.WriteMeta("", "timestamp", "0") // The timestamp will inherit throughout the directories/files created.
-	w1.WriteBlob("a/b/c", NewBlob([]byte("foo")))
-	w1.WriteBlob("a/b/d", NewBlob([]byte("bar")))
-	if !w1.Remove("a/b/c") {
-		t.Errorf("remove failed")
-	}
-
-	w2 := NewCollections()
-	w2.WriteMeta("", "timestamp", "0")
-	w2.WriteBlob("a/b/d", NewBlob([]byte("bar")))
-	if w2.Remove("a/b") {
-		t.Errorf("illegal remove accepted")
-	}
-	if w2.Remove("") {
-		t.Errorf("illegal remove accepted")
-	}
-
-	if _, _, identical, err := w1.Prepare(time.Now()).Diff(w2.Prepare(time.Now())); !identical || err != nil {
-		t.Errorf("insert/removal did not result in no-op: %v %v", identical, err)
-	}
-
-	if !w2.Remove("a/b/d") {
-		t.Errorf("legal remove not accepted")
-	}
-
-	if !w2.Remove("a/b") {
-		t.Errorf("legal remove not accepted")
-	}
-
-	if !w2.Remove("a") {
-		t.Errorf("legal remove not accepted")
-	}
-
-	if !w2.Remove("") {
-		t.Errorf("legal remove not accepted")
-	}
-
-	if r := w2.Resource(""); r == nil || r.Kind() != Directory || len(r.Resources()) != 0 {
-		t.Errorf("root contents not removed")
-	}
-}
-
 func TestCollectionsMeta(t *testing.T) {
 	w := NewCollections()
 	w.WriteBlob("a/b", NewBlob([]byte("foo")))

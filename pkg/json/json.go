@@ -65,8 +65,8 @@ var (
 type Iterable interface {
 	Len() int
 	Iterate(i int) Json
-	RemoveIdx(i int)
-	SetIdx(i int, j File)
+	RemoveIdx(i int) Json
+	SetIdx(i int, j File) Json
 }
 
 type Finder func(value Json)
@@ -531,8 +531,8 @@ type Array interface {
 	Json
 	Iterable
 
-	Append(element ...File)
-	AppendSingle(element File)
+	Append(element ...File) Array
+	AppendSingle(element File) (Array, bool)
 	Slice(i, j int) Array
 	Value(i int) Json
 	WriteI(w io.Writer, i int, written *int64) error
@@ -556,17 +556,17 @@ func (a ArrayBinary) Contents() interface{} {
 	return a.JSON()
 }
 
-func (ArrayBinary) Append(...File) {
-	panic("json: unsupported append")
+func (a ArrayBinary) Append(elements ...File) Array {
+	return a.clone().Append(elements...)
 }
 
-func (ArrayBinary) AppendSingle(File) {
-	panic("json: unsupported append")
+func (a ArrayBinary) AppendSingle(element File) (Array, bool) {
+	n, _ := a.clone().AppendSingle(element)
+	return n, true
 }
 
-func (ArrayBinary) Slice(int, int) Array {
-	// XXX
-	panic("json: unsupported slice")
+func (a ArrayBinary) Slice(i int, j int) Array {
+	return a.clone().Slice(i, j)
 }
 
 func (a ArrayBinary) Len() int {
@@ -609,12 +609,12 @@ func (a ArrayBinary) Iterate(i int) Json {
 	return a.Value(i)
 }
 
-func (ArrayBinary) RemoveIdx(int) {
-	panic("json: unsupported remove")
+func (a ArrayBinary) RemoveIdx(i int) Json {
+	return a.clone().RemoveIdx(i)
 }
 
-func (ArrayBinary) SetIdx(int, File) {
-	panic("json: unsupported set")
+func (a ArrayBinary) SetIdx(i int, value File) Json {
+	return a.clone().SetIdx(i, value)
 }
 
 func (a ArrayBinary) JSON() interface{} {
@@ -673,17 +673,17 @@ func (a ArrayBinary) Walk(state *DecodingState, walker Walker) {
 	arrayWalk(a, state, walker)
 }
 
-func (a ArrayBinary) Clone(deepCopy bool) File {
-	j := make([]File, a.Len())
-	for i := 0; i < len(j); i++ {
-		v := a.valueImpl(i)
-		if deepCopy {
-			v = v.Clone(true)
-		}
-		j[i] = v
+func (a ArrayBinary) Clone(bool) File {
+	return a
+}
+
+func (a ArrayBinary) clone() Array {
+	c := make([]File, a.Len())
+	for i := 0; i < len(c); i++ {
+		c[i] = a.valueImpl(i)
 	}
 
-	return NewArray(j...)
+	return NewArray2(c)
 }
 
 func (a ArrayBinary) String() string {
@@ -699,11 +699,11 @@ type ArraySlice struct {
 }
 
 func NewArray(elements ...File) Array {
-	return &ArraySlice{elements: elements}
+	return &ArraySlice{elements}
 }
 
 func NewArray2(elements []File) Array {
-	return &ArraySlice{elements: elements}
+	return &ArraySlice{elements}
 }
 
 func (a *ArraySlice) WriteTo(w io.Writer) (int64, error) {
@@ -714,12 +714,14 @@ func (a *ArraySlice) Contents() interface{} {
 	return a.JSON()
 }
 
-func (a *ArraySlice) Append(elements ...File) {
+func (a *ArraySlice) Append(elements ...File) Array {
 	a.elements = append(a.elements, elements...)
+	return a
 }
 
-func (a *ArraySlice) AppendSingle(element File) {
+func (a *ArraySlice) AppendSingle(element File) (Array, bool) {
 	a.elements = append(a.elements, element)
+	return a, false
 }
 
 func (a *ArraySlice) Slice(i, j int) Array {
@@ -755,7 +757,7 @@ func (a *ArraySlice) Iterate(i int) Json {
 	return a.Value(i)
 }
 
-func (a *ArraySlice) RemoveIdx(i int) {
+func (a *ArraySlice) RemoveIdx(i int) Json {
 	if i < 0 || i >= a.Len() {
 		panic("json: index out of range")
 	}
@@ -763,14 +765,16 @@ func (a *ArraySlice) RemoveIdx(i int) {
 	copy(a.elements[i:], a.elements[i+1:])
 	a.elements[len(a.elements)-1] = nil // prevent the internal array to hold a ref to the deleted element
 	a.elements = a.elements[:len(a.elements)-1]
+	return a
 }
 
-func (a *ArraySlice) SetIdx(i int, j File) {
+func (a *ArraySlice) SetIdx(i int, j File) Json {
 	if i < 0 || i >= a.Len() {
 		panic("json: index out of range")
 	}
 
 	a.elements[i] = j
+	return a
 }
 
 func (a *ArraySlice) JSON() interface{} {
@@ -785,7 +789,7 @@ func (a *ArraySlice) JSON() interface{} {
 	return array
 }
 
-func (a ArraySlice) AST() ast.Value {
+func (a *ArraySlice) AST() ast.Value {
 	array := make([]*ast.Term, len(a.elements))
 	for i, e := range a.elements {
 		j, ok := e.(Json)
@@ -861,11 +865,11 @@ type Object interface {
 	Json
 
 	Names() []string
-	Set(name string, value Json)
-	setImpl(name string, value File)
+	Set(name string, value Json) (Object, bool)
+	setImpl(name string, value File) (Object, bool)
 	Value(name string) Json
 	valueImpl(name string) File
-	Remove(name string)
+	Remove(name string) Object
 	Serialize(cache *encodingCache, buffer *bytes.Buffer, base int32) (int32, error)
 
 	Iterable
@@ -931,12 +935,13 @@ func (o ObjectBinary) NamesIndex(i int) string {
 	return name
 }
 
-func (o ObjectBinary) Set(name string, value Json) {
-	o.setImpl(name, value)
+func (o ObjectBinary) Set(name string, value Json) (Object, bool) {
+	return o.setImpl(name, value)
 }
 
-func (ObjectBinary) setImpl(string, File) {
-	panic("json: unsupported set")
+func (o ObjectBinary) setImpl(name string, value File) (Object, bool) {
+	n, _ := o.clone().setImpl(name, value)
+	return n, true
 }
 
 func (o ObjectBinary) Value(name string) Json {
@@ -966,16 +971,16 @@ func (o ObjectBinary) Iterate(i int) Json {
 	return o.Value(o.NamesIndex(i))
 }
 
-func (ObjectBinary) RemoveIdx(int) {
-	panic("json: unsupported remove")
+func (o ObjectBinary) RemoveIdx(i int) Json {
+	return o.clone().RemoveIdx(i)
 }
 
-func (ObjectBinary) SetIdx(int, File) {
-	panic("json: unsupported set")
+func (o ObjectBinary) SetIdx(i int, value File) Json {
+	return o.clone().SetIdx(i, value)
 }
 
-func (ObjectBinary) Remove(string) {
-	panic("json: unsupported remove")
+func (o ObjectBinary) Remove(name string) Object {
+	return o.clone().Remove(name)
 }
 
 func (o ObjectBinary) Len() int {
@@ -1048,20 +1053,19 @@ func (o ObjectBinary) Walk(state *DecodingState, walker Walker) {
 	objectWalk(o, state, walker)
 }
 
-func (o ObjectBinary) Clone(deepCopy bool) File {
-	properties, offsets, err := o.content.objectNameValueOffsets()
-	checkError(err)
+func (o ObjectBinary) Clone(bool) File {
+	return o
+}
 
-	for i := 0; i < len(properties); i++ {
-		v := newFile(o.content, offsets[i])
-		if deepCopy {
-			v = v.Clone(true)
-		}
-
-		properties[i].value = v
+func (o ObjectBinary) clone() Object {
+	n := o.Len()
+	p := make(map[string]File, n)
+	for i := 0; i < n; i++ {
+		name := o.NamesIndex(i)
+		p[name] = o.valueImpl(name)
 	}
 
-	return &ObjectMap{properties}
+	return NewObject(p)
 }
 
 func (o ObjectBinary) String() string {
@@ -1153,15 +1157,15 @@ func (o *ObjectMap) Names() []string {
 	return names
 }
 
-func (o *ObjectMap) Set(name string, value Json) {
-	o.setImpl(name, value)
+func (o *ObjectMap) Set(name string, value Json) (Object, bool) {
+	return o.setImpl(name, value)
 }
 
-func (o *ObjectMap) setImpl(name string, value File) {
+func (o *ObjectMap) setImpl(name string, value File) (Object, bool) {
 	i, ok := o.find(name)
 	if ok {
 		o.properties[i] = objectEntry{name, value}
-		return
+		return o, false
 	}
 
 	properties := make([]objectEntry, len(o.properties)+1)
@@ -1169,6 +1173,7 @@ func (o *ObjectMap) setImpl(name string, value File) {
 	properties[i] = objectEntry{name, value}
 	copy(properties[i+1:], o.properties[i:])
 	o.properties = properties
+	return o, false
 }
 
 func (o *ObjectMap) Value(name string) Json {
@@ -1218,7 +1223,7 @@ func (o *ObjectMap) Iterate(i int) Json {
 	return o.properties[i].value.(Json)
 }
 
-func (o *ObjectMap) RemoveIdx(i int) {
+func (o *ObjectMap) RemoveIdx(i int) Json {
 	if i < 0 || i >= len(o.properties) {
 		panic("json: index out of range")
 	}
@@ -1226,21 +1231,24 @@ func (o *ObjectMap) RemoveIdx(i int) {
 	properties := make([]objectEntry, len(o.properties)-1)
 	copy(properties, o.properties[0:i])
 	copy(properties[i:], o.properties[i+1:])
-	o.properties = properties
+	return &ObjectMap{properties}
 }
 
-func (o *ObjectMap) SetIdx(i int, j File) {
+func (o *ObjectMap) SetIdx(i int, j File) Json {
 	if i < 0 || i >= len(o.properties) {
 		panic("json: index out of range")
 	}
 
 	o.properties[i].value = j
+	return o
 }
 
-func (o *ObjectMap) Remove(name string) {
+func (o *ObjectMap) Remove(name string) Object {
 	if i, ok := o.find(name); ok {
-		o.RemoveIdx(i)
+		return o.RemoveIdx(i).(Object)
 	}
+
+	return o
 }
 
 func (o *ObjectMap) Len() int {
@@ -1260,7 +1268,7 @@ func (o *ObjectMap) JSON() interface{} {
 	return object
 }
 
-func (o ObjectMap) AST() ast.Value {
+func (o *ObjectMap) AST() ast.Value {
 	object := make([][2]*ast.Term, 0, len(o.properties))
 
 	for i := range o.properties {

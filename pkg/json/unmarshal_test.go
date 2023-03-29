@@ -40,7 +40,7 @@ func TestUnmarshalArray(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		parsed.Append(v)
+		parsed = parsed.Append(v)
 		return nil
 	}); err != nil {
 		t.Errorf("parsing failure: %s", err)

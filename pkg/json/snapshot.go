@@ -222,33 +222,41 @@ func kindImpl(obj Object) Kind {
 	}
 }
 
-func createImpl(j Object, name string) *resourceImpl {
+// createImpl prepares the hierarchy starting at Object for modifications.
+func createImpl(j Object, name string) (Object, *resourceImpl) {
 	return createImpl2(j, PathSegments(name), 0)
 }
 
-func createImpl2(obj Object, segs []string, i int) *resourceImpl {
+func createImpl2(obj Object, segs []string, i int) (Object, *resourceImpl) {
 	prefix := "data:"
 
 	if len(segs) == i {
-		return &resourceImpl{strings.Join(segs, "/"), obj}
+		if o, ok := obj.(ObjectBinary); ok {
+			obj = o.clone()
+		}
+
+		return obj, &resourceImpl{strings.Join(segs, "/"), obj}
 	}
 
 	// Remove any non-directory contents.
 
 	if kindImpl(obj) != Directory {
 		for _, name := range obj.Names() {
-			obj.Remove(name)
+			obj = obj.Remove(name)
 		}
 	}
 
 	child := obj.Value(prefix + segs[i])
-	if obj, ok := child.(Object); child != nil && ok {
-		return createImpl2(obj, segs, i+1)
+	if c, ok := child.(Object); child != nil && ok {
+		c, r := createImpl2(c, segs, i+1)
+		obj, _ = obj.Set(prefix+segs[i], c)
+		return obj, r
 	}
 
-	childo := NewObject(nil)
-	obj.Set(prefix+segs[i], childo)
-	return createImpl2(childo, segs, i+1)
+	childo, r := createImpl2(NewObject(nil), segs, i+1)
+	obj, _ = obj.Set(prefix+segs[i], childo)
+	return obj, r
+
 }
 
 func (r *resourceImpl) Name() string {
@@ -263,15 +271,13 @@ func (r *resourceImpl) Kind() Kind {
 	return kindImpl(r.obj)
 }
 
+// setKind expect the resource to be prepared for modification.
 func (r *resourceImpl) setKind(kind Kind) {
 	if kind != Directory {
-		r.obj.Set("kind", NewString(fmt.Sprintf("%d", kind)))
+		if _, ok := r.obj.Set("kind", NewString(fmt.Sprintf("%d", kind))); ok {
+			panic("not reached")
+		}
 	}
-}
-
-func (r *resourceImpl) remove(name string) {
-	prefix := "data:"
-	r.obj.Remove(prefix + name)
 }
 
 func (r *resourceImpl) Resource(name string) Resource {
@@ -331,12 +337,16 @@ func (r *resourceImpl) setBlob(blob Blob) {
 		panic("json: not a blob")
 	}
 
-	r.obj.setImpl("data", blob)
+	if _, ok := r.obj.setImpl("data", blob); ok {
+		panic("not reached")
+	}
 
 	// Remove any subdirectories, if this was a directory before.
 	for _, name := range r.obj.Names() {
 		if strings.HasPrefix(name, "data:") {
-			r.obj.Remove(name)
+			if r.obj.Remove(name) != r.obj {
+				panic("not reached")
+			}
 		}
 	}
 }
@@ -349,17 +359,22 @@ func (r *resourceImpl) JSON() Json {
 	return r.obj.Value("data")
 }
 
+// setJSON expect the resource to be prepared for modification.
 func (r *resourceImpl) setJSON(j Json) {
 	if r.Kind() != JSON {
 		panic("json: not a json")
 	}
 
-	r.obj.Set("data", j)
+	if _, ok := r.obj.Set("data", j); ok {
+		panic("not reached")
+	}
 
 	// Remove any subdirectories, if this was a directory before.
 	for _, name := range r.obj.Names() {
 		if strings.HasPrefix(name, "data:") {
-			r.obj.Remove(name)
+			if r.obj.Remove(name) != r.obj {
+				panic("not reached")
+			}
 		}
 	}
 }
@@ -374,8 +389,11 @@ func (r *resourceImpl) Meta(key string) (string, bool) {
 	}
 }
 
+// setMeta expect the resource to be prepared for modification.
 func (r *resourceImpl) setMeta(key string, value string) {
-	r.obj.setImpl(fmt.Sprintf("meta:%s", key), NewString(value))
+	if _, ok := r.obj.setImpl(fmt.Sprintf("meta:%s", key), NewString(value)); ok {
+		panic("not reached")
+	}
 }
 
 func (r *resourceImpl) Walk(callback func(resource Resource) bool) {
@@ -435,35 +453,6 @@ func (s *writableSnapshot) WriteDirectory(name string) {
 	r.setKind(Directory)
 }
 
-func (s *writableSnapshot) Remove(name string) bool {
-	name = strings.TrimPrefix(name, "/")
-
-	r := s.find(name)
-	if r == nil {
-		return false
-	}
-
-	if r.Kind() == Directory && len(r.Resources()) > 0 {
-		// Directories have to be empty.
-		return false
-	}
-
-	// Root is simply marked invalid, since there's no parent to remove it from.
-
-	if name == "" {
-		s.data = NewObject(nil)
-		return true
-	}
-
-	// Access the parent to remove the requested resource.
-
-	segs := PathSegments(name)
-	parent := s.find(strings.Join(segs[:len(segs)-1], "/"))
-	parent.(*resourceImpl).remove(segs[len(segs)-1])
-
-	return true
-}
-
 func (s *writableSnapshot) WriteMeta(name string, key string, value string) bool {
 	r := s.find(name)
 	if r == nil {
@@ -503,7 +492,9 @@ func (s *writableSnapshot) find(name string) Resource {
 }
 
 func (s *writableSnapshot) create(name string) *resourceImpl {
-	return createImpl(s.data, name)
+	var r *resourceImpl
+	s.data, r = createImpl(s.data, name)
+	return r
 }
 
 func translate(data interface{}) (*snapshotReader, int64, error) {

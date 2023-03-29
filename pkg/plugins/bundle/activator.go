@@ -389,11 +389,11 @@ func activateBundles(opts *bundleApi.ActivateOpts) error {
 
 					dir := bjson.NewObject(nil)
 					for i := len(p) - 1; i > 0; i-- {
-						dir.Set(p[i], val)
+						dir, _ = dir.Set(p[i], val)
 						val = dir
 						dir = bjson.NewObject(nil)
 					}
-					dir.Set(p[0], val)
+					dir, _ = dir.Set(p[0], val)
 
 					err = doDFS(dir, filepath.Dir(strings.Trim(path, "/")), *b.Manifest.Roots)
 					if err != nil {

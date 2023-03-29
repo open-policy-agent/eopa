@@ -298,8 +298,8 @@ func newUpdateArray(data bjson.Array, op storage.PatchOp, path storage.Path, idx
 			if op != storage.AddOp {
 				return nil, invalidPatchError("%v: invalid patch path", path)
 			}
-			cpy := data.Slice(0, data.Len())
-			cpy.Append(value)
+			cpy := data.Slice(0, data.Len()).Clone(false).(bjson.Array)
+			cpy = cpy.Append(value)
 			return &update{path[:len(path)-1], false, cpy}, nil
 		}
 
@@ -311,20 +311,20 @@ func newUpdateArray(data bjson.Array, op storage.PatchOp, path storage.Path, idx
 		switch op {
 		case storage.AddOp:
 			cpy := data.Slice(0, pos).Clone(false).(bjson.Array)
-			cpy.Append(value)
+			cpy = cpy.Append(value)
 			for i := pos; i < data.Len(); i++ {
-				cpy.Append(data.Value(i))
+				cpy = cpy.Append(data.Value(i))
 			}
 			return &update{path[:len(path)-1], false, cpy}, nil
 
 		case storage.RemoveOp:
 			cpy := data.Slice(0, data.Len()).Clone(false).(bjson.Array)
-			cpy.RemoveIdx(pos)
+			cpy = cpy.RemoveIdx(pos).(bjson.Array)
 			return &update{path[:len(path)-1], false, cpy}, nil
 
 		default:
 			cpy := data.Slice(0, data.Len()).Clone(false).(bjson.Array)
-			cpy.SetIdx(pos, value)
+			cpy = cpy.SetIdx(pos, value).(bjson.Array)
 			return &update{path[:len(path)-1], false, cpy}, nil
 		}
 	}
@@ -358,26 +358,13 @@ func (u *update) Apply(data bjson.Json) bjson.Json {
 	if len(u.path) == 0 {
 		return u.value
 	}
-	parent, err := ptr.Ptr(data, u.path[:len(u.path)-1])
-	if err != nil {
-		panic(err)
-	}
-	key := u.path[len(u.path)-1]
+
 	if u.remove {
-		parent.(bjson.Object).Remove(key) // TODO
+		data, _ = u.set(data, u.path, nil) // TODO
 		return data
 	}
 
-	switch parent := parent.(type) {
-	case bjson.Object:
-		parent.Set(key, u.value)
-	case bjson.Array:
-		idx, err := strconv.Atoi(key)
-		if err != nil {
-			panic(err)
-		}
-		parent.SetIdx(idx, u.value)
-	}
+	data, _ = u.set(data, u.path, u.value)
 	return data
 }
 
@@ -385,4 +372,41 @@ func (u *update) Relative(path storage.Path) *update {
 	cpy := *u
 	cpy.path = cpy.path[len(path):]
 	return &cpy
+}
+
+func (u *update) set(data bjson.Json, path storage.Path, value bjson.Json) (bjson.Json, bool) {
+	if len(path) == 0 {
+		return value, true
+	}
+
+	switch parent := data.(type) {
+	case bjson.Object:
+		existing := parent.Value(path[0])
+		if updated, ok := u.set(existing, path[1:], value); updated == nil {
+			return parent.Remove(path[0]), true
+		} else if ok {
+			parent, _ = parent.Set(path[0], updated)
+			return parent, true // TODO
+		}
+
+		return parent, false
+
+	case bjson.Array:
+		idx, err := strconv.Atoi(path[0])
+		if err != nil {
+			panic(err)
+		}
+
+		existing := parent.Value(idx)
+		if updated, ok := u.set(existing, path[1:], value); updated == nil {
+			panic("not reached")
+		} else if ok {
+			parent = parent.SetIdx(idx, updated).(bjson.Array)
+		}
+
+		return parent, false
+
+	default:
+		panic("not reached")
+	}
 }

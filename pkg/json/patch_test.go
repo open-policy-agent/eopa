@@ -591,7 +591,7 @@ func TestPatch(t *testing.T) {
 			for i := 0; i < len(patch); i++ {
 				if patch[i].Op != patch2[i].Op ||
 					patch[i].Path != patch2[i].Path ||
-					!(patch[i].Value == patch2[i].Value || patch[i].Value.Compare(patch2[i].Value) == 0) ||
+					!((patch[i].Value == nil && patch2[i].Value == nil) || patch[i].Value.Compare(patch2[i].Value) == 0) ||
 					patch[i].From != patch2[i].From {
 					t.Fatalf("marshaling/unmarshaling round trip didn't result to equal result")
 				}

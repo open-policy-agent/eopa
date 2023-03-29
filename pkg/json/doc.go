@@ -97,9 +97,6 @@ type WritableCollections interface {
 	// WriteDirectory
 	WriteDirectory(name string)
 
-	// Remove removes a resource. It returns true if found and successfully removed. It does not remove a directory if it's not empty.
-	Remove(name string) bool
-
 	// Writes a meta key-value pair for a resource, returning if successful. Note, the resource has to exist this to take effect.
 	WriteMeta(name string, key string, value string) bool
 

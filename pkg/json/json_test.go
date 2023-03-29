@@ -194,7 +194,7 @@ func TestArray(t *testing.T) {
 		t.Errorf("Array.Clone is broken")
 	}
 
-	clone.RemoveIdx(1)
+	clone = clone.RemoveIdx(1).(Array)
 	if clone.Len() != 2 {
 		t.Fatalf("Array.RemoveIdx is broken")
 	}
@@ -858,8 +858,8 @@ func TestObject(t *testing.T) {
 
 	// Len, Iterate, SetIdx and RemoveIdx
 
-	o.SetIdx(4, NewString("f"))
-	o.RemoveIdx(3)
+	o = o.SetIdx(4, NewString("f")).(Object)
+	o = o.RemoveIdx(3).(Object)
 
 	if names := o.Names(); !reflect.DeepEqual(names, []string{"a", "b", "c", "e"}) {
 		t.Errorf("names don't match: %v", names)
