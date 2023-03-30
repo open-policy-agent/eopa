@@ -94,6 +94,10 @@ func (d *Decoder) Decode() (Json, error) {
 			return nil, err
 		}
 
+		if len(arr) <= maxCompactArray {
+			return NewArrayCompact(arr), nil
+		}
+
 		trimmed := make([]File, len(arr))
 		copy(trimmed, arr)
 		return NewArray2(trimmed), nil

@@ -535,6 +535,7 @@ type Array interface {
 	AppendSingle(element File) (Array, bool)
 	Slice(i, j int) Array
 	Value(i int) Json
+	valueImpl(i int) File
 	WriteI(w io.Writer, i int, written *int64) error
 }
 
@@ -743,14 +744,12 @@ func (a *ArraySlice) Value(i int) Json {
 	return nil
 }
 
-func (a *ArraySlice) WriteI(w io.Writer, i int, written *int64) error {
-	if i < 0 || i >= a.Len() {
-		panic("json: index out of range")
-	}
+func (a *ArraySlice) valueImpl(i int) File {
+	return a.elements[i]
+}
 
-	n, err := a.elements[i].WriteTo(w)
-	*written += int64(n)
-	return err
+func (a *ArraySlice) WriteI(w io.Writer, i int, written *int64) error {
+	return arraySliceBase[*ArraySlice]{}.WriteI(a, w, i, written)
 }
 
 func (a *ArraySlice) Iterate(i int) Json {
@@ -778,53 +777,19 @@ func (a *ArraySlice) SetIdx(i int, j File) Json {
 }
 
 func (a *ArraySlice) JSON() interface{} {
-	array := make([]interface{}, len(a.elements))
-	for i, e := range a.elements {
-		j, ok := e.(Json)
-		if ok {
-			array[i] = j.JSON()
-		}
-	}
-
-	return array
+	return arraySliceBase[*ArraySlice]{}.JSON(a)
 }
 
 func (a *ArraySlice) AST() ast.Value {
-	array := make([]*ast.Term, len(a.elements))
-	for i, e := range a.elements {
-		j, ok := e.(Json)
-		if ok {
-			array[i] = ast.NewTerm(j.AST())
-		}
-	}
-
-	return ast.NewArray(array...)
+	return arraySliceBase[*ArraySlice]{}.AST(a)
 }
 
 func (a *ArraySlice) Extract(ptr string) (Json, error) {
-	p, err := preparePointer(ptr)
-	if err != nil {
-		return nil, err
-	}
-
-	return a.extractImpl(p)
+	return arraySliceBase[*ArraySlice]{}.Extract(a, ptr)
 }
 
 func (a *ArraySlice) extractImpl(ptr []string) (Json, error) {
-	if len(ptr) == 0 {
-		return a, nil
-	}
-
-	i, err := parseInt(ptr[0])
-	if err != nil {
-		return nil, errPathNotFound
-	}
-
-	if i < 0 || i >= a.Len() {
-		return nil, errPathNotFound
-	}
-
-	return a.Value(i).extractImpl(ptr[1:])
+	return arraySliceBase[*ArraySlice]{}.extractImpl(a, ptr)
 }
 
 func (a *ArraySlice) Find(search Path, finder Finder) {
@@ -840,24 +805,11 @@ func (a *ArraySlice) Walk(state *DecodingState, walker Walker) {
 }
 
 func (a *ArraySlice) Clone(deepCopy bool) File {
-	j := make([]File, a.Len())
-	for i := 0; i < len(j); i++ {
-		v := a.elements[i]
-		if deepCopy {
-			v = v.Clone(true).(Json)
-		}
-		j[i] = v
-	}
-
-	return NewArray(j...)
+	return arraySliceBase[*ArraySlice]{}.clone(a, deepCopy)
 }
 
 func (a *ArraySlice) String() string {
-	s := make([]string, a.Len())
-	for i := 0; i < len(s); i++ {
-		s[i] = a.Value(i).String()
-	}
-	return "[" + strings.Join(s, ",") + "]"
+	return arraySliceBase[*ArraySlice]{}.String(a)
 }
 
 // Object represents JSON object.
