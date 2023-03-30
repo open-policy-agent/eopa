@@ -167,7 +167,11 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		value, ok := state.Globals.NDBCache.Get(bi.Name, ast.NewArray(a...))
 		// NOTE(sr): Nondet builtins currently aren't relations, and don't return void.
 		if ok {
-			state.SetReturnValue(Unused, state.ValueOps().FromInterface(value))
+			v, err := state.ValueOps().FromInterface(state.Globals.Ctx, value)
+			if err != nil {
+				return err
+			}
+			state.SetReturnValue(Unused, v)
 			return nil
 		}
 	}
@@ -178,14 +182,22 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 			*noescape(&f))
 	}(&a, func(value *ast.Term) error {
 		if relation {
-			if err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(Unused), state.ValueOps().FromInterface(value.Value)); err != nil {
+			v, err := state.ValueOps().FromInterface(state.Globals.Ctx, value.Value)
+			if err != nil {
+				return err
+			}
+			if err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(Unused), v); err != nil {
 				return err
 			}
 		} else {
 			// topdown print returns iter(nil)
 			var ret Value
 			if value != nil {
-				ret = state.ValueOps().FromInterface(value.Value)
+				var err error
+				ret, err = state.ValueOps().FromInterface(state.Globals.Ctx, value.Value)
+				if err != nil {
+					return err
+				}
 				if state.Globals.NDBCache != nil && bi.IsNondeterministic() {
 					state.Globals.NDBCache.Put(name, ast.NewArray(a...), value.Value)
 				}
@@ -537,7 +549,11 @@ func externalCall(state *State, path []string, args []Value) (interface{}, bool,
 	}
 
 	for _, seg := range path {
-		value, defined, err := state.ValueOps().GetCall(state.Globals.Ctx, data, state.ValueOps().FromInterface(seg))
+		s, err := state.ValueOps().FromInterface(state.Globals.Ctx, seg)
+		if err != nil {
+			return nil, false, false, err
+		}
+		value, defined, err := state.ValueOps().GetCall(state.Globals.Ctx, data, s)
 		if err != nil || !defined {
 			return nil, false, false, err
 		}
@@ -812,7 +828,7 @@ func (o objectMerge) Execute(state *State) (bool, uint32, error) {
 		return false, 0, ErrObjectInsertConflict
 	}
 
-	m, err := ops.ObjectMerge(a, b)
+	m, err := ops.ObjectMerge(state.Globals.Ctx, a, b)
 	if err != nil {
 		return false, 0, err
 	}
@@ -892,10 +908,14 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 	}
 
 	var result Value
+	var err error
 	if ok {
-		result = ops.CopyShallow(originalValue)
+		result, err = ops.CopyShallow(state.Globals.Ctx, originalValue)
 	} else {
 		result = ops.MakeObject()
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	nested := result
@@ -923,8 +943,10 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 			next = ops.MakeObject()
 			err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
 		} else {
-			next = ops.CopyShallow(next)
-			err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
+			next, err = ops.CopyShallow(state.Globals.Ctx, next)
+			if err == nil {
+				err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
+			}
 		}
 
 		if err != nil {
@@ -936,7 +958,7 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 		return nil, err
 	}
 
-	err := ops.ObjectInsert(state.Globals.Ctx, nested, state.Value(StringIndexConst(last)), state.Value(value))
+	err = ops.ObjectInsert(state.Globals.Ctx, nested, state.Value(StringIndexConst(last)), state.Value(value))
 	return result, err
 }
 

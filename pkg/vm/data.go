@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	gojson "encoding/json"
 	"errors"
-	"math/big"
 	"sort"
 	"strconv"
 
@@ -15,10 +14,11 @@ import (
 )
 
 var (
-	ErrInvalidData            = errors.New("invalid data")      // Unsupported data type detected.
-	ErrIllegalIter            = errors.New("illegal iteration") // Illegal iteration over persisted table detected.
-	_              fjson.Json = &Set{}
-	_              fjson.Json = &Object{}
+	ErrInvalidData                = errors.New("invalid data")      // Unsupported data type detected.
+	ErrIllegalIter                = errors.New("illegal iteration") // Illegal iteration over persisted table detected.
+	_              fjson.Json     = &Set{}
+	_              fjson.Json     = &Object{}
+	_              IterableObject = &Object{}
 
 	// prebuilt types are not stored as their specific types to keep them allocated as ready for interface{}.
 
@@ -36,15 +36,13 @@ func init() {
 }
 
 type (
-	dataOperations struct{}
+	DataOperations struct{}
 
-	// GetNamespace is the interface external, read-only, non-scannable namespace implementation should provide.
-	GetNamespace interface {
+	// IterableObject is the interface for external, read-only (probably persisted) object implementations.
+	IterableObject interface {
 		Get(ctx context.Context, key interface{}) (interface{}, bool, error)
-	}
-
-	IterNamespace interface {
 		Iter(ctx context.Context, f func(key, value interface{}) bool) error
+		Len(ctx context.Context) (int, error)
 	}
 
 	GetCallNamespace interface {
@@ -56,7 +54,7 @@ type (
 	}
 )
 
-func (*dataOperations) Get(ctx context.Context, value, key interface{}) (interface{}, bool, error) {
+func (*DataOperations) Get(ctx context.Context, value, key interface{}) (interface{}, bool, error) {
 	jkey, err := castJSON(ctx, key)
 	if err != nil {
 		return nil, false, err
@@ -80,10 +78,6 @@ func (*dataOperations) Get(ctx context.Context, value, key interface{}) (interfa
 
 		return v.Iterate(int(i)), true, nil
 
-	case *Object:
-		value, ok := v.Get(jkey)
-		return value, ok, nil
-
 	case fjson.Object:
 		s, ok := jkey.(fjson.String)
 		if !ok {
@@ -94,16 +88,10 @@ func (*dataOperations) Get(ctx context.Context, value, key interface{}) (interfa
 		return value, value != nil, nil
 
 	case *Set:
-		match, ok := v.Get(jkey)
-		return match, ok, nil
+		return v.Get(ctx, jkey)
 
-	case GetNamespace:
-		s, ok := jkey.(fjson.String)
-		if !ok {
-			return nil, false, nil
-		}
-
-		return v.Get(ctx, s)
+	case IterableObject:
+		return v.Get(ctx, jkey)
 
 	default:
 		if _, err := castJSON(ctx, value); err != nil {
@@ -114,7 +102,7 @@ func (*dataOperations) Get(ctx context.Context, value, key interface{}) (interfa
 	return nil, false, nil
 }
 
-func (*dataOperations) GetCall(ctx context.Context, value, key interface{}) (interface{}, bool, error) {
+func (*DataOperations) GetCall(ctx context.Context, value, key interface{}) (interface{}, bool, error) {
 	jkey, err := castJSON(ctx, key)
 	if err != nil {
 		return nil, false, err
@@ -128,7 +116,7 @@ func (*dataOperations) GetCall(ctx context.Context, value, key interface{}) (int
 	return nil, false, nil
 }
 
-func (*dataOperations) IsCall(value interface{}) (bool, error) {
+func (*DataOperations) IsCall(value interface{}) (bool, error) {
 	switch value.(type) {
 	case CallNamespace:
 		return true, nil
@@ -137,7 +125,7 @@ func (*dataOperations) IsCall(value interface{}) (bool, error) {
 	}
 }
 
-func (*dataOperations) Call(ctx context.Context, value interface{}, args []*interface{}, caller *State) (interface{}, bool, bool, error) {
+func (*DataOperations) Call(ctx context.Context, value interface{}, args []*interface{}, caller *State) (interface{}, bool, bool, error) {
 	switch v := value.(type) {
 	case CallNamespace:
 		return v.Call(ctx, args, caller)
@@ -146,7 +134,7 @@ func (*dataOperations) Call(ctx context.Context, value interface{}, args []*inte
 	return nil, false, false, nil
 }
 
-func (*dataOperations) ArrayAppend(ctx context.Context, array interface{}, value interface{}) error {
+func (*DataOperations) ArrayAppend(ctx context.Context, array interface{}, value interface{}) error {
 	jvalue, err := castJSON(ctx, value)
 	if err != nil {
 		return err
@@ -155,6 +143,7 @@ func (*dataOperations) ArrayAppend(ctx context.Context, array interface{}, value
 	switch a := array.(type) {
 	case fjson.Array:
 		// Using singular version avoids an allocation to construct slice of arguments.
+		// TODO: Should be able to append any value?
 		a.AppendSingle(jvalue)
 	default:
 		if _, err := castJSON(ctx, array); err != nil {
@@ -165,145 +154,178 @@ func (*dataOperations) ArrayAppend(ctx context.Context, array interface{}, value
 	return nil
 }
 
-func (*dataOperations) CopyShallow(value interface{}) interface{} {
+func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (interface{}, error) {
 	switch v := value.(type) {
 	case fjson.Null:
-		return v
+		return v, nil
 	case fjson.Bool:
-		return v
+		return v, nil
 	case fjson.Float:
-		return v
+		return v, nil
 	case fjson.String:
-		return v
+		return v, nil
 	case fjson.Array:
-		return v.Clone(false)
-	case *Object:
-		obj := NewObject()
-		v.Iter(func(key, value fjson.Json) bool {
-			obj.Insert(key, value)
-			return false
-		})
-
-		return obj
-
+		return v.Clone(false), nil
 	case fjson.Object:
-		return v.Clone(false)
+		return v.Clone(false), nil
 	case *Set:
 		set := NewSet()
+		var err error
 		v.Iter(func(v fjson.Json) bool {
-			set.Add(v)
-			return false
+			err = set.Add(ctx, v)
+			return err != nil
 		})
-		return set
-	case GetNamespace, IterNamespace:
-		return v // TODO: return a copy?
+		return set, err
+	case IterableObject:
+		// TODO: Return a copy-on-write object.
+		obj := NewObject()
+		var err2 error
+		err := v.Iter(ctx, func(k, v interface{}) bool {
+			err2 = obj.Insert(ctx, k, v)
+			return err2 != nil
+		})
+		if err2 != nil {
+			return nil, err2
+		} else if err != nil {
+			return nil, err
+		}
+
+		return obj, nil
 	default:
 		notImplemented()
 	}
 
-	return nil
+	return nil, nil
 }
 
-func (*dataOperations) Equal(ctx context.Context, a, b interface{}) (bool, error) {
-	x, err := castJSON(ctx, a)
-	if err != nil {
-		return false, err
-	}
-
-	y, err := castJSON(ctx, b)
-	if err != nil {
-		return false, err
-	}
-
-	return equalOp(x, y), nil
+func (*DataOperations) Equal(ctx context.Context, a, b interface{}) (bool, error) {
+	return equalOp(ctx, a, b)
 }
 
 // FromInterface converts a golang native data to internal representation.
-func (o *dataOperations) FromInterface(x interface{}) interface{} {
+func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (interface{}, error) {
 	switch x := x.(type) {
 	case nil:
-		return fjson.NewNull()
+		return fjson.NewNull(), nil
 	case ast.Null:
-		return fjson.NewNull()
+		return fjson.NewNull(), nil
 	case bool:
-		return fjson.NewBool(x)
+		return fjson.NewBool(x), nil
 	case ast.Boolean:
-		return fjson.NewBool(bool(x))
+		return fjson.NewBool(bool(x)), nil
 	case gojson.Number:
-		return fjson.NewFloat(x)
+		return fjson.NewFloat(x), nil
 	case ast.Number:
-		return fjson.NewFloat(gojson.Number(x))
+		return fjson.NewFloat(gojson.Number(x)), nil
 	case int64:
-		return o.MakeNumberInt(x)
+		return o.MakeNumberInt(x), nil
 	case uint64:
 		notImplemented()
 	case float64:
-		return o.MakeNumberFloat(x)
+		return o.MakeNumberFloat(x), nil
 	case int:
-		return o.MakeNumberInt(int64(x))
+		return o.MakeNumberInt(int64(x)), nil
 	case string:
-		return fjson.NewString(x)
+		return fjson.NewString(x), nil
 	case ast.String:
-		return fjson.NewString(string(x))
+		return fjson.NewString(string(x)), nil
 	case []interface{}:
 		values := make([]fjson.File, 0, len(x))
 		for _, v := range x {
-			values = append(values, o.FromInterface(v).(fjson.Json))
+			y, err := o.FromInterface(ctx, v)
+			if err != nil {
+				return nil, err
+			}
+			values = append(values, y.(fjson.Json))
 		}
-		return fjson.NewArray(values...)
+		return fjson.NewArray(values...), nil
 	case *ast.Array:
 		values := make([]fjson.File, 0, x.Len())
-		x.Iter(func(v *ast.Term) error {
-			values = append(values, o.FromInterface(v.Value).(fjson.Json))
+		err := x.Iter(func(v *ast.Term) error {
+			y, err := o.FromInterface(ctx, v.Value)
+			if err != nil {
+				return err
+			}
+			values = append(values, y.(fjson.Json))
 			return nil
 		})
-		return fjson.NewArray(values...)
+		if err != nil {
+			return nil, err
+		}
+		return fjson.NewArray(values...), nil
 	case map[string]interface{}:
 		obj := NewObject()
 		for k, v := range x {
-			obj.Insert(fjson.NewString(k), o.FromInterface(v).(fjson.Json))
+			y, err := o.FromInterface(ctx, v)
+			if err != nil {
+				return nil, err
+			}
+			if err := obj.Insert(ctx, fjson.NewString(k), y.(fjson.Json)); err != nil {
+				return nil, err
+			}
 		}
-		return obj
+		return obj, nil
 	case []map[string]interface{}:
 		values := make([]fjson.File, 0, len(x))
 		for _, v := range x {
-			values = append(values, o.FromInterface(v).(fjson.Json))
+			y, err := o.FromInterface(ctx, v)
+			if err != nil {
+				return nil, err
+			}
+			values = append(values, y.(fjson.Json))
 		}
-		return fjson.NewArray(values...)
+		return fjson.NewArray(values...), nil
 	case map[string]string:
 		obj := NewObject()
 		for k, v := range x {
-			obj.Insert(fjson.NewString(k), fjson.NewString(v))
+			if err := obj.Insert(ctx, fjson.NewString(k), fjson.NewString(v)); err != nil {
+				return nil, err
+			}
 		}
-		return obj
+		return obj, nil
 	case ast.Object:
 		obj := NewObject()
-		x.Iter(func(k, v *ast.Term) error {
-			obj.Insert(o.FromInterface(k).(fjson.Json), o.FromInterface(v).(fjson.Json))
-			return nil
-		})
-		return obj
+		if err := x.Iter(func(k, v *ast.Term) error {
+			kj, err := o.FromInterface(ctx, k)
+			if err != nil {
+				return err
+			}
+			vj, err := o.FromInterface(ctx, v)
+			if err != nil {
+				return err
+			}
+			return obj.Insert(ctx, kj.(fjson.Json), vj.(fjson.Json))
+		}); err != nil {
+			return nil, err
+		}
+		return obj, nil
 	case ast.Ref:
 		notImplemented()
 	case ast.Set:
 		set := NewSet()
-		x.Iter(func(v *ast.Term) error {
-			set.Add(o.FromInterface(v).(fjson.Json))
-			return nil
+		err := x.Iter(func(v *ast.Term) error {
+			y, err := o.FromInterface(ctx, v)
+			if err != nil {
+				return err
+			}
+			return set.Add(ctx, y.(fjson.Json))
 		})
-		return set
+		if err != nil {
+			return nil, err
+		}
+		return set, nil
 	case *ast.Term:
-		return o.FromInterface(x.Value)
+		return o.FromInterface(ctx, x.Value)
 	case []byte:
-		return fjson.NewString(base64.StdEncoding.EncodeToString(x))
+		return fjson.NewString(base64.StdEncoding.EncodeToString(x)), nil
 	default:
 		notImplemented()
 	}
 
-	return nil
+	return nil, nil
 }
 
-func (o *dataOperations) Iter(ctx context.Context, v interface{}, f func(key, value interface{}) bool) error {
+func (o *DataOperations) Iter(ctx context.Context, v interface{}, f func(key, value interface{}) bool) error {
 	switch v := v.(type) {
 	case fjson.Array:
 		n := v.Len()
@@ -312,10 +334,6 @@ func (o *dataOperations) Iter(ctx context.Context, v interface{}, f func(key, va
 				break
 			}
 		}
-	case *Object:
-		v.Iter(func(key, value fjson.Json) bool {
-			return f(key, value)
-		})
 	case fjson.Object:
 		for i, key := range v.Names() {
 			if f(fjson.NewString(key), v.Iterate(i)) {
@@ -326,18 +344,18 @@ func (o *dataOperations) Iter(ctx context.Context, v interface{}, f func(key, va
 		v.Iter(func(v fjson.Json) bool {
 			return f(v, v)
 		})
-	case IterNamespace:
+	case IterableObject:
 		return v.Iter(ctx, f)
 	}
 
 	return nil
 }
 
-func (*dataOperations) IsArray(ctx context.Context, v interface{}) (bool, error) {
+func (*DataOperations) IsArray(ctx context.Context, v interface{}) (bool, error) {
 	switch v.(type) {
 	case fjson.Array:
 		return true, nil
-	case IterNamespace:
+	case IterableObject:
 		return false, nil
 	default:
 		_, err := castJSON(ctx, v)
@@ -345,11 +363,9 @@ func (*dataOperations) IsArray(ctx context.Context, v interface{}) (bool, error)
 	}
 }
 
-func (*dataOperations) IsObject(ctx context.Context, v interface{}) (bool, error) {
+func (*DataOperations) IsObject(ctx context.Context, v interface{}) (bool, error) {
 	switch v.(type) {
-	case fjson.Object, *Object:
-		return true, nil
-	case IterNamespace:
+	case fjson.Object, IterableObject:
 		return true, nil
 	default:
 		_, err := castJSON(ctx, v)
@@ -357,11 +373,11 @@ func (*dataOperations) IsObject(ctx context.Context, v interface{}) (bool, error
 	}
 }
 
-func (*dataOperations) MakeArray(int32) fjson.Array {
+func (*DataOperations) MakeArray(int32) fjson.Array {
 	return fjson.NewArray()
 }
 
-func (*dataOperations) MakeBoolean(v bool) fjson.Json {
+func (*DataOperations) MakeBoolean(v bool) fjson.Json {
 	if v {
 		return prebuiltTrue
 	}
@@ -369,23 +385,23 @@ func (*dataOperations) MakeBoolean(v bool) fjson.Json {
 	return prebuiltFalse
 }
 
-func (*dataOperations) MakeObject() *Object {
+func (*DataOperations) MakeObject() *Object {
 	return NewObject()
 }
 
-func (*dataOperations) MakeNull() fjson.Json {
+func (*DataOperations) MakeNull() fjson.Json {
 	return prebuiltNull
 }
 
-func (*dataOperations) MakeNumberFloat(f float64) fjson.Float {
+func (*DataOperations) MakeNumberFloat(f float64) fjson.Float {
 	return fjson.NewFloat(gojson.Number(strconv.FormatFloat(f, 'g', -1, 64)))
 }
 
-func (o *dataOperations) MakeNumberZero() fjson.Json {
+func (o *DataOperations) MakeNumberZero() fjson.Json {
 	return prebuiltZero
 }
 
-func (o *dataOperations) MakeNumberInt(i int64) fjson.Json {
+func (o *DataOperations) MakeNumberInt(i int64) fjson.Json {
 	if i >= 0 && i < int64(len(prebuiltInts)) {
 		return prebuiltInts[i]
 	}
@@ -393,23 +409,21 @@ func (o *dataOperations) MakeNumberInt(i int64) fjson.Json {
 	return fjson.NewFloat(gojson.Number(strconv.FormatInt(i, 10)))
 }
 
-func (*dataOperations) MakeNumberRef(n interface{}) fjson.Float {
+func (*DataOperations) MakeNumberRef(n interface{}) fjson.Float {
 	return fjson.NewFloat(gojson.Number(n.(fjson.String).Value()))
 }
 
-func (*dataOperations) MakeSet() *Set {
+func (*DataOperations) MakeSet() *Set {
 	return NewSet()
 }
 
-func (*dataOperations) MakeString(v string) fjson.String {
+func (*DataOperations) MakeString(v string) fjson.String {
 	return fjson.NewString(v)
 }
 
-func (o *dataOperations) Len(ctx context.Context, v interface{}) (fjson.Json, error) {
+func (o *DataOperations) Len(ctx context.Context, v interface{}) (fjson.Json, error) {
 	switch v := v.(type) {
 	case fjson.Array:
-		return o.MakeNumberInt(int64(v.Len())), nil
-	case *Object:
 		return o.MakeNumberInt(int64(v.Len())), nil
 	case fjson.Object:
 		return o.MakeNumberInt(int64(v.Len())), nil
@@ -417,13 +431,13 @@ func (o *dataOperations) Len(ctx context.Context, v interface{}) (fjson.Json, er
 		return o.MakeNumberInt(int64(v.Len())), nil
 	case fjson.String:
 		return o.MakeNumberInt(int64(len(v.Value()))), nil
-	case IterNamespace:
-		obj, err := castJSON(ctx, v)
+	case IterableObject:
+		n, err := v.Len(ctx)
 		if err != nil {
-			return o.MakeNumberZero(), err
+			return nil, err
 		}
 
-		return o.MakeNumberInt(int64(obj.(fjson.Object).Len())), nil
+		return o.MakeNumberInt(int64(n)), nil
 	default:
 		if _, err := castJSON(ctx, v); err != nil {
 			return o.MakeNumberZero(), err
@@ -433,21 +447,16 @@ func (o *dataOperations) Len(ctx context.Context, v interface{}) (fjson.Json, er
 	}
 }
 
-func (*dataOperations) ObjectGet(ctx context.Context, object, key interface{}) (interface{}, bool, error) {
-	jobject, err := castJSON(ctx, object)
-	if err != nil {
-		return nil, false, err
-	}
-
+func (*DataOperations) ObjectGet(ctx context.Context, object, key interface{}) (interface{}, bool, error) {
 	jkey, err := castJSON(ctx, key)
 	if err != nil {
 		return nil, false, err
 	}
 
-	switch object := jobject.(type) {
-	case *Object:
-		value, ok := object.Get(jkey)
-		return value, ok, nil
+	switch object := object.(type) {
+	case IterableObject:
+		value, ok, err := object.Get(ctx, jkey)
+		return value, ok, err
 
 	case fjson.Object:
 		s, ok := jkey.(fjson.String)
@@ -462,31 +471,22 @@ func (*dataOperations) ObjectGet(ctx context.Context, object, key interface{}) (
 	return nil, false, nil
 }
 
-func (*dataOperations) ObjectInsert(ctx context.Context, object, key, value interface{}) error {
-	if _, ok := object.(IterNamespace); ok {
-		return ErrIllegalIter // Can't modify a persisted object.
-	}
-
-	jobject, err := castJSON(ctx, object)
-	if err != nil {
-		return err
-	}
-
+func (*DataOperations) ObjectInsert(ctx context.Context, object, key, value interface{}) error {
 	jkey, err := castJSON(ctx, key)
 	if err != nil {
 		return err
 	}
 
-	jvalue, err := castJSON(ctx, value)
-	if err != nil {
-		return err
-	}
-
-	switch object := jobject.(type) {
+	switch object := object.(type) {
 	case *Object:
-		object.Insert(jkey, jvalue)
+		return object.Insert(ctx, jkey, value)
 
 	case fjson.Object:
+		jvalue, err := castJSON(ctx, value)
+		if err != nil {
+			return err
+		}
+
 		s, ok := jkey.(fjson.String)
 		if !ok {
 			// Evaluation should never try to modify a JSON it loaded from disk.
@@ -494,16 +494,19 @@ func (*dataOperations) ObjectInsert(ctx context.Context, object, key, value inte
 		}
 
 		object.Set(s.Value(), jvalue)
+
+	default:
+		panic("not reached")
 	}
 
 	return nil
 }
 
-func (o *dataOperations) ObjectMerge(a, b interface{}) (interface{}, error) {
+func (o *DataOperations) ObjectMerge(ctx context.Context, a, b interface{}) (interface{}, error) {
 	_, okaa := a.(fjson.Object)
-	_, okab := a.(*Object)
+	_, okab := a.(IterableObject)
 	_, okba := b.(fjson.Object)
-	_, okbb := b.(*Object)
+	_, okbb := b.(IterableObject)
 
 	if (!okaa && !okab) || (!okba && !okbb) {
 		return a, nil
@@ -513,37 +516,54 @@ func (o *dataOperations) ObjectMerge(a, b interface{}) (interface{}, error) {
 
 	var err error
 
-	objectIterate(a, func(key, value fjson.Json) bool {
-		other, ok := objectGet(b, key)
-		if !ok {
-			merged.Insert(key, value)
-			return false
+	if err2 := objectIterate(ctx, a, func(key, value interface{}) bool {
+		var other interface{}
+		var ok bool
+		other, ok, err = objectGet(ctx, b, key)
+		if err != nil {
+			return true
+		} else if !ok {
+			err = merged.Insert(ctx, key, value)
+			return err != nil
 		}
 
 		var m interface{}
-		m, err = o.ObjectMerge(value, other)
+		m, err = o.ObjectMerge(ctx, value, other)
 		if err != nil {
 			return true
 		}
 
-		merged.Insert(key, m.(fjson.Json))
-		return false
-	})
-	if err != nil {
+		err = merged.Insert(ctx, key, m)
+		return err != nil
+	}); err2 != nil {
+		return nil, err2
+	} else if err != nil {
 		return nil, err
 	}
 
-	objectIterate(b, func(key, value fjson.Json) bool {
-		if _, ok := objectGet(a, key); !ok {
-			merged.Insert(key, value)
+	if err2 := objectIterate(ctx, b, func(key, value interface{}) bool {
+		var ok bool
+		_, ok, err = objectGet(ctx, a, key)
+		if err != nil {
+			return true
+		}
+		if !ok {
+			err = merged.Insert(ctx, key, value)
+			if err != nil {
+				return true
+			}
 		}
 		return false
-	})
+	}); err2 != nil {
+		return nil, err2
+	} else if err != nil {
+		return nil, err
+	}
 
 	return merged, nil
 }
 
-func objectIterate(obj interface{}, f func(key, value fjson.Json) bool) {
+func objectIterate(ctx context.Context, obj interface{}, f func(key, value interface{}) bool) error {
 	if obj, ok := obj.(fjson.Object); ok {
 		for i, name := range obj.Names() {
 			if f(fjson.NewString(name), obj.Iterate(i)) {
@@ -551,26 +571,26 @@ func objectIterate(obj interface{}, f func(key, value fjson.Json) bool) {
 			}
 		}
 
-		return
+		return nil
 	}
 
-	obj.(*Object).Iter(f)
+	return obj.(IterableObject).Iter(ctx, f)
 }
 
-func objectGet(obj interface{}, key interface{}) (fjson.Json, bool) {
+func objectGet(ctx context.Context, obj interface{}, key interface{}) (interface{}, bool, error) {
 	if obj, ok := obj.(fjson.Object); ok {
 		if s, ok := key.(fjson.String); ok {
 			value := obj.Value(s.Value())
-			return value, value != nil
+			return value, value != nil, nil
 		}
 
-		return nil, false
+		return nil, false, nil
 	}
 
-	return obj.(*Object).Get(key.(fjson.Json))
+	return obj.(IterableObject).Get(ctx, key)
 }
 
-func (*dataOperations) SetAdd(ctx context.Context, set, value interface{}) error {
+func (*DataOperations) SetAdd(ctx context.Context, set, value interface{}) error {
 	jvalue, err := castJSON(ctx, value)
 	if err != nil {
 		return err
@@ -578,7 +598,7 @@ func (*dataOperations) SetAdd(ctx context.Context, set, value interface{}) error
 
 	switch set := set.(type) {
 	case *Set:
-		set.Add(jvalue)
+		return set.Add(ctx, jvalue)
 	default:
 		if _, err := castJSON(ctx, set); err != nil {
 			return err
@@ -588,7 +608,7 @@ func (*dataOperations) SetAdd(ctx context.Context, set, value interface{}) error
 	return nil
 }
 
-func (o *dataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, error) {
+func (o *DataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, error) {
 	switch v := v.(type) {
 	case fjson.Null:
 		return ast.Null{}, nil
@@ -616,32 +636,6 @@ func (o *dataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, e
 		}
 		arr := ast.NewArray(terms...)
 		return arr, nil
-
-	case *Object:
-		var err error
-
-		terms := make([][2]*ast.Term, 0, v.Len())
-		v.Iter(func(k, v fjson.Json) bool {
-			var a ast.Value
-			a, err = o.ToAST(ctx, k)
-			if err != nil {
-				return true
-			}
-
-			var b ast.Value
-			b, err = o.ToAST(ctx, v)
-			if err != nil {
-				return true
-			}
-
-			terms = append(terms, [2]*ast.Term{ast.NewTerm(a), ast.NewTerm(b)})
-			return false
-		})
-		if err != nil {
-			return nil, err
-		}
-		obj := ast.NewObject(terms...)
-		return obj, nil
 
 	case fjson.Object:
 		var err error
@@ -689,10 +683,10 @@ func (o *dataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, e
 		set := ast.NewSet(terms...)
 		return set, nil
 
-	case IterNamespace:
+	case IterableObject:
 		obj := ast.NewObject()
 		var err error
-		v.Iter(ctx, func(k, v interface{}) bool {
+		if err2 := v.Iter(ctx, func(k, v interface{}) bool {
 			var a ast.Value
 			a, err = o.ToAST(ctx, k)
 			if err != nil {
@@ -707,15 +701,12 @@ func (o *dataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, e
 
 			obj.Insert(ast.NewTerm(a), ast.NewTerm(b))
 			return false
-		})
-		if err != nil {
+		}); err2 != nil {
+			return nil, err2
+		} else if err != nil {
 			return nil, err
 		}
 		return obj, nil
-
-	case GetNamespace:
-		// No enough of primary key gathered to iterate.
-		return nil, ErrIllegalIter
 	}
 
 	notImplemented()
@@ -723,7 +714,7 @@ func (o *dataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, e
 }
 
 // ToInterface converts the data to golang native presentation.
-func (o *dataOperations) ToInterface(ctx context.Context, v interface{}) (interface{}, error) {
+func (o *DataOperations) ToInterface(ctx context.Context, v interface{}) (interface{}, error) {
 	v, err := o.ToAST(ctx, v)
 	if err != nil {
 		return nil, err
@@ -743,42 +734,54 @@ func NewSet() *Set {
 	return &Set{set: NewHashSet()}
 }
 
-func (s *Set) Add(v fjson.Json) {
-	s.set.Put(v)
+func (s *Set) Add(ctx context.Context, v fjson.Json) error {
+	return s.set.Put(ctx, v)
 }
 
-func (s *Set) Get(k fjson.Json) (fjson.Json, bool) {
-	if ok := s.set.Get(k); ok {
-		return k, true
+func (s *Set) Get(ctx context.Context, k fjson.Json) (fjson.Json, bool, error) {
+	ok, err := s.set.Get(ctx, k)
+	if err != nil {
+		return nil, false, err
+	} else if ok {
+		return k, true, nil
 	}
 
-	return nil, false
+	return nil, false, nil
 }
 
 func (s *Set) Iter(iter func(v fjson.Json) bool) bool {
-	return s.set.Iter(iter)
+	return s.set.Iter(func(v interface{}) bool {
+		return iter(v.(fjson.Json))
+	})
 }
 
 func (s *Set) Len() int {
 	return s.set.Len()
 }
 
-func (s *Set) Equal(y *Set) bool {
+func (s *Set) Equal(ctx context.Context, y *Set) (bool, error) {
 	if s == y {
-		return true
+		return true, nil
 	}
 
 	if s.Len() != y.Len() {
-		return false
+		return false, nil
 	}
 
 	match := true
+	var err error
 	s.Iter(func(v fjson.Json) bool {
-		_, match = y.Get(v)
+		_, match, err = y.Get(ctx, v)
+		if err != nil {
+			return true
+		}
 		return !match
 	})
+	if err != nil {
+		return false, err
+	}
 
-	return match
+	return match, nil
 }
 
 type Object struct {
@@ -790,81 +793,23 @@ func NewObject() *Object {
 	return &Object{obj: NewHashMap()}
 }
 
-func (o *Object) Insert(k, v fjson.Json) {
-	o.obj.Put(k, v)
+func (o *Object) Insert(ctx context.Context, k, v interface{}) error {
+	return o.obj.Put(ctx, k, v)
 }
 
-func (o *Object) Get(k fjson.Json) (fjson.Json, bool) {
-	if v, ok := o.obj.Get(k); ok {
-		return v, true
-	}
-
-	return nil, false
+func (o *Object) Get(ctx context.Context, k interface{}) (interface{}, bool, error) {
+	return o.obj.Get(ctx, k)
 }
 
-func (o *Object) Iter(iter func(k, v fjson.Json) bool) bool {
-	return o.obj.Iter(func(k, v T) bool {
+func (o *Object) Iter(_ context.Context, iter func(key, value interface{}) bool) error {
+	o.obj.Iter(func(k, v T) bool {
 		return iter(k, v)
 	})
+	return nil
 }
 
-func (o *Object) Len() int {
-	return o.obj.Len()
-}
-
-func (o *Object) Equal(other interface{}) bool {
-	if other, ok := other.(fjson.Object); ok {
-		if o.Len() != other.Len() {
-			return false
-		}
-
-		eq := true
-		o.obj.Iter(func(k, va T) bool {
-			s, ok := k.(fjson.String)
-			if !ok {
-				eq = false
-				return false
-			}
-
-			vb := other.Value(s.Value())
-			if vb == nil {
-				eq = false
-				return false
-			}
-
-			eq = equalOp(va, vb)
-			return !eq
-		})
-
-		return eq
-	}
-
-	ob, ok := other.(*Object)
-	if !ok {
-		return false
-	}
-
-	if o == ob {
-		return true
-	}
-
-	if o.Len() != ob.Len() {
-		return false
-	}
-
-	eq := true
-	o.Iter(func(k, a fjson.Json) bool {
-		b, ok := ob.Get(k)
-		if !ok {
-			eq = false
-			return false
-		}
-
-		eq = equalOp(a, b)
-		return !eq
-	})
-
-	return eq
+func (o *Object) Len(context.Context) (int, error) {
+	return o.obj.Len(), nil
 }
 
 func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
@@ -874,7 +819,7 @@ func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
 	}
 
 	switch v := v.(type) {
-	case IterNamespace:
+	case IterableObject:
 		obj := fjson.NewObject(nil)
 		var err error
 		v.Iter(ctx, func(k, v interface{}) bool {
@@ -885,150 +830,9 @@ func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
 			return nil, err
 		}
 		return obj, nil
-
-	case GetNamespace:
-		// No enough of primary key gathered to iterate.
-		return nil, ErrIllegalIter
 	}
 
 	return nil, ErrInvalidData
-}
-
-func equalOp(a, b fjson.Json) bool {
-	switch x := a.(type) {
-	case fjson.Null:
-		_, ok := b.(fjson.Null)
-		return ok
-
-	case fjson.Bool:
-		if y, ok := b.(fjson.Bool); ok {
-			return x.Value() == y.Value()
-		}
-
-		return false
-
-	case fjson.Float:
-		if y, ok := b.(fjson.Float); ok {
-			return compare(x, y) == 0
-		}
-
-		return false
-
-	case fjson.String:
-		if y, ok := b.(fjson.String); ok {
-			return x.Value() == y.Value()
-		}
-
-		return false
-
-	case fjson.Array:
-		if y, ok := b.(fjson.Array); ok {
-			if x.Len() != y.Len() {
-				return false
-			}
-
-			for i := 0; i < x.Len(); i++ {
-				if !equalOp(x.Iterate(i), y.Iterate(i)) {
-					return false
-				}
-			}
-
-			return true
-		}
-
-		return false
-
-	case *Object:
-		return x.Equal(b)
-
-	case fjson.Object:
-		if y, ok := b.(fjson.Object); ok {
-			return x.Compare(y) == 0
-		}
-
-		if y, ok := b.(*Object); ok {
-			return y.Equal(x)
-		}
-
-		return false
-
-	case *Set:
-		if y, ok := b.(*Set); ok {
-			return x.Equal(y)
-		}
-
-		return false
-
-	case hashable:
-		if y, ok := b.(hashable); ok {
-			return x.Equal(y)
-		}
-
-		return false
-
-	default:
-		panic("unsupported type")
-	}
-}
-
-func compare(x, y fjson.Float) int {
-	a, b := x.Value(), y.Value()
-
-	if ai, err := a.Int64(); err == nil {
-		if bi, err := b.Int64(); err == nil {
-			if ai == bi {
-				return 0
-			}
-			if ai < bi {
-				return -1
-			}
-			return 1
-		}
-	}
-
-	// We use big.Rat for comparing big numbers.
-	// It replaces big.Float due to following reason:
-	// big.Float comes with a default precision of 64, and setting a
-	// larger precision results in more memory being allocated
-	// (regardless of the actual number we are parsing with SetString).
-	//
-	// Note: If we're so close to zero that big.Float says we are zero, do
-	// *not* big.Rat).SetString on the original string it'll potentially
-	// take very long.
-	var bigA, bigB *big.Rat
-	fa, ok := new(big.Float).SetString(string(a))
-	if !ok {
-		panic("illegal value")
-	}
-	if fa.IsInt() {
-		if i, _ := fa.Int64(); i == 0 {
-			bigA = new(big.Rat).SetInt64(0)
-		}
-	}
-	if bigA == nil {
-		bigA, ok = new(big.Rat).SetString(string(a))
-		if !ok {
-			panic("illegal value")
-		}
-	}
-
-	fb, ok := new(big.Float).SetString(string(b))
-	if !ok {
-		panic("illegal value")
-	}
-	if fb.IsInt() {
-		if i, _ := fb.Int64(); i == 0 {
-			bigB = new(big.Rat).SetInt64(0)
-		}
-	}
-	if bigB == nil {
-		bigB, ok = new(big.Rat).SetString(string(b))
-		if !ok {
-			panic("illegal value")
-		}
-	}
-
-	return bigA.Cmp(bigB)
 }
 
 func notImplemented() {

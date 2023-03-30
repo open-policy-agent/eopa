@@ -20,6 +20,7 @@ import (
 
 	"github.com/styrainc/load-private/pkg/plugins/bundle"
 	"github.com/styrainc/load-private/pkg/plugins/data"
+	dl "github.com/styrainc/load-private/pkg/plugins/decision_logs"
 	"github.com/styrainc/load-private/pkg/plugins/discovery"
 	"github.com/styrainc/load-private/pkg/plugins/grpc"
 	"github.com/styrainc/load-private/pkg/plugins/impact"
@@ -318,6 +319,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 			data.Name:       data.Factory(),
 			impact.Name:     impact.Factory(),
 			grpc.PluginName: grpc.Factory(),
+			dl.Name:         dl.Factory(),
 		}),
 	)
 	if err != nil {
@@ -365,6 +367,7 @@ func loadCertPool(tlsCACertFile string) (*x509.CertPool, error) {
 func loadRouter() *mux.Router {
 	m := mux.NewRouter()
 	m.Use(impact.HTTPMiddleware)
+	m.Use(dl.HTTPMiddleware)
 	return m
 }
 

@@ -35,7 +35,7 @@ type (
 	VM struct {
 		executable   Executable
 		data         *interface{}
-		ops          dataOperations
+		ops          DataOperations
 		mu           sync.RWMutex
 		stringsCache []Value
 	}
@@ -178,7 +178,7 @@ func (vm *VM) WithDataJSON(data interface{}) *VM {
 
 // Eval evaluates the query with the options given. Eval is thread
 // safe. Return value is of ast.Value for now.
-func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (Value, error) {
+func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, error) {
 	if !vm.executable.IsValid() {
 		return nil, ErrInvalidExecutable
 	}
@@ -194,7 +194,12 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (Value, erro
 
 			var input *interface{}
 			if opts.Input != nil {
-				var i interface{} = vm.ops.FromInterface(*opts.Input)
+				var err error
+				var i interface{}
+				i, err = vm.ops.FromInterface(ctx, *opts.Input)
+				if err != nil {
+					return nil, err
+				}
 				input = &i
 			}
 
@@ -347,7 +352,11 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				return nil, false, false, err
 			}
 
-			r, defined, err := vm.ops.Get(ctx, m, vm.ops.FromInterface("result"))
+			v, err := vm.ops.FromInterface(ctx, "result")
+			if err != nil {
+				return nil, false, false, err
+			}
+			r, defined, err := vm.ops.Get(ctx, m, v)
 			return r, defined, true, err
 		}
 	}
@@ -366,7 +375,10 @@ func (vm *VM) runtime(ctx context.Context, v interface{}) (*ast.Term, error) {
 				return nil, err
 			}
 			if !ok {
-				v = vm.ops.FromInterface(v)
+				v, err = vm.ops.FromInterface(ctx, v)
+				if err != nil {
+					return nil, err
+				}
 			}
 
 			runtime, err = vm.ops.ToAST(ctx, v)
@@ -480,7 +492,7 @@ func (s *State) New() State {
 	return newState(s.Globals, s.stats)
 }
 
-func (s *State) ValueOps() *dataOperations {
+func (s *State) ValueOps() *DataOperations {
 	return &s.Globals.vm.ops
 }
 

@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"context"
 	"fmt"
 	gostrings "strings"
 )
@@ -25,67 +26,100 @@ func NewHashSet() *HashSet {
 }
 
 // Copy returns a shallow copy of this HashSet.
-func (h *HashSet) Copy() *HashSet {
+func (h *HashSet) Copy(ctx context.Context) (*HashSet, error) {
 	cpy := &HashSet{
 		table: make(map[int]*hashSetEntry, len(h.table)),
 		size:  0,
 	}
+	var err error
 	h.Iter(func(k T) bool {
-		cpy.Put(k)
+		if err = cpy.Put(ctx, k); err != nil {
+			return true
+		}
 		return false
 	})
-	return cpy
+	if err != nil {
+		return nil, err
+	}
+	return cpy, nil
 }
 
 // Equal returns true if this HashSet equals the other HashSet.
 // Two hash maps are equal if they contain the same values.
-func (h *HashSet) Equal(other *HashSet) bool {
+func (h *HashSet) Equal(ctx context.Context, other *HashSet) (bool, error) {
 	if h.Len() != other.Len() {
-		return false
+		return false, nil
 	}
-	return !h.Iter(func(k T) bool {
-		return !other.Get(k)
+	var err error
+	neq := h.Iter(func(k T) bool {
+		var eq bool
+		eq, err = other.Get(ctx, k)
+		if err != nil {
+			return true
+		}
+		return !eq
 	})
+	return !neq, err
 }
 
 // Get checks if the value is in the set.
-func (h *HashSet) Get(k T) bool {
-	hash := h.hash(k)
+func (h *HashSet) Get(ctx context.Context, k T) (bool, error) {
+	hash, err := h.hash(ctx, k)
+	if err != nil {
+		return false, err
+	}
 	for entry := h.table[hash]; entry != nil; entry = entry.next {
-		if h.eq(entry.k, k) {
-			return true
+		eq, err := h.eq(ctx, entry.k, k)
+		if err != nil {
+			return false, err
+		} else if eq {
+			return true, nil
 		}
 	}
 
-	return false
+	return false, nil
 }
 
 // Delete removes the the key k.
-func (h *HashSet) Delete(k T) {
-	hash := h.hash(k)
+func (h *HashSet) Delete(ctx context.Context, k T) error {
+	hash, err := h.hash(ctx, k)
+	if err != nil {
+		return err
+	}
 	var prev *hashSetEntry
 	for entry := h.table[hash]; entry != nil; entry = entry.next {
-		if h.eq(entry.k, k) {
+		eq, err := h.eq(ctx, entry.k, k)
+		if err != nil {
+			return err
+		}
+		if eq {
 			if prev != nil {
 				prev.next = entry.next
 			} else {
 				h.table[hash] = entry.next
 			}
 			h.size--
-			return
+			return nil
 		}
 		prev = entry
 	}
+	return nil
 }
 
 // Hash returns the hash code for this hash map.
-func (h *HashSet) Hash() int {
+func (h *HashSet) Hash(ctx context.Context) (int, error) {
 	var hash int
+	var err error
 	h.Iter(func(k T) bool {
-		hash += h.hash(k)
+		var v int
+		v, err = h.hash(ctx, k)
+		if err != nil {
+			return true
+		}
+		hash += v
 		return false
 	})
-	return hash
+	return hash, err
 }
 
 // Iter invokes the iter function for each element in the HashSet.
@@ -110,16 +144,24 @@ func (h *HashSet) Len() int {
 
 // Put inserts a value into this HashSet. If the value is already
 // present, the operation is a no op.
-func (h *HashSet) Put(k T) {
-	hash := h.hash(k)
+func (h *HashSet) Put(ctx context.Context, k T) error {
+	hash, err := h.hash(ctx, k)
+	if err != nil {
+		return err
+	}
 	head := h.table[hash]
 	for entry := head; entry != nil; entry = entry.next {
-		if h.eq(entry.k, k) {
-			return
+		eq, err := h.eq(ctx, entry.k, k)
+		if err != nil {
+			return err
+		}
+		if eq {
+			return nil
 		}
 	}
 	h.table[hash] = &hashSetEntry{k: k, next: head}
 	h.size++
+	return nil
 }
 
 func (h *HashSet) String() string {
@@ -139,19 +181,26 @@ func (h *HashSet) String() string {
 }
 
 // Update returns a new HashSet with elements from the other HashSet put into this HashSet.
-func (h *HashSet) Update(other *HashSet) *HashSet {
-	updated := h.Copy()
+func (h *HashSet) Update(ctx context.Context, other *HashSet) (*HashSet, error) {
+	updated, err := h.Copy(ctx)
+	if err != nil {
+		return nil, err
+	}
 	other.Iter(func(k T) bool {
-		updated.Put(k)
-		return false
+		err = updated.Put(ctx, k)
+		return err != nil
 	})
-	return updated
+	if err != nil {
+		return nil, err
+	}
+	return updated, nil
 }
 
-func (h *HashSet) hash(v T) int {
-	return int(hash(v))
+func (h *HashSet) hash(ctx context.Context, v T) (int, error) {
+	x, err := hash(ctx, v)
+	return int(x), err
 }
 
-func (h *HashSet) eq(a, b T) bool {
-	return equalOp(a, b)
+func (h *HashSet) eq(ctx context.Context, a, b T) (bool, error) {
+	return equalOp(ctx, a, b)
 }

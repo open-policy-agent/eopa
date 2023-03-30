@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	bjson "github.com/styrainc/load-private/pkg/json"
+	dl "github.com/styrainc/load-private/pkg/plugins/decision_logs"
 	"github.com/styrainc/load-private/pkg/plugins/impact"
 	inmem "github.com/styrainc/load-private/pkg/store"
 	"github.com/styrainc/load-private/pkg/vm"
@@ -117,8 +118,11 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 	}
 	statsToMetrics(ectx.Metrics(), s)
 
-	go impact.Enqueue(ctx, ectx, result.(ast.Value))
-	return result.(ast.Value), nil
+	go impact.Enqueue(ctx, ectx, result)
+	if err := dl.Log(ctx, ectx, result, err); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func runtime(rt ast.Value) ast.Value {

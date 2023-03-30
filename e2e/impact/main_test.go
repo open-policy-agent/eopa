@@ -536,7 +536,7 @@ func TestStillWorksWithoutDecisionLogsAndErrorLogging(t *testing.T) {
 	ctx := context.Background()
 	config := `
 plugins:
-  impact_analysis:
+  impact_analysis: {}
 `
 	policy := `
 package test
@@ -558,6 +558,10 @@ q := true
 		t.Fatal(err)
 	}
 
+	// LIA runs for 10 seconds, so we'll give it a bit of time to start, and wait here
+	// before starting the API requests.
+	time.Sleep(time.Second)
+
 	for i := 0; i < count; i++ { // act: evaluate the policy via the v1 data API, provide empty input, many times
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
@@ -576,7 +580,9 @@ q := true
 		}
 	}
 
-	ctl.Wait()
+	if err := ctl.Wait(); err != nil {
+		t.Fatal(err)
+	}
 	if testing.Verbose() {
 		t.Logf("impact output:\n%s", ctlOut.String())
 	}

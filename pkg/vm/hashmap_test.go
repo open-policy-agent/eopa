@@ -6,6 +6,7 @@
 package vm
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -14,50 +15,57 @@ import (
 )
 
 func TestHashMapPutDelete(t *testing.T) {
+	ctx := context.Background()
 	m := stringHashMap()
-	m.Put(str("a"), str("b"))
-	m.Put(str("b"), str("c"))
-	m.Delete(str("b"))
-	r, _ := m.Get(str("a"))
+	m.Put(ctx, str("a"), str("b"))
+	m.Put(ctx, str("b"), str("c"))
+	if err := m.Delete(ctx, str("b")); err != nil {
+		t.Fatal(err)
+	}
+	r, _, _ := m.Get(ctx, str("a"))
 	if r != str("b") {
 		t.Fatal("Expected a to be intact")
 	}
-	r, ok := m.Get(str("b"))
+	r, ok, _ := m.Get(ctx, str("b"))
 	if ok {
 		t.Fatalf("Expected b to be removed: %v", r)
 	}
-	m.Delete(str("b"))
-	r, _ = m.Get(str("a"))
+	if err := m.Delete(ctx, str("b")); err != nil {
+		t.Fatal(err)
+	}
+	r, _, _ = m.Get(ctx, str("a"))
 	if r != str("b") {
 		t.Fatal("Expected a to be intact")
 	}
 }
 
 func TestHashMapOverwrite(t *testing.T) {
+	ctx := context.Background()
 	m := stringHashMap()
 	key := str("hello")
 	expected := str("goodbye")
-	m.Put(key, str("world"))
-	m.Put(key, expected)
-	result, _ := m.Get(key)
+	m.Put(ctx, key, str("world"))
+	m.Put(ctx, key, expected)
+	result, _, _ := m.Get(ctx, key)
 	if result != expected {
 		t.Errorf("Expected existing value to be overwritten but got %v for key %v", result, key)
 	}
 }
 
 func TestHashMapIter(t *testing.T) {
+	ctx := context.Background()
 	m := NewHashMap()
 	keys := []fjson.Json{testHashType{fjson.NewFloat("1"), 1}, testHashType{fjson.NewFloat("2"), 2}, testHashType{fjson.NewFloat("1.4"), 1}}
 	value := str("")
 	for _, k := range keys {
-		m.Put(k, value)
+		m.Put(ctx, k, value)
 	}
 	// 1 and 1.4 should both hash to 1.
 	if len(m.table) != 2 {
 		panic(fmt.Sprintf("Expected collision: %v", m))
 	}
 	results := map[float64]string{}
-	m.Iter(func(k fjson.Json, v fjson.Json) bool {
+	m.Iter(func(k, v interface{}) bool {
 		f, _ := k.(testHashType).Json.(fjson.Float).Value().Float64()
 		results[f] = v.(fjson.String).Value()
 		return false
@@ -73,6 +81,7 @@ func TestHashMapIter(t *testing.T) {
 }
 
 func TestHashMapCompare(t *testing.T) {
+	ctx := context.Background()
 	m := stringHashMap()
 	n := stringHashMap()
 	k1 := str("k1")
@@ -81,32 +90,37 @@ func TestHashMapCompare(t *testing.T) {
 	v1 := str("hello")
 	v2 := str("goodbye")
 
-	m.Put(k1, v1)
-	if m.Equal(n) {
+	m.Put(ctx, k1, v1)
+	if eq, err := m.Equal(ctx, n); eq || err != nil {
 		t.Errorf("Expected hash maps of different size to be non-equal for %v and %v", m, n)
 		return
 	}
-	n.Put(k1, v1)
-	if m.Hash() != n.Hash() {
+	n.Put(ctx, k1, v1)
+	hm, _ := m.Hash(ctx)
+	hn, _ := n.Hash(ctx)
+	if hm != hn {
 		t.Errorf("Expected hashes to equal for %v and %v", m, n)
 		return
 	}
-	if !m.Equal(n) {
+	if eq, err := m.Equal(ctx, n); !eq || err != nil {
 		t.Errorf("Expected hash maps to be equal for %v and %v", m, n)
 		return
 	}
-	m.Put(k2, v2)
-	n.Put(k3, v2)
-	if m.Hash() == n.Hash() {
+	m.Put(ctx, k2, v2)
+	n.Put(ctx, k3, v2)
+	hm, _ = m.Hash(ctx)
+	hn, _ = n.Hash(ctx)
+	if hm == hn {
 		t.Errorf("Did not expect hashes to equal for %v and %v", m, n)
 		return
 	}
-	if m.Equal(n) {
+	if eq, err := m.Equal(ctx, n); eq || err != nil {
 		t.Errorf("Did not expect hash maps to be equal for %v and %v", m, n)
 	}
 }
 
 func TestHashMapCopy(t *testing.T) {
+	ctx := context.Background()
 	m := stringHashMap()
 
 	k1 := str("k1")
@@ -114,24 +128,25 @@ func TestHashMapCopy(t *testing.T) {
 	v1 := str("hello")
 	v2 := str("goodbye")
 
-	m.Put(k1, v1)
-	m.Put(k2, v2)
+	m.Put(ctx, k1, v1)
+	m.Put(ctx, k2, v2)
 
-	n := m.Copy()
+	n, _ := m.Copy(ctx)
 
-	if !n.Equal(m) {
+	if eq, err := n.Equal(ctx, m); !eq || err != nil {
 		t.Errorf("Expected hash maps to be equal: %v != %v", n, m)
 		return
 	}
 
-	m.Put(k2, str("world"))
+	m.Put(ctx, k2, str("world"))
 
-	if n.Equal(m) {
+	if eq, err := n.Equal(ctx, m); eq || err != nil {
 		t.Errorf("Expected hash maps to be non-equal: %v == %v", n, m)
 	}
 }
 
 func TestHashMapUpdate(t *testing.T) {
+	ctx := context.Background()
 	m := stringHashMap()
 	n := stringHashMap()
 	x := stringHashMap()
@@ -141,21 +156,22 @@ func TestHashMapUpdate(t *testing.T) {
 	v1 := str("hello")
 	v2 := str("goodbye")
 
-	m.Put(k1, v1)
-	n.Put(k2, v2)
-	x.Put(k1, v1)
-	x.Put(k2, v2)
+	m.Put(ctx, k1, v1)
+	n.Put(ctx, k2, v2)
+	x.Put(ctx, k1, v1)
+	x.Put(ctx, k2, v2)
 
-	o := n.Update(m)
+	o, _ := n.Update(ctx, m)
 
-	if !x.Equal(o) {
+	if eq, err := x.Equal(ctx, o); !eq || err != nil {
 		t.Errorf("Expected update to merge hash maps: %v != %v", x, o)
 	}
 }
 
 func TestHashMapString(t *testing.T) {
+	ctx := context.Background()
 	x := stringHashMap()
-	x.Put(str("x"), str("y"))
+	x.Put(ctx, str("x"), str("y"))
 	str := x.String()
 	exp := `{"x": "y"}`
 	if exp != str {

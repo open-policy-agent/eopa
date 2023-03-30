@@ -5,14 +5,13 @@
 package vm
 
 import (
+	"context"
 	"fmt"
 	gostrings "strings"
-
-	fjson "github.com/styrainc/load-private/pkg/json"
 )
 
 // T is a concise way to refer to T.
-type T = fjson.Json
+type T = interface{}
 
 type hashEntry struct {
 	k    T
@@ -35,70 +34,112 @@ func NewHashMap() *HashMap {
 }
 
 // Copy returns a shallow copy of this HashMap.
-func (h *HashMap) Copy() *HashMap {
+func (h *HashMap) Copy(ctx context.Context) (*HashMap, error) {
 	cpy := &HashMap{
 		table: make(map[int]*hashEntry, len(h.table)),
 		size:  0,
 	}
+	var err error
 	h.Iter(func(k, v T) bool {
-		cpy.Put(k, v)
-		return false
+		err = cpy.Put(ctx, k, v)
+		return err != nil
 	})
-	return cpy
+	return cpy, err
 }
 
 // Equal returns true if this HashMap equals the other HashMap.
 // Two hash maps are equal if they contain the same key/value pairs.
-func (h *HashMap) Equal(other *HashMap) bool {
+func (h *HashMap) Equal(ctx context.Context, other *HashMap) (bool, error) {
 	if h.Len() != other.Len() {
-		return false
+		return false, nil
 	}
+	var err error
 	return !h.Iter(func(k, v T) bool {
-		ov, ok := other.Get(k)
-		if !ok {
+		var ov T
+		var ok bool
+		ov, ok, err = other.Get(ctx, k)
+		if err != nil {
+			return true
+		} else if !ok {
 			return true
 		}
-		return !h.eq(v, ov)
-	})
+
+		var eq bool
+		eq, err = h.eq(ctx, v, ov)
+		if err != nil {
+			return true
+		}
+
+		return !eq
+	}), err
 }
 
 // Get returns the value for k.
-func (h *HashMap) Get(k T) (T, bool) {
-	hash := h.hash(k)
+func (h *HashMap) Get(ctx context.Context, k T) (T, bool, error) {
+	hash, err := h.hash(ctx, k)
+	if err != nil {
+		return nil, false, err
+	}
+
 	for entry := h.table[hash]; entry != nil; entry = entry.next {
-		if h.eq(entry.k, k) {
-			return entry.v, true
+		eq, err := h.eq(ctx, entry.k, k)
+		if err != nil {
+			return nil, false, err
+		}
+		if eq {
+			return entry.v, true, nil
 		}
 	}
-	return nil, false
+	return nil, false, nil
 }
 
 // Delete removes the the key k.
-func (h *HashMap) Delete(k T) {
-	hash := h.hash(k)
+func (h *HashMap) Delete(ctx context.Context, k T) error {
+	hash, err := h.hash(ctx, k)
+	if err != nil {
+		return err
+	}
 	var prev *hashEntry
 	for entry := h.table[hash]; entry != nil; entry = entry.next {
-		if h.eq(entry.k, k) {
+		eq, err := h.eq(ctx, entry.k, k)
+		if err != nil {
+			return err
+		} else if eq {
 			if prev != nil {
 				prev.next = entry.next
 			} else {
 				h.table[hash] = entry.next
 			}
 			h.size--
-			return
+			return nil
 		}
 		prev = entry
 	}
+
+	return nil
 }
 
 // Hash returns the hash code for this hash map.
-func (h *HashMap) Hash() int {
+func (h *HashMap) Hash(ctx context.Context) (int, error) {
 	var hash int
+	var err error
 	h.Iter(func(k, v T) bool {
-		hash += h.hash(k) + h.hash(v)
+		var kh int
+		kh, err = h.hash(ctx, k)
+		if err != nil {
+			return true
+		}
+
+		var vh int
+		vh, err = h.hash(ctx, v)
+		if err != nil {
+			return true
+		}
+
+		hash += kh + vh
 		return false
 	})
-	return hash
+	return hash, err
 }
 
 // Iter invokes the iter function for each element in the HashMap.
@@ -123,17 +164,25 @@ func (h *HashMap) Len() int {
 
 // Put inserts a key/value pair into this HashMap. If the key is already present, the existing
 // value is overwritten.
-func (h *HashMap) Put(k T, v T) {
-	hash := h.hash(k)
+func (h *HashMap) Put(ctx context.Context, k T, v T) error {
+	hash, err := h.hash(ctx, k)
+	if err != nil {
+		return err
+	}
 	head := h.table[hash]
 	for entry := head; entry != nil; entry = entry.next {
-		if h.eq(entry.k, k) {
+		eq, err := h.eq(ctx, entry.k, k)
+		if err != nil {
+			return err
+		}
+		if eq {
 			entry.v = v
-			return
+			return nil
 		}
 	}
 	h.table[hash] = &hashEntry{k: k, v: v, next: head}
 	h.size++
+	return nil
 }
 
 func (h *HashMap) String() string {
@@ -155,19 +204,23 @@ func (h *HashMap) String() string {
 // Update returns a new HashMap with elements from the other HashMap put into this HashMap.
 // If the other HashMap contains elements with the same key as this HashMap, the value
 // from the other HashMap overwrites the value from this HashMap.
-func (h *HashMap) Update(other *HashMap) *HashMap {
-	updated := h.Copy()
+func (h *HashMap) Update(ctx context.Context, other *HashMap) (*HashMap, error) {
+	updated, err := h.Copy(ctx)
+	if err != nil {
+		return nil, err
+	}
 	other.Iter(func(k, v T) bool {
-		updated.Put(k, v)
-		return false
+		err = updated.Put(ctx, k, v)
+		return err != nil
 	})
-	return updated
+	return updated, err
 }
 
-func (h *HashMap) hash(v T) int {
-	return int(hash(v))
+func (h *HashMap) hash(ctx context.Context, v T) (int, error) {
+	x, err := hash(ctx, v)
+	return int(x), err
 }
 
-func (h *HashMap) eq(a, b T) bool {
-	return equalOp(a, b)
+func (h *HashMap) eq(ctx context.Context, a, b T) (bool, error) {
+	return equalOp(ctx, a, b)
 }

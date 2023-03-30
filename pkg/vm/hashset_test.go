@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -9,45 +10,48 @@ import (
 )
 
 func TestHashSetPutDelete(t *testing.T) {
+	ctx := context.Background()
 	m := stringHashSet()
-	m.Put(str("a"))
-	m.Put(str("b"))
-	m.Delete(str("b"))
-	if ok := m.Get(str("a")); !ok {
+	m.Put(ctx, str("a"))
+	m.Put(ctx, str("b"))
+	m.Delete(ctx, str("b"))
+	if ok, _ := m.Get(ctx, str("a")); !ok {
 		t.Fatal("Expected a to be intact")
 	}
-	if ok := m.Get(str("b")); ok {
+	if ok, _ := m.Get(ctx, str("b")); ok {
 		t.Fatalf("Expected b to be removed: %v", "b")
 	}
-	m.Delete(str("b"))
-	if ok := m.Get(str("a")); !ok {
+	m.Delete(ctx, str("b"))
+	if ok, _ := m.Get(ctx, str("a")); !ok {
 		t.Fatal("Expected a to be intact")
 	}
 }
 
 func TestHashSetOverwrite(t *testing.T) {
+	ctx := context.Background()
 	m := stringHashSet()
 	key := str("hello")
-	m.Put(key)
-	m.Put(key)
+	m.Put(ctx, key)
+	m.Put(ctx, key)
 
-	if ok := m.Get(key); !ok {
+	if ok, _ := m.Get(ctx, key); !ok {
 		t.Errorf("Expected existing value to be there: %v", key)
 	}
 }
 
 func TestHashSetIter(t *testing.T) {
+	ctx := context.Background()
 	m := NewHashSet()
 	keys := []fjson.Json{testHashType{fjson.NewFloat("1"), 1}, testHashType{fjson.NewFloat("2"), 2}, testHashType{fjson.NewFloat("1.4"), 1}}
 	for _, k := range keys {
-		m.Put(k)
+		m.Put(ctx, k)
 	}
 	// 1 and 1.4 should both hash to 1.
 	if len(m.table) != 2 {
 		panic(fmt.Sprintf("Expected collision: %v", m))
 	}
 	results := map[float64]struct{}{}
-	m.Iter(func(k fjson.Json) bool {
+	m.Iter(func(k interface{}) bool {
 		f, _ := k.(testHashType).Json.(fjson.Float).Value().Float64()
 		results[f] = struct{}{}
 		return false
@@ -63,55 +67,63 @@ func TestHashSetIter(t *testing.T) {
 }
 
 func TestHashSetCompare(t *testing.T) {
+	ctx := context.Background()
 	m := stringHashSet()
 	n := stringHashSet()
 	k1 := str("k1")
 	k2 := str("k2")
 	k3 := str("k3")
 
-	m.Put(k1)
-	if m.Equal(n) {
+	m.Put(ctx, k1)
+	if ok, _ := m.Equal(ctx, n); ok {
 		t.Errorf("Expected hash sets of different size to be non-equal for %v and %v", m, n)
 		return
 	}
-	n.Put(k1)
-	if m.Hash() != n.Hash() {
+	n.Put(ctx, k1)
+	hm, _ := m.Hash(ctx)
+	hn, _ := n.Hash(ctx)
+	if hm != hn {
 		t.Errorf("Expected hashes to equal for %v and %v", m, n)
 		return
 	}
-	if !m.Equal(n) {
+	if ok, _ := m.Equal(ctx, n); !ok {
 		t.Errorf("Expected hash sets to be equal for %v and %v", m, n)
 		return
 	}
-	m.Put(k2)
-	n.Put(k3)
-	if m.Hash() == n.Hash() {
+	m.Put(ctx, k2)
+	n.Put(ctx, k3)
+
+	hm, _ = m.Hash(ctx)
+	hn, _ = n.Hash(ctx)
+	if hm == hn {
 		t.Errorf("Did not expect hashes to equal for %v and %v", m, n)
 		return
 	}
-	if m.Equal(n) {
+	if ok, _ := m.Equal(ctx, n); ok {
 		t.Errorf("Did not expect hash sets to be equal for %v and %v", m, n)
 	}
 }
 
 func TestHashSetCopy(t *testing.T) {
+	ctx := context.Background()
 	m := stringHashSet()
 
 	k1 := str("k1")
 	k2 := str("k2")
 
-	m.Put(k1)
-	m.Put(k2)
+	m.Put(ctx, k1)
+	m.Put(ctx, k2)
 
-	n := m.Copy()
+	n, _ := m.Copy(ctx)
 
-	if !n.Equal(m) {
+	if ok, _ := n.Equal(ctx, m); !ok {
 		t.Errorf("Expected hash sets to be equal: %v != %v", n, m)
 		return
 	}
 }
 
 func TestHashSetUpdate(t *testing.T) {
+	ctx := context.Background()
 	m := stringHashSet()
 	n := stringHashSet()
 	x := stringHashSet()
@@ -119,21 +131,22 @@ func TestHashSetUpdate(t *testing.T) {
 	k1 := str("k1")
 	k2 := str("k2")
 
-	m.Put(k1)
-	n.Put(k2)
-	x.Put(k1)
-	x.Put(k2)
+	m.Put(ctx, k1)
+	n.Put(ctx, k2)
+	x.Put(ctx, k1)
+	x.Put(ctx, k2)
 
-	o := n.Update(m)
+	o, _ := n.Update(ctx, m)
 
-	if !x.Equal(o) {
+	if ok, _ := x.Equal(ctx, o); !ok {
 		t.Errorf("Expected update to merge hash sets: %v != %v", x, o)
 	}
 }
 
 func TestHashSetString(t *testing.T) {
+	ctx := context.Background()
 	x := stringHashSet()
-	x.Put(str("x"))
+	x.Put(ctx, str("x"))
 	str := x.String()
 	exp := `{"x"}`
 	if exp != str {

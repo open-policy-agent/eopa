@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"context"
 	"encoding/binary"
 	"math"
 	"reflect"
@@ -29,13 +30,13 @@ type hashable interface {
 	Hash() uint64
 }
 
-func hash(value interface{}) uint64 {
+func hash(ctx context.Context, value interface{}) (uint64, error) {
 	hasher := xxhash.New64()
-	hashImpl(value, hasher)
-	return hasher.Sum64()
+	err := hashImpl(ctx, value, hasher)
+	return hasher.Sum64(), err
 }
 
-func hashImpl(value interface{}, hasher *xxhash.XXHash64) {
+func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.XXHash64) error {
 	// Note Hasher writer below never returns an error.
 
 	switch value := value.(type) {
@@ -69,9 +70,11 @@ func hashImpl(value interface{}, hasher *xxhash.XXHash64) {
 		hasher.Write([]byte{typeHashArray})
 
 		n := value.Len()
-		for i := 0; i < n; i++ {
-			hashImpl(value.Iterate(i), hasher)
+		var err error
+		for i := 0; i < n && err == nil; i++ {
+			err = hashImpl(ctx, value.Iterate(i), hasher)
 		}
+		return err
 
 	case *Object:
 		// The two object implementation should have equal
@@ -79,13 +82,24 @@ func hashImpl(value interface{}, hasher *xxhash.XXHash64) {
 		hasher.Write([]byte{typeHashObject})
 
 		var m uint64
-		value.Iter(func(k, v fjson.Json) bool {
+		var err2 error
+		if err := value.Iter(ctx, func(k, v interface{}) bool {
 			hasher := xxhash.New64()
-			hashImpl(k, hasher)
-			hashImpl(v, hasher)
+			err2 = hashImpl(ctx, k, hasher)
+			if err2 == nil {
+				err2 = hashImpl(ctx, v, hasher)
+			}
+			if err2 != nil {
+				return true
+			}
+
 			m += hasher.Sum64()
 			return false
-		})
+		}); err != nil {
+			return err
+		} else if err2 != nil {
+			return err2
+		}
 
 		b := make([]byte, 8)
 		binary.BigEndian.PutUint64(b, m)
@@ -96,12 +110,17 @@ func hashImpl(value interface{}, hasher *xxhash.XXHash64) {
 
 		var m uint64
 		names := value.Names()
-		for i := 0; i < len(names); i++ {
+		var err error
+		for i := 0; i < len(names) && err == nil; i++ {
 			hasher := xxhash.New64()
 			key := fjson.NewString(names[i])
 			hashString(key, hasher)
-			hashImpl(value.Iterate(i), hasher)
+			err = hashImpl(ctx, value.Iterate(i), hasher)
 			m += hasher.Sum64()
+		}
+
+		if err != nil {
+			return err
 		}
 
 		b := make([]byte, 8)
@@ -112,12 +131,19 @@ func hashImpl(value interface{}, hasher *xxhash.XXHash64) {
 		hasher.Write([]byte{typeHashSet})
 
 		var m uint64
+		var err error
 		value.Iter(func(v fjson.Json) bool {
 			hasher := xxhash.New64()
-			hashImpl(v, hasher)
+			err = hashImpl(ctx, v, hasher)
+			if err != nil {
+				return true
+			}
 			m += hasher.Sum64()
 			return false
 		})
+		if err != nil {
+			return err
+		}
 
 		b := make([]byte, 8)
 		binary.BigEndian.PutUint64(b, m)
@@ -131,6 +157,8 @@ func hashImpl(value interface{}, hasher *xxhash.XXHash64) {
 	default:
 		panic("json: unsupported type")
 	}
+
+	return nil
 }
 
 func hashString(value fjson.String, hasher *xxhash.XXHash64) {
