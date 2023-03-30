@@ -122,7 +122,7 @@ func (d *Decoder) Decode() (Json, error) {
 			return nil, err
 		}
 
-		return NewObject2(properties, d.keys), nil
+		return NewObjectMapCompact(properties, d.keys), nil
 	}
 
 	return nil, fmt.Errorf("unexpected value type: %v", valueType)

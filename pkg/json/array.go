@@ -234,6 +234,10 @@ func (a *ArraySliceCompact[T]) Iterate(i int) Json {
 	return a.Value(i)
 }
 
+func (a *ArraySliceCompact[T]) iterate(i int) File {
+	return a.valueImpl(i)
+}
+
 func (a *ArraySliceCompact[T]) RemoveIdx(i int) Json {
 	return a.clone(false).RemoveIdx(i)
 }

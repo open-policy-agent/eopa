@@ -5,7 +5,6 @@
 package merge
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 
@@ -57,7 +56,7 @@ func TestMergeDocs(t *testing.T) {
 			expected := expJson.(bjson.Object)
 
 			c, ok := InterfaceMaps(a, b)
-			if !ok || !reflect.DeepEqual(c, expected) {
+			if !ok || expected.Compare(c) != 0 {
 				t.Errorf("Expected merge(%v, %v) == %v but got: %v (ok: %v)", a, b, expected, c, ok)
 			}
 		}

@@ -65,6 +65,7 @@ var (
 type Iterable interface {
 	Len() int
 	Iterate(i int) Json
+	iterate(i int) File
 	RemoveIdx(i int) Json
 	SetIdx(i int, j File) Json
 }
@@ -610,6 +611,10 @@ func (a ArrayBinary) Iterate(i int) Json {
 	return a.Value(i)
 }
 
+func (a ArrayBinary) iterate(i int) File {
+	return a.valueImpl(i)
+}
+
 func (a ArrayBinary) RemoveIdx(i int) Json {
 	return a.clone().RemoveIdx(i)
 }
@@ -754,6 +759,10 @@ func (a *ArraySlice) WriteI(w io.Writer, i int, written *int64) error {
 
 func (a *ArraySlice) Iterate(i int) Json {
 	return a.Value(i)
+}
+
+func (a *ArraySlice) iterate(i int) File {
+	return a.valueImpl(i)
 }
 
 func (a *ArraySlice) RemoveIdx(i int) Json {
@@ -921,6 +930,10 @@ func (o ObjectBinary) valueImpl(name string) File {
 
 func (o ObjectBinary) Iterate(i int) Json {
 	return o.Value(o.NamesIndex(i))
+}
+
+func (o ObjectBinary) iterate(i int) File {
+	return o.valueImpl(o.NamesIndex(i))
 }
 
 func (o ObjectBinary) RemoveIdx(i int) Json {
@@ -1096,33 +1109,7 @@ func (kv *keyValueSlices) Swap(i, j int) {
 }
 
 func (o *ObjectMap) WriteTo(w io.Writer) (int64, error) {
-	var written int64
-	if err := writeSafe(w, leftCurlyBracketBytes, &written); err != nil {
-		return written, err
-	}
-
-	for i, key := range o.keys() {
-		if err := writeValueSeparator(w, i, &written); err != nil {
-			return written, err
-		}
-
-		if data, err := marshalStringJSON(key, true); err != nil {
-			return written, err
-		} else if err := writeSafe(w, data, &written); err != nil {
-			return written, err
-		}
-
-		if err := writeSafe(w, colonBytes, &written); err != nil {
-			return written, err
-		}
-
-		if err := writeToSafe(w, o.values[i].(File), &written); err != nil {
-			return written, err
-		}
-	}
-
-	err := writeSafe(w, rightCurlyBracketBytes, &written)
-	return written, err
+	return objectMapBase[*ObjectMap]{}.WriteTo(o, w)
 }
 
 func (o *ObjectMap) Contents() interface{} {
@@ -1160,38 +1147,11 @@ func (o *ObjectMap) setImpl(name string, value File) (Object, bool) {
 }
 
 func (o *ObjectMap) Value(name string) Json {
-	j := o.valueImpl(name)
-	if j == nil {
-		return nil
-	}
-
-	if _, ok := j.(Json); ok {
-		return j.(Json)
-	}
-
-	return nil
+	return objectMapBase[*ObjectMap]{}.Value(o, name)
 }
 
 func (o *ObjectMap) find(name string) (int, bool) {
-	// golang sort.Search implementation embedded here to assist compiler in inlining.
-	keys := o.keys()
-	i, j := 0, len(keys)
-	for i < j {
-		h := int(uint(i+j) >> 1) // avoid overflow when computing h
-		// i ≤ h < j
-
-		// begin f(h):
-		ret := keys[h] >= name
-		// end f(h)
-
-		if !ret {
-			i = h + 1 // preserves f(i-1) == false
-		} else {
-			j = h // preserves f(j) == true
-		}
-	}
-
-	return i, i < len(keys) && keys[i] == name
+	return objectMapBase[*ObjectMap]{}.find(o.keys(), name)
 }
 
 func (o *ObjectMap) valueImpl(name string) File {
@@ -1205,6 +1165,10 @@ func (o *ObjectMap) valueImpl(name string) File {
 
 func (o *ObjectMap) Iterate(i int) Json {
 	return o.values[i].(Json)
+}
+
+func (o *ObjectMap) iterate(i int) File {
+	return o.values[i].(File)
 }
 
 func (o *ObjectMap) RemoveIdx(i int) Json {
@@ -1247,55 +1211,19 @@ func (o *ObjectMap) Len() int {
 }
 
 func (o *ObjectMap) JSON() interface{} {
-	keys := o.keys()
-	object := make(map[string]interface{}, len(keys))
-	for i := range keys {
-		j, ok := o.values[i].(Json)
-		if ok {
-			object[keys[i]] = j.JSON()
-		}
-		// else: TODO: Should set the value to nil, to be identical with array processing?
-	}
-
-	return object
+	return objectMapBase[*ObjectMap]{}.JSON(o)
 }
 
 func (o *ObjectMap) AST() ast.Value {
-	keys := o.keys()
-	object := make([][2]*ast.Term, 0, len(keys))
-
-	for i := range keys {
-		j, ok := o.values[i].(Json)
-		if ok {
-			k := ast.String(keys[i])
-			object = append(object, [2]*ast.Term{ast.NewTerm(k), ast.NewTerm(j.AST())})
-		}
-		// else: TODO: Should set the value to nil, to be identical with array processing?
-	}
-
-	return ast.NewObject(object...)
+	return objectMapBase[*ObjectMap]{}.AST(o)
 }
 
 func (o *ObjectMap) Extract(ptr string) (Json, error) {
-	p, err := preparePointer(ptr)
-	if err != nil {
-		return nil, err
-	}
-
-	return o.extractImpl(p)
+	return objectMapBase[*ObjectMap]{}.Extract(o, ptr)
 }
 
 func (o *ObjectMap) extractImpl(ptr []string) (Json, error) {
-	if len(ptr) == 0 {
-		return o, nil
-	}
-
-	v := o.Value(ptr[0])
-	if v == nil {
-		return nil, errPathNotFound
-	}
-
-	return v.extractImpl(ptr[1:])
+	return objectMapBase[*ObjectMap]{}.extractImpl(o, ptr)
 }
 
 func (o *ObjectMap) Find(search Path, finder Finder) {
@@ -1311,54 +1239,19 @@ func (o *ObjectMap) Walk(state *DecodingState, walker Walker) {
 }
 
 func (o *ObjectMap) Clone(deepCopy bool) File {
-	values := make([]interface{}, 0, len(o.values))
-	for i := range o.values {
-		v := o.values[i]
-		if deepCopy {
-			v = v.(File).Clone(true)
-		}
-		values = append(values, v)
-	}
-
-	return &ObjectMap{o.internedKeys, values}
+	return objectMapBase[*ObjectMap]{}.clone(o, o.internedKeys, deepCopy)
 }
 
 func (o *ObjectMap) String() string {
-	names := o.Names()
-	s := make([]string, 0, len(names))
-	for _, name := range names {
-		s = append(s, fmt.Sprint(strconv.Quote(name), ":", o.Value(name)))
-	}
-
-	return "{" + strings.Join(s, ",") + "}"
+	return objectMapBase[*ObjectMap]{}.String(o)
 }
 
 func (o *ObjectMap) Serialize(cache *encodingCache, buffer *bytes.Buffer, base int32) (int32, error) {
-	properties := make([]objectEntry, len(o.values))
-
-	for i, key := range o.keys() {
-		properties[i] = objectEntry{key, o.values[i]}
-	}
-
-	return serializeObject(properties, cache, buffer, base)
+	return objectMapBase[*ObjectMap]{}.Serialize(o, cache, buffer, base)
 }
 
 func (o *ObjectMap) intern(s []string, keys map[interface{}]*[]string) *[]string {
-	if keys == nil {
-		return &s
-	}
-
-	arr := reflect.New(reflect.ArrayOf(len(s), reflect.TypeOf(""))).Elem()
-	reflect.Copy(arr, reflect.ValueOf(s))
-	cmpVal := arr.Interface()
-
-	p, ok := keys[cmpVal]
-	if ok {
-		return p
-	}
-
-	keys[cmpVal] = &s
-	return &s
+	return objectMapBase[*ObjectMap]{}.intern(s, keys)
 }
 
 func (o *ObjectMap) keys() []string {
