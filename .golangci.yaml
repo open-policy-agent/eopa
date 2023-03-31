@@ -1,7 +1,9 @@
 run:
   timeout: 5m
+  skip-dirs:
+    - pkg/json/internal # copied from stdlib
 
-linter-settings:
+linters-settings:
   lll:
     line-length: 200
 
@@ -22,7 +24,6 @@ linters:
     - staticcheck
     - gosimple
     - prealloc
-    # - gosec # too many false positives
 
 issues:
   exclude:

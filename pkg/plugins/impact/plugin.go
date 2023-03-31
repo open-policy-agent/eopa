@@ -85,7 +85,7 @@ func Enqueue(ctx context.Context, ectx EvalContext, exp ast.Value) {
 	// are busy, a call to Go() will block until the task can be started.
 	singleton.workers.Go(func() {
 		// NOTE(sr): We're using a new context here because the one we're given is
-		// scoped to the HTTP request. Once that's done, it'll be cancelled, and that
+		// scoped to the HTTP request. Once that's done, it'll be canceled, and that
 		// may not give us enough time for the secondary evaluation.
 		ctx, cancel := context.WithTimeout(singleton.ctx, 5*time.Second)
 		defer cancel()

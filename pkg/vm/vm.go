@@ -688,6 +688,6 @@ func (c *cancel) Cancel() {
 	atomic.StoreInt32(&c.value, 1)
 }
 
-func (c *cancel) Cancelled() bool {
+func (c *cancel) Cancelled() bool { // nolint:misspell // opa Cancel interface contains Cancelled function
 	return atomic.LoadInt32(&c.value) != 0
 }

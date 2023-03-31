@@ -24,7 +24,7 @@ type Op struct {
 	Op          PatchOp `json:"op"`
 	Path        string  `json:"path"`
 	Value       Json    `json:"value,omitempty"`
-	From        string  `json:"from"` // Note, only marshalled if operation is either copy or move.
+	From        string  `json:"from"` // Note, only marshaled if operation is either copy or move.
 	valueBinary File    // For package internal use only.
 }
 
