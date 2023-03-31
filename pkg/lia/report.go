@@ -5,10 +5,14 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"strings"
+	"time"
 
 	"github.com/mithrandie/csvq-driver"
 	_ "github.com/mithrandie/csvq-driver" // import driver
 	"github.com/mithrandie/csvq/lib/query"
+	"github.com/mithrandie/go-text"
+	"github.com/mithrandie/go-text/table"
 )
 
 type Report interface {
@@ -50,7 +54,73 @@ func (r *report) ToJSON(ctx context.Context, w io.Writer) error {
 }
 
 func (r *report) ToPretty(ctx context.Context, w io.Writer) error {
-	return r.Output(ctx, w, pretty)
+	defer r.reset()
+	rows, err := r.db.QueryContext(ctx, r.query())
+	if err != nil {
+		return err
+	}
+	cols, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+	value := func(s string) any {
+		switch {
+		case strings.Contains(s, "_ns"):
+			return &duration{}
+		default:
+			x := ""
+			return &x
+		}
+	}
+	tableRows := make([]any, 0)
+	for rows.Next() {
+		dest := make([]any, len(cols))
+		for i := range cols {
+			dest[i] = value(cols[i])
+		}
+		if err := rows.Scan(dest...); err != nil {
+			return err
+		}
+		tableRows = append(tableRows, dest)
+	}
+	e := table.NewEncoder(table.BoxTable, len(tableRows))
+	hdrs := headersFromCols(cols)
+	e.SetHeader(hdrs)
+	for _, records := range tableRows {
+		records := records.([]any)
+		tableRow := make([]table.Field, len(records))
+		for ri := range records {
+			var value string
+			switch s := records[ri].(type) {
+			case *string:
+				value = *s
+			case *duration:
+				value = s.String()
+			}
+			tableRow[ri] = table.NewField(value, text.RightAligned)
+		}
+
+		e.AppendRecord(tableRow)
+	}
+	out, err := e.Encode()
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(w, strings.NewReader(out))
+	return err
+}
+
+func headersFromCols(cols []string) []table.Field {
+	fs := make([]table.Field, len(cols))
+	for i := range cols {
+		if strings.Contains(cols[i], "_ns") {
+			name := strings.Replace(cols[i], "_ns", "_duration", 1)
+			fs[i] = table.NewField(name, text.Centering)
+			continue
+		}
+		fs[i] = table.NewField(cols[i], text.Centering)
+	}
+	return fs
 }
 
 func (r *report) Output(ctx context.Context, w io.Writer, fmt format) error {
@@ -73,9 +143,7 @@ func (r *report) Count(ctx context.Context) int {
 	return c
 }
 
-func (r *report) queryOutput(ctx context.Context) (io.Reader, error) {
-	defer r.reset()
-	var query string
+func (r *report) query() (query string) {
 	switch {
 	case r.grouped:
 		query = `SELECT
@@ -104,7 +172,12 @@ func (r *report) queryOutput(ctx context.Context) (io.Reader, error) {
 			query += fmt.Sprintf(` LIMIT %d`, r.limit)
 		}
 	}
-	if _, err := r.db.ExecContext(ctx, query); err != nil {
+	return
+}
+
+func (r *report) queryOutput(ctx context.Context) (io.Reader, error) {
+	defer r.reset()
+	if _, err := r.db.ExecContext(ctx, r.query()); err != nil {
 		return nil, err
 	}
 	return &r.output.Buffer, nil
@@ -155,4 +228,17 @@ func ReportFromReader(ctx context.Context, r io.Reader, opts ...ReportOption) (R
 
 func (r *report) Close() error {
 	return r.db.Close()
+}
+
+type duration struct {
+	time.Duration
+}
+
+func (d *duration) Scan(src any) error {
+	if src == nil {
+		d.Duration = time.Duration(0)
+		return nil
+	}
+	d.Duration = time.Duration(src.(float64))
+	return nil
 }

@@ -138,7 +138,7 @@ p := rand.intn("test", 2)
 
 	waitForLIAEnd(ctx, t, loadOut)
 	ctl.Wait()
-	if testing.Verbose() {
+	if testing.Verbose() && t.Failed() {
 		t.Logf("impact output:\n%s", ctlOut.String())
 	}
 
@@ -263,7 +263,7 @@ q := true
 
 	waitForLIAEnd(ctx, t, loadOut)
 	ctl.Wait()
-	if testing.Verbose() {
+	if testing.Verbose() && t.Failed() {
 		t.Logf("impact output:\n%s", ctlOut.String())
 	}
 
@@ -354,7 +354,7 @@ q := true
 
 	waitForLIAEnd(ctx, t, loadOut)
 	ctl.Wait()
-	if testing.Verbose() {
+	if testing.Verbose() && t.Failed() {
 		t.Logf("impact output:\n%s", ctlOut.String())
 	}
 
@@ -482,7 +482,7 @@ q := true
 	}
 
 	waitForLIAEnd(ctx, t, loadOut)
-	if testing.Verbose() {
+	if testing.Verbose() && t.Failed() {
 		t.Logf("impact output:\n%s", ctlOut.String())
 	}
 }
@@ -524,7 +524,7 @@ q := true
 	}
 
 	waitForLIAEnd(ctx, t, loadOut)
-	if testing.Verbose() {
+	if testing.Verbose() && t.Failed() {
 		t.Logf("impact output:\n%s", ctlOut.String())
 	}
 }
@@ -583,7 +583,7 @@ q := true
 	if err := ctl.Wait(); err != nil {
 		t.Fatal(err)
 	}
-	if testing.Verbose() {
+	if testing.Verbose() && t.Failed() {
 		t.Logf("impact output:\n%s", ctlOut.String())
 	}
 
