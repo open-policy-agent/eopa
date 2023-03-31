@@ -1,5 +1,14 @@
 ## Changelog
 
+### v1.0.0
+
+This release marks the first general availability release of Styra Load.
+Load provides a number of improvements over open source OPA, including:
+
+ - Optimizations (CPU/Memory use)
+ - Datasource integrations
+ - Live Impact Analysis
+
 ### v0.102.5
 
  * This release is a release engineering fix to sort out part of our gRPC documentation system.
