@@ -31,6 +31,16 @@ p if rand.intn("coin", 2) == 0
 	}
 	waitForLog(ctx, t, loadOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
+	for i := 0; i < 3; i++ {
+		if err := grpcurlSimple("-plaintext", "localhost:9090", "list"); err != nil {
+			if i == 2 {
+				t.Fatalf("wait for gRPC endpoint: %v", err)
+			}
+			time.Sleep(time.Second)
+			continue
+		}
+	}
+
 	{
 		out := grpcurl(t, "-d", `{"path": "/test", "policy": "package foo allow := x {x = true}"}`, "-plaintext", "localhost:9090", "load.v1.PolicyService/CreatePolicy")
 		var m map[string]any
@@ -120,6 +130,11 @@ func grpcurl(t *testing.T, args ...string) *bytes.Buffer {
 		t.Fatal(err)
 	}
 	return &buf
+}
+
+func grpcurlSimple(args ...string) error {
+	_, err := exec.Command("grpcurl", args...).Output()
+	return err
 }
 
 func binary() string {
