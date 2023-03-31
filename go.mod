@@ -21,8 +21,9 @@ require (
 	github.com/keygen-sh/keygen-go/v2 v2.3.1
 	github.com/mithrandie/csvq v1.18.1
 	github.com/mithrandie/csvq-driver v1.7.0
+	github.com/mithrandie/go-text v1.6.0
 	github.com/okta/okta-sdk-golang/v3 v3.0.1
-	github.com/open-policy-agent/opa v0.50.2
+	github.com/open-policy-agent/opa v0.51.0
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/rs/zerolog v1.29.0
@@ -113,7 +114,7 @@ require (
 	github.com/go-faster/errors v0.6.1 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
-	github.com/go-logr/logr v1.2.3 // indirect
+	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
@@ -170,7 +171,6 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/mithrandie/go-file/v2 v2.1.0 // indirect
-	github.com/mithrandie/go-text v1.6.0 // indirect
 	github.com/mithrandie/ternary v1.1.1 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
@@ -247,7 +247,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.14.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
-	go.uber.org/automaxprocs v1.5.1 // indirect
+	go.uber.org/automaxprocs v1.5.2 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/mod v0.8.0 // indirect
@@ -275,7 +275,7 @@ require (
 	modernc.org/sqlite v1.19.1 // indirect
 	modernc.org/strutil v1.1.3 // indirect
 	modernc.org/token v1.1.0 // indirect
-	oras.land/oras-go/v2 v2.0.0 // indirect
+	oras.land/oras-go/v2 v2.0.2 // indirect
 )
 
 // glog's init function does a lookup of the current user, and that can be quite
@@ -283,4 +283,4 @@ require (
 // and badger only calls it to die with a log messsage.
 replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.50.3-0.20230323130021-fd96a63d893a
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.51.1-0.20230331165642-145e9cc28a99
