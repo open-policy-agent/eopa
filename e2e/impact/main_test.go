@@ -424,7 +424,7 @@ func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *byt
 			panic(err)
 		}
 		load.Wait()
-		if testing.Verbose() && !silent {
+		if testing.Verbose() && t.Failed() && !silent {
 			t.Logf("load output:\n%s", buf.String())
 		}
 	})

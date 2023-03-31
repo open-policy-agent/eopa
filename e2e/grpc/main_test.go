@@ -99,7 +99,7 @@ func loadRun(t *testing.T, policy, data string, extraArgs ...string) (*exec.Cmd,
 			panic(err)
 		}
 		load.Wait()
-		if testing.Verbose() {
+		if testing.Verbose() && t.Failed() {
 			t.Logf("load output:\n%s", buf.String())
 		}
 	})
@@ -112,6 +112,7 @@ func grpcurl(t *testing.T, args ...string) *bytes.Buffer {
 	buf := bytes.Buffer{}
 	c := exec.Command("grpcurl", args...)
 	c.Stdout = &buf
+	c.Stderr = os.Stderr
 	if err := c.Start(); err != nil {
 		t.Fatal(err)
 	}

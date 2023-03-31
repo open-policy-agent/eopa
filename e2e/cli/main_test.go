@@ -202,7 +202,7 @@ func loadRun(t *testing.T, policy, data, config string, extraArgs ...string) (*e
 			panic(err)
 		}
 		load.Wait()
-		if testing.Verbose() {
+		if testing.Verbose() && t.Failed() {
 			t.Logf("load output:\n%s", buf.String())
 		}
 	})

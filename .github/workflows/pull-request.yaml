@@ -52,7 +52,7 @@ jobs:
           version: v1.52.2
           skip-pkg-cache: true
           skip-build-cache: true
-          args: --timeout=5m
+          args: --timeout=10m
       - name: gcassert
         run: gcassert ./...
       # Note(philip): We need to install the `buf` CLI before we can lint our protobuf sources.
