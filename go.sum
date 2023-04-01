@@ -644,8 +644,8 @@ github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+
 github.com/oasisprotocol/curve25519-voi v0.0.0-20211102120939-d5a936accd94 h1:YXfl+eCNmAQhVbSNQ85bSi1n4qhUBPW8Qq9Rac4pt/s=
 github.com/oasisprotocol/curve25519-voi v0.0.0-20211102120939-d5a936accd94/go.mod h1:WUcXjUd98qaCVFb6j8Xc87MsKeMCXDu9Nk8JRJ9SeC8=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
-github.com/okta/okta-sdk-golang/v3 v3.0.1 h1:A/Jdz8SdUgCuMOJ+IehZZviPNuwrAdYvcLOMtfYXCKk=
-github.com/okta/okta-sdk-golang/v3 v3.0.1/go.mod h1:7fDqgCvPaxgjhYHaxRwvc6RMioVcQ+XHN5a5hUe4nnw=
+github.com/okta/okta-sdk-golang/v3 v3.0.2 h1:f3cmHSVqP7Lmhy0f/XjFk6sZxb+/n9ALG3dUgyEP8pY=
+github.com/okta/okta-sdk-golang/v3 v3.0.2/go.mod h1:7fDqgCvPaxgjhYHaxRwvc6RMioVcQ+XHN5a5hUe4nnw=
 github.com/olekukonko/tablewriter v0.0.5 h1:P2Ga83D34wi1o9J6Wh1mRuqd4mF/x/lgBS7N7AbDhec=
 github.com/olekukonko/tablewriter v0.0.5/go.mod h1:hPp6KlRPjbx+hW8ykQs1w3UBbZlj6HuIJcUGPhkA7kY=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
