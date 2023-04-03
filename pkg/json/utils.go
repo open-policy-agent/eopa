@@ -18,10 +18,6 @@ func PathSegments(path string) []string {
 	return segs
 }
 
-func bytesToString(b []byte) string {
-	return unsafe.String(unsafe.SliceData(b), len(b))
-}
-
 func readOnlyStringBytes(s string) []byte {
 	return unsafe.Slice(unsafe.StringData(s), len(s))
 }

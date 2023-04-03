@@ -893,7 +893,7 @@ func readString(content *utils.MultiReader, offset int64) (string, error) {
 		return "", fmt.Errorf("string not read: %w", err)
 	}
 
-	return bytesToString(p), nil
+	return string(p), nil
 }
 
 func (s *snapshotReader) ReadBytes(offset int64) ([]byte, error) {
