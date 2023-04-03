@@ -1573,6 +1573,17 @@ func NewFromBinary(data []byte) (Json, error) {
 	}
 }
 
+// IsBJson checks header: watch out for {/t,/n,/r} (valid json)
+func IsBJson(data []byte) bool {
+	t := data[0]
+	switch t {
+	case typeNil, typeFalse, typeTrue, typeString, typeStringInt, typeNumber, typeArray, typeObjectFull: // typeObjectThin can't be first
+		return true
+	default:
+		return false
+	}
+}
+
 // Marshal serializes the JSON to a single binary snapshot.
 func Marshal(j Json) ([]byte, error) {
 	cache := newEncodingCache()

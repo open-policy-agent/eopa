@@ -283,4 +283,4 @@ require (
 // and badger only calls it to die with a log messsage.
 replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.51.1-0.20230331165642-145e9cc28a99
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.51.1-0.20230403115121-00a6477ecc3a

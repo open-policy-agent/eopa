@@ -293,7 +293,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 
 	params.rt.SkipPluginRegistration = true
 
-	params.rt.BundleLazyLoadingMode = true
+	params.rt.BundleLazyLoadingMode = params.rt.BundleMode
 
 	params.rt.NDBCacheEnabled = true // We need this for LIA.
 
