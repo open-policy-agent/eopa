@@ -79,7 +79,7 @@ func (*DataOperations) Get(ctx context.Context, value, key interface{}) (interfa
 		return v.Iterate(int(i)), true, nil
 
 	case fjson.Object:
-		s, ok := jkey.(fjson.String)
+		s, ok := jkey.(*fjson.String)
 		if !ok {
 			return nil, false, nil
 		}
@@ -162,7 +162,7 @@ func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (inte
 		return v, nil
 	case fjson.Float:
 		return v, nil
-	case fjson.String:
+	case *fjson.String:
 		return v, nil
 	case fjson.Array:
 		return v.Clone(false), nil
@@ -410,14 +410,14 @@ func (o *DataOperations) MakeNumberInt(i int64) fjson.Json {
 }
 
 func (*DataOperations) MakeNumberRef(n interface{}) fjson.Float {
-	return fjson.NewFloat(gojson.Number(n.(fjson.String).Value()))
+	return fjson.NewFloat(gojson.Number(n.(*fjson.String).Value()))
 }
 
 func (*DataOperations) MakeSet() *Set {
 	return NewSet()
 }
 
-func (*DataOperations) MakeString(v string) fjson.String {
+func (*DataOperations) MakeString(v string) *fjson.String {
 	return fjson.NewString(v)
 }
 
@@ -429,7 +429,7 @@ func (o *DataOperations) Len(ctx context.Context, v interface{}) (fjson.Json, er
 		return o.MakeNumberInt(int64(v.Len())), nil
 	case *Set:
 		return o.MakeNumberInt(int64(v.Len())), nil
-	case fjson.String:
+	case *fjson.String:
 		return o.MakeNumberInt(int64(len(v.Value()))), nil
 	case IterableObject:
 		n, err := v.Len(ctx)
@@ -459,7 +459,7 @@ func (*DataOperations) ObjectGet(ctx context.Context, object, key interface{}) (
 		return value, ok, err
 
 	case fjson.Object:
-		s, ok := jkey.(fjson.String)
+		s, ok := jkey.(*fjson.String)
 		if !ok {
 			return nil, false, nil
 		}
@@ -487,7 +487,7 @@ func (*DataOperations) ObjectInsert(ctx context.Context, object, key, value inte
 			return nil, false, err
 		}
 
-		s, ok := jkey.(fjson.String)
+		s, ok := jkey.(*fjson.String)
 		if !ok {
 			// Evaluation should never try to modify a JSON it loaded from disk.
 			panic("not reached")
@@ -583,7 +583,7 @@ func objectIterate(ctx context.Context, obj interface{}, f func(key, value inter
 
 func objectGet(ctx context.Context, obj interface{}, key interface{}) (interface{}, bool, error) {
 	if obj, ok := obj.(fjson.Object); ok {
-		if s, ok := key.(fjson.String); ok {
+		if s, ok := key.(*fjson.String); ok {
 			value := obj.Value(s.Value())
 			return value, value != nil, nil
 		}
@@ -623,7 +623,7 @@ func (o *DataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, e
 	case fjson.Float:
 		return ast.Number(string(v.Value())), nil
 
-	case fjson.String:
+	case *fjson.String:
 		return ast.String(v.Value()), nil
 
 	case fjson.Array:
@@ -827,7 +827,7 @@ func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
 		obj := NewObject()
 		var err error
 		v.Iter(ctx, func(k, v interface{}) bool {
-			obj.Insert(ctx, k.(fjson.String), v.(fjson.Json))
+			obj.Insert(ctx, k.(*fjson.String), v.(fjson.Json))
 			return false
 		})
 		if err != nil {

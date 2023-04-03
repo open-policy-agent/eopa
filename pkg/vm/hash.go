@@ -63,7 +63,7 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.XXHash64) e
 		binary.BigEndian.PutUint64(b, math.Float64bits(f))
 		hasher.Write(b)
 
-	case fjson.String:
+	case *fjson.String:
 		hashString(value, hasher)
 
 	case fjson.Array:
@@ -161,13 +161,13 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.XXHash64) e
 	return nil
 }
 
-func hashString(value fjson.String, hasher *xxhash.XXHash64) {
+func hashString(value *fjson.String, hasher *xxhash.XXHash64) {
 	hasher.Write([]byte{typeHashString})
 
-	if len(value) == 0 {
+	if len(*value) == 0 {
 		return
 	}
 
-	ss := (*reflect.StringHeader)(unsafe.Pointer(&value))
-	hasher.Write((*[maxInt32]byte)(unsafe.Pointer(ss.Data))[:len(value):len(value)])
+	ss := (*reflect.StringHeader)(unsafe.Pointer(value))
+	hasher.Write((*[maxInt32]byte)(unsafe.Pointer(ss.Data))[:len(*value):len(*value)])
 }

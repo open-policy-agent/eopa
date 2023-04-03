@@ -204,13 +204,13 @@ func kindImpl(obj Object) Kind {
 		return Directory
 	}
 
-	if _, ok := kind.(String); !ok {
+	if _, ok := kind.(*String); !ok {
 		corrupted(nil)
 		return Invalid
 	}
 
 	var k int
-	fmt.Sscanf(kind.(String).Value(), "%d", &k)
+	fmt.Sscanf(kind.(*String).Value(), "%d", &k)
 
 	switch Kind(k) {
 	case Unstructured:
@@ -382,7 +382,7 @@ func (r *resourceImpl) setJSON(j Json) {
 func (r *resourceImpl) Meta(key string) (string, bool) {
 	if v := r.obj.Value(fmt.Sprintf("meta:%s", key)); v == nil {
 		return "", false
-	} else if s, ok := v.(String); ok {
+	} else if s, ok := v.(*String); ok {
 		return s.Value(), true
 	} else {
 		return "", false
@@ -530,7 +530,7 @@ func serialize(data interface{}, cache *encodingCache, buffer *bytes.Buffer, bas
 	case string:
 		return serializeString(v, cache, buffer, base), nil
 
-	case String:
+	case *String:
 		return serializeString(v.Value(), cache, buffer, base), nil
 
 	case bool:

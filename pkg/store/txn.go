@@ -282,7 +282,7 @@ func newUpdate(data bjson.Json, op storage.PatchOp, path storage.Path, idx int, 
 		return newUpdateObject(data, op, path, idx, value)
 	case bjson.Array:
 		return newUpdateArray(data, op, path, idx, value)
-	case bjson.Null, bjson.Bool, bjson.Float, bjson.String:
+	case bjson.Null, bjson.Bool, bjson.Float, *bjson.String:
 		return nil, errors.NewNotFoundError(path)
 	}
 

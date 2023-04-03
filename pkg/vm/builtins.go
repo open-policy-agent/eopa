@@ -192,7 +192,7 @@ func stringsSprintfBuiltin(state *State, args []Value) error {
 			} else {
 				a[i] = gn.String()
 			}
-		case fjson.String:
+		case *fjson.String:
 			a[i] = v.Value()
 		case fjson.Array, fjson.Object, *Object, *Set:
 			// TODO: Object, Set have no String() implementation at the moment, whereas fjson.Array/fjson.Object
@@ -214,7 +214,7 @@ func stringsSprintfBuiltin(state *State, args []Value) error {
 }
 
 func builtinStringOperand(state *State, value Value, pos int) (string, error) {
-	s, ok := value.(fjson.String)
+	s, ok := value.(*fjson.String)
 	if !ok {
 		v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
 		if err != nil {

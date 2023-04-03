@@ -23,7 +23,7 @@ func TestHashMapPutDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 	r, _, _ := m.Get(ctx, str("a"))
-	if r != str("b") {
+	if *r.(*fjson.String) != *str("b") {
 		t.Fatal("Expected a to be intact")
 	}
 	r, ok, _ := m.Get(ctx, str("b"))
@@ -34,7 +34,7 @@ func TestHashMapPutDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 	r, _, _ = m.Get(ctx, str("a"))
-	if r != str("b") {
+	if *r.(*fjson.String) != *str("b") {
 		t.Fatal("Expected a to be intact")
 	}
 }
@@ -67,7 +67,7 @@ func TestHashMapIter(t *testing.T) {
 	results := map[float64]string{}
 	m.Iter(func(k, v interface{}) bool {
 		f, _ := k.(testHashType).Json.(fjson.Float).Value().Float64()
-		results[f] = v.(fjson.String).Value()
+		results[f] = v.(*fjson.String).Value()
 		return false
 	})
 	expected := map[float64]string{
@@ -183,7 +183,7 @@ func stringHashMap() *HashMap {
 	return NewHashMap()
 }
 
-func str(s string) fjson.String {
+func str(s string) *fjson.String {
 	return fjson.NewString(s)
 }
 

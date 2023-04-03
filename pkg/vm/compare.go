@@ -27,8 +27,8 @@ func equalOp(ctx context.Context, a, b interface{}) (bool, error) {
 
 		return false, nil
 
-	case fjson.String:
-		if y, ok := b.(fjson.String); ok {
+	case *fjson.String:
+		if y, ok := b.(*fjson.String); ok {
 			return x.Value() == y.Value(), nil
 		}
 
@@ -98,7 +98,7 @@ func equalObject(ctx context.Context, a, b interface{}) (bool, error) {
 			var err error
 			n := 0
 			a.Iter(ctx, func(k, va T) bool {
-				s, ok := k.(fjson.String)
+				s, ok := k.(*fjson.String)
 				if !ok {
 					eq = false
 					return true

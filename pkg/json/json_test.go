@@ -58,7 +58,7 @@ func TestString(t *testing.T) {
 	}
 
 	validateSerialization(t, j, []byte{typeString, 0x0})
-	if s, ok := j.(String); !ok || s.Value() != "" {
+	if s, ok := j.(*String); !ok || s.Value() != "" {
 		t.Errorf("Incorrect value")
 	}
 
@@ -70,7 +70,7 @@ func TestString(t *testing.T) {
 	}
 
 	validateSerialization(t, j, []byte{typeString, 0x6, 'f', 'o', 'o'})
-	if s, ok := j.(String); !ok || s.Value() != "foo" {
+	if s, ok := j.(*String); !ok || s.Value() != "foo" {
 		t.Errorf("Incorrect value")
 	}
 }
@@ -82,7 +82,7 @@ func TestStringInt(t *testing.T) {
 	}
 
 	validateSerialization(t, j, []byte{typeStringInt, 0xa4, 0x13})
-	if s, ok := j.(String); !ok || s.Value() != "1234" {
+	if s, ok := j.(*String); !ok || s.Value() != "1234" {
 		t.Errorf("Incorrect value")
 	}
 
@@ -94,7 +94,7 @@ func TestStringInt(t *testing.T) {
 	}
 
 	validateSerialization(t, j, []byte{typeString, 0x0a, '0', '1', '2', '3', '4'})
-	if s, ok := j.(String); !ok || s.Value() != "01234" {
+	if s, ok := j.(*String); !ok || s.Value() != "01234" {
 		t.Errorf("Incorrect value")
 	}
 }
@@ -153,7 +153,7 @@ func TestArray(t *testing.T) {
 	}
 
 	elem0 := array.Value(0)
-	if s0, ok := elem0.(String); !ok || s0.Value() != "a" {
+	if s0, ok := elem0.(*String); !ok || s0.Value() != "a" {
 		t.Errorf("Wrong element 0 loaded")
 	}
 
@@ -177,15 +177,15 @@ func TestArray(t *testing.T) {
 	elem0 = array.Value(0)
 	elem1 := array.Value(1)
 	elem2 := array.Value(2)
-	if s0, ok := elem0.(String); !ok || s0.Value() != "a" {
+	if s0, ok := elem0.(*String); !ok || s0.Value() != "a" {
 		t.Errorf("Wrong element 0 loaded")
 	}
 
-	if s1, ok := elem1.(String); !ok || s1.Value() != "b" {
+	if s1, ok := elem1.(*String); !ok || s1.Value() != "b" {
 		t.Errorf("Wrong element 0 loaded")
 	}
 
-	if s2, ok := elem2.(String); !ok || s2.Value() != "c" {
+	if s2, ok := elem2.(*String); !ok || s2.Value() != "c" {
 		t.Errorf("Wrong element 0 loaded")
 	}
 
@@ -201,11 +201,11 @@ func TestArray(t *testing.T) {
 	elem0 = clone.Value(0)
 	elem1 = clone.Value(1)
 
-	if s0, ok := elem0.(String); !ok || s0.Value() != "a" {
+	if s0, ok := elem0.(*String); !ok || s0.Value() != "a" {
 		t.Fatalf("Array.RemoveIdx is broken")
 	}
 
-	if s1, ok := elem1.(String); !ok || s1.Value() != "c" {
+	if s1, ok := elem1.(*String); !ok || s1.Value() != "c" {
 		t.Fatalf("Array.RemoveIdx is broken")
 	}
 }
@@ -244,7 +244,7 @@ func TestObjectFull(t *testing.T) {
 	}
 
 	value := obj.Value("a")
-	if str, ok := value.(String); !ok || str.Value() != "b" {
+	if str, ok := value.(*String); !ok || str.Value() != "b" {
 		t.Errorf("Value incorrect")
 	}
 
@@ -275,17 +275,17 @@ func TestObjectFull(t *testing.T) {
 	}
 
 	valueA := obj.Value("a")
-	if str, ok := valueA.(String); !ok || str.Value() != "b" {
+	if str, ok := valueA.(*String); !ok || str.Value() != "b" {
 		t.Errorf("Value incorrect: %s", str)
 	}
 
 	valueB := obj.Value("b")
-	if str, ok := valueB.(String); !ok || str.Value() != "c" {
+	if str, ok := valueB.(*String); !ok || str.Value() != "c" {
 		t.Errorf("Value incorrect: %s", str)
 	}
 
 	valueC := obj.Value("c")
-	if str, ok := valueC.(String); !ok || str.Value() != "d" {
+	if str, ok := valueC.(*String); !ok || str.Value() != "d" {
 		t.Errorf("Value incorrect: %s", str)
 	}
 
@@ -352,12 +352,12 @@ func TestObjectThin(t *testing.T) {
 		}
 
 		valueA := obj.Value("a")
-		if str, ok := valueA.(String); !ok || str.Value() != "xa" {
+		if str, ok := valueA.(*String); !ok || str.Value() != "xa" {
 			t.Errorf("Value incorrect: %s", str)
 		}
 
 		valueB := obj.Value("b")
-		if str, ok := valueB.(String); !ok || str.Value() != "xb" {
+		if str, ok := valueB.(*String); !ok || str.Value() != "xb" {
 			t.Errorf("Value incorrect: %s", str)
 		}
 	}
@@ -371,12 +371,12 @@ func TestObjectThin(t *testing.T) {
 		}
 
 		valueA := obj.Value("a")
-		if str, ok := valueA.(String); !ok || str.Value() != "ya" {
+		if str, ok := valueA.(*String); !ok || str.Value() != "ya" {
 			t.Errorf("Value incorrect: %s", str)
 		}
 
 		valueB := obj.Value("b")
-		if str, ok := valueB.(String); !ok || str.Value() != "yb" {
+		if str, ok := valueB.(*String); !ok || str.Value() != "yb" {
 			t.Errorf("Value incorrect: %s", str)
 		}
 	}
@@ -469,11 +469,11 @@ func TestDeduplication(t *testing.T) {
 	elem1 := array.Value(1)
 	elem2 := array.Value(2)
 	elem3 := array.Value(3)
-	if s0, ok := elem0.(String); !ok || s0.Value() != "a" {
+	if s0, ok := elem0.(*String); !ok || s0.Value() != "a" {
 		t.Errorf("Wrong element 0 loaded")
 	}
 
-	if s1, ok := elem1.(String); !ok || s1.Value() != "a" {
+	if s1, ok := elem1.(*String); !ok || s1.Value() != "a" {
 		t.Errorf("Wrong element 1 loaded")
 	}
 
@@ -850,9 +850,9 @@ func TestObject(t *testing.T) {
 
 	if v := o.Value("b"); v == nil {
 		t.Errorf("not found")
-	} else if s, ok := v.(String); !ok {
+	} else if s, ok := v.(*String); !ok {
 		t.Errorf("not string")
-	} else if s != NewString("b") {
+	} else if *s != *NewString("b") {
 		t.Errorf("not b")
 	}
 

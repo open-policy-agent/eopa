@@ -454,43 +454,46 @@ func Max(a, b Float) Float {
 // String represents a JSON string.
 type String string
 
-func NewString(s string) String {
-	return String(s)
+func NewString(s string) *String {
+	ss := String(s)
+	return &ss
 }
 
-func newString(content contentReader, offset int64) String {
+func newString(content contentReader, offset int64) *String {
 	str, err := content.ReadString(offset)
 	checkError(err)
-	return String(str)
+	s := String(str)
+	return &s
 }
 
-func newStringInt(content contentReader, offset int64) String {
+func newStringInt(content contentReader, offset int64) *String {
 	n, err := content.ReadVarInt(offset)
 	checkError(err)
-	return String(strconv.FormatInt(n, 10))
+	s := String(strconv.FormatInt(n, 10))
+	return &s
 }
 
-func (s String) WriteTo(w io.Writer) (int64, error) {
-	return writeStringJSON(w, string(s), true)
+func (s *String) WriteTo(w io.Writer) (int64, error) {
+	return writeStringJSON(w, string(*s), true)
 }
 
-func (s String) Contents() interface{} {
+func (s *String) Contents() interface{} {
 	return s.JSON()
 }
 
-func (s String) Value() string {
-	return string(s)
+func (s *String) Value() string {
+	return string(*s)
 }
 
-func (s String) JSON() interface{} {
+func (s *String) JSON() interface{} {
 	return s.Value()
 }
 
-func (s String) AST() ast.Value {
-	return ast.String(s)
+func (s *String) AST() ast.Value {
+	return ast.String(*s)
 }
 
-func (s String) Extract(ptr string) (Json, error) {
+func (s *String) Extract(ptr string) (Json, error) {
 	p, err := preparePointer(ptr)
 	if err != nil {
 		return nil, err
@@ -499,7 +502,7 @@ func (s String) Extract(ptr string) (Json, error) {
 	return s.extractImpl(p)
 }
 
-func (s String) extractImpl(ptr []string) (Json, error) {
+func (s *String) extractImpl(ptr []string) (Json, error) {
 	if len(ptr) == 0 {
 		return s, nil
 	}
@@ -507,23 +510,23 @@ func (s String) extractImpl(ptr []string) (Json, error) {
 	return nil, errPathNotFound
 }
 
-func (s String) Find(search Path, finder Finder) {
+func (s *String) Find(search Path, finder Finder) {
 	find(search, []byte{'$'}, s, finder)
 }
 
-func (s String) Compare(other Json) int {
+func (s *String) Compare(other Json) int {
 	return compare(s, other)
 }
 
-func (s String) Walk(state *DecodingState, walker Walker) {
-	walker.String(state, s)
+func (s *String) Walk(state *DecodingState, walker Walker) {
+	walker.String(state, *s)
 }
 
-func (s String) Clone(bool) File {
+func (s *String) Clone(bool) File {
 	return s
 }
 
-func (s String) String() string {
+func (s *String) String() string {
 	return strconv.Quote(s.Value())
 }
 
@@ -1331,8 +1334,8 @@ func compare(x Json, y Json) int {
 		case Float:
 			return Compare(x.(Float), y.(Float))
 
-		case String:
-			return strings.Compare(x.(String).Value(), y.(String).Value())
+		case *String:
+			return strings.Compare(x.(*String).Value(), y.(*String).Value())
 
 		case Null:
 			return 0
@@ -1364,7 +1367,7 @@ func jsonType(j Json) int {
 		return typeNil
 	case Bool:
 		return typeFalse // typeTrue never returned.
-	case String:
+	case *String:
 		return typeString // typeStringInt and typeStringNumber never returned.
 	case Float:
 		return typeNumber

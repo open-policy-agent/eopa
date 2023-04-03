@@ -195,7 +195,7 @@ func ReadWasmModulesFromStore(ctx context.Context, store storage.Store, txn stor
 	rawModules := map[string][]byte{}
 	for _, path := range encodedModules.Names() {
 		enc := encodedModules.Value(path)
-		encStr, ok := enc.(bjson.String)
+		encStr, ok := enc.(*bjson.String)
 		if !ok {
 			return nil, fmt.Errorf("corrupt wasm modules")
 		}
@@ -252,7 +252,7 @@ func readRevisionFromStore(ctx context.Context, store storage.Store, txn storage
 		return "", err
 	}
 
-	str, ok := value.(bjson.String)
+	str, ok := value.(*bjson.String)
 	if !ok {
 		return "", fmt.Errorf("corrupt manifest revision")
 	}
@@ -294,7 +294,7 @@ func readEtagFromStore(ctx context.Context, store storage.Store, txn storage.Tra
 		return "", err
 	}
 
-	str, ok := value.(bjson.String)
+	str, ok := value.(*bjson.String)
 	if !ok {
 		return "", fmt.Errorf("corrupt bundle etag")
 	}
