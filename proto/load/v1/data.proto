@@ -3,6 +3,19 @@ package load.v1;
 
 import "google/protobuf/struct.proto";
 
+// DataDocument is a thin wrapper type around a JSON value located at a
+// particular path in the virtual document store.
+message DataDocument {
+  string path = 1;
+  google.protobuf.Value document = 2; // json value, like {"foo":true} or [1, 2, 3]
+}
+
+// InputDocument is a thin wrapper type around OPA inputs, which are always
+// JSON object types.
+message InputDocument {
+  google.protobuf.Struct document = 1; // json object, like {"foo":true}
+}
+
 // PatchOp allows specifying a subset of JSON-Patch operations, namely
 // "add", "remove", and "replace".
 enum PatchOp {
@@ -18,8 +31,7 @@ enum PatchOp {
 // This is equivalent in functionality to OPA's
 // [Data REST API Create/Overwrite method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-overwrite-a-document).
 message CreateDataRequest {
-  string path = 1;
-  google.protobuf.Value data = 2; // json value, like {"foo":true}
+  DataDocument data = 1;
 }
 
 message CreateDataResponse {
@@ -37,12 +49,11 @@ message CreateDataResponse {
 // in the input field directly.
 message GetDataRequest {
   string path = 1;
-  google.protobuf.Struct input = 2; // json object, like {"foo":true}
+  InputDocument input = 2;
 }
 
 message GetDataResponse {
-  string path = 1;
-  google.protobuf.Value result = 2; // json value, like {"foo":true}
+  DataDocument result = 1;
 }
 
 // UpdateDataRequest looks up the document by path, and then attempts to
@@ -53,9 +64,8 @@ message GetDataResponse {
 // [Data REST API Patch method](https://www.openpolicyagent.org/docs/latest/rest-api/#patch-a-document)
 //
 message UpdateDataRequest {
-  string path = 1;
+  DataDocument data = 1; // JSON value to be patched in, like {"foo":true}
   PatchOp op = 2; // If unspecified, defaults to "overwrite/replace".
-  google.protobuf.Value data = 3; // JSON value to be patched in, like {"foo":true}
 }
 
 message UpdateDataResponse {

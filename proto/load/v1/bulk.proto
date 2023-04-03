@@ -3,6 +3,7 @@ package load.v1;
 
 import "load/v1/data.proto";
 import "load/v1/policy.proto";
+import "google/protobuf/any.proto";
 
 // BulkRWRequest allows specifying a fixed-structure, bulk read/write
 // operation. WritePolicy/Data requests are executed sequentially, aborting
@@ -101,7 +102,7 @@ message BulkRWResponse {
 // Context-dependent error messages.
 message ErrorList {
   // The errors in the list.
-  repeated string errors = 1;
+  repeated google.protobuf.Any errors = 1;
 }
 
 // BulkService is an API for specifying batches of read/write operations.

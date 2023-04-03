@@ -50,8 +50,9 @@ func (s *Server) listPoliciesFromRequest(ctx context.Context, txn storage.Transa
 
 // preParsedModule is an optional parameter, allowing module parsing to be done elsewhere.
 func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.CreatePolicyRequest, preParsedModule *ast.Module) (*loadv1.CreatePolicyResponse, error) {
-	path := req.GetPath()
-	rawPolicy := req.GetPolicy()
+	policy := req.GetPolicy()
+	path := policy.GetPath()
+	rawPolicy := policy.GetText()
 
 	if err := s.checkPolicyIDScope(ctx, txn, path); err != nil && !storage.IsNotFound(err) {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
@@ -155,13 +156,14 @@ func (s *Server) getPolicyFromRequest(ctx context.Context, txn storage.Transacti
 	// 	return nil, status.Error(codes.Internal, err.Error())
 	// }
 	// bs := bjsonItem.String()
-	return &loadv1.GetPolicyResponse{Path: path, Result: string(policyBytes)}, nil
+	return &loadv1.GetPolicyResponse{Result: &loadv1.Policy{Path: path, Text: string(policyBytes)}}, nil
 }
 
 // preParsedModule is an optional parameter, allowing module parsing to be done elsewhere.
 func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.UpdatePolicyRequest, preParsedModule *ast.Module) (*loadv1.UpdatePolicyResponse, error) {
-	path := req.GetPath()
-	rawPolicy := req.GetPolicy()
+	policy := req.GetPolicy()
+	path := policy.GetPath()
+	rawPolicy := policy.GetText()
 	if err := s.checkPolicyIDScope(ctx, txn, path); err != nil && !storage.IsNotFound(err) {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}

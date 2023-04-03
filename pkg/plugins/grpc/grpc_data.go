@@ -33,7 +33,8 @@ import (
 // Handles all validation and store reads/writes. Transaction commit/abort is handled by the caller.
 // preParsedValue is an optional parameter, allowing JSON parsing to be done elsewhere.
 func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.CreateDataRequest, preParsedValue interface{}) (*loadv1.CreateDataResponse, error) {
-	path := req.GetPath()
+	dataDoc := req.GetData()
+	path := dataDoc.GetPath()
 	p, ok := storage.ParsePath(path)
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "invalid path")
@@ -43,7 +44,7 @@ func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transact
 		var err error
 
 		// val, err = bjson.NewDecoder(strings.NewReader(req.GetData())).Decode()
-		val, err = bjson.New(req.GetData().AsInterface())
+		val, err = bjson.New(dataDoc.GetDocument().AsInterface())
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
 		}
@@ -79,7 +80,7 @@ func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transact
 func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.GetDataRequest) (*loadv1.GetDataResponse, error) {
 	path := req.GetPath()
 
-	rawInput := req.GetInput().AsMap()
+	rawInput := req.GetInput().GetDocument().AsMap()
 	input, err := ast.InterfaceToValue(rawInput)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid input")
@@ -168,7 +169,7 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 		// if err != nil {
 		// 	return nil, status.Errorf(codes.Internal, "evaluation failed: %v", err)
 		// }
-		return &loadv1.GetDataResponse{Path: path}, nil
+		return &loadv1.GetDataResponse{Result: &loadv1.DataDocument{Path: path}}, nil
 	}
 
 	resultValue := &rs[0].Expressions[0].Value
@@ -186,11 +187,12 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &loadv1.GetDataResponse{Path: path, Result: bv}, nil
+	return &loadv1.GetDataResponse{Result: &loadv1.DataDocument{Path: path, Document: bv}}, nil
 }
 
 func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.UpdateDataRequest, preParsedValue interface{}) (*loadv1.UpdateDataResponse, error) {
-	path := req.GetPath()
+	dataDoc := req.GetData()
+	path := dataDoc.GetPath()
 	p, ok := storage.ParsePath(path)
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "invalid path")
@@ -199,7 +201,7 @@ func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transact
 	if preParsedValue == nil {
 		var err error
 		// val, err = bjson.NewDecoder(strings.NewReader(req.GetData())).Decode()
-		val, err = bjson.New(req.GetData().AsInterface())
+		val, err = bjson.New(dataDoc.GetDocument().AsInterface())
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
 		}

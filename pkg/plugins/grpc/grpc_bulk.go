@@ -13,6 +13,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -41,12 +42,14 @@ func bulkRWParsePolicyFromRequest(req *loadv1.BulkRWRequest_WritePolicyRequest) 
 	switch x := req.GetReq().(type) {
 	case *loadv1.BulkRWRequest_WritePolicyRequest_Create:
 		wr := x.Create
-		path = wr.GetPath()
-		rawPolicy = wr.GetPolicy()
+		policy := wr.GetPolicy()
+		path = policy.GetPath()
+		rawPolicy = policy.GetText()
 	case *loadv1.BulkRWRequest_WritePolicyRequest_Update:
 		wr := x.Update
-		path = wr.GetPath()
-		rawPolicy = wr.GetPolicy()
+		policy := wr.GetPolicy()
+		path = policy.GetPath()
+		rawPolicy = policy.GetText()
 	default:
 		// All other types.
 		return nil, nil
@@ -73,10 +76,12 @@ func bulkRWParseDataFromRequest(req *loadv1.BulkRWRequest_WriteDataRequest) (int
 	switch x := req.GetReq().(type) {
 	case *loadv1.BulkRWRequest_WriteDataRequest_Create:
 		wr := x.Create
-		data = wr.GetData()
+		dataDoc := wr.GetData()
+		data = dataDoc.GetDocument()
 	case *loadv1.BulkRWRequest_WriteDataRequest_Update:
 		wr := x.Update
-		data = wr.GetData()
+		dataDoc := wr.GetData()
+		data = dataDoc.GetDocument()
 	default:
 		// All other types.
 		return nil, nil
@@ -286,7 +291,15 @@ func (s *Server) BulkRW(ctx context.Context, req *loadv1.BulkRWRequest) (*loadv1
 						resp, err := s.getPolicyFromRequest(ctx, txn, policyReadReq)
 						if err != nil {
 							s.store.Abort(ctx, txn)
-							out.ReadsPolicy[i] = &loadv1.BulkRWResponse_ReadPolicyResponse{Errors: &loadv1.ErrorList{Errors: []string{err.Error()}}}
+							listErr, err := structpb.NewList([]interface{}{structpb.NewStringValue(err.Error())})
+							if err != nil {
+								return status.Error(codes.Internal, "error serialization failed")
+							}
+							serializedErr, err := anypb.New(listErr)
+							if err != nil {
+								return status.Error(codes.Internal, "error serialization failed")
+							}
+							out.ReadsPolicy[i] = &loadv1.BulkRWResponse_ReadPolicyResponse{Errors: &loadv1.ErrorList{Errors: []*anypb.Any{serializedErr}}}
 							return nil
 						}
 						out.ReadsPolicy[i] = &loadv1.BulkRWResponse_ReadPolicyResponse{Resp: resp}
@@ -326,7 +339,15 @@ func (s *Server) BulkRW(ctx context.Context, req *loadv1.BulkRWRequest) (*loadv1
 						resp, err := s.getDataFromRequest(ctx, txn, dataReadReq)
 						if err != nil {
 							s.store.Abort(ctx, txn)
-							out.ReadsData[i] = &loadv1.BulkRWResponse_ReadDataResponse{Errors: &loadv1.ErrorList{Errors: []string{err.Error()}}}
+							listErr, err := structpb.NewList([]interface{}{structpb.NewStringValue(err.Error())})
+							if err != nil {
+								return status.Error(codes.Internal, "error serialization failed")
+							}
+							serializedErr, err := anypb.New(listErr)
+							if err != nil {
+								return status.Error(codes.Internal, "error serialization failed")
+							}
+							out.ReadsData[i] = &loadv1.BulkRWResponse_ReadDataResponse{Errors: &loadv1.ErrorList{Errors: []*anypb.Any{serializedErr}}}
 							return nil
 						}
 						out.ReadsData[i] = &loadv1.BulkRWResponse_ReadDataResponse{Resp: resp}

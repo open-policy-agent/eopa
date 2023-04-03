@@ -81,13 +81,11 @@ func TestCreatePolicy(t *testing.T) {
 
 	// Create new policy in the store.
 	{
-		_, err := client.CreatePolicy(ctx, &loadv1.CreatePolicyRequest{
-			Path: "/a", Policy: `package a
+		_, err := client.CreatePolicy(ctx, &loadv1.CreatePolicyRequest{Policy: &loadv1.Policy{Path: "/a", Text: `package a
 
 x { true }
 y { false }
-`,
-		})
+`}})
 		if err != nil {
 			t.Fatalf("CreatePolicy failed: %v", err)
 		}
@@ -98,13 +96,14 @@ y { false }
 		if err != nil {
 			t.Fatalf("GetPolicy failed: %v", err)
 		}
-		path := resp.GetPath()
+		policy := resp.GetResult()
+		path := policy.GetPath()
 		if path != "/a" {
 			t.Fatalf("Expected /a, got: %v", path)
 		}
 		// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST.
 		const expectedPolicy = "package a\n\nx { true }\ny { false }\n"
-		result := resp.GetResult()
+		result := policy.GetText()
 		if expectedPolicy != string(result) {
 			t.Fatalf("Expected %v\n\ngot:\n%v", expectedPolicy, string(result))
 		}
@@ -137,7 +136,8 @@ y { false }
 	}
 	// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST.
 	const expectedPolicy = "package a\n\nx { true }\ny { false }\n"
-	result := resp.GetResult()
+	policy := resp.GetResult()
+	result := policy.GetText()
 	if expectedPolicy != string(result) {
 		t.Fatalf("Expected %v\n\ngot:\n%v", expectedPolicy, string(result))
 	}
@@ -165,11 +165,13 @@ y { false }
 	// Update the policy in the store.
 	{
 		_, err := client.UpdatePolicy(ctx, &loadv1.UpdatePolicyRequest{
-			Path: "/a", Policy: `package a
+			Policy: &loadv1.Policy{
+				Path: "/a", Text: `package a
 
 r { true }
 s { false }
 `,
+			},
 		})
 		if err != nil {
 			t.Fatalf("UpdatePolicy failed: %v", err)
@@ -181,13 +183,14 @@ s { false }
 		if err != nil {
 			t.Fatalf("GetPolicy failed: %v", err)
 		}
-		path := resp.GetPath()
+		policy := resp.GetResult()
+		path := policy.GetPath()
 		if path != "/a" {
 			t.Fatalf("Expected /a, got: %v", path)
 		}
 		// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST.
 		const expectedPolicy = "package a\n\nr { true }\ns { false }\n"
-		result := resp.GetResult()
+		result := policy.GetText()
 		if expectedPolicy != string(result) {
 			t.Fatalf("Expected %v\n\ngot:\n%v", expectedPolicy, string(result))
 		}

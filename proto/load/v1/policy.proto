@@ -18,7 +18,7 @@ message Policy {
 message ListPoliciesRequest {}
 
 message ListPoliciesResponse {
-  repeated Policy results = 2;
+  repeated Policy results = 1;
 }
 
 // CreatePolicyRequest allows inserting new policy code into the policy
@@ -34,8 +34,7 @@ message ListPoliciesResponse {
 // number of policies down, or using Bundles are the recommended
 // workarounds for most OPA users.
 message CreatePolicyRequest {
-  string path = 1;
-  string policy = 2; // Rego module.
+  Policy policy = 1; // Rego module.
 }
 
 message CreatePolicyResponse {}
@@ -52,8 +51,7 @@ message GetPolicyRequest {
 }
 
 message GetPolicyResponse {
-  string path = 1;
-  string result = 2; // Rego module.
+  Policy result = 2; // Rego module.
 }
 
 // UpdatePolicyRequest allows updating a policy module in the policy
@@ -69,8 +67,7 @@ message GetPolicyResponse {
 // number of policies down, or using Bundles are the recommended
 // workarounds for most OPA users.
 message UpdatePolicyRequest {
-  string path = 1;
-  string policy = 2; // Rego module.
+  Policy policy = 2; // Rego module.
 }
 
 message UpdatePolicyResponse {}

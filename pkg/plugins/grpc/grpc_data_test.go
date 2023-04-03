@@ -128,7 +128,7 @@ func TestCreateData(t *testing.T) {
 
 	// Create new data store item.
 	{
-		_, err := client.CreateData(ctx, &loadv1.CreateDataRequest{Path: "/a", Data: structpb.NewNumberValue(27)})
+		_, err := client.CreateData(ctx, &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}})
 		if err != nil {
 			t.Fatalf("CreateData failed: %v", err)
 		}
@@ -139,11 +139,12 @@ func TestCreateData(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetData failed: %v", err)
 		}
-		path := resp.GetPath()
+		resultDoc := resp.GetResult()
+		path := resultDoc.GetPath()
 		if path != "/a" {
 			t.Fatalf("Expected /a, got: %v", path)
 		}
-		data := resp.GetResult()
+		data := resultDoc.GetDocument()
 		if data.GetNumberValue() != 27 {
 			t.Fatalf("Expected 27, got: %v", data)
 		}
@@ -168,11 +169,12 @@ func TestGetDataBaseDocument(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetData failed: %v", err)
 		}
-		path := resp.GetPath()
+		resultDoc := resp.GetResult()
+		path := resultDoc.GetPath()
 		if path != "/a" {
 			t.Fatalf("Expected /a, got: %v", path)
 		}
-		data := resp.GetResult()
+		data := resultDoc.GetDocument()
 		if data.GetNumberValue() != 27 {
 			t.Fatalf("Expected 27, got: %v", data)
 		}
@@ -192,7 +194,7 @@ func TestUpdateData(t *testing.T) {
 
 	// Update the data item.
 	{
-		_, err := client.UpdateData(ctx, &loadv1.UpdateDataRequest{Path: "/a", Op: loadv1.PatchOp_PATCH_OP_REPLACE, Data: structpb.NewNumberValue(4)})
+		_, err := client.UpdateData(ctx, &loadv1.UpdateDataRequest{Op: loadv1.PatchOp_PATCH_OP_REPLACE, Data: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(4)}})
 		if err != nil {
 			t.Fatalf("UpdateData failed: %v", err)
 		}
@@ -203,11 +205,12 @@ func TestUpdateData(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetData failed: %v", err)
 		}
-		path := resp.GetPath()
+		resultDoc := resp.GetResult()
+		path := resultDoc.GetPath()
 		if path != "/a" {
 			t.Fatalf("Expected /a, got: %v", path)
 		}
-		data := resp.GetResult()
+		data := resultDoc.GetDocument()
 		if data.GetNumberValue() != 4 {
 			t.Fatalf("Expected 4, got: %v", data)
 		}
@@ -238,11 +241,12 @@ func TestDeleteData(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetData failed: %v", err)
 		}
-		path := resp.GetPath()
+		resultDoc := resp.GetResult()
+		path := resultDoc.GetPath()
 		if path != "/a" {
 			t.Fatalf("Expected /a, got: %v", path)
 		}
-		data := resp.GetResult()
+		data := resultDoc.GetDocument()
 		if data.GetStringValue() != "" {
 			t.Fatalf("Expected \"\", got: %v", data)
 		}

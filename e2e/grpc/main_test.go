@@ -42,7 +42,7 @@ p if rand.intn("coin", 2) == 0
 	}
 
 	{
-		out := grpcurl(t, "-d", `{"path": "/test", "policy": "package foo allow := x {x = true}"}`, "-plaintext", "localhost:9090", "load.v1.PolicyService/CreatePolicy")
+		out := grpcurl(t, "-d", `{"policy": {"path": "/test", "text": "package foo allow := x {x = true}"}}`, "-plaintext", "localhost:9090", "load.v1.PolicyService/CreatePolicy")
 		var m map[string]any
 		if err := json.NewDecoder(out).Decode(&m); err != nil {
 			t.Fatal(err)
@@ -58,9 +58,9 @@ p if rand.intn("coin", 2) == 0
 			t.Fatal(err)
 		}
 		exp := map[string]any{
-			"path": "/foo",
 			"result": map[string]any{
-				"allow": true,
+				"document": map[string]any{"allow": true},
+				"path":     "/foo",
 			},
 		}
 		if diff := cmp.Diff(exp, act); diff != "" {
