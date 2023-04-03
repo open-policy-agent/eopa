@@ -62,9 +62,9 @@ func TestKeygen(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"NO_MACHINE\"")
 
 	var result int
-	license.ValidateLicense("", "", func(code int, err error) { result = code })
-	if result != 0 {
-		t.Fatalf("Invalid result %d", result)
+	license.ValidateLicense("", "", func(code int, _ error) { result = code })
+	if exp, act := 0, result; exp != act {
+		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
 	license.ReleaseLicense()
 }
@@ -80,9 +80,9 @@ func TestKeygenExpiry(t *testing.T) {
 	setupKeygen("null", "\"NO_MACHINE\"")
 
 	var result int
-	license.ValidateLicense("", "", func(code int, err error) { result = code })
-	if result != 2 {
-		t.Fatalf("Invalid result %d", result)
+	license.ValidateLicense("", "", func(code int, _ error) { result = code })
+	if exp, act := 3, result; exp != act {
+		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
 }
 
@@ -97,9 +97,9 @@ func TestKeygenExpired(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"EXPIRED\"")
 
 	var result int
-	license.ValidateLicense("", "", func(code int, err error) { result = code })
-	if result != 2 {
-		t.Fatalf("Invalid result %d", result)
+	license.ValidateLicense("", "", func(code int, _ error) { result = code })
+	if exp, act := 3, result; exp != act {
+		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
 }
 
@@ -115,9 +115,9 @@ func TestKeygenToken(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"NOT_FOUND\"")
 
 	var result int
-	license.ValidateLicense("", "", func(code int, err error) { result = code })
-	if result != 2 {
-		t.Fatalf("Invalid result %d", result)
+	license.ValidateLicense("", "", func(code int, _ error) { result = code })
+	if exp, act := 3, result; exp != act {
+		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
 }
 
@@ -132,9 +132,9 @@ func TestKeygenSignature(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"NOT_FOUND\"")
 
 	var result int
-	license.ValidateLicense("", "", func(code int, err error) { result = code })
-	if result != 2 {
-		t.Fatalf("Invalid result %d", result)
+	license.ValidateLicense("", "", func(code int, _ error) { result = code })
+	if exp, act := 3, result; exp != act {
+		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
 }
 
@@ -150,9 +150,9 @@ func TestKeygenValid(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"VALID\"")
 
 	var result int
-	license.ValidateLicense("", "", func(code int, err error) { result = code })
-	if result != 2 {
-		t.Fatalf("Invalid result %d", result)
+	license.ValidateLicense("", "", func(code int, _ error) { result = code })
+	if exp, act := 3, result; exp != act {
+		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
 }
 
@@ -169,8 +169,8 @@ func TestKeygenRateLimit(t *testing.T) {
 	var result int
 	var err error
 	license.ValidateLicense("", "", func(code int, lerr error) { result, err = code, lerr })
-	if result != 2 {
-		t.Fatalf("Invalid result %d", result)
+	if exp, act := 3, result; exp != act {
+		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
 
 	expected := "invalid license: rate limit has been exceeded"
@@ -193,8 +193,8 @@ func TestKeygenOffline(t *testing.T) {
 	var err error
 	expected := "off-line license verification failed: license key is not genuine"
 	license.ValidateLicense("", "", func(code int, lerr error) { result, err = code, lerr })
-	if result != 2 {
-		t.Fatalf("Invalid result %d", result)
+	if exp, act := 3, result; exp != act {
+		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
 	if err.Error() != expected {
 		t.Fatalf("expected: %v, got %v", expected, err.Error())
@@ -215,8 +215,8 @@ func TestKeygenOfflineExpired(t *testing.T) {
 	var err error
 	expected := "off-line license verification failed: license expired 2023-02-01 00:00:00 +0000 UTC"
 	license.ValidateLicense("", "", func(code int, lerr error) { result, err = code, lerr })
-	if result != 2 {
-		t.Fatalf("Invalid result %d", result)
+	if exp, act := 3, result; exp != act {
+		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
 	if err.Error() != expected {
 		t.Fatalf("expected: %v, got %v", expected, err.Error())

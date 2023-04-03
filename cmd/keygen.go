@@ -21,6 +21,7 @@ import (
 
 const loadLicenseToken = "STYRA_LOAD_LICENSE_TOKEN"
 const loadLicenseKey = "STYRA_LOAD_LICENSE_KEY"
+const licenseErrorExitCode = 3
 
 type (
 	License struct {
@@ -210,7 +211,7 @@ func (l *License) ValidateLicense(key string, token string, terminate func(code 
 	defer func() {
 		if err != nil {
 			l.logger.Error("licensing error: %v", err)
-			terminate(2, err)
+			terminate(licenseErrorExitCode, err)
 		}
 	}()
 
@@ -287,7 +288,7 @@ func (l *License) ValidateLicense(key string, token string, terminate func(code 
 		}
 
 		// Start heartbeat monitor for machine (also set policy "Heartbeat Basis": FROM_CREATION)
-		l.monitor(machine)
+		go l.monitor(machine)
 		return
 	}
 
@@ -368,23 +369,21 @@ func (l *License) monitorRetry(m *keygen.Machine) error {
 
 // monitor: send keygen SaaS heartbeat
 func (l *License) monitor(m *keygen.Machine) {
-	go func() {
+	if err := heartbeat(m); err != nil {
+		l.logger.Debug("Licensing heartbeat error: %v", err)
+	}
+
+	t := (time.Duration(m.HeartbeatDuration) * time.Second) - (30 * time.Second)
+
+	for range time.Tick(t) {
 		if err := heartbeat(m); err != nil {
-			l.logger.Debug("Licensing heartbeat error: %v", err)
-		}
-
-		t := (time.Duration(m.HeartbeatDuration) * time.Second) - (30 * time.Second)
-
-		for range time.Tick(t) {
-			if err := heartbeat(m); err != nil {
-				if err := l.monitorRetry(m); err != nil {
-					// give up - leak license
-					l.logger.Error("Licensing heartbeat error: %v", err)
-					return
-				}
+			if err := l.monitorRetry(m); err != nil {
+				// give up - leak license
+				l.logger.Error("Licensing heartbeat error: %v", err)
+				return
 			}
 		}
-	}()
+	}
 }
 
 func heartbeat(m *keygen.Machine) error {
@@ -406,8 +405,8 @@ func (l *License) Policy() (*keygenLicense, error) {
 		return nil, err
 	}
 	var data keygenLicense
-	if lerr := json.Unmarshal(license.Body, &data); lerr != nil {
-		return nil, fmt.Errorf("license unmarshal failed: %w", lerr)
+	if err := json.Unmarshal(license.Body, &data); err != nil {
+		return nil, fmt.Errorf("license unmarshal failed: %w", err)
 	}
-	return &data, err
+	return &data, nil
 }
