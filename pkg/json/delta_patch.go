@@ -758,6 +758,14 @@ func (d *deltaPatchObjectReader) ObjectNames() ([]string, error) {
 	return d.impl.ObjectNames()
 }
 
+func (d *deltaPatchObjectReader) ObjectNamesIndex(i int) (string, error) {
+	s, err := d.impl.ObjectNames()
+	if err != nil {
+		return "", err
+	}
+	return s[i], nil
+}
+
 func (d *deltaPatchObjectReader) ObjectNameOffset(name string) (int64, bool, error) {
 	return d.impl.ObjectNameOffset(name)
 }

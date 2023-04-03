@@ -893,7 +893,7 @@ func readString(content *utils.MultiReader, offset int64) (string, error) {
 		return "", fmt.Errorf("string not read: %w", err)
 	}
 
-	return string(p), nil
+	return bytesToString(p), nil
 }
 
 func (s *snapshotReader) ReadBytes(offset int64) ([]byte, error) {
@@ -1115,6 +1115,19 @@ func (s *snapshotObjectReader) ObjectNames() ([]string, error) {
 	}
 
 	return names, nil
+}
+
+func (s *snapshotObjectReader) ObjectNamesIndex(i int) (string, error) {
+	boffset, err := s.content.Bytes(s.noffsets+int64(i*4), 4)
+	if len(boffset) < 4 {
+		return "", fmt.Errorf("object name offset not read: %w", err)
+	}
+	offset := int64(int32(order.Uint32(boffset)))
+	name, err := readString(s.content, offset)
+	if err != nil {
+		return "", fmt.Errorf("object name offset not read: %w", err)
+	}
+	return name, nil
 }
 
 func (s *snapshotObjectReader) objectNameIndex(name string) (int, bool, error) {

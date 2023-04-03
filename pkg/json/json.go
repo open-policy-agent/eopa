@@ -915,6 +915,12 @@ func (o ObjectBinary) Names() []string {
 	return names
 }
 
+func (o ObjectBinary) NamesIndex(i int) string {
+	name, err := o.content.ObjectNamesIndex(i)
+	checkError(err)
+	return name
+}
+
 func (o ObjectBinary) Set(name string, value Json) {
 	o.setImpl(name, value)
 }
@@ -947,8 +953,7 @@ func (o ObjectBinary) valueImpl(name string) File {
 }
 
 func (o ObjectBinary) Iterate(i int) Json {
-	names := o.Names()
-	return o.Value(names[i])
+	return o.Value(o.NamesIndex(i))
 }
 
 func (ObjectBinary) RemoveIdx(int) {

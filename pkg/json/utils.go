@@ -18,13 +18,12 @@ func PathSegments(path string) []string {
 	return segs
 }
 
+func bytesToString(b []byte) string {
+	return unsafe.String(unsafe.SliceData(b), len(b))
+}
+
 func readOnlyStringBytes(s string) []byte {
-	var b []byte
-	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	bh.Data = (*reflect.StringHeader)(unsafe.Pointer(&s)).Data
-	bh.Len = len(s)
-	bh.Cap = len(s)
-	return b
+	return unsafe.Slice(unsafe.StringData(s), len(s))
 }
 
 func isEmptyValue(v reflect.Value) bool {

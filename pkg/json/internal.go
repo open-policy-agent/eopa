@@ -61,6 +61,9 @@ type objectReader interface {
 	// ObjectNames returns the property names. The names are returned in lexical order.
 	ObjectNames() ([]string, error)
 
+	// ObjectNamesIndex returns the property names at 'i'.
+	ObjectNamesIndex(i int) (string, error)
+
 	// ObjectName returns the name offset to the name.
 	ObjectNameOffset(name string) (int64, bool, error)
 
