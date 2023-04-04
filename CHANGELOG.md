@@ -1,5 +1,15 @@
 ## Changelog
 
+### v1.0.1
+
+* Performance improvements for queries of "all of `data`", like `load eval [...] data` or
+  `GET /v1/data` with Load's API.
+* Fix bug when referencing a bundle via `load eval bundle.tar.gz` (without explicitly loading it
+  as a bundle via `-b`). This ensures compatibility with how OPA operates in these circumstances.
+* Restructure parts of the gRPC API to make it more resource-focussed.
+* Change the exit code for license validation related errors from 2 to 3 -- to differentiate them
+  from any other errors.
+
 ### v1.0.0
 
 This release marks the first general availability release of Styra Load.

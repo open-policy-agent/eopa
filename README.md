@@ -1,6 +1,6 @@
 # Styra Load-Private
 
-![OPA v0.50.2](https://openpolicyagent.org/badge/v0.50.2)
+![OPA v0.51.0](https://openpolicyagent.org/badge/v0.51.0)
 
 ## Build
 
