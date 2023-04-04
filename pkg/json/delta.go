@@ -339,11 +339,15 @@ func (d *deltaObjectReaderImpl) ObjectNames() ([]string, error) {
 }
 
 func (d *deltaObjectReaderImpl) ObjectNamesIndex(i int) (string, error) {
-	s, err := d.ObjectNames()
+	noff, err := d.objectNameOffset(i)
 	if err != nil {
 		return "", err
 	}
-	return s[i], nil
+	n, err := readString(d.content, noff)
+	if err != nil {
+		return "", err
+	}
+	return n, nil
 }
 
 func (d *deltaObjectReaderImpl) objectNameOffset(i int) (int64, error) {
