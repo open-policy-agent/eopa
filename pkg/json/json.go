@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding"
 	gojson "encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -57,6 +58,7 @@ var (
 	rightCurlyBracketBytes = []byte("}")
 	commaBytes             = []byte(",")
 	colonBytes             = []byte(":")
+	errPathNotFound        = errors.New("json: path not found")
 )
 
 // Iterable is implemented by both Arrays and Objects.
@@ -124,8 +126,7 @@ func (n Null) extractImpl(ptr []string) (Json, error) {
 	if len(ptr) == 0 {
 		return n, nil
 	}
-
-	return nil, fmt.Errorf("json: path not found")
+	return nil, errPathNotFound
 }
 
 func (n Null) Find(search Path, finder Finder) {
@@ -202,7 +203,7 @@ func (b Bool) extractImpl(ptr []string) (Json, error) {
 		return b, nil
 	}
 
-	return nil, fmt.Errorf("json: path not found")
+	return nil, errPathNotFound
 }
 
 func (b Bool) Find(search Path, finder Finder) {
@@ -279,7 +280,7 @@ func (f Float) extractImpl(ptr []string) (Json, error) {
 		return f, nil
 	}
 
-	return nil, fmt.Errorf("json: path not found")
+	return nil, errPathNotFound
 }
 
 func (f Float) Find(search Path, finder Finder) {
@@ -502,7 +503,7 @@ func (s String) extractImpl(ptr []string) (Json, error) {
 		return s, nil
 	}
 
-	return nil, fmt.Errorf("json: path not found")
+	return nil, errPathNotFound
 }
 
 func (s String) Find(search Path, finder Finder) {
@@ -650,11 +651,11 @@ func (a ArrayBinary) extractImpl(ptr []string) (Json, error) {
 
 	i, err := parseInt(ptr[0])
 	if err != nil {
-		return nil, fmt.Errorf("json: path not found")
+		return nil, errPathNotFound
 	}
 
 	if i < 0 || i >= a.Len() {
-		return nil, fmt.Errorf("json: path not found")
+		return nil, errPathNotFound
 	}
 
 	return a.Value(i).extractImpl(ptr[1:])
@@ -672,8 +673,17 @@ func (a ArrayBinary) Walk(state *DecodingState, walker Walker) {
 	arrayWalk(a, state, walker)
 }
 
-func (a ArrayBinary) Clone(bool) File {
-	return a
+func (a ArrayBinary) Clone(deepCopy bool) File {
+	j := make([]File, a.Len())
+	for i := 0; i < len(j); i++ {
+		v := a.valueImpl(i)
+		if deepCopy {
+			v = v.Clone(true)
+		}
+		j[i] = v
+	}
+
+	return NewArray(j...)
 }
 
 func (a ArrayBinary) String() string {
@@ -803,11 +813,11 @@ func (a *ArraySlice) extractImpl(ptr []string) (Json, error) {
 
 	i, err := parseInt(ptr[0])
 	if err != nil {
-		return nil, fmt.Errorf("json: path not found")
+		return nil, errPathNotFound
 	}
 
 	if i < 0 || i >= a.Len() {
-		return nil, fmt.Errorf("json: path not found")
+		return nil, errPathNotFound
 	}
 
 	return a.Value(i).extractImpl(ptr[1:])
@@ -1020,7 +1030,7 @@ func (o ObjectBinary) extractImpl(ptr []string) (Json, error) {
 
 	v := o.Value(ptr[0])
 	if v == nil {
-		return nil, fmt.Errorf("json: path not found")
+		return nil, errPathNotFound
 	}
 
 	return v.extractImpl(ptr[1:])
@@ -1038,8 +1048,20 @@ func (o ObjectBinary) Walk(state *DecodingState, walker Walker) {
 	objectWalk(o, state, walker)
 }
 
-func (o ObjectBinary) Clone(bool) File {
-	return o
+func (o ObjectBinary) Clone(deepCopy bool) File {
+	properties, offsets, err := o.content.objectNameValueOffsets()
+	checkError(err)
+
+	for i := 0; i < len(properties); i++ {
+		v := newFile(o.content, offsets[i])
+		if deepCopy {
+			v = v.Clone(true)
+		}
+
+		properties[i].value = v
+	}
+
+	return &ObjectMap{properties}
 }
 
 func (o ObjectBinary) String() string {
@@ -1269,7 +1291,7 @@ func (o *ObjectMap) extractImpl(ptr []string) (Json, error) {
 
 	v := o.Value(ptr[0])
 	if v == nil {
-		return nil, fmt.Errorf("json: path not found")
+		return nil, errPathNotFound
 	}
 
 	return v.extractImpl(ptr[1:])
