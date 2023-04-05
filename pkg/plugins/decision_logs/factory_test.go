@@ -73,18 +73,18 @@ output:
 buffer:
   type: memory
   max_bytes: 120
-  flush_count: 100
-  flush_period: 10s
-  flush_bytes: 12
+  flush_at_count: 100
+  flush_at_period: 10s
+  flush_at_bytes: 12
 output:
   type: console
  `,
 			checks: isConfig(Config{
 				memoryBuffer: &memBufferOpts{
-					FlushCount:  100,
-					FlushBytes:  12,
-					FlushPeriod: "10s",
-					MaxBytes:    120,
+					FlushAtCount:  100,
+					FlushAtBytes:  12,
+					FlushAtPeriod: "10s",
+					MaxBytes:      120,
 				},
 				outputConsole: &outputConsoleOpts{},
 			}),
@@ -249,6 +249,80 @@ output:
 					},
 					Array:    true,
 					Compress: true,
+				},
+			}),
+		},
+		{
+			note: "service output with oauth2",
+			mgr: `services:
+- name: knownservice
+  url: "http://knownservice/prefix"
+  credentials:
+    oauth2:
+      token_url: "https://otherservice.com"
+      client_id: mememe
+      client_secret: sesamememe
+      scopes:
+      - foo
+      - bar
+`,
+			config: `
+output:
+  type: service
+  service: knownservice
+  resource: decisionlogs`,
+			checks: isConfig(Config{
+				memoryBuffer: &memBufferOpts{
+					MaxBytes: defaultMemoryMaxBytes,
+				},
+				outputHTTP: &outputHTTPOpts{
+					URL:      "http://knownservice/prefix/decisionlogs",
+					Timeout:  "10s",
+					Array:    true,
+					Compress: true,
+					OAuth2: &httpAuthOAuth2{
+						Enabled:      true,
+						TokenURL:     "https://otherservice.com",
+						ClientKey:    "mememe",
+						ClientSecret: "sesamememe",
+						Scopes:       []string{"foo", "bar"},
+					},
+				},
+			}),
+		},
+		{
+			note: "service output with tls",
+			mgr: `services:
+- name: knownservice
+  url: "http://knownservice/prefix"
+  tls:
+    ca_cert: testdata/ca.pem
+  credentials:
+    client_tls:
+      cert: testdata/cert.pem
+      private_key: testdata/key.pem
+`,
+			config: `
+output:
+  type: service
+  service: knownservice
+  resource: decisionlogs`,
+			checks: isConfig(Config{
+				memoryBuffer: &memBufferOpts{
+					MaxBytes: defaultMemoryMaxBytes,
+				},
+				outputHTTP: &outputHTTPOpts{
+					URL:      "http://knownservice/prefix/decisionlogs",
+					Timeout:  "10s",
+					Array:    true,
+					Compress: true,
+					TLS: &httpAuthTLS{
+						Enabled: true,
+						Certificates: []certs{
+							{Key: "key\n", Cert: "cert\n"},
+						},
+						RootCAs: "ca\n",
+					},
 				},
 			}),
 		},

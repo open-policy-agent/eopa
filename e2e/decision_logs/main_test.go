@@ -6,9 +6,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -213,6 +216,112 @@ plugins:
 	}
 }
 
+func TestDecisionLogsMemoryBatching(t *testing.T) {
+	ctx := context.Background()
+
+	policy := `
+package test
+import future.keywords
+
+# always succeeds, but adds nd_builtin_cache entry
+coin if rand.intn("coin", 2)
+`
+
+	t.Run("flush_at_count", func(t *testing.T) {
+		config := `
+plugins:
+  load_decision_logger:
+    drop_decision: /test/drop
+    mask_decision: /test/mask
+    buffer:
+      type: memory
+      flush_at_count: 2
+    output:
+      type: console
+`
+		load, loadOut, loadErr := loadLoad(t, config, policy, false)
+		if err := load.Start(); err != nil {
+			t.Fatal(err)
+		}
+		waitForLog(ctx, t, loadErr, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+
+		{ // act 1: first request, not logged yet
+			resp, err := http.Post("http://localhost:28181/v1/data/test/coin", jsonType, nil)
+			if err != nil {
+				t.Fatalf("http request: %v", err)
+			}
+			defer resp.Body.Close()
+			if exp, act := 200, resp.StatusCode; exp != act {
+				t.Fatalf("expected status %d, got %d", exp, act)
+			}
+		}
+
+		{ // assert 1: no decision logs
+			time.Sleep(20 * time.Millisecond)
+			exp, act := ``, loadOut.String()
+			if diff := cmp.Diff(exp, act); diff != "" {
+				t.Fatalf("unexpected console logs: (-want, +got):\n%s", diff)
+			}
+		}
+
+		{ // act 2: second request, triggers flush
+			resp, err := http.Post("http://localhost:28181/v1/data/test/coin", jsonType, nil)
+			if err != nil {
+				t.Fatalf("http request: %v", err)
+			}
+			defer resp.Body.Close()
+			if exp, act := 200, resp.StatusCode; exp != act {
+				t.Fatalf("expected status %d, got %d", exp, act)
+			}
+		}
+
+		_ = collectDL(ctx, t, loadOut, false, 2) // if we pass this, we've got two logs
+	})
+
+	t.Run("flush_at_period", func(t *testing.T) {
+		config := `
+plugins:
+  load_decision_logger:
+    drop_decision: /test/drop
+    mask_decision: /test/mask
+    buffer:
+      type: memory
+      flush_at_period: 1s
+    output:
+      type: console
+`
+		load, loadOut, loadErr := loadLoad(t, config, policy, false)
+		if err := load.Start(); err != nil {
+			t.Fatal(err)
+		}
+		waitForLog(ctx, t, loadErr, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+
+		{ // act 1: first request, not logged yet
+			resp, err := http.Post("http://localhost:28181/v1/data/test/coin", jsonType, nil)
+			if err != nil {
+				t.Fatalf("http request: %v", err)
+			}
+			defer resp.Body.Close()
+			if exp, act := 200, resp.StatusCode; exp != act {
+				t.Fatalf("expected status %d, got %d", exp, act)
+			}
+		}
+
+		{ // assert: no decision logs (yet)
+			time.Sleep(100 * time.Millisecond)
+			exp, act := ``, loadOut.String()
+			if diff := cmp.Diff(exp, act); diff != "" {
+				t.Fatalf("unexpected console logs: (-want, +got):\n%s", diff)
+			}
+		}
+
+		time.Sleep(time.Second)
+		_ = collectDL(ctx, t, loadOut, false, 1) // if we pass this, we've got one log
+	})
+}
+
+const jsonType = "application/json"
+
 func TestDecisionLogsServiceOutput(t *testing.T) {
 	ctx := context.Background()
 	policy := `
@@ -307,6 +416,159 @@ plugins:
 	}
 }
 
+func TestDecisionLogsServiceOutputWithOAuth2(t *testing.T) {
+	ctx := context.Background()
+	policy := `
+package test
+import future.keywords
+
+coin if rand.intn("coin", 2)
+`
+	configFmt := `
+services:
+- name: "dl-sink"
+  url: "%[1]s/prefix"
+  credentials:
+    oauth2:
+      client_id: mememe
+      client_secret: sesamememe
+      token_url: "%[1]s/token"
+plugins:
+  load_decision_logger:
+    output:
+      type: service
+      service: dl-sink
+`
+	buf := bytes.Buffer{}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/token":
+			w.Header().Add("content-type", jsonType)
+			if err := json.NewEncoder(w).Encode(map[string]any{"access_token": "sometoken"}); err != nil {
+				w.WriteHeader(http.StatusForbidden)
+			}
+			return
+		case r.URL.Path != "/prefix/logs":
+		case r.Method != http.MethodPost:
+		default: // all matches
+			src, _ := gzip.NewReader(r.Body)
+			io.Copy(&buf, src)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	t.Cleanup(ts.Close)
+	load, _, loadErr := loadLoad(t, fmt.Sprintf(configFmt, ts.URL), policy, false)
+	if err := load.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waitForLog(ctx, t, loadErr, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	{ // act: send API request
+		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
+		if err != nil {
+			t.Fatalf("http request: %v", err)
+		}
+		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if exp, act := 200, resp.StatusCode; exp != act {
+			t.Fatalf("expected status %d, got %d", exp, act)
+		}
+	}
+
+	_ = collectDL(ctx, t, &buf, true, 1)
+}
+
+func TestDecisionLogsServiceOutputWithTLS(t *testing.T) {
+	log.SetFlags(log.Llongfile)
+	ctx := context.Background()
+	policy := `
+package test
+import future.keywords
+
+coin if rand.intn("coin", 2)
+`
+	configFmt := `
+services:
+- name: "dl-sink"
+  url: "%[1]s/prefix"
+  tls:
+    ca_cert: testdata/tls/ca.pem
+  credentials:
+    client_tls:
+      cert: testdata/tls/client-cert.pem
+      private_key: testdata/tls/client-key.pem
+plugins:
+  load_decision_logger:
+    output:
+      type: service
+      service: dl-sink
+`
+	buf := bytes.Buffer{}
+	caCert, err := os.ReadFile("testdata/tls/ca.pem")
+	if err != nil {
+		t.Fatal(err)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path != "/prefix/logs":
+		case r.Method != http.MethodPost:
+		default: // all matches
+			src, _ := gzip.NewReader(r.Body)
+			io.Copy(&buf, src)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	srv := &http.Server{
+		Addr:    "127.0.0.1:9999",
+		Handler: mux,
+		TLSConfig: &tls.Config{
+			ClientCAs:  caCertPool,
+			ClientAuth: tls.RequireAndVerifyClientCert,
+		},
+	}
+	go srv.ListenAndServeTLS("testdata/tls/server-cert.pem", "testdata/tls/server-key.pem")
+	t.Cleanup(func() { _ = srv.Close() })
+
+	config := fmt.Sprintf(configFmt, "https://127.0.0.1:9999")
+	load, _, loadErr := loadLoad(t, config, policy, false)
+	if err := load.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waitForLog(ctx, t, loadErr, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	{ // act: send API request
+		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
+		if err != nil {
+			t.Fatalf("http request: %v", err)
+		}
+		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if exp, act := 200, resp.StatusCode; exp != act {
+			t.Fatalf("expected status %d, got %d", exp, act)
+		}
+	}
+
+	_ = collectDL(ctx, t, &buf, true, 1)
+}
+
 func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	var silent bool
 	logLevel := "debug" // Needed for checking if server is ready
@@ -325,7 +587,7 @@ func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *byt
 	}
 	policyPath := filepath.Join(dir, "eval.rego")
 	if err := os.WriteFile(policyPath, []byte(policy), 0x777); err != nil {
-		t.Fatalf("write config: %v", err)
+		t.Fatalf("write policy: %v", err)
 	}
 
 	args := []string{
@@ -352,7 +614,7 @@ func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *byt
 			panic(err)
 		}
 		load.Wait()
-		if testing.Verbose() && !silent {
+		if testing.Verbose() && t.Failed() && !silent {
 			t.Logf("load stdout:\n%s", stdout.String())
 			t.Logf("load stderr:\n%s", stderr.String())
 		}

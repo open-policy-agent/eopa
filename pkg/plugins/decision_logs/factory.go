@@ -2,6 +2,7 @@ package decisionlogs
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/util"
@@ -100,6 +101,36 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 		c.outputHTTP.Array = true
 		c.outputHTTP.Compress = true
 
+		if oauth2 := cfg.Credentials.OAuth2; oauth2 != nil {
+			c.outputHTTP.OAuth2 = &httpAuthOAuth2{
+				Enabled:      true,
+				ClientKey:    oauth2.ClientID,
+				ClientSecret: oauth2.ClientSecret,
+				TokenURL:     oauth2.TokenURL,
+				Scopes:       oauth2.Scopes,
+			}
+		}
+		if tls := cfg.Credentials.ClientTLS; tls != nil {
+			cert, err := os.ReadFile(tls.Cert)
+			if err != nil {
+				return nil, err
+			}
+			key, err := os.ReadFile(tls.PrivateKey)
+			if err != nil {
+				return nil, err
+			}
+			c.outputHTTP.TLS = &httpAuthTLS{
+				Enabled:      true,
+				Certificates: []certs{{Cert: string(cert), Key: string(key)}},
+			}
+			if cfg.TLS != nil {
+				caCert, err := os.ReadFile(cfg.TLS.CACert)
+				if err != nil {
+					return nil, err
+				}
+				c.outputHTTP.TLS.RootCAs = string(caCert)
+			}
+		}
 	case "console":
 		c.outputConsole = new(outputConsoleOpts)
 		if err := util.Unmarshal(c.Output, c.outputConsole); err != nil {

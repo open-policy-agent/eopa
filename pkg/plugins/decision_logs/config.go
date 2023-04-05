@@ -21,24 +21,25 @@ type Config struct {
 }
 
 type memBufferOpts struct {
-	MaxBytes    int    `json:"max_bytes"`    // Maximum buffer size (in bytes) to allow before applying backpressure upstream
-	FlushCount  int    `json:"flush_count"`  // Number of messages at which the batch should be flushed. If 0 disables count based batching.
-	FlushBytes  int    `json:"flush_bytes"`  // Amount of bytes at which the batch should be flushed. If 0 disables size based batching.
-	FlushPeriod string `json:"flush_period"` // period in which an incomplete batch should be flushed regardless of its size (e.g. 1s)
+	MaxBytes      int    `json:"max_bytes"`       // Maximum buffer size (in bytes) to allow before applying backpressure upstream
+	FlushAtCount  int    `json:"flush_at_count"`  // Number of messages at which the batch should be flushed. If 0 disables count based batching.
+	FlushAtBytes  int    `json:"flush_at_bytes"`  // Amount of bytes at which the batch should be flushed. If 0 disables size based batching.
+	FlushAtPeriod string `json:"flush_at_period"` // period in which an incomplete batch should be flushed regardless of its size (e.g. 1s)
 }
 
 const defaultMemoryMaxBytes = 524288000 // 500M
 
 func (m *memBufferOpts) String() string {
-	if m.FlushBytes > 0 || m.FlushCount > 0 || m.FlushPeriod != "" {
+	if m.FlushAtBytes > 0 || m.FlushAtCount > 0 || m.FlushAtPeriod != "" {
 		return fmt.Sprintf(`memory:
   limit: %d
   batch_policy:
     enabled: true
     count: %d
     byte_size: %d
-    period: %s`, m.MaxBytes, m.FlushCount, m.FlushBytes, m.FlushPeriod)
+    period: %s`, m.MaxBytes, m.FlushAtCount, m.FlushAtBytes, m.FlushAtPeriod)
 	}
+
 	return fmt.Sprintf(`memory:
   limit: %d
 `, m.MaxBytes)
@@ -66,7 +67,29 @@ type outputHTTPOpts struct {
 	Headers  map[string]string `json:"headers,omitempty"`
 	Array    bool              `json:"array"` // send batches as arrays of json blobs (default: lines of json blobs)
 	Compress bool              `json:"compress"`
+
+	OAuth2 *httpAuthOAuth2 `json:"oauth2,omitempty"`
+	TLS    *httpAuthTLS    `json:"tls,omitempty"`
 	// TODO(sr): add retry, batching
+}
+
+type httpAuthOAuth2 struct {
+	Enabled      bool     `json:"enabled"`
+	ClientKey    string   `json:"client_key"`
+	ClientSecret string   `json:"client_secret"`
+	TokenURL     string   `json:"token_url"`
+	Scopes       []string `json:"scopes,omitempty"`
+}
+
+type httpAuthTLS struct {
+	Enabled      bool    `json:"enabled"`
+	Certificates []certs `json:"client_certs"`
+	RootCAs      string  `json:"root_cas,omitempty"`
+}
+
+type certs struct {
+	Key  string `json:"key"`
+	Cert string `json:"cert"`
 }
 
 func (s *outputHTTPOpts) String() string {
@@ -80,14 +103,21 @@ func (s *outputHTTPOpts) String() string {
 		processors = append(processors, map[string]any{"compress": map[string]any{"algorithm": "gzip"}})
 	}
 
-	j, err := json.Marshal(map[string]any{"http_client": map[string]any{
+	m := map[string]any{
 		"url":     s.URL,
 		"timeout": s.Timeout,
 		"batching": map[string]any{
 			"period":     "10ms",
 			"processors": processors,
 		},
-	}})
+	}
+	if s.OAuth2 != nil {
+		m["oauth2"] = s.OAuth2
+	}
+	if s.TLS != nil {
+		m["tls"] = s.TLS
+	}
+	j, err := json.Marshal(map[string]any{"http_client": m})
 	if err != nil {
 		panic(err)
 	}
