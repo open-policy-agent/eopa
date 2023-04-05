@@ -664,12 +664,12 @@ func (s *State) findReg(v Local) *registersList {
 	return r
 }
 
-func (l Local) localOrConst()            {}
-func (b BoolConst) localOrConst()        {}
-func (s StringIndexConst) localOrConst() {}
+func (Local) localOrConst()            {}
+func (BoolConst) localOrConst()        {}
+func (StringIndexConst) localOrConst() {}
 
-func watchContext(ctx context.Context) (*cancel, func()) {
-	var cancel cancel
+func watchContext(ctx context.Context) (*cancel, context.CancelFunc) {
+	var c cancel
 
 	exit := make(chan struct{})
 	go func() {
@@ -678,10 +678,10 @@ func watchContext(ctx context.Context) (*cancel, func()) {
 		case <-exit:
 		}
 
-		cancel.Cancel()
+		c.Cancel()
 	}()
 
-	return &cancel, func() { close(exit) }
+	return &c, func() { close(exit) }
 }
 
 func (c *cancel) Cancel() {
