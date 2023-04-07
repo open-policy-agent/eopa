@@ -194,6 +194,10 @@ type ObjectMapCompact[T indexable] struct {
 }
 
 func NewObjectMapCompact(properties map[string]File, interning map[interface{}]*[]string) Object {
+	if o := NewObjectMapCompactStrings(properties, interning); o != nil {
+		return o
+	}
+
 	switch len(properties) {
 	case 0:
 		return zeroObject
