@@ -64,8 +64,14 @@ func setupTest(t *testing.T, storeDataInput string, storePolicyInputs map[string
 		}
 	}
 	ctx := context.Background()
-	server := grpc_plugin.New(pluginMgr(ctx, t, store, storeDataInput))
+	mgr := pluginMgr(ctx, t, store, storeDataInput)
+	config, err := grpc_plugin.Factory().Validate(mgr, []byte("addr: :9090")) // Note(philip): This is a no-op right now.
+	if err != nil {
+		log.Fatal(err)
+	}
+	server := grpc_plugin.New(mgr, config.(grpc_plugin.Config))
 	go func() {
+		// Plug in the custom listener, and run the server.
 		if err := server.Serve(lis); err != nil {
 			log.Fatalf("Server exited with error: %v", err)
 		}

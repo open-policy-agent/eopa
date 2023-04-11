@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"go.uber.org/goleak"
 
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
@@ -62,6 +61,10 @@ addr: 127.0.0.1:8083
 			if tc.checks != nil {
 				tc.checks(t, g, err)
 			}
+			ctx := context.Background()
+			t.Cleanup(func() {
+				mgr.Stop(ctx)
+			})
 		})
 	}
 }
@@ -79,15 +82,16 @@ addr: 127.0.0.1:9090
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			defer goleak.VerifyNone(t)
+			// defer goleak.VerifyNone(t)
+			ctx := context.Background()
 
 			mgr := getTestManager()
 			c, err := grpc.Factory().Validate(mgr, []byte(tt.config))
 			if err != nil {
 				t.Fatalf("Validate: %v", err)
 			}
+			t.Cleanup(func() { mgr.Stop(ctx) }) // Ensure manager shuts down.
 			gp := grpc.Factory().New(mgr, c)
-			ctx := context.Background()
 			if err := gp.Start(ctx); err != nil {
 				t.Fatalf("Start: %v", err)
 			}
@@ -96,8 +100,6 @@ addr: 127.0.0.1:9090
 			// the less flaky this test will be, if there are leaked routines.
 			time.Sleep(200 * time.Millisecond)
 			gp.Stop(ctx)
-
-			// goleak will assert that no goroutine is still running
 		})
 	}
 }

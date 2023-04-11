@@ -12,14 +12,19 @@ package grpc
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/topdown"
@@ -28,58 +33,125 @@ import (
 	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 )
 
+// AuthenticationScheme enumerates the supported authentication schemes. The
+// authentication scheme determines how client identities are established.
+type AuthenticationScheme int
+
+// Set of supported authentication schemes.
+const (
+	AuthenticationOff AuthenticationScheme = iota
+	AuthenticationToken
+	AuthenticationTLS
+)
+
+var supportedTLSVersions = []uint16{tls.VersionTLS10, tls.VersionTLS11, tls.VersionTLS12, tls.VersionTLS13}
+
+// AuthorizationScheme enumerates the supported authorization schemes. The authorization
+// scheme determines how access to OPA is controlled.
+type AuthorizationScheme int
+
+// Set of supported authorization schemes.
+const (
+	AuthorizationOff AuthorizationScheme = iota
+	AuthorizationBasic
+)
+
+const defaultMinTLSVersion = tls.VersionTLS12
+
 // General gRPC server utilities.
+
+// Note(philip): Logically, the running server is structured as a wrapper
+// around an actual grpc.Server type. At runtime, the grpc.Server runs in
+// its own goroutine, and is optionally supported by a certLoop goroutine
+// that checks to see if certificates have changed on disk since the last
+// refresh. If the certificate files changed, the certLoop triggers a
+// complete shutdown-and-restart sequence for the grpc.Server, to ensure
+// that it comes back up under the correct TLS config. This sequence will
+// also result in the shutdown and respawning of the certLoop goroutine.
+// This process roughly mimics that of the OPA HTTP server's certLoop.
 type Server struct {
 	mtx                 sync.RWMutex
 	preparedEvalQueries *cache
 	manager             *plugins.Manager
 	grpcServer          *grpc.Server
 	decisionIDFactory   func() string
-	// logger                 func(context.Context, *Info) error
 	// metrics                Metrics
 	interQueryBuiltinCache iCache.InterQueryCache
 	// allPluginsOkOnce       bool
 	runtimeData     *ast.Term
 	ndbCacheEnabled bool
 	store           storage.Store
+	logger          logging.Logger // inherited from manager.
+
+	authentication      AuthenticationScheme
+	authorization       AuthorizationScheme
+	cert                *tls.Certificate
+	certMtx             sync.RWMutex
+	certFilename        string
+	certFileHash        []byte
+	certKeyFilename     string
+	certKeyFileHash     []byte
+	certRefreshInterval time.Duration
+	minTLSVersion       uint16
+
+	tlsRootCACertFilename string
+	certPool              *x509.CertPool
+
+	// No certPool, since we aren't doing mTLS.
+	certLoopHaltChannel             chan struct{}
+	certLoopShutdownCompleteChannel chan struct{}
 
 	loadv1.UnimplementedDataServiceServer
 	loadv1.UnimplementedPolicyServiceServer
 	loadv1.UnimplementedBulkServiceServer
 }
 
-// type pathValuePair struct {
-// 	path  string
-// 	value interface{}
-// }
-
 const pqMaxCacheSize = 100
 
 // map of unsafe builtins
 var unsafeBuiltinsMap = map[string]struct{}{ast.HTTPSend.Name: {}}
 
-func New(manager *plugins.Manager) *Server {
-	grpcServer := grpc.NewServer()
+// Validation of TLS config happens upstream in (factory).Validate().
+func New(manager *plugins.Manager, config Config) *Server {
+	creds := insecure.NewCredentials()
 
 	server := Server{
 		mtx:                    sync.RWMutex{},
 		preparedEvalQueries:    newCache(pqMaxCacheSize),
 		manager:                manager,
-		grpcServer:             grpcServer,
 		interQueryBuiltinCache: iCache.NewInterQueryCache(manager.InterQueryBuiltinCacheConfig()),
 		store:                  manager.Store,
+		logger:                 manager.Logger(),
+		certFilename:           config.TLS.CertFile,
+		certKeyFilename:        config.TLS.CertKeyFile,
+		tlsRootCACertFilename:  config.TLS.RootCACertFile,
+		certRefreshInterval:    time.Duration(config.TLS.CertRefreshInterval),
+	}
+	if config.Authentication != "" {
+		server.authentication = getAuthenticationScheme(config.Authentication)
+	}
+	if config.Authorization != "" {
+		server.authorization = getAuthorizationScheme(config.Authorization)
+	}
+	if config.TLS.MinVersion != "" {
+		server.minTLSVersion = getMinTLSVersion(config.TLS.MinVersion)
 	}
 
-	loadv1.RegisterDataServiceServer(grpcServer, &server)
-	loadv1.RegisterPolicyServiceServer(grpcServer, &server)
-	loadv1.RegisterBulkServiceServer(grpcServer, &server)
-	reflection.Register(grpcServer)
+	if tlsCreds := server.getTLSCredentials(); tlsCreds != nil {
+		creds = tlsCreds
+	}
+
+	// Fills in all grpc.Server-related parts of the Server struct.
+	server.initGRPCServer(creds)
+
 	return &server
 }
 
@@ -95,7 +167,175 @@ func (s *Server) GracefulStop() {
 	s.grpcServer.GracefulStop()
 }
 
+// This function initializes a gRPC server from the Server state, namely
+// certFile and certKeyFile. It should only be used by the plugin,
+// certLoop, and (*Server).New() method.
+func (s *Server) initGRPCServer(creds credentials.TransportCredentials) error {
+	var serverOptions []grpc.ServerOption
+	var stopCertLoopChannel chan struct{}
+	var certLoopShutdownCompleteChannel chan struct{}
+
+	if creds != nil {
+		serverOptions = append(serverOptions, grpc.Creds(creds))
+	}
+
+	// Lock the server during the gRPC server swapout process.
+	s.mtx.Lock()
+	s.grpcServer = grpc.NewServer(serverOptions...)
+	s.certLoopHaltChannel = stopCertLoopChannel
+	s.certLoopShutdownCompleteChannel = certLoopShutdownCompleteChannel
+
+	// The RegisterXXXServiceServer calls enable each service's API methods
+	// individually. This allows generating code for multiple services, but
+	// only using a subset of those services on a gRPC server instance.
+	loadv1.RegisterDataServiceServer(s.grpcServer, s)
+	loadv1.RegisterPolicyServiceServer(s.grpcServer, s)
+	loadv1.RegisterBulkServiceServer(s.grpcServer, s)
+	reflection.Register(s.grpcServer)
+	s.mtx.Unlock()
+
+	return nil
+}
+
+func (s *Server) getTLSCredentials() credentials.TransportCredentials {
+	// Load normal TLS public/private key pair.
+	// Note(philip): All other TLS options are gated behind the server
+	// being able to load up its own TLS config. As best I can tell, this
+	// roughly mimics the OPA HTTPS connection logic.
+	if s.certFilename != "" && s.certKeyFilename != "" {
+		var tlsConfig tls.Config
+		var err error
+		// Attempt to load the server's initial cert keypair.
+		cert, err := tls.LoadX509KeyPair(s.certFilename, s.certKeyFilename)
+		if err != nil {
+			s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to load public/private key pair: " + err.Error()})
+			return nil
+		}
+		s.cert = &cert
+		tlsConfig.GetCertificate = s.getCertificate
+		// Load the files up again, and hash them.
+		// TODO(philip): We should fix this in the future to pull up the
+		// key pair just once, and then hash the byte buffers. That will
+		// require mirroring the changes to grpc/certs.go as well.
+		certHash, err := hash(s.certFilename)
+		if err != nil {
+			s.logger.Error("Failed to refresh server certificate: %s.", err.Error())
+			s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to refresh server certificate: " + err.Error()})
+			return nil
+		}
+		s.certFileHash = certHash
+		certKeyHash, err := hash(s.certKeyFilename)
+		if err != nil {
+			s.logger.Error("Failed to refresh server certificate: %s.", err.Error())
+			s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to refresh server certificate: " + err.Error()})
+			return nil
+		}
+		s.certKeyFileHash = certKeyHash
+
+		// Load custom root CA Cert for mTLS usecases.
+		// Note(philip): This currently only loads up a custom root CA cert *on
+		// startup*. Cert refresh will not pick up changes to this certificate.
+		if s.tlsRootCACertFilename != "" {
+			pool, err := loadCertPool(s.tlsRootCACertFilename)
+			if err != nil {
+				s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to load root CA certificate: " + s.tlsRootCACertFilename})
+				return nil
+			}
+			s.certPool = pool // TODO(philip): Do we even need this after initial TLS setup?
+			tlsConfig.ClientCAs = pool
+		}
+
+		if s.authentication == AuthenticationTLS {
+			tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+		}
+
+		if s.minTLSVersion != 0 {
+			tlsConfig.MinVersion = s.minTLSVersion
+		} else {
+			tlsConfig.MinVersion = defaultMinTLSVersion
+		}
+
+		return credentials.NewTLS(&tlsConfig)
+	}
+	return nil
+}
+
+// Note(philip): Relies on (factory).Validate being called upstream.
+func getAuthenticationScheme(k string) AuthenticationScheme {
+	switch k {
+	case "token":
+		return AuthenticationToken
+	case "tls":
+		return AuthenticationTLS
+	case "off":
+		return AuthenticationOff
+	default:
+		return AuthenticationOff
+	}
+}
+
+// Note(philip): Relies on (factory).Validate being called upstream.
+func getAuthorizationScheme(k string) AuthorizationScheme {
+	switch k {
+	case "basic":
+		return AuthorizationBasic
+	case "off":
+		return AuthorizationOff
+	default:
+		return AuthorizationOff
+	}
+}
+
+// Note(philip): Relies on (factory).Validate being called upstream.
+func getMinTLSVersion(k string) uint16 {
+	switch k {
+	case "1.0":
+		return tls.VersionTLS10
+	case "1.1":
+		return tls.VersionTLS11
+	case "1.2":
+		return tls.VersionTLS12
+	case "1.3":
+		return tls.VersionTLS13
+	default:
+		return tls.VersionTLS12
+	}
+}
+
 // Borrowed functions from open-policy-agent/opa/server/server.go:
+
+// WithAuthentication sets authentication scheme to use on the server.
+func (s *Server) WithAuthentication(scheme AuthenticationScheme) *Server {
+	s.authentication = scheme
+	return s
+}
+
+// WithAuthorization sets authorization scheme to use on the server.
+func (s *Server) WithAuthorization(scheme AuthorizationScheme) *Server {
+	s.authorization = scheme
+	return s
+}
+
+// WithCertificate sets the server-side certificate that the server will use.
+func (s *Server) WithCertificate(cert *tls.Certificate) *Server {
+	s.cert = cert
+	return s
+}
+
+// WithCertificatePaths sets the server-side certificate and keyfile paths
+// that the server will periodically check for changes, and reload if necessary.
+func (s *Server) WithCertificatePaths(certFilename, keyFilename string, refresh time.Duration) *Server {
+	s.certFilename = certFilename
+	s.certKeyFilename = keyFilename
+	s.certRefreshInterval = refresh
+	return s
+}
+
+// WithCertPool sets the server-side cert pool that the server will use.
+func (s *Server) WithCertPool(pool *x509.CertPool) *Server {
+	s.certPool = pool
+	return s
+}
 
 // WithDecisionIDFactory sets a function on the server to generate decision IDs.
 func (s *Server) WithDecisionIDFactory(f func() string) *Server {
@@ -107,6 +347,24 @@ func (s *Server) WithDecisionIDFactory(f func() string) *Server {
 func (s *Server) WithRuntimeData(term *ast.Term) *Server {
 	s.runtimeData = term
 	return s
+}
+
+func (s *Server) WithMinTLSVersion(minTLSVersion uint16) *Server {
+	if isMinTLSVersionSupported(minTLSVersion) {
+		s.minTLSVersion = minTLSVersion
+	} else {
+		s.minTLSVersion = defaultMinTLSVersion
+	}
+	return s
+}
+
+func isMinTLSVersionSupported(TLSVersion uint16) bool {
+	for _, version := range supportedTLSVersions {
+		if TLSVersion == version {
+			return true
+		}
+	}
+	return false
 }
 
 // Utility function for path reachability.
@@ -301,3 +559,15 @@ func (s *Server) makeRego(_ context.Context,
 // 	}
 // 	return ""
 // }
+
+func loadCertPool(tlsCACertFile string) (*x509.CertPool, error) {
+	caCertPEM, err := os.ReadFile(tlsCACertFile)
+	if err != nil {
+		return nil, fmt.Errorf("read CA cert file: %s", err.Error())
+	}
+	pool := x509.NewCertPool()
+	if ok := pool.AppendCertsFromPEM(caCertPEM); !ok {
+		return nil, fmt.Errorf("failed to parse CA cert %q", tlsCACertFile)
+	}
+	return pool, nil
+}
