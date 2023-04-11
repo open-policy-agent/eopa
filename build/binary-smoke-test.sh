@@ -27,7 +27,7 @@ cleanup() {
     rm -rf builddir
 }
 
-trap "cleanup" ERR
+trap "cleanup" EXIT
 
 # assert_contains checks if the actual string contains the expected string.
 assert_contains() {
@@ -55,6 +55,9 @@ load parse test/cli/smoke/test.rego
 
 # Tar paths 
 load build --output o3.tar.gz test/cli/smoke
+load eval --bundle o3.tar.gz --input test/cli/smoke/input.json data.test.foo.bar -fpretty --fail
+load bundle convert o3.tar.gz o9.tar.gz
+load test --bundle o9.tar.gz -fpretty -v
 github_actions_group assert_contains '/test/cli/smoke/test.rego' "$(tar -tf o3.tar.gz /test/cli/smoke/test.rego)"
 
 # Verify load bjson
@@ -62,7 +65,6 @@ load bundle convert test/cli/smoke/golden-bundle.tar.gz o4.tar.gz
 load eval --bundle o4.tar.gz --input test/cli/smoke/input.json data.test.result --fail
 
 load exec --bundle o4.tar.gz --decision test/result test/cli/smoke/input.json
-load test -b o4.tar.gz
 load check -b o4.tar.gz
 load deps -b o4.tar.gz data
 load inspect -a o4.tar.gz
@@ -84,6 +86,8 @@ cp .signatures.json builddir/.
 
 load build --bundle --signing-key private_key.pem --verification-key public_key.pem builddir/ -o o5.tar.gz
 
+load eval --bundle o5.tar.gz --input test/cli/smoke/input.json data.test.result --fail
+
 $LOAD_EXEC run -s --addr ":8183" -b o5.tar.gz --verification-key=public_key.pem &
 last_pid=$!
 sleep 2
@@ -94,5 +98,3 @@ echo "::endgroup::"
 echo "::group:: Data files - correct namespaces"
 assert_contains "data.namespace | test${PATH_SEPARATOR}cli${PATH_SEPARATOR}smoke${PATH_SEPARATOR}namespace${PATH_SEPARATOR}data.json" "$(load inspect test/cli/smoke)"
 echo "::endgroup::"
-
-cleanup
