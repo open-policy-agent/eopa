@@ -101,6 +101,10 @@ type ArraySliceCompact[T indexable] struct {
 }
 
 func NewArrayCompact(elements []File) Array {
+	if a := NewArrayCompactStrings(elements); a != nil {
+		return a
+	}
+
 	switch len(elements) {
 	case 0:
 		return zeroArray
