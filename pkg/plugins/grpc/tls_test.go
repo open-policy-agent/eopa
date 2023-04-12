@@ -48,8 +48,8 @@ func TestServerTLS(t *testing.T) {
         tls:
           cert_file: %[1]s
           cert_key_file: %[2]s
-          cert_refresh_interval: %[3]d
-`, serverCertPath, serverKeyPath, 1000)
+          cert_refresh_interval: %[3]s
+`, serverCertPath, serverKeyPath, "1000s")
 
 	// Create the new store with the dummy data.
 	storeDataInput := `{
@@ -110,8 +110,8 @@ func TestTLSIsMandatoryWhenEnabled(t *testing.T) {
         tls:
           cert_file: %[1]s
           cert_key_file: %[2]s
-          cert_refresh_interval: %[3]d
-`, serverCertPath, serverKeyPath, 1000)
+          cert_refresh_interval: %[3]s
+`, serverCertPath, serverKeyPath, "1000s")
 
 	// Create the new store with the dummy data.
 	storeDataInput := `{
@@ -160,9 +160,9 @@ func TestMutualTLSHappyPath(t *testing.T) {
         tls:
           cert_file: %[1]s
           cert_key_file: %[2]s
-          cert_refresh_interval: %[3]d
+          cert_refresh_interval: %[3]s
           ca_cert_file: %[4]s
-`, serverCertPath, serverKeyPath, 1000, caCertPath)
+`, serverCertPath, serverKeyPath, "1000s", caCertPath)
 
 	// Create the new store with the dummy data.
 	storeDataInput := `{
@@ -240,9 +240,9 @@ func TestMutualTLSFailureClientLacksCert(t *testing.T) {
         tls:
           cert_file: %[1]s
           cert_key_file: %[2]s
-          cert_refresh_interval: %[3]d
+          cert_refresh_interval: %[3]s
           ca_cert_file: %[4]s
-`, serverCertPath, serverKeyPath, 1000, caCertPath)
+`, serverCertPath, serverKeyPath, "1000s", caCertPath)
 
 	// Create the new store with the dummy data.
 	storeDataInput := `{
@@ -299,9 +299,9 @@ func TestMutualTLSFailureWrongRootCA(t *testing.T) {
         tls:
           cert_file: %[1]s
           cert_key_file: %[2]s
-          cert_refresh_interval: %[3]d
+          cert_refresh_interval: %[3]s
           ca_cert_file: %[4]s
-`, serverCertPath, serverKeyPath, 1000, caCertPath)
+`, serverCertPath, serverKeyPath, "1000s", caCertPath)
 
 	// Create the new store with the dummy data.
 	storeDataInput := `{

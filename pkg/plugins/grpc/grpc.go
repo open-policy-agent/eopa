@@ -133,7 +133,6 @@ func New(manager *plugins.Manager, config Config) *Server {
 		certFilename:           config.TLS.CertFile,
 		certKeyFilename:        config.TLS.CertKeyFile,
 		tlsRootCACertFilename:  config.TLS.RootCACertFile,
-		certRefreshInterval:    time.Duration(config.TLS.CertRefreshInterval),
 	}
 	if config.Authentication != "" {
 		server.authentication = getAuthenticationScheme(config.Authentication)
@@ -143,6 +142,10 @@ func New(manager *plugins.Manager, config Config) *Server {
 	}
 	if config.TLS.MinVersion != "" {
 		server.minTLSVersion = getMinTLSVersion(config.TLS.MinVersion)
+	}
+	if config.TLS.CertRefreshInterval != "" {
+		// Use the "smuggled" value from upstream. Relies on (*factory).Validate.
+		server.certRefreshInterval = config.TLS.validatedCertRefreshDuration
 	}
 
 	if tlsCreds := server.getTLSCredentials(); tlsCreds != nil {

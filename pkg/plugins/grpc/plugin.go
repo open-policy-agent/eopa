@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
@@ -24,10 +25,11 @@ type Config struct {
 	TLS struct {
 		CertFile            string `json:"cert_file,omitempty"`
 		CertKeyFile         string `json:"cert_key_file,omitempty"`
-		CertRefreshInterval int    `json:"cert_refresh_interval,omitempty"` // duration between cert hash checks
+		CertRefreshInterval string `json:"cert_refresh_interval,omitempty"` // duration to wait between cert hash checks.
 		RootCACertFile      string `json:"ca_cert_file,omitempty"`          // Path to the root CA certificate for verifying clients. If not provided, this defaults to TLS using the host’s root CA set.
 		// SystemCARequired    bool   `json:"system_ca_required,omitempty"`    // require system certificate appended with root CA certificate.
-		MinVersion string `json:"min_version,omitempty"`
+		MinVersion                   string        `json:"min_version,omitempty"`
+		validatedCertRefreshDuration time.Duration // intentionally unexported
 	} `json:"tls,omitempty"`
 }
 

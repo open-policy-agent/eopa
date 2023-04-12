@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/util"
@@ -40,28 +41,22 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 		return nil, fmt.Errorf("need at least one address to serve from")
 	}
 	// Check client authentication scheme.
-	if c.Authentication != "" {
-		switch c.Authentication {
-		case "token", "tls", "off":
-		default:
-			return nil, fmt.Errorf("Unknown authentication scheme: %s", c.Authentication)
-		}
+	switch c.Authentication {
+	case "", "token", "tls", "off":
+	default:
+		return nil, fmt.Errorf("Unknown authentication scheme: %s", c.Authentication)
 	}
 	// Check client authorization scheme.
-	if c.Authorization != "" {
-		switch c.Authorization {
-		case "basic", "off":
-		default:
-			return nil, fmt.Errorf("Unknown authorization scheme: %s", c.Authorization)
-		}
+	switch c.Authorization {
+	case "", "basic", "off":
+	default:
+		return nil, fmt.Errorf("Unknown authorization scheme: %s", c.Authorization)
 	}
 	// Check minimum allowed TLS version.
-	if c.TLS.MinVersion != "" {
-		switch c.TLS.MinVersion {
-		case "1.0", "1.1", "1.2", "1.3":
-		default:
-			return nil, fmt.Errorf("Unknown TLS version: %s", c.TLS.MinVersion)
-		}
+	switch c.TLS.MinVersion {
+	case "", "1.0", "1.1", "1.2", "1.3":
+	default:
+		return nil, fmt.Errorf("Unknown TLS version: %s", c.TLS.MinVersion)
 	}
 
 	// Make sure *both* parameters are provided for server-side TLS.
@@ -70,6 +65,14 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 	case c.TLS.CertFile != "" && c.TLS.CertKeyFile != "":
 	default:
 		return nil, fmt.Errorf("tls.cert_file and tls.cert_private_key_file must be specified together")
+	}
+
+	if c.TLS.CertRefreshInterval != "" {
+		if refresh, err := time.ParseDuration(c.TLS.CertRefreshInterval); err == nil {
+			c.TLS.validatedCertRefreshDuration = refresh // Smuggle in the duration value.
+		} else {
+			return nil, fmt.Errorf("invalid duration for tls.cert_refresh_interval: %w", err)
+		}
 	}
 
 	return c, nil

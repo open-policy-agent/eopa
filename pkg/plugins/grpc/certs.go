@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"io"
 	"os"
-	"time"
 
 	ftime "github.com/styrainc/load-private/pkg/plugins/grpc/utils"
 	"google.golang.org/grpc/credentials"
@@ -27,8 +26,7 @@ type Loop func(chan struct{}, chan struct{}) error
 func (s *Server) certLoop() Loop {
 	return func(stopC chan struct{}, shutdownCompleteC chan struct{}) error {
 		for {
-			expiryDuration := s.certRefreshInterval
-			timer, cancel := ftime.TimerWithCancel(time.Duration(expiryDuration) * time.Second)
+			timer, cancel := ftime.TimerWithCancel(s.certRefreshInterval)
 			select {
 			case <-stopC:
 				cancel()
