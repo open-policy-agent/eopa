@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"go.uber.org/goleak"
 
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage/inmem"
@@ -343,6 +344,7 @@ output:
 
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
+			defer goleak.VerifyNone(t)
 			mgr := getTestManager(tc.mgr)
 			config, err := Factory().Validate(mgr, []byte(tc.config))
 			if tc.checks != nil {

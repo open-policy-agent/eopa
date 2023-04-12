@@ -119,7 +119,6 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/godbus/dbus v0.0.0-20190726142602-4481cbc300e2 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
@@ -137,7 +136,6 @@ require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.13.0 // indirect
-	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
 	github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
@@ -282,5 +280,11 @@ require (
 // expensive on windows. We only need glog as a third-party dependency (of badger),
 // and badger only calls it to die with a log messsage.
 replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
+
+// keyring is used as an upstream dependency for a few libraries (including
+// benthos), and has an ongoing bug that has to be worked around:
+//   https://github.com/99designs/keyring/issues/103
+// We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
+replace github.com/99designs/keyring => ./build/replacements/github.com/99designs/keyring
 
 replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.51.1-0.20230410104315-b6acddbb5d18
