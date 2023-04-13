@@ -873,9 +873,7 @@ func (with with) Execute(state *State) (bool, uint32, error) {
 	local, wvalue := with.Local(), with.Value()
 
 	value := state.Value(local)
-	defer func() {
-		state.SetValue(local, value)
-	}()
+	defer state.SetValue(local, value)
 
 	pathLen := with.PathLen()
 	if pathLen == 0 {

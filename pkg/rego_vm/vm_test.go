@@ -13,6 +13,7 @@ import (
 	"github.com/open-policy-agent/opa/compile"
 	"github.com/open-policy-agent/opa/ir"
 
+	bjson "github.com/styrainc/load-private/pkg/json"
 	"github.com/styrainc/load-private/pkg/vm"
 )
 
@@ -55,7 +56,7 @@ func loadBundle(tb testing.TB, buffer []byte) *bundle.Bundle {
 	return &b
 }
 
-func testCompiler(tb testing.TB, policy ir.Policy, input string, query string, result string) {
+func testCompiler(tb testing.TB, policy ir.Policy, input string, query string, result string, data any) {
 	executable, err := vm.NewCompiler().WithPolicy(&policy).Compile()
 	if err != nil {
 		tb.Fatal(err)
@@ -65,7 +66,8 @@ func testCompiler(tb testing.TB, policy ir.Policy, input string, query string, r
 
 	var inp interface{} = ast.MustParseTerm(input)
 
-	nvm := vm.NewVM().WithExecutable(executable)
+	bdata := bjson.MustNew(data)
+	nvm := vm.NewVM().WithExecutable(executable).WithDataJSON(bdata)
 	v, err := nvm.Eval(ctx, query, vm.EvalOpts{
 		Input: &inp,
 		Time:  time.Now(),
@@ -102,7 +104,7 @@ const simpleResult = `{{"result": true}}`
 func TestCompiler(t *testing.T) {
 	bundle := createBundle(t, simpleRego)
 	policy := setup(t, bundle, simpleQuery)
-	testCompiler(t, policy, simpleInput, simpleQuery, simpleResult)
+	testCompiler(t, policy, simpleInput, simpleQuery, simpleResult, bundle.Data)
 }
 
 func BenchmarkCompiler(b *testing.B) {
@@ -111,7 +113,7 @@ func BenchmarkCompiler(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		testCompiler(b, policy, simpleInput, simpleQuery, "")
+		testCompiler(b, policy, simpleInput, simpleQuery, "", bundle.Data)
 	}
 }
 
@@ -128,7 +130,7 @@ func TestMonster(t *testing.T) {
 	query := "play"
 	bundle := createBundle(t, benchMonsterRego)
 	policy := setup(t, bundle, query)
-	testCompiler(t, policy, benchMonsterInput, query, benchMonsterResult)
+	testCompiler(t, policy, benchMonsterInput, query, benchMonsterResult, bundle.Data)
 }
 
 func BenchmarkMonster(b *testing.B) {
@@ -138,7 +140,7 @@ func BenchmarkMonster(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		testCompiler(b, policy, benchMonsterInput, query, "")
+		testCompiler(b, policy, benchMonsterInput, query, "", bundle.Data)
 	}
 }
 
@@ -158,7 +160,7 @@ var benchEntitlementsQuery = `main/main`
 func TestEntitlements(t *testing.T) {
 	bundle := loadBundle(t, benchEntitlementsBundle)
 	policy := setup(t, bundle, benchEntitlementsQuery)
-	testCompiler(t, policy, benchEntitlementsInput, benchEntitlementsQuery, benchEntitlementsResult)
+	testCompiler(t, policy, benchEntitlementsInput, benchEntitlementsQuery, benchEntitlementsResult, bundle.Data)
 }
 
 func BenchmarkEntitlements(b *testing.B) {
@@ -167,6 +169,6 @@ func BenchmarkEntitlements(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		testCompiler(b, policy, benchEntitlementsInput, benchEntitlementsQuery, "")
+		testCompiler(b, policy, benchEntitlementsInput, benchEntitlementsQuery, "", bundle.Data)
 	}
 }
