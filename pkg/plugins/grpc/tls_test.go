@@ -63,9 +63,7 @@ func TestServerTLS(t *testing.T) {
 	if err := mgr.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		mgr.Stop(ctx)
-	})
+	defer mgr.Stop(ctx)
 
 	waitForStorePath(ctx, t, store, "/test/a")
 
@@ -125,9 +123,7 @@ func TestTLSIsMandatoryWhenEnabled(t *testing.T) {
 	if err := mgr.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		mgr.Stop(ctx)
-	})
+	defer mgr.Stop(ctx)
 
 	waitForStorePath(ctx, t, store, "/test/a")
 
@@ -176,9 +172,7 @@ func TestMutualTLSHappyPath(t *testing.T) {
 	if err := mgr.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		mgr.Stop(ctx)
-	})
+	defer mgr.Stop(ctx)
 
 	waitForStorePath(ctx, t, store, "/test/a")
 
@@ -256,9 +250,7 @@ func TestMutualTLSFailureClientLacksCert(t *testing.T) {
 	if err := mgr.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		mgr.Stop(ctx)
-	})
+	defer mgr.Stop(ctx)
 
 	waitForStorePath(ctx, t, store, "/test/a")
 
@@ -281,8 +273,8 @@ func TestMutualTLSFailureClientLacksCert(t *testing.T) {
 	if response, err := client.UpdateData(ctx, &loadv1.UpdateDataRequest{Data: &loadv1.DataDocument{Path: "/test/a", Document: structpb.NewNumberValue(5)}}); err == nil {
 		t.Fatalf("expected error, got: %v", response)
 	} else {
-		if !strings.Contains(err.Error(), "tls: bad certificate") {
-			t.Fatalf("expected tls error, got: %v", err)
+		if !strings.Contains(err.Error(), "tls: bad certificate") && !strings.Contains(err.Error(), "write: broken pipe") {
+			t.Fatalf("expected tls error or broken pipe (from early client hangup), got: %v", err)
 		}
 	}
 }
@@ -315,9 +307,7 @@ func TestMutualTLSFailureWrongRootCA(t *testing.T) {
 	if err := mgr.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		mgr.Stop(ctx)
-	})
+	defer mgr.Stop(ctx)
 
 	waitForStorePath(ctx, t, store, "/test/a")
 
