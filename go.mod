@@ -285,6 +285,6 @@ replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 // benthos), and has an ongoing bug that has to be worked around:
 //   https://github.com/99designs/keyring/issues/103
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
-replace github.com/99designs/keyring => ./build/replacements/github.com/99designs/keyring
+replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
 replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.51.1-0.20230413180734-2cad43f93983
