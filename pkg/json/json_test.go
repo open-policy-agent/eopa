@@ -842,7 +842,9 @@ func TestObject(t *testing.T) {
 
 	// Set and Value
 
-	o.Set("c", NewString("c"))
+	if v, ok := o.Set("c", NewString("c")); ok {
+		o = v
+	}
 
 	if names := o.Names(); !reflect.DeepEqual(names, []string{"a", "b", "c", "d", "e"}) {
 		t.Errorf("names don't match: %v", names)

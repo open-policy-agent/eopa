@@ -20,7 +20,9 @@ func TestUnmarshalObject(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		parsed.Set(property, v)
+		if o, ok := parsed.Set(property, v); ok {
+			parsed = o
+		}
 		return nil
 	}); err != nil {
 		t.Errorf("parsing failure: %s", err)

@@ -92,7 +92,7 @@ func NewArrayCompactStrings(elements []File) Array {
 	case 32:
 		return newArrayCompactStrings[[32]*String](elements)
 	default:
-		return NewArray2(elements)
+		return newArrayImpl(elements)
 	}
 }
 
@@ -127,7 +127,7 @@ func (a *ArraySliceCompactStrings[T]) Slice(i, j int) Array {
 		elements[k] = a.elements[i+k]
 	}
 
-	return NewArray2(elements)
+	return newArrayImpl(elements)
 }
 
 func (a *ArraySliceCompactStrings[T]) Len() int {

@@ -59,7 +59,7 @@ func (arraySliceBase[T]) clone(a T, deepCopy bool) Array {
 		j[i] = v
 	}
 
-	return NewArray2(j)
+	return newArrayImpl(j)
 }
 
 func (arraySliceBase[T]) JSON(a T) interface{} {
@@ -173,7 +173,7 @@ func NewArrayCompact(elements []File) Array {
 	case 32:
 		return newArrayCompact[[32]File](elements)
 	default:
-		return NewArray2(elements)
+		return newArrayImpl(elements)
 	}
 }
 
@@ -208,7 +208,7 @@ func (a *ArraySliceCompact[T]) Slice(i, j int) Array {
 		elements[k] = a.elements[i+k]
 	}
 
-	return NewArray2(elements)
+	return newArrayImpl(elements)
 }
 
 func (a *ArraySliceCompact[T]) Len() int {

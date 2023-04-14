@@ -692,7 +692,7 @@ func (a ArrayBinary) clone() Array {
 		c[i] = a.valueImpl(i)
 	}
 
-	return NewArray2(c)
+	return newArrayImpl(c)
 }
 
 func (a ArrayBinary) String() string {
@@ -708,10 +708,10 @@ type ArraySlice struct {
 }
 
 func NewArray(elements ...File) Array {
-	return &ArraySlice{elements}
+	return newArrayImpl(elements)
 }
 
-func NewArray2(elements []File) Array {
+func newArrayImpl(elements []File) Array {
 	return &ArraySlice{elements}
 }
 
@@ -1072,10 +1072,10 @@ type objectEntry struct {
 }
 
 func NewObject(properties map[string]File) Object {
-	return NewObject2(properties, nil)
+	return newObjectImpl(properties, nil)
 }
 
-func NewObject2(properties map[string]File, interning map[interface{}]*[]string) Object {
+func newObjectImpl(properties map[string]File, interning map[interface{}]*[]string) Object {
 	keys := make([]string, len(properties))
 	values := make([]interface{}, len(properties))
 
@@ -1263,7 +1263,7 @@ func (o *ObjectMap) keys() []string {
 
 // compare compares two JSON values, returning -1, 0, 1 if a is less
 // than b, a equals to b, or a is more than b, respectively.
-func compare(x Json, y Json) int {
+func compare(x File, y File) int {
 	ka, kb := jsonType(x), jsonType(y)
 
 	if ka == kb {
@@ -1280,7 +1280,7 @@ func compare(x Json, y Json) int {
 			}
 
 			for i := 0; i < a.Len(); i++ {
-				c := compare(a.Value(i), b.Value(i))
+				c := compare(a.valueImpl(i), b.valueImpl(i))
 				if c != 0 {
 					return c
 				}
@@ -1307,8 +1307,8 @@ func compare(x Json, y Json) int {
 					return c
 				}
 
-				aa := a.Value(keysa[i])
-				bb := b.Value(keysa[i])
+				aa := a.valueImpl(keysa[i])
+				bb := b.valueImpl(keysa[i])
 				if aa == nil || bb == nil {
 					panic(fmt.Sprintf("json: compared value for key '%s' not found", keysa[i]))
 				}
@@ -1361,7 +1361,7 @@ func compare(x Json, y Json) int {
 
 // jsonType returns a unique number for each type. Note that the caller should not assume anything about the numbers but that they are unique for each JSON type and they
 // can be used to order the types.
-func jsonType(j Json) int {
+func jsonType(j File) int {
 	switch j.(type) {
 	case Null:
 		return typeNil
@@ -1470,9 +1470,19 @@ func find(search Path, path []byte, doc Json, finder Finder) {
 	}
 }
 
+type unmarshaller struct {
+	strings map[string]*String
+	keys    map[interface{}]*[]string
+}
+
+func (u *unmarshaller) intern(v string) *String {
+	return internString(v, u.strings)
+}
+
 // New constructs a JSON object out of go native types. It supports the struct tags.
 func New(value interface{}) (Json, error) {
-	doc, err := unmarshal(reflect.ValueOf(value), reflect.TypeOf(value))
+	u := unmarshaller{strings: make(map[string]*String), keys: make(map[interface{}]*[]string)}
+	doc, err := u.unmarshal(reflect.ValueOf(value), reflect.TypeOf(value))
 	if err != nil {
 		return nil, fmt.Errorf("json: unable to encode to JSON: %w", err)
 	}
@@ -1552,7 +1562,7 @@ var (
 
 // unmarshal takes the value read from, but also its type. This because the type might not be available from the value itself, if it's of invalid type -- whereas
 // the caller might know it.
-func unmarshal(value reflect.Value, typ reflect.Type) (Json, error) {
+func (u *unmarshaller) unmarshal(value reflect.Value, typ reflect.Type) (Json, error) {
 	// Handle the gojson.Marshaler encoding.MarshalText interfaces. Note, their implemented semantics in the golang json package
 	// calls for writing JSON null, even if the implementation of the marshaller could handle writing a nil value.
 	if typ != nil {
@@ -1591,13 +1601,13 @@ func unmarshal(value reflect.Value, typ reflect.Type) (Json, error) {
 		return NewNull(), nil
 	case reflect.Interface:
 		if v := value.Elem(); v.IsValid() {
-			return unmarshal(value.Elem(), value.Elem().Type())
+			return u.unmarshal(value.Elem(), value.Elem().Type())
 		}
-		return unmarshal(value.Elem(), nil)
+		return u.unmarshal(value.Elem(), nil)
 	case reflect.Ptr:
-		return unmarshal(value.Elem(), typ.Elem())
+		return u.unmarshal(value.Elem(), typ.Elem())
 	case reflect.Array, reflect.Slice:
-		return unmarshalArray(value, value.Type().Elem())
+		return u.unmarshalArray(value, value.Type().Elem())
 	case reflect.Bool:
 		return NewBool(value.Bool()), nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -1618,17 +1628,17 @@ func unmarshal(value reflect.Value, typ reflect.Type) (Json, error) {
 			return NewFloat(gojson.Number(value.String())), nil
 		}
 
-		return NewString(value.String()), nil
+		return u.intern(value.String()), nil
 	case reflect.Map:
-		return unmarshalMap(value)
+		return u.unmarshalMap(value)
 	case reflect.Struct:
-		return unmarshalStruct(value)
+		return u.unmarshalStruct(value)
 	default:
 		return nil, fmt.Errorf("json: unsupported type: %v", value.Type())
 	}
 }
 
-func unmarshalArray(values reflect.Value, typ reflect.Type) (Json, error) {
+func (u *unmarshaller) unmarshalArray(values reflect.Value, typ reflect.Type) (Json, error) {
 	if values.Kind() == reflect.Slice && values.IsNil() {
 		return NewNull(), nil
 	}
@@ -1638,7 +1648,7 @@ func unmarshalArray(values reflect.Value, typ reflect.Type) (Json, error) {
 
 	for i := 0; i < n; i++ {
 		var err error
-		value, err := unmarshal(values.Index(i), typ)
+		value, err := u.unmarshal(values.Index(i), typ)
 		if err != nil {
 			return nil, err
 		}
@@ -1646,10 +1656,10 @@ func unmarshalArray(values reflect.Value, typ reflect.Type) (Json, error) {
 		a = append(a, value)
 	}
 
-	return NewArray(a...), nil
+	return NewArrayCompact(a), nil
 }
 
-func unmarshalMap(values reflect.Value) (Json, error) {
+func (u *unmarshaller) unmarshalMap(values reflect.Value) (Json, error) {
 	if values.IsNil() {
 		return NewNull(), nil
 	}
@@ -1663,36 +1673,36 @@ func unmarshalMap(values reflect.Value) (Json, error) {
 		for iter.Next() {
 			keyStr := iter.Key().String()
 
-			v, err := unmarshal(iter.Value(), elem)
+			v, err := u.unmarshal(iter.Value(), elem)
 			if err != nil {
 				return nil, err
 			}
 
-			m[keyStr] = v
+			m[u.intern(keyStr).Value()] = v
 		}
 
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		for iter.Next() {
 			keyStr := strconv.FormatInt(iter.Key().Int(), 10)
 
-			v, err := unmarshal(iter.Value(), elem)
+			v, err := u.unmarshal(iter.Value(), elem)
 			if err != nil {
 				return nil, err
 			}
 
-			m[keyStr] = v
+			m[u.intern(keyStr).Value()] = v
 		}
 
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		for iter.Next() {
 			keyStr := strconv.FormatUint(iter.Key().Uint(), 10)
 
-			v, err := unmarshal(iter.Value(), elem)
+			v, err := u.unmarshal(iter.Value(), elem)
 			if err != nil {
 				return nil, err
 			}
 
-			m[keyStr] = v
+			m[u.intern(keyStr).Value()] = v
 		}
 
 	default:
@@ -1715,19 +1725,19 @@ func unmarshalMap(values reflect.Value) (Json, error) {
 				keyStr = string(raw)
 			}
 
-			v, err := unmarshal(iter.Value(), elem)
+			v, err := u.unmarshal(iter.Value(), elem)
 			if err != nil {
 				return nil, err
 			}
 
-			m[keyStr] = v
+			m[u.intern(keyStr).Value()] = v
 		}
 	}
 
-	return NewObject(m), nil
+	return NewObjectMapCompact(m, u.keys), nil
 }
 
-func unmarshalStruct(values reflect.Value) (Json, error) {
+func (u *unmarshaller) unmarshalStruct(values reflect.Value) (Json, error) {
 	fields := internal.CachedTypeFields(values.Type())
 	m := make(map[string]File, len(fields))
 
@@ -1737,15 +1747,15 @@ func unmarshalStruct(values reflect.Value) (Json, error) {
 			continue
 		}
 
-		v, err := unmarshal(fv, fv.Type())
+		v, err := u.unmarshal(fv, fv.Type())
 		if err != nil {
 			return nil, err
 		}
 
-		m[f.Name] = v
+		m[u.intern(f.Name).Value()] = v
 	}
 
-	return NewObject(m), nil
+	return NewObjectMapCompact(m, u.keys), nil
 }
 
 // marshalStringJSON implements fast serialization of simple JSON strings. Everything but ASCII control characters (0-31), double quotes and backslash are safe, requiring no escaping.

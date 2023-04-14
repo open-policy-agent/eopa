@@ -54,8 +54,19 @@ func TestJSONCompare(t *testing.T) {
 	testJSONCompare(t, map[string]interface{}{"key1": "foo", "key2": "bar1"}, map[string]interface{}{"key1": "foo", "key2": "bar0"}, 1)
 
 	// Mixed types
+
 	testJSONCompare(t, nil, "foo", -1)
 	testJSONCompare(t, "foo", nil, 1)
 	testJSONCompare(t, "foo", float64(0), -1)
 	testJSONCompare(t, float64(0), "foo", 1)
+
+	// Binary types in arrays and objects
+
+	testJSONCompare(t, []interface{}{NewBlob([]byte("bar"))}, []interface{}{NewBlob([]byte("foo"))}, -1)
+	testJSONCompare(t, []interface{}{NewBlob([]byte("foo"))}, []interface{}{NewBlob([]byte("foo"))}, 0)
+	testJSONCompare(t, []interface{}{NewBlob([]byte("foo"))}, []interface{}{NewBlob([]byte("bar"))}, 1)
+
+	testJSONCompare(t, map[string]interface{}{"key1": NewBlob([]byte("bar"))}, map[string]interface{}{"key1": NewBlob([]byte("foo"))}, -1)
+	testJSONCompare(t, map[string]interface{}{"key1": NewBlob([]byte("foo"))}, map[string]interface{}{"key1": NewBlob([]byte("foo"))}, 0)
+	testJSONCompare(t, map[string]interface{}{"key1": NewBlob([]byte("foo"))}, map[string]interface{}{"key1": NewBlob([]byte("bar"))}, 1)
 }

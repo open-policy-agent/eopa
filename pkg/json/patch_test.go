@@ -3,7 +3,6 @@ package json
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"testing"
 )
 
@@ -675,7 +674,7 @@ func TestPatchBinary(t *testing.T) {
 			jpatched, err := test.Op.applyTo(test.Doc)
 			if err != nil {
 				t.Error(err)
-			} else if !reflect.DeepEqual(test.Expected, jpatched) {
+			} else if test.Expected.Compare(jpatched.(Object)) != 0 {
 				t.Errorf("%v != %v", test.Expected, jpatched)
 			}
 		})

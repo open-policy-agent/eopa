@@ -100,7 +100,7 @@ func (d *Decoder) Decode() (Json, error) {
 
 		trimmed := make([]File, len(arr))
 		copy(trimmed, arr)
-		return NewArray2(trimmed), nil
+		return newArrayImpl(trimmed), nil
 
 	case jsoniter.ObjectValue:
 		properties := make(map[string]File)
@@ -129,12 +129,16 @@ func (d *Decoder) Decode() (Json, error) {
 }
 
 func (d *Decoder) intern(v string) *String {
-	if s, ok := d.strings[v]; ok {
+	return internString(v, d.strings)
+}
+
+func internString(v string, strings map[string]*String) *String {
+	if s, ok := strings[v]; ok {
 		return s
 	}
 
 	s := String(v)
-	d.strings[v] = &s
+	strings[v] = &s
 
 	return &s
 }

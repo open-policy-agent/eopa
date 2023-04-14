@@ -266,7 +266,7 @@ func NewObjectMapCompact(properties map[string]File, interning map[interface{}]*
 	case 32:
 		return newObjectMapCompact[[32]File](properties, interning)
 	default:
-		return NewObject2(properties, interning)
+		return newObjectImpl(properties, interning)
 	}
 }
 
@@ -364,14 +364,7 @@ func (o *ObjectMapCompact[T]) setImpl(name string, value File) (Object, bool) {
 		return o, false
 	}
 
-	keys := o.keys()
-	p := make(map[string]File, len(keys))
-
-	for i, key := range keys {
-		p[key] = o.values[i]
-	}
-
-	n, _ := NewObject(p).setImpl(name, value)
+	n, _ := o.clone(false).setImpl(name, value)
 	return n, true
 }
 
