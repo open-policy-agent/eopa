@@ -55,6 +55,29 @@ Build with `make build`, run with `make run`, publish with `make push`.
 - `make test`: run unittests
 - `make check`: run linter
 
+## Supporting services
+
+While this repository tracks the code required to build Styra Load, some additional services have been built to help with the free trial, telemetry, and other "supporting" tasks.
+
+### Free Trial services
+
+ - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/load-trial-generator)] :: `load-trial-generator`: Generates licenses for each free trial signup.
+   - `kubectl` context: `kubectl config use-context load-trial-generator-prod`
+ - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/load-trial-activation-tracker)] :: `load-trial-activation-tracker`: Pushes first-time license activation events to Marketo.
+   - `kubectl` context: `kubectl config use-context load-trial-generator-prod` (Same group as the `-generator` service.)
+ - Concourse job [[source](https://github.com/StyraInc/concourse-defs/tree/main/load/licenses-reaper)] :: `load/licenses-reaper`: Weekly job to remove expired trial licenses from Keygen.sh.
+
+### Telemetry services
+
+ - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/load-telemetry)] :: `load-telemetry`: Load version of the "OPA Telemetry" service.
+   - `kubectl` context: `kubectl config use-context load-telemetry-prod`
+ - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/load-telemetry-dashboard)] :: `load-telemetry-dashboard`: Load version of the "OPA Telemetry Dashboard" service.
+   - `kubectl` context: `kubectl config use-context load-telemetry-prod`
+   - Dashboard URL: https://ops-prod.k8s.styra.com/v1/service/load-telemetry-dashboard.load-telemetry:8080/
+
+### Monitoring
+
+ - NewRelic Dashboard [[Link](https://one.newrelic.com/dashboards/detail/MzU5NDA4OHxWSVp8REFTSEJPQVJEfGRhOjMxNTUwNjQ?account=3594088&state=0e224a3f-d3cc-492f-a8c6-fb2fd1caa0e0)]: `Load Health`: Tracks the key metrics / status of all `load-trial-*` and `load-telemetry*` services.
 ## FAQ
 
 ### How can I update the `load` branch of the github.com/StyraInc/opa fork?
