@@ -55,22 +55,35 @@ jobs:
           args: --timeout=10m
       - name: gcassert
         run: gcassert ./...
+      # Do a pre-flight check to ensure we don't bother with `buf` unless
+      # we have protobuf changes present.
+      - name: Check for proto/ file changes in git diffs.
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            proto:
+              - 'proto/**'
       # Note(philip): We need to install the `buf` CLI before we can lint our protobuf sources.
       # The action uses the repo-scoped GITHUB_TOKEN to allow one of its dependencies (Octokit)
       # to skip Github API rate limits when fetching the latest buf build artifact.
       - uses: bufbuild/buf-setup-action@v1
+        if: steps.changes.outputs.proto == 'true'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - uses: bufbuild/buf-lint-action@v1
+        if: steps.changes.outputs.proto == 'true'
         with:
           input: proto
       # Now that we've passed linting, we check to make sure the build artifacts are identical
       # to what was checked in.
       - name: Install protoc-gen-go dependencies
+        if: steps.changes.outputs.proto == 'true'
         run: |
           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
       - name: Fail if `buf generate` diff detected between generated/checked in files
+        if: steps.changes.outputs.proto == 'true'
         run: |-
           cd proto && buf generate
           if [[ "$(git diff --name-status | wc -l)" != 0 ]]; then
@@ -251,13 +264,24 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      # Do a pre-flight check to ensure we don't push up a BSR draft for
+      # PRs that don't touch the protobuf files at all.
+      - name: Check for proto/ file changes in git diffs.
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            proto:
+              - 'proto/**'
       # Note(philip): We need to install the `buf` CLI before we can lint our protobuf sources.
       # The action uses the repo-scoped GITHUB_TOKEN to allow one of its dependencies (Octokit)
       # to skip Github API rate limits when fetching the latest buf build artifact.
       - uses: bufbuild/buf-setup-action@v1
+        if: steps.changes.outputs.proto == 'true'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - uses: bufbuild/buf-push-action@v1
+        if: steps.changes.outputs.proto == 'true'
         with:
           buf_token: ${{ secrets.BUF_TOKEN }}
           draft: true
