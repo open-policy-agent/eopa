@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	bjson "github.com/styrainc/load-private/pkg/json"
-	"github.com/styrainc/load-private/pkg/store/internal/errors"
+	"github.com/styrainc/load-private/pkg/storage/errors"
 
 	"github.com/open-policy-agent/opa/storage"
 )

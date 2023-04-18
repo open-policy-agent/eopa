@@ -12,7 +12,7 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 
-	inmem "github.com/styrainc/load-private/pkg/store"
+	inmem "github.com/styrainc/load-private/pkg/storage"
 )
 
 const (

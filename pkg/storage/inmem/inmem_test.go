@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	bjson "github.com/styrainc/load-private/pkg/json"
-	"github.com/styrainc/load-private/pkg/store/internal/errors"
+	"github.com/styrainc/load-private/pkg/storage/errors"
 
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/util"
@@ -44,7 +44,7 @@ func TestInMemoryRead(t *testing.T) {
 		{"/a/-1", errors.NewNotFoundErrorWithHint(storage.MustParsePath("/a/-1"), errors.OutOfRangeMsg)},
 	}
 
-	store := NewFromObject(data)
+	store := NewFromObject(data).(*store)
 	ctx := context.Background()
 
 	for idx, tc := range tests {
@@ -130,7 +130,7 @@ func TestInMemoryWrite(t *testing.T) {
 
 	for i, tc := range tests {
 		data := loadSmallTestData()
-		store := NewFromObject(data)
+		store := NewFromObject(data).(*store)
 
 		// Perform patch and check result
 		value := loadExpectedSortedResult(tc.value)
@@ -221,7 +221,7 @@ func TestInMemoryWriteOfStruct(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			store := New()
+			store := New().(*store)
 			ctx := context.Background()
 
 			err := storage.WriteOne(ctx, store, storage.AddOp, storage.MustParsePath("/x"), bjson.MustNew(tc.value))
@@ -245,7 +245,7 @@ func TestInMemoryWriteOfStruct(t *testing.T) {
 func TestInMemoryTxnMultipleWrites(t *testing.T) {
 
 	ctx := context.Background()
-	store := NewFromObject(loadSmallTestData())
+	store := NewFromObject(loadSmallTestData()).(*store)
 	txn := storage.NewTransactionOrDie(ctx, store, storage.WriteParams)
 
 	// Perform a sequence of writes and then verify the read results are the
@@ -303,7 +303,7 @@ func TestInMemoryTxnMultipleWrites(t *testing.T) {
 
 	for _, r := range reads {
 		jsn := util.MustUnmarshalJSON([]byte(r.expected))
-		result, err := store.(BJSONReader).ReadBJSON(ctx, txn, storage.MustParsePath(r.path))
+		result, err := store.ReadBJSON(ctx, txn, storage.MustParsePath(r.path))
 		if err != nil || bjson.MustNew(jsn).Compare(result) != 0 {
 			t.Fatalf("Expected writer's read %v to be %v but got: %v (err: %v)", r.path, jsn, result, err)
 		}
@@ -317,7 +317,7 @@ func TestInMemoryTxnMultipleWrites(t *testing.T) {
 
 	for _, r := range reads {
 		jsn := util.MustUnmarshalJSON([]byte(r.expected))
-		result, err := store.(BJSONReader).ReadBJSON(ctx, txn, storage.MustParsePath(r.path))
+		result, err := store.ReadBJSON(ctx, txn, storage.MustParsePath(r.path))
 		if err != nil || bjson.MustNew(jsn).Compare(result) != 0 {
 			t.Fatalf("Expected reader's read %v to be %v but got: %v (err: %v)", r.path, jsn, result, err)
 		}
@@ -488,7 +488,7 @@ func TestInMemoryTxnPolicies(t *testing.T) {
 func TestInMemoryTriggers(t *testing.T) {
 
 	ctx := context.Background()
-	store := NewFromObject(loadSmallTestData())
+	store := NewFromObject(loadSmallTestData()).(*store)
 	writeTxn := storage.NewTransactionOrDie(ctx, store, storage.WriteParams)
 	readTxn := storage.NewTransactionOrDie(ctx, store)
 
@@ -508,7 +508,7 @@ func TestInMemoryTriggers(t *testing.T) {
 
 	_, err = store.Register(ctx, writeTxn, storage.TriggerConfig{
 		OnCommit: func(ctx context.Context, txn storage.Transaction, evt storage.TriggerEvent) {
-			result, err := store.(BJSONReader).ReadBJSON(ctx, txn, modifiedPath)
+			result, err := store.ReadBJSON(ctx, txn, modifiedPath)
 			if err != nil || bjson.MustNew(expectedValue).Compare(result) != 0 {
 				t.Fatalf("Expected result to be hello for trigger read but got: %v (err: %v)", result, err)
 			}
@@ -682,13 +682,12 @@ func loadSmallTestData() bjson.Object {
 	return bjson.MustNew(data).(bjson.Object)
 }
 
-func readOne(ctx context.Context, store storage.Store, path storage.Path) (bjson.Json, error) {
-	db := store.(BJSONReader)
-	txn, err := store.NewTransaction(ctx)
+func readOne(ctx context.Context, db *store, path storage.Path) (bjson.Json, error) {
+	txn, err := db.NewTransaction(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer store.Abort(ctx, txn)
+	defer db.Abort(ctx, txn)
 
 	return db.ReadBJSON(ctx, txn, path)
 }

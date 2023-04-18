@@ -11,8 +11,8 @@ import (
 	"go.uber.org/goleak"
 
 	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
+	inmem "github.com/styrainc/load-private/pkg/storage"
 	load_storage "github.com/styrainc/load-private/pkg/storage"
-	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
 func TestKafkaReconfigure(t *testing.T) {

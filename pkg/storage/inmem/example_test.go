@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	bjson "github.com/styrainc/load-private/pkg/json"
-	inmem "github.com/styrainc/load-private/pkg/store"
+	inmem "github.com/styrainc/load-private/pkg/storage"
 
 	"github.com/open-policy-agent/opa/storage"
 )

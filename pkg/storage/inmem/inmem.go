@@ -26,23 +26,11 @@ import (
 
 	bjson "github.com/styrainc/load-private/pkg/json"
 	"github.com/styrainc/load-private/pkg/plugins/bundle"
-	"github.com/styrainc/load-private/pkg/store/internal/merge"
+	"github.com/styrainc/load-private/pkg/storage/merge"
 
 	"github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/storage"
 )
-
-type BJSONReader interface {
-	ReadBJSON(context.Context, storage.Transaction, storage.Path) (bjson.Json, error)
-}
-
-type WriterUnchecked interface {
-	WriteUnchecked(context.Context, storage.Transaction, storage.PatchOp, storage.Path, interface{}) error
-}
-
-type DataPlugins interface {
-	RegisterDataPlugin(name string, path storage.Path)
-}
 
 // New returns an empty in-memory store.
 func New() storage.Store {
@@ -357,14 +345,6 @@ func (db *store) Write(ctx context.Context, txn storage.Transaction, op storage.
 	}
 
 	return db.WriteUnchecked(ctx, txn, op, path, value)
-}
-
-// WriteUnchecked is a convenience function to invoke the write unchecked.
-// It will create a new Transaction to perform the write with, and clean up after itself
-func WriteUnchecked(ctx context.Context, store storage.Store, op storage.PatchOp, path storage.Path, value interface{}) error {
-	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
-		return store.(WriterUnchecked).WriteUnchecked(ctx, txn, op, path, value)
-	})
 }
 
 func (h *handle) Unregister(_ context.Context, txn storage.Transaction) {

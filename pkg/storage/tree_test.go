@@ -9,7 +9,7 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 
 	"github.com/styrainc/load-private/pkg/json"
-	inmem "github.com/styrainc/load-private/pkg/store"
+	"github.com/styrainc/load-private/pkg/storage/inmem"
 	"github.com/styrainc/load-private/pkg/vm"
 )
 

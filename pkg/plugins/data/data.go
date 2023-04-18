@@ -20,7 +20,7 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/data/okta"
 	"github.com/styrainc/load-private/pkg/plugins/data/s3"
 	"github.com/styrainc/load-private/pkg/plugins/data/types"
-	inmem "github.com/styrainc/load-private/pkg/store"
+	inmem "github.com/styrainc/load-private/pkg/storage"
 )
 
 const Name = "data"

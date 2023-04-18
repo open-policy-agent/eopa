@@ -10,13 +10,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	fjson "github.com/styrainc/load-private/pkg/json"
-	inmem "github.com/styrainc/load-private/pkg/store"
+	"github.com/styrainc/load-private/pkg/storage/inmem"
 )
 
 var (
-	_ inmem.BJSONReader     = &store{}
-	_ inmem.WriterUnchecked = &store{}
-	_ inmem.DataPlugins     = &store{}
+	_ BJSONReader     = &store{}
+	_ WriterUnchecked = &store{}
+	_ DataPlugins     = &store{}
 )
 
 func TestStoreRead(t *testing.T) {

@@ -13,9 +13,21 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	bjson "github.com/styrainc/load-private/pkg/json"
-	inmem "github.com/styrainc/load-private/pkg/store"
+	"github.com/styrainc/load-private/pkg/storage/inmem"
 	"github.com/styrainc/load-private/pkg/vm"
 )
+
+type BJSONReader interface {
+	ReadBJSON(context.Context, storage.Transaction, storage.Path) (bjson.Json, error)
+}
+
+type WriterUnchecked interface {
+	WriteUnchecked(context.Context, storage.Transaction, storage.PatchOp, storage.Path, interface{}) error
+}
+
+type DataPlugins interface {
+	RegisterDataPlugin(name string, path storage.Path)
+}
 
 type (
 	// store implements a virtual store spanning a single
@@ -190,7 +202,7 @@ func (s *store) underlying(txn storage.Transaction) *transaction {
 }
 
 func (s *store) RegisterDataPlugin(name string, path storage.Path) {
-	s.root.(inmem.DataPlugins).RegisterDataPlugin(name, path)
+	s.root.(DataPlugins).RegisterDataPlugin(name, path)
 }
 
 // NewTransaction is called create a new transaction in the store.
@@ -294,7 +306,7 @@ func (txn *transaction) ReadBJSON(ctx context.Context, path storage.Path) (bjson
 		return nil, err
 	}
 
-	return s.(inmem.BJSONReader).ReadBJSON(ctx, t, path)
+	return s.(BJSONReader).ReadBJSON(ctx, t, path)
 }
 
 func (txn *transaction) WriteUnchecked(ctx context.Context, op storage.PatchOp, path storage.Path, doc interface{}) error {
@@ -308,7 +320,7 @@ func (txn *transaction) WriteUnchecked(ctx context.Context, op storage.PatchOp, 
 		return err
 	}
 
-	return s.(inmem.WriterUnchecked).WriteUnchecked(ctx, t, op, path, doc)
+	return s.(WriterUnchecked).WriteUnchecked(ctx, t, op, path, doc)
 }
 
 func (txn *transaction) Write(ctx context.Context, op storage.PatchOp, path storage.Path, doc interface{}) error {
@@ -392,7 +404,7 @@ func (txn *transaction) read(ctx context.Context, store storage.Store, path stor
 	}
 
 	switch s := store.(type) {
-	case inmem.BJSONReader:
+	case BJSONReader:
 		doc, err = s.ReadBJSON(ctx, t, path)
 	default:
 		doc, err = s.Read(ctx, t, path)
@@ -405,6 +417,14 @@ func (txn *transaction) read(ctx context.Context, store storage.Store, path stor
 	}
 
 	return doc, true, nil
+}
+
+// WriteUnchecked is a convenience function to invoke the write unchecked.
+// It will create a new Transaction to perform the write with, and clean up after itself
+func WriteUnchecked(ctx context.Context, store storage.Store, op storage.PatchOp, path storage.Path, value interface{}) error {
+	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
+		return store.(WriterUnchecked).WriteUnchecked(ctx, txn, op, path, value)
+	})
 }
 
 func init() {
