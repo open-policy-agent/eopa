@@ -76,14 +76,7 @@ func (x *Policy) GetText() string {
 	return ""
 }
 
-// ListPoliciesRequest returns the set of stored policies.
-//
-// This is equivalent in functionality to OPA's
-// [Policy REST API List method](https://www.openpolicyagent.org/docs/latest/rest-api/#list-policies).
-//
-// Warning: This request will enumerate *all* policies stored by the Load
-// instance. This can have substantial overheads if the policies are large
-// in size.
+// ListPoliciesRequest is used to start a ListPolicy operation.
 type ListPoliciesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -122,6 +115,8 @@ func (*ListPoliciesRequest) Descriptor() ([]byte, []int) {
 	return file_load_v1_policy_proto_rawDescGZIP(), []int{1}
 }
 
+// ListPoliciesResponse contains the list of all policies enumerated by a
+// ListPolicy operation.
 type ListPoliciesResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -169,18 +164,8 @@ func (x *ListPoliciesResponse) GetResults() []*Policy {
 	return nil
 }
 
-// CreatePolicyRequest allows inserting new policy code into the policy
-// store.
-//
-// This is equivalent in functionality to OPA's
-// [Policy REST API Create/Update method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-update-a-policy).
-//
-// Warning: Inserting a new policy will trigger a full recompilation
-// of *all* policies in the store, in order to ensure the new policy does
-// not break existing policies. This is a known performance hazard for the
-// OPA REST API, and remains a hazard for gRPC as well. Keeping the unique
-// number of policies down, or using Bundles are the recommended
-// workarounds for most OPA users.
+// CreatePolicyRequest provides the policy and path to insert it at for a
+// CreatePolicy operation.
 type CreatePolicyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -228,6 +213,7 @@ func (x *CreatePolicyRequest) GetPolicy() *Policy {
 	return nil
 }
 
+// CreatePolicyResponse is an empty confirmation message type.
 type CreatePolicyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -266,13 +252,7 @@ func (*CreatePolicyResponse) Descriptor() ([]byte, []int) {
 	return file_load_v1_policy_proto_rawDescGZIP(), []int{4}
 }
 
-// GetPolicyRequest allows inserting new policy code into the policy
-// store.
-//
-// This is roughly equivalent in functionality to OPA's
-// [Policy REST API Get method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-policy).
-//
-// Note: Only the raw policy text is returned in this version of the API.
+// GetPolicyRequest requires the path of the policy to fetch.
 type GetPolicyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -320,6 +300,8 @@ func (x *GetPolicyRequest) GetPath() string {
 	return ""
 }
 
+// GetPolicyResponse contains the retrieved Rego module from a GetPolicy
+// operation.
 type GetPolicyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -367,18 +349,8 @@ func (x *GetPolicyResponse) GetResult() *Policy {
 	return nil
 }
 
-// UpdatePolicyRequest allows updating a policy module in the policy
-// store.
-//
-// This is equivalent in functionality to OPA's
-// [Policy REST API Create/Update method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-update-a-policy).
-//
-// Warning: Modifying an existing policy will trigger a full recompilation
-// of *all* policies in the store, in order to ensure the updated policy does
-// not break existing policies. This is a known performance hazard for the
-// OPA REST API, and remains a hazard for gRPC as well. Keeping the unique
-// number of policies down, or using Bundles are the recommended
-// workarounds for most OPA users.
+// UpdatePolicyRequest provides the policy and path to update for an
+// UpdatePolicy operation.
 type UpdatePolicyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -426,6 +398,7 @@ func (x *UpdatePolicyRequest) GetPolicy() *Policy {
 	return nil
 }
 
+// UpdatePolicyResponse is an empty confirmation message type.
 type UpdatePolicyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -464,18 +437,7 @@ func (*UpdatePolicyResponse) Descriptor() ([]byte, []int) {
 	return file_load_v1_policy_proto_rawDescGZIP(), []int{8}
 }
 
-// DeletePolicyRequest allows removing a policy module from the policy
-// store.
-//
-// This is equivalent in functionality to OPA's
-// [Policy REST API Delete method](https://www.openpolicyagent.org/docs/latest/rest-api/#delete-a-policy).
-//
-// Warning: Removing a policy will trigger a full recompilation of *all*
-// policies in the store, in order to ensure that removing the policy
-// module does not break existing policies. This is a known performance
-// hazard for the OPA REST API, and remains a hazard for gRPC as well.
-// Keeping the unique number of policies down, or using Bundles are the
-// recommended workarounds for most OPA users.
+// DeletePolicyRequest specifies which path to delete a policy from.
 type DeletePolicyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -523,6 +485,7 @@ func (x *DeletePolicyRequest) GetPath() string {
 	return ""
 }
 
+// DeletePolicyResponse is an empty confirmation message type.
 type DeletePolicyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

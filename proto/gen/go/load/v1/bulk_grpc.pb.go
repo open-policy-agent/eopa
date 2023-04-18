@@ -22,6 +22,17 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BulkServiceClient interface {
+	// BulkRW specifies a fixed-structure, bulk read/write operation.
+	//
+	// WritePolicy and WriteData operations are executed sequentially, aborting
+	// the entire gRPC call if any operations fail.
+	//
+	// The ReadPolicy and ReadData operations are then executed in parallel,
+	// but will report errors inline in their responses, instead of aborting
+	// the entire gRPC call.
+	//
+	// Warning: The same performance hazards described for the Policy API
+	// apply for PolicyWrite operations here as well.
 	BulkRW(ctx context.Context, in *BulkRWRequest, opts ...grpc.CallOption) (*BulkRWResponse, error)
 }
 
@@ -46,6 +57,17 @@ func (c *bulkServiceClient) BulkRW(ctx context.Context, in *BulkRWRequest, opts 
 // All implementations must embed UnimplementedBulkServiceServer
 // for forward compatibility
 type BulkServiceServer interface {
+	// BulkRW specifies a fixed-structure, bulk read/write operation.
+	//
+	// WritePolicy and WriteData operations are executed sequentially, aborting
+	// the entire gRPC call if any operations fail.
+	//
+	// The ReadPolicy and ReadData operations are then executed in parallel,
+	// but will report errors inline in their responses, instead of aborting
+	// the entire gRPC call.
+	//
+	// Warning: The same performance hazards described for the Policy API
+	// apply for PolicyWrite operations here as well.
 	BulkRW(context.Context, *BulkRWRequest) (*BulkRWResponse, error)
 	mustEmbedUnimplementedBulkServiceServer()
 }

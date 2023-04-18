@@ -22,10 +22,57 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PolicyServiceClient interface {
+	// ListPolicies returns the set of stored policies in the policy store.
+	//
+	// This is equivalent in functionality to OPA's
+	// [Policy REST API List method](https://www.openpolicyagent.org/docs/latest/rest-api/#list-policies).
+	//
+	// Warning: This request will enumerate *all* policies stored by the Load
+	// instance. This can have substantial overheads if the policies are large
+	// in size.
 	ListPolicies(ctx context.Context, in *ListPoliciesRequest, opts ...grpc.CallOption) (*ListPoliciesResponse, error)
+	// GetPolicy fetches a policy module's code from the policy store.
+	//
+	// This is roughly equivalent in functionality to OPA's
+	// [Policy REST API Get method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-policy).
+	//
+	// Note: Only the raw policy text is returned in this version of the API.
 	GetPolicy(ctx context.Context, in *GetPolicyRequest, opts ...grpc.CallOption) (*GetPolicyResponse, error)
+	// CreatePolicy inserts a new policy module into the policy store.
+	//
+	// This is equivalent in functionality to OPA's
+	// [Policy REST API Create/Update method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-update-a-policy).
+	//
+	// Warning: Inserting a new policy will trigger a full recompilation
+	// of *all* policies in the store, in order to ensure the new policy does
+	// not break existing policies. This is a known performance hazard for the
+	// OPA REST API, and remains a hazard for gRPC as well. Keeping the unique
+	// number of policies down, or using Bundles are the recommended
+	// workarounds for most OPA users.
 	CreatePolicy(ctx context.Context, in *CreatePolicyRequest, opts ...grpc.CallOption) (*CreatePolicyResponse, error)
+	// UpdatePolicy updates a policy module in the policy store.
+	//
+	// This is equivalent in functionality to OPA's
+	// [Policy REST API Create/Update method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-update-a-policy).
+	//
+	// Warning: Modifying an existing policy will trigger a full recompilation
+	// of *all* policies in the store, in order to ensure the updated policy does
+	// not break existing policies. This is a known performance hazard for the
+	// OPA REST API, and remains a hazard for gRPC as well. Keeping the unique
+	// number of policies down, or using Bundles are the recommended
+	// workarounds for most OPA users.
 	UpdatePolicy(ctx context.Context, in *UpdatePolicyRequest, opts ...grpc.CallOption) (*UpdatePolicyResponse, error)
+	// DeletePolicy removes a policy module from the policy store.
+	//
+	// This is equivalent in functionality to OPA's
+	// [Policy REST API Delete method](https://www.openpolicyagent.org/docs/latest/rest-api/#delete-a-policy).
+	//
+	// Warning: Removing a policy will trigger a full recompilation of *all*
+	// policies in the store, in order to ensure that removing the policy
+	// module does not break existing policies. This is a known performance
+	// hazard for the OPA REST API, and remains a hazard for gRPC as well.
+	// Keeping the unique number of policies down, or using Bundles are the
+	// recommended workarounds for most OPA users.
 	DeletePolicy(ctx context.Context, in *DeletePolicyRequest, opts ...grpc.CallOption) (*DeletePolicyResponse, error)
 }
 
@@ -86,10 +133,57 @@ func (c *policyServiceClient) DeletePolicy(ctx context.Context, in *DeletePolicy
 // All implementations must embed UnimplementedPolicyServiceServer
 // for forward compatibility
 type PolicyServiceServer interface {
+	// ListPolicies returns the set of stored policies in the policy store.
+	//
+	// This is equivalent in functionality to OPA's
+	// [Policy REST API List method](https://www.openpolicyagent.org/docs/latest/rest-api/#list-policies).
+	//
+	// Warning: This request will enumerate *all* policies stored by the Load
+	// instance. This can have substantial overheads if the policies are large
+	// in size.
 	ListPolicies(context.Context, *ListPoliciesRequest) (*ListPoliciesResponse, error)
+	// GetPolicy fetches a policy module's code from the policy store.
+	//
+	// This is roughly equivalent in functionality to OPA's
+	// [Policy REST API Get method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-policy).
+	//
+	// Note: Only the raw policy text is returned in this version of the API.
 	GetPolicy(context.Context, *GetPolicyRequest) (*GetPolicyResponse, error)
+	// CreatePolicy inserts a new policy module into the policy store.
+	//
+	// This is equivalent in functionality to OPA's
+	// [Policy REST API Create/Update method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-update-a-policy).
+	//
+	// Warning: Inserting a new policy will trigger a full recompilation
+	// of *all* policies in the store, in order to ensure the new policy does
+	// not break existing policies. This is a known performance hazard for the
+	// OPA REST API, and remains a hazard for gRPC as well. Keeping the unique
+	// number of policies down, or using Bundles are the recommended
+	// workarounds for most OPA users.
 	CreatePolicy(context.Context, *CreatePolicyRequest) (*CreatePolicyResponse, error)
+	// UpdatePolicy updates a policy module in the policy store.
+	//
+	// This is equivalent in functionality to OPA's
+	// [Policy REST API Create/Update method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-update-a-policy).
+	//
+	// Warning: Modifying an existing policy will trigger a full recompilation
+	// of *all* policies in the store, in order to ensure the updated policy does
+	// not break existing policies. This is a known performance hazard for the
+	// OPA REST API, and remains a hazard for gRPC as well. Keeping the unique
+	// number of policies down, or using Bundles are the recommended
+	// workarounds for most OPA users.
 	UpdatePolicy(context.Context, *UpdatePolicyRequest) (*UpdatePolicyResponse, error)
+	// DeletePolicy removes a policy module from the policy store.
+	//
+	// This is equivalent in functionality to OPA's
+	// [Policy REST API Delete method](https://www.openpolicyagent.org/docs/latest/rest-api/#delete-a-policy).
+	//
+	// Warning: Removing a policy will trigger a full recompilation of *all*
+	// policies in the store, in order to ensure that removing the policy
+	// module does not break existing policies. This is a known performance
+	// hazard for the OPA REST API, and remains a hazard for gRPC as well.
+	// Keeping the unique number of policies down, or using Bundles are the
+	// recommended workarounds for most OPA users.
 	DeletePolicy(context.Context, *DeletePolicyRequest) (*DeletePolicyResponse, error)
 	mustEmbedUnimplementedPolicyServiceServer()
 }

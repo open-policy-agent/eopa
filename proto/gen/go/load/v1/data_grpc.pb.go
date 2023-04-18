@@ -22,9 +22,35 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DataServiceClient interface {
+	// CreateData looks up the document by path, and inserts a new JSON value
+	// at the end of the path.
+	//
+	// This is equivalent in functionality to OPA's
+	// [Data REST API Create/Overwrite method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-overwrite-a-document).
 	GetData(ctx context.Context, in *GetDataRequest, opts ...grpc.CallOption) (*GetDataResponse, error)
+	// GetData looks up the document by path. This can be either a plain JSON
+	// value (a "Base" document in OPA parlance), or a rule head (a
+	// "Virtual"/computed document).
+	//
+	// This is equivalent in functionality to OPA's
+	// [Data REST API Get with Input method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-document-with-input).
+	//
+	// Note that the input field should not be wrapped with
+	// `{ "input": <value> }`, you can simply put the JSON serialized `<value>`
+	// in the input field directly.
 	CreateData(ctx context.Context, in *CreateDataRequest, opts ...grpc.CallOption) (*CreateDataResponse, error)
+	// UpdateData looks up the document by path, and then attempts to perform
+	// one of three patching operations at that location: add, remove, or
+	// replace.
+	//
+	// This is roughly equivalent in functionality to OPA's
+	// [Data REST API Patch method](https://www.openpolicyagent.org/docs/latest/rest-api/#patch-a-document)
 	UpdateData(ctx context.Context, in *UpdateDataRequest, opts ...grpc.CallOption) (*UpdateDataResponse, error)
+	// DeleteData looks up the document by path, and then attempts to remove
+	// it from the store.
+	//
+	// This is equivalent in functionality to OPA's
+	// [Data REST API Delete method](https://www.openpolicyagent.org/docs/latest/rest-api/#delete-a-document).
 	DeleteData(ctx context.Context, in *DeleteDataRequest, opts ...grpc.CallOption) (*DeleteDataResponse, error)
 }
 
@@ -76,9 +102,35 @@ func (c *dataServiceClient) DeleteData(ctx context.Context, in *DeleteDataReques
 // All implementations must embed UnimplementedDataServiceServer
 // for forward compatibility
 type DataServiceServer interface {
+	// CreateData looks up the document by path, and inserts a new JSON value
+	// at the end of the path.
+	//
+	// This is equivalent in functionality to OPA's
+	// [Data REST API Create/Overwrite method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-overwrite-a-document).
 	GetData(context.Context, *GetDataRequest) (*GetDataResponse, error)
+	// GetData looks up the document by path. This can be either a plain JSON
+	// value (a "Base" document in OPA parlance), or a rule head (a
+	// "Virtual"/computed document).
+	//
+	// This is equivalent in functionality to OPA's
+	// [Data REST API Get with Input method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-document-with-input).
+	//
+	// Note that the input field should not be wrapped with
+	// `{ "input": <value> }`, you can simply put the JSON serialized `<value>`
+	// in the input field directly.
 	CreateData(context.Context, *CreateDataRequest) (*CreateDataResponse, error)
+	// UpdateData looks up the document by path, and then attempts to perform
+	// one of three patching operations at that location: add, remove, or
+	// replace.
+	//
+	// This is roughly equivalent in functionality to OPA's
+	// [Data REST API Patch method](https://www.openpolicyagent.org/docs/latest/rest-api/#patch-a-document)
 	UpdateData(context.Context, *UpdateDataRequest) (*UpdateDataResponse, error)
+	// DeleteData looks up the document by path, and then attempts to remove
+	// it from the store.
+	//
+	// This is equivalent in functionality to OPA's
+	// [Data REST API Delete method](https://www.openpolicyagent.org/docs/latest/rest-api/#delete-a-document).
 	DeleteData(context.Context, *DeleteDataRequest) (*DeleteDataResponse, error)
 	mustEmbedUnimplementedDataServiceServer()
 }

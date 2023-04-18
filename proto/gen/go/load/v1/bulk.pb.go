@@ -21,24 +21,21 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// BulkRWRequest allows specifying a fixed-structure, bulk read/write
-// operation. WritePolicy/Data requests are executed sequentially, aborting
-// the entire gRPC call if any requests fail. The ReadPolicy/Data requests
-// are then executed in parallel, but will report errors inline in their
-// responses, instead of aborting the entire gRPC call.
+// BulkRWRequest can contain any combination of read/write operations on
+// policies and data.
 type BulkRWRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// All writes occur first. First policy, then data.
-	// Writes are done in-order, sequentially.
+	// writes_policy provides a sequence of WritePolicy operations to apply.
 	WritesPolicy []*BulkRWRequest_WritePolicyRequest `protobuf:"bytes,2,rep,name=writes_policy,json=writesPolicy,proto3" json:"writes_policy,omitempty"`
-	WritesData   []*BulkRWRequest_WriteDataRequest   `protobuf:"bytes,3,rep,name=writes_data,json=writesData,proto3" json:"writes_data,omitempty"`
-	// Reads occur second.
-	// Reads may be executed in arbitrary order, and are currently executed in parallel.
+	// writes_data provides a sequence of WriteData operations to apply.
+	WritesData []*BulkRWRequest_WriteDataRequest `protobuf:"bytes,3,rep,name=writes_data,json=writesData,proto3" json:"writes_data,omitempty"`
+	// reads_policy provides a sequence of ReadPolicy operations to apply.
 	ReadsPolicy []*BulkRWRequest_ReadPolicyRequest `protobuf:"bytes,4,rep,name=reads_policy,json=readsPolicy,proto3" json:"reads_policy,omitempty"`
-	ReadsData   []*BulkRWRequest_ReadDataRequest   `protobuf:"bytes,5,rep,name=reads_data,json=readsData,proto3" json:"reads_data,omitempty"`
+	// reads_data provides a sequence of ReadData operations to apply.
+	ReadsData []*BulkRWRequest_ReadDataRequest `protobuf:"bytes,5,rep,name=reads_data,json=readsData,proto3" json:"reads_data,omitempty"`
 }
 
 func (x *BulkRWRequest) Reset() {
@@ -101,19 +98,21 @@ func (x *BulkRWRequest) GetReadsData() []*BulkRWRequest_ReadDataRequest {
 	return nil
 }
 
+// BulkRWResponse contains lists of the appropriate response types for each
+// operation in the BulkRWRequest.
 type BulkRWResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// All writes occur first. First policy, then data.
-	// Writes are done in-order, sequentially.
+	// writes_policy provides a sequence of WritePolicy results.
 	WritesPolicy []*BulkRWResponse_WritePolicyResponse `protobuf:"bytes,2,rep,name=writes_policy,json=writesPolicy,proto3" json:"writes_policy,omitempty"`
-	WritesData   []*BulkRWResponse_WriteDataResponse   `protobuf:"bytes,3,rep,name=writes_data,json=writesData,proto3" json:"writes_data,omitempty"`
-	// Reads occur second.
-	// Reads may be executed in arbitrary order, but currently are executed in-order.
+	// writes_data provides a sequence of WriteData results.
+	WritesData []*BulkRWResponse_WriteDataResponse `protobuf:"bytes,3,rep,name=writes_data,json=writesData,proto3" json:"writes_data,omitempty"`
+	// reads_policy provides a sequence of ReadPolicy results or errors.
 	ReadsPolicy []*BulkRWResponse_ReadPolicyResponse `protobuf:"bytes,4,rep,name=reads_policy,json=readsPolicy,proto3" json:"reads_policy,omitempty"`
-	ReadsData   []*BulkRWResponse_ReadDataResponse   `protobuf:"bytes,5,rep,name=reads_data,json=readsData,proto3" json:"reads_data,omitempty"`
+	// reads_data provides a sequence of ReadData results or errors.
+	ReadsData []*BulkRWResponse_ReadDataResponse `protobuf:"bytes,5,rep,name=reads_data,json=readsData,proto3" json:"reads_data,omitempty"`
 }
 
 func (x *BulkRWResponse) Reset() {
@@ -227,9 +226,6 @@ func (x *ErrorList) GetErrors() []*anypb.Any {
 
 // WritePolicyRequest provides a union of possible Policy request types.
 // This allows creating arbitrary sequences of policy store operations.
-//
-// Warning: The same performance hazards described for the Policy API
-// apply for these operations as well.
 type BulkRWRequest_WritePolicyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -520,7 +516,8 @@ func (x *BulkRWRequest_ReadDataRequest) GetReq() *GetDataRequest {
 	return nil
 }
 
-// WritePolicyResponse provides a union of possible response types, mirroring the union of possible request types.
+// WritePolicyResponse provides a union of possible response types,
+// mirroring the union of possible request types.
 type BulkRWResponse_WritePolicyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -616,7 +613,8 @@ func (*BulkRWResponse_WritePolicyResponse_Update) isBulkRWResponse_WritePolicyRe
 
 func (*BulkRWResponse_WritePolicyResponse_Delete) isBulkRWResponse_WritePolicyResponse_Resp() {}
 
-// WriteDataResponse provides a union of possible response types, mirroring the union of possible request types.
+// WriteDataResponse provides a union of possible response types,
+// mirroring the union of possible request types.
 type BulkRWResponse_WriteDataResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -712,7 +710,8 @@ func (*BulkRWResponse_WriteDataResponse_Update) isBulkRWResponse_WriteDataRespon
 
 func (*BulkRWResponse_WriteDataResponse_Delete) isBulkRWResponse_WriteDataResponse_Resp() {}
 
-// ReadPolicyResponse provides fields for a response or list of errors. The two should be mutually exclusive.
+// ReadPolicyResponse provides fields for a response or list of errors.
+// The two should be mutually exclusive.
 type BulkRWResponse_ReadPolicyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -768,7 +767,8 @@ func (x *BulkRWResponse_ReadPolicyResponse) GetErrors() *ErrorList {
 	return nil
 }
 
-// ReadDataResponse provides fields for a response or list of errors. The two should be mutually exclusive.
+// ReadDataResponse provides fields for a response or list of errors. The
+// two should be mutually exclusive.
 type BulkRWResponse_ReadDataResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

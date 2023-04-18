@@ -7,93 +7,107 @@ message Policy {
   string text = 2;
 }
 
-// ListPoliciesRequest returns the set of stored policies.
-//
-// This is equivalent in functionality to OPA's
-// [Policy REST API List method](https://www.openpolicyagent.org/docs/latest/rest-api/#list-policies).
-//
-// Warning: This request will enumerate *all* policies stored by the Load
-// instance. This can have substantial overheads if the policies are large
-// in size.
+// ListPoliciesRequest is used to start a ListPolicy operation.
 message ListPoliciesRequest {}
 
+// ListPoliciesResponse contains the list of all policies enumerated by a
+// ListPolicy operation.
 message ListPoliciesResponse {
   repeated Policy results = 1;
 }
 
-// CreatePolicyRequest allows inserting new policy code into the policy
-// store.
-//
-// This is equivalent in functionality to OPA's
-// [Policy REST API Create/Update method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-update-a-policy).
-//
-// Warning: Inserting a new policy will trigger a full recompilation
-// of *all* policies in the store, in order to ensure the new policy does
-// not break existing policies. This is a known performance hazard for the
-// OPA REST API, and remains a hazard for gRPC as well. Keeping the unique
-// number of policies down, or using Bundles are the recommended
-// workarounds for most OPA users.
+// CreatePolicyRequest provides the policy and path to insert it at for a
+// CreatePolicy operation.
 message CreatePolicyRequest {
   Policy policy = 1; // Rego module.
 }
 
+// CreatePolicyResponse is an empty confirmation message type.
 message CreatePolicyResponse {}
 
-// GetPolicyRequest allows inserting new policy code into the policy
-// store.
-//
-// This is roughly equivalent in functionality to OPA's
-// [Policy REST API Get method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-policy).
-//
-// Note: Only the raw policy text is returned in this version of the API.
+// GetPolicyRequest requires the path of the policy to fetch.
 message GetPolicyRequest {
   string path = 1;
 }
 
+// GetPolicyResponse contains the retrieved Rego module from a GetPolicy
+// operation.
 message GetPolicyResponse {
   Policy result = 2; // Rego module.
 }
 
-// UpdatePolicyRequest allows updating a policy module in the policy
-// store.
-//
-// This is equivalent in functionality to OPA's
-// [Policy REST API Create/Update method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-update-a-policy).
-//
-// Warning: Modifying an existing policy will trigger a full recompilation
-// of *all* policies in the store, in order to ensure the updated policy does
-// not break existing policies. This is a known performance hazard for the
-// OPA REST API, and remains a hazard for gRPC as well. Keeping the unique
-// number of policies down, or using Bundles are the recommended
-// workarounds for most OPA users.
+// UpdatePolicyRequest provides the policy and path to update for an
+// UpdatePolicy operation.
 message UpdatePolicyRequest {
   Policy policy = 2; // Rego module.
 }
 
+// UpdatePolicyResponse is an empty confirmation message type.
 message UpdatePolicyResponse {}
 
-// DeletePolicyRequest allows removing a policy module from the policy
-// store.
-//
-// This is equivalent in functionality to OPA's
-// [Policy REST API Delete method](https://www.openpolicyagent.org/docs/latest/rest-api/#delete-a-policy).
-//
-// Warning: Removing a policy will trigger a full recompilation of *all*
-// policies in the store, in order to ensure that removing the policy
-// module does not break existing policies. This is a known performance
-// hazard for the OPA REST API, and remains a hazard for gRPC as well.
-// Keeping the unique number of policies down, or using Bundles are the
-// recommended workarounds for most OPA users.
+// DeletePolicyRequest specifies which path to delete a policy from.
 message DeletePolicyRequest {
   string path = 1;
 }
 
+// DeletePolicyResponse is an empty confirmation message type.
 message DeletePolicyResponse {}
 
 service PolicyService {
+  // ListPolicies returns the set of stored policies in the policy store.
+  //
+  // This is equivalent in functionality to OPA's
+  // [Policy REST API List method](https://www.openpolicyagent.org/docs/latest/rest-api/#list-policies).
+  //
+  // Warning: This request will enumerate *all* policies stored by the Load
+  // instance. This can have substantial overheads if the policies are large
+  // in size.
   rpc ListPolicies(ListPoliciesRequest) returns (ListPoliciesResponse);
+
+  // GetPolicy fetches a policy module's code from the policy store.
+  //
+  // This is roughly equivalent in functionality to OPA's
+  // [Policy REST API Get method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-policy).
+  //
+  // Note: Only the raw policy text is returned in this version of the API.
   rpc GetPolicy(GetPolicyRequest) returns (GetPolicyResponse);
+
+  // CreatePolicy inserts a new policy module into the policy store.
+  //
+  // This is equivalent in functionality to OPA's
+  // [Policy REST API Create/Update method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-update-a-policy).
+  //
+  // Warning: Inserting a new policy will trigger a full recompilation
+  // of *all* policies in the store, in order to ensure the new policy does
+  // not break existing policies. This is a known performance hazard for the
+  // OPA REST API, and remains a hazard for gRPC as well. Keeping the unique
+  // number of policies down, or using Bundles are the recommended
+  // workarounds for most OPA users.
   rpc CreatePolicy(CreatePolicyRequest) returns (CreatePolicyResponse);
+
+  // UpdatePolicy updates a policy module in the policy store.
+  //
+  // This is equivalent in functionality to OPA's
+  // [Policy REST API Create/Update method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-update-a-policy).
+  //
+  // Warning: Modifying an existing policy will trigger a full recompilation
+  // of *all* policies in the store, in order to ensure the updated policy does
+  // not break existing policies. This is a known performance hazard for the
+  // OPA REST API, and remains a hazard for gRPC as well. Keeping the unique
+  // number of policies down, or using Bundles are the recommended
+  // workarounds for most OPA users.
   rpc UpdatePolicy(UpdatePolicyRequest) returns (UpdatePolicyResponse);
+
+  // DeletePolicy removes a policy module from the policy store.
+  //
+  // This is equivalent in functionality to OPA's
+  // [Policy REST API Delete method](https://www.openpolicyagent.org/docs/latest/rest-api/#delete-a-policy).
+  //
+  // Warning: Removing a policy will trigger a full recompilation of *all*
+  // policies in the store, in order to ensure that removing the policy
+  // module does not break existing policies. This is a known performance
+  // hazard for the OPA REST API, and remains a hazard for gRPC as well.
+  // Keeping the unique number of policies down, or using Bundles are the
+  // recommended workarounds for most OPA users.
   rpc DeletePolicy(DeletePolicyRequest) returns (DeletePolicyResponse);
 }

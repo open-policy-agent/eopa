@@ -5,17 +5,11 @@ import "load/v1/data.proto";
 import "load/v1/policy.proto";
 import "google/protobuf/any.proto";
 
-// BulkRWRequest allows specifying a fixed-structure, bulk read/write
-// operation. WritePolicy/Data requests are executed sequentially, aborting
-// the entire gRPC call if any requests fail. The ReadPolicy/Data requests
-// are then executed in parallel, but will report errors inline in their
-// responses, instead of aborting the entire gRPC call.
+// BulkRWRequest can contain any combination of read/write operations on
+// policies and data.
 message BulkRWRequest {
   // WritePolicyRequest provides a union of possible Policy request types.
   // This allows creating arbitrary sequences of policy store operations.
-  //
-  // Warning: The same performance hazards described for the Policy API
-  // apply for these operations as well.
   message WritePolicyRequest {
     oneof req {
       CreatePolicyRequest create = 1;
@@ -46,19 +40,22 @@ message BulkRWRequest {
     GetDataRequest req = 1;
   }
 
-  // All writes occur first. First policy, then data.
-  // Writes are done in-order, sequentially.
+  // writes_policy provides a sequence of WritePolicy operations to apply.
   repeated WritePolicyRequest writes_policy = 2;
+  // writes_data provides a sequence of WriteData operations to apply.
   repeated WriteDataRequest writes_data = 3;
 
-  // Reads occur second.
-  // Reads may be executed in arbitrary order, and are currently executed in parallel.
+  // reads_policy provides a sequence of ReadPolicy operations to apply.
   repeated ReadPolicyRequest reads_policy = 4;
+  // reads_data provides a sequence of ReadData operations to apply.
   repeated ReadDataRequest reads_data = 5;
 }
 
+// BulkRWResponse contains lists of the appropriate response types for each
+// operation in the BulkRWRequest.
 message BulkRWResponse {
-  // WritePolicyResponse provides a union of possible response types, mirroring the union of possible request types.
+  // WritePolicyResponse provides a union of possible response types,
+  // mirroring the union of possible request types.
   message WritePolicyResponse {
     oneof resp {
       CreatePolicyResponse create = 1;
@@ -67,7 +64,8 @@ message BulkRWResponse {
     }
   }
 
-  // WriteDataResponse provides a union of possible response types, mirroring the union of possible request types.
+  // WriteDataResponse provides a union of possible response types,
+  // mirroring the union of possible request types.
   message WriteDataResponse {
     oneof resp {
       CreateDataResponse create = 1;
@@ -76,26 +74,28 @@ message BulkRWResponse {
     }
   }
 
-  // ReadPolicyResponse provides fields for a response or list of errors. The two should be mutually exclusive.
+  // ReadPolicyResponse provides fields for a response or list of errors.
+  // The two should be mutually exclusive.
   message ReadPolicyResponse {
     GetPolicyResponse resp = 1;
     ErrorList errors = 2;
   }
 
-  // ReadDataResponse provides fields for a response or list of errors. The two should be mutually exclusive.
+  // ReadDataResponse provides fields for a response or list of errors. The
+  // two should be mutually exclusive.
   message ReadDataResponse {
     GetDataResponse resp = 1;
     ErrorList errors = 2;
   }
 
-  // All writes occur first. First policy, then data.
-  // Writes are done in-order, sequentially.
+  // writes_policy provides a sequence of WritePolicy results.
   repeated WritePolicyResponse writes_policy = 2;
+  // writes_data provides a sequence of WriteData results.
   repeated WriteDataResponse writes_data = 3;
 
-  // Reads occur second.
-  // Reads may be executed in arbitrary order, but currently are executed in-order.
+  // reads_policy provides a sequence of ReadPolicy results or errors.
   repeated ReadPolicyResponse reads_policy = 4;
+  // reads_data provides a sequence of ReadData results or errors.
   repeated ReadDataResponse reads_data = 5;
 }
 
@@ -107,5 +107,16 @@ message ErrorList {
 
 // BulkService is an API for specifying batches of read/write operations.
 service BulkService {
+  // BulkRW specifies a fixed-structure, bulk read/write operation.
+  //
+  // WritePolicy and WriteData operations are executed sequentially, aborting
+  // the entire gRPC call if any operations fail.
+  //
+  // The ReadPolicy and ReadData operations are then executed in parallel,
+  // but will report errors inline in their responses, instead of aborting
+  // the entire gRPC call.
+  //
+  // Warning: The same performance hazards described for the Policy API
+  // apply for PolicyWrite operations here as well.
   rpc BulkRW(BulkRWRequest) returns (BulkRWResponse);
 }

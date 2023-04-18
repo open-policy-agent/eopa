@@ -181,11 +181,7 @@ func (x *InputDocument) GetDocument() *structpb.Struct {
 	return nil
 }
 
-// CreateDataRequest looks up the document by path, and inserts a new JSON
-// value there.
-//
-// This is equivalent in functionality to OPA's
-// [Data REST API Create/Overwrite method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-overwrite-a-document).
+// CreateDataRequest provides a document and the path to insert it at.
 type CreateDataRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -233,6 +229,7 @@ func (x *CreateDataRequest) GetData() *DataDocument {
 	return nil
 }
 
+// CreateDataResponse is an empty confirmation message type.
 type CreateDataResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -271,16 +268,23 @@ func (*CreateDataResponse) Descriptor() ([]byte, []int) {
 	return file_load_v1_data_proto_rawDescGZIP(), []int{3}
 }
 
-// GetDataRequest looks up the document by path. This can be either a plain
-// JSON value (a "Base" document in OPA parlance), or a rule head (a
-// "Virtual"/computed document).
+// GetDataRequest queries the virtual document store at the specified path.
+// This path can target a rule, or any value under the `data` document.
 //
-// This is equivalent in functionality to OPA's
-// [Data REST API Get with Input method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-document-with-input).
+// Input to a query can also be provided, as a key-value mapping that will
+// appear under the `input` document at runtime. For example, the following
+// input mapping:
+// ```json
 //
-// Note that the input field should not be wrapped with
-// `{ "input": <value> }`, you can simply put the JSON serialized `<value>`
-// in the input field directly.
+//	{
+//	  "a": 2,
+//	  "b": "example",
+//	  "c": true
+//	}
+//
+// ````
+// would map to `input.a`, `input.b`, and `input.c`, where `input.a` has
+// the value `2`, and so forth in a Rego policy.
 type GetDataRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -336,6 +340,7 @@ func (x *GetDataRequest) GetInput() *InputDocument {
 	return nil
 }
 
+// GetDataResponse is the query result returned from a GetData operation.
 type GetDataResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -383,12 +388,9 @@ func (x *GetDataResponse) GetResult() *DataDocument {
 	return nil
 }
 
-// UpdateDataRequest looks up the document by path, and then attempts to
-// perform one of three patching operations at that location: add, remove,
-// or replace.
-//
-// This is roughly equivalent in functionality to OPA's
-// [Data REST API Patch method](https://www.openpolicyagent.org/docs/latest/rest-api/#patch-a-document)
+// UpdateDataRequest provides an optional document to patch in, and the
+// patch operation specifying whether it's a create/update/delete operation
+// to be performed.
 type UpdateDataRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -444,6 +446,7 @@ func (x *UpdateDataRequest) GetOp() PatchOp {
 	return PatchOp_PATCH_OP_UNSPECIFIED
 }
 
+// UpdateDataResponse is an empty confirmation message type.
 type UpdateDataResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -482,11 +485,8 @@ func (*UpdateDataResponse) Descriptor() ([]byte, []int) {
 	return file_load_v1_data_proto_rawDescGZIP(), []int{7}
 }
 
-// DeleteDataRequest looks up the document by path, and then attempts to
-// remove it from the store.
-//
-// This is equivalent in functionality to OPA's
-// [Data REST API Delete method](https://www.openpolicyagent.org/docs/latest/rest-api/#delete-a-document).
+// DeleteDataRequest provides the path of a document to delete from the
+// document store.
 type DeleteDataRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -534,6 +534,7 @@ func (x *DeleteDataRequest) GetPath() string {
 	return ""
 }
 
+// DeleteDataResponse is an empty confirmation message type.
 type DeleteDataResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
