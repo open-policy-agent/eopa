@@ -286,7 +286,7 @@ plugins:
     mask_decision: /test/mask
     buffer:
       type: memory
-      flush_at_period: 1s
+      flush_at_period: 3s
     output:
       type: console
 `
@@ -315,7 +315,7 @@ plugins:
 			}
 		}
 
-		time.Sleep(time.Second)
+		time.Sleep(3 * time.Second)
 		_ = collectDL(ctx, t, loadOut, false, 1) // if we pass this, we've got one log
 	})
 }

@@ -157,6 +157,8 @@ github.com/aymerick/douceur v0.2.0/go.mod h1:wlT5vV2O3h55X9m7iVYN0TBM0NH/MmbLnd3
 github.com/benhoyt/goawk v1.21.0 h1:GASuhJXHMFZ/2TJBPh+2Ah3kclVGNvGjt+uh3ajMdLk=
 github.com/benthosdev/benthos/v4 v4.13.0 h1:9ZaDQbxnTWTalEayIztM14t76MHpYvuiuAx+diRBbuY=
 github.com/benthosdev/benthos/v4 v4.13.0/go.mod h1:tFORjc40PpE3HmhhLyFtsmGsQYcHa4NJMXMab1Iosic=
+github.com/benthosdev/benthos/v4 v4.13.1-0.20230417162539-33a65f2d3ee1 h1:xHOoxHso8+WMuZz4+cWXNvlx9TLKNr4MuwXhSD4WVb4=
+github.com/benthosdev/benthos/v4 v4.13.1-0.20230417162539-33a65f2d3ee1/go.mod h1:SFcHsQmXHDYUbH5GvvqoWmiWBst38hRDXWBcioiYiO8=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
