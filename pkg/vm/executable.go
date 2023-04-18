@@ -110,6 +110,10 @@ const (
 	headerFunctionsOffsetOffset = headerStringsOffsetOffset + 4
 	headerPlansOffsetOffset     = headerFunctionsOffsetOffset + 4
 	headerLength                = headerPlansOffsetOffset + 4
+
+	sizeofInt32        = 4
+	sizeofLocal        = 4
+	sizeofLocalOrConst = 4
 )
 
 func (header) Write(version uint32, totalLength uint32, stringsOffset uint32, functionsOffset uint32, plansOffset uint32) []byte {
@@ -325,7 +329,7 @@ func (f function) ParamsIter(fcn func(i uint32, arg Local) error) error {
 	n := getUint32(f, offset)
 
 	for i := uint32(0); i < n; i++ {
-		if err := fcn(i, getLocal(f, offset+4+i*4)); err != nil {
+		if err := fcn(i, getLocal(f, offset+4+i*sizeofLocal)); err != nil {
 			return err
 		}
 	}
@@ -713,7 +717,7 @@ func (c callDynamic) ArgsIter(fcn func(i uint32, arg Local) error) error {
 	n := getUint32(c, offset)
 
 	for i := uint32(0); i < n; i++ {
-		if err := fcn(i, getLocal(c, offset+4+i*4)); err != nil {
+		if err := fcn(i, getLocal(c, offset+4+i*sizeofLocal)); err != nil {
 			return err
 		}
 	}
@@ -741,7 +745,7 @@ func (c callDynamic) PathIter(fcn func(i uint32, arg LocalOrConst) error) error 
 	n := getUint32(c, offset)
 
 	for i := uint32(0); i < n; i++ {
-		if err := fcn(i, getLocalOrConst(c, offset+4+i*4)); err != nil {
+		if err := fcn(i, getLocalOrConst(c, offset+4+i*sizeofLocalOrConst)); err != nil {
 			return err
 		}
 	}
@@ -788,7 +792,7 @@ func (c call) ArgsIter(fcn func(i uint32, arg LocalOrConst) error) error {
 	n := getUint32(c, offset)
 
 	for i := uint32(0); i < n; i++ {
-		if err := fcn(i, getLocalOrConst(c, offset+4+i*4)); err != nil {
+		if err := fcn(i, getLocalOrConst(c, offset+4+i*sizeofLocalOrConst)); err != nil {
 			return err
 		}
 	}
@@ -1543,7 +1547,7 @@ func (w with) Path() []int {
 
 	a := make([]int, 0, n)
 	for i := uint32(0); i < n; i++ {
-		v := getInt32(w, offset+4+i*4)
+		v := getInt32(w, offset+4+i*sizeofInt32)
 		a = append(a, int(v))
 	}
 	return a
@@ -1559,7 +1563,7 @@ func (w with) PathIter(fcn func(i uint32, arg int) error) error {
 	n := getUint32(w, offset)
 
 	for i := uint32(0); i < n; i++ {
-		if err := fcn(i, int(getInt32(w, offset+4+i*4))); err != nil {
+		if err := fcn(i, int(getInt32(w, offset+4+i*sizeofInt32))); err != nil {
 			return err
 		}
 	}
@@ -1592,7 +1596,7 @@ func getBool(data []byte, offset uint32) bool {
 
 //go:inline
 func getOffsetIndex(data []byte, offset uint32, i int) uint32 {
-	return getUint32(data, offset+uint32(i)*4)
+	return getUint32(data, offset+uint32(i)*sizeofInt32)
 }
 
 func appendOffsetSize(n int) int {
@@ -1608,7 +1612,7 @@ func appendOffsetIndex(d []byte, n int) []byte {
 }
 
 func putOffsetIndex(data []byte, offset uint32, i int, value uint32) {
-	binary.BigEndian.PutUint32(data[offset+uint32(i*4):], value)
+	binary.BigEndian.PutUint32(data[offset+uint32(i*sizeofInt32):], value)
 }
 
 //go:inline
@@ -1745,7 +1749,7 @@ func getLocalArray(data []byte, offset uint32) []Local {
 
 	a := make([]Local, 0, n)
 	for i := uint32(0); i < n; i++ {
-		a = append(a, getLocal(data, offset+4+i*4))
+		a = append(a, getLocal(data, offset+4+i*sizeofLocal))
 	}
 
 	return a
@@ -1757,7 +1761,7 @@ func getLocalArraySize(data []byte, offset uint32) int {
 }
 
 func appendIntArraySize(local []int) int {
-	return 4 + len(local)*4
+	return 4 + len(local)*sizeofInt32
 }
 
 func appendIntArray(d []byte, local []int) []byte {
@@ -1769,7 +1773,7 @@ func appendIntArray(d []byte, local []int) []byte {
 }
 
 func appendLocalArraySize(local []Local) int {
-	return 4 + len(local)*4
+	return 4 + len(local)*sizeofLocal
 }
 
 func appendLocalArray(d []byte, local []Local) []byte {
@@ -1839,14 +1843,14 @@ func getLocalOrConstArray(data []byte, offset uint32) []LocalOrConst {
 
 	l := make([]LocalOrConst, 0, n)
 	for i := uint32(0); i < n; i++ {
-		l = append(l, getLocalOrConst(data, offset+4+i*4))
+		l = append(l, getLocalOrConst(data, offset+4+i*sizeofLocalOrConst))
 	}
 
 	return l
 }
 
 func appendLocalOrConstArraySize(l []LocalOrConst) int {
-	return 4 + 4*len(l)
+	return 4 + len(l)*sizeofLocalOrConst
 }
 
 func appendLocalOrConstArray(d []byte, l []LocalOrConst) []byte {

@@ -2,6 +2,13 @@
 
 ![OPA v0.51.0](https://openpolicyagent.org/badge/v0.51.0)
 
+## Github Source and Project
+
+- [Load Dev Board](https://github.com/orgs/StyraInc/projects/4/views/1)
+- [load-private](https://github.com/StyraInc/load-private)
+- [opa](https://github.com/StyraInc/opa)
+- [load](https://github.com/StyraInc/load)
+
 ## Build
 
 ### Prerequisites:
@@ -78,6 +85,7 @@ While this repository tracks the code required to build Styra Load, some additio
 ### Monitoring
 
  - NewRelic Dashboard [[Link](https://one.newrelic.com/dashboards/detail/MzU5NDA4OHxWSVp8REFTSEJPQVJEfGRhOjMxNTUwNjQ?account=3594088&state=0e224a3f-d3cc-492f-a8c6-fb2fd1caa0e0)]: `Load Health`: Tracks the key metrics / status of all `load-trial-*` and `load-telemetry*` services.
+
 ## FAQ
 
 ### How can I update the `load` branch of the github.com/StyraInc/opa fork?

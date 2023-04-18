@@ -81,16 +81,17 @@ pushd builddir
 tar xzf ../o4.tar.gz
 popd
 
-load sign --signing-key private_key.pem --bundle builddir/
+$LOAD_EXEC sign --signing-key private_key.pem --bundle builddir/
 cp .signatures.json builddir/.
 
-load build --bundle --signing-key private_key.pem --verification-key public_key.pem builddir/ -o o5.tar.gz
+$LOAD_EXEC build --bundle --signing-key private_key.pem --verification-key public_key.pem builddir/ -o o5.tar.gz
 
-load eval --bundle o5.tar.gz --input test/cli/smoke/input.json data.test.result --fail
+$LOAD_EXEC eval --bundle o5.tar.gz --input test/cli/smoke/input.json data.test.result --fail
 
 $LOAD_EXEC run -s --addr ":8183" -b o5.tar.gz --verification-key=public_key.pem &
 last_pid=$!
 sleep 2
+curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X GET localhost:8183/v1/data
 kill $last_pid
 echo "::endgroup::"
 
