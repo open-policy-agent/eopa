@@ -713,7 +713,7 @@ func (c callDynamic) ArgsIter(fcn func(i uint32, arg Local) error) error {
 	n := getUint32(c, offset)
 
 	for i := uint32(0); i < n; i++ {
-		if err := fcn(i, getLocal(c, offset+4+i*5)); err != nil {
+		if err := fcn(i, getLocal(c, offset+4+i*4)); err != nil {
 			return err
 		}
 	}

@@ -180,7 +180,7 @@ func test(t testing.TB) {
 	// CallDynamic
 
 	{
-		args, result, path := []Local{Local(1)}, Local(2), []LocalOrConst{Local(3)}
+		args, result, path := []Local{Local(0), Local(1)}, Local(2), []LocalOrConst{Local(3), StringIndexConst(1), BoolConst(false)}
 		s := callDynamic(callDynamic{}.Write(args, result, path))
 
 		check(t, "size", size(s), len(s))
@@ -195,7 +195,7 @@ func test(t testing.TB) {
 	// Call
 
 	{
-		index, args, result := 1, []LocalOrConst{Local(2)}, Local(3)
+		index, args, result := 1, []LocalOrConst{Local(1), Local(2), StringIndexConst(1), BoolConst(false)}, Local(3)
 		s := call(call{}.Write(index, args, result))
 
 		check(t, "size", size(s), len(s))
