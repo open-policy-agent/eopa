@@ -1,5 +1,5 @@
 syntax = "proto3";
-package load.v1;
+package load.policy.v1;
 
 // Policy is a thin wrapper type around a Rego policy.
 message Policy {

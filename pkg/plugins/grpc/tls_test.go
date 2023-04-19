@@ -24,7 +24,7 @@ import (
 	bjson "github.com/styrainc/load-private/pkg/json"
 	_ "github.com/styrainc/load-private/pkg/rego_vm" // important! use VM for rego.Eval below
 	inmem "github.com/styrainc/load-private/pkg/store"
-	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
+	datav1 "github.com/styrainc/load-private/proto/gen/go/load/data/v1"
 )
 
 const (
@@ -81,12 +81,12 @@ func TestServerTLS(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	client := loadv1.NewDataServiceClient(conn)
+	client := datav1.NewDataServiceClient(conn)
 
-	if _, err := client.UpdateData(ctx, &loadv1.UpdateDataRequest{Data: &loadv1.DataDocument{Path: "/test/a", Document: structpb.NewNumberValue(5)}}); err != nil {
+	if _, err := client.UpdateData(ctx, &datav1.UpdateDataRequest{Data: &datav1.DataDocument{Path: "/test/a", Document: structpb.NewNumberValue(5)}}); err != nil {
 		t.Fatal(err)
 	}
-	response, err := client.GetData(ctx, &loadv1.GetDataRequest{Path: "/test/a"})
+	response, err := client.GetData(ctx, &datav1.GetDataRequest{Path: "/test/a"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,9 +133,9 @@ func TestTLSIsMandatoryWhenEnabled(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	client := loadv1.NewDataServiceClient(conn)
+	client := datav1.NewDataServiceClient(conn)
 
-	if response, err := client.GetData(ctx, &loadv1.GetDataRequest{Path: "/test/a"}); err == nil {
+	if response, err := client.GetData(ctx, &datav1.GetDataRequest{Path: "/test/a"}); err == nil {
 		t.Fatalf("expected error, got: %v", response)
 	} else {
 		if !strings.Contains(err.Error(), "connection error") {
@@ -205,12 +205,12 @@ func TestMutualTLSHappyPath(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	client := loadv1.NewDataServiceClient(conn)
+	client := datav1.NewDataServiceClient(conn)
 
-	if _, err := client.UpdateData(ctx, &loadv1.UpdateDataRequest{Data: &loadv1.DataDocument{Path: "/test/a", Document: structpb.NewNumberValue(5)}}); err != nil {
+	if _, err := client.UpdateData(ctx, &datav1.UpdateDataRequest{Data: &datav1.DataDocument{Path: "/test/a", Document: structpb.NewNumberValue(5)}}); err != nil {
 		t.Fatal(err)
 	}
-	response, err := client.GetData(ctx, &loadv1.GetDataRequest{Path: "/test/a"})
+	response, err := client.GetData(ctx, &datav1.GetDataRequest{Path: "/test/a"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,9 +268,9 @@ func TestMutualTLSFailureClientLacksCert(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	client := loadv1.NewDataServiceClient(conn)
+	client := datav1.NewDataServiceClient(conn)
 
-	if response, err := client.UpdateData(ctx, &loadv1.UpdateDataRequest{Data: &loadv1.DataDocument{Path: "/test/a", Document: structpb.NewNumberValue(5)}}); err == nil {
+	if response, err := client.UpdateData(ctx, &datav1.UpdateDataRequest{Data: &datav1.DataDocument{Path: "/test/a", Document: structpb.NewNumberValue(5)}}); err == nil {
 		t.Fatalf("expected error, got: %v", response)
 	} else {
 		if !strings.Contains(err.Error(), "tls: bad certificate") && !strings.Contains(err.Error(), "write: broken pipe") {
@@ -340,9 +340,9 @@ func TestMutualTLSFailureWrongRootCA(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	client := loadv1.NewDataServiceClient(conn)
+	client := datav1.NewDataServiceClient(conn)
 
-	if response, err := client.UpdateData(ctx, &loadv1.UpdateDataRequest{Data: &loadv1.DataDocument{Path: "/test/a", Document: structpb.NewNumberValue(5)}}); err == nil {
+	if response, err := client.UpdateData(ctx, &datav1.UpdateDataRequest{Data: &datav1.DataDocument{Path: "/test/a", Document: structpb.NewNumberValue(5)}}); err == nil {
 		t.Fatalf("expected error, got: %v", response)
 	} else {
 		if !strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {

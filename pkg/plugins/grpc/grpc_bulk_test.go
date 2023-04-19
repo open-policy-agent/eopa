@@ -6,7 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
+	bulkv1 "github.com/styrainc/load-private/proto/gen/go/load/bulk/v1"
+	datav1 "github.com/styrainc/load-private/proto/gen/go/load/data/v1"
+	policyv1 "github.com/styrainc/load-private/proto/gen/go/load/policy/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -26,63 +28,63 @@ func TestBulkRW(t *testing.T) {
 		note        string
 		storeData   string
 		storePolicy map[string]string
-		request     *loadv1.BulkRWRequest
-		expResponse *loadv1.BulkRWResponse
+		request     *bulkv1.BulkRWRequest
+		expResponse *bulkv1.BulkRWResponse
 		expErr      error
 	}{
 		// Data writes (single req/resp).
 		{
 			note: "single data create",
-			request: &loadv1.BulkRWRequest{
-				WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}}},
+			request: &bulkv1.BulkRWRequest{
+				WritesData: []*bulkv1.BulkRWRequest_WriteDataRequest{
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}}},
 				},
 			},
-			expResponse: &loadv1.BulkRWResponse{
-				WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
-					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
+			expResponse: &bulkv1.BulkRWResponse{
+				WritesData: []*bulkv1.BulkRWResponse_WriteDataResponse{
+					{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Create{Create: &datav1.CreateDataResponse{}}},
 				},
 			},
 		},
 		{
 			note:      "single data update",
 			storeData: `{"a": 27}`,
-			request: &loadv1.BulkRWRequest{
-				WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Update{Update: &loadv1.UpdateDataRequest{Data: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}}},
+			request: &bulkv1.BulkRWRequest{
+				WritesData: []*bulkv1.BulkRWRequest_WriteDataRequest{
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Update{Update: &datav1.UpdateDataRequest{Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}}},
 				},
 			},
-			expResponse: &loadv1.BulkRWResponse{
-				WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
-					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Update{Update: &loadv1.UpdateDataResponse{}}},
+			expResponse: &bulkv1.BulkRWResponse{
+				WritesData: []*bulkv1.BulkRWResponse_WriteDataResponse{
+					{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Update{Update: &datav1.UpdateDataResponse{}}},
 				},
 			},
 		},
 		{
 			note:      "single data delete",
 			storeData: `{"a": 27}`,
-			request: &loadv1.BulkRWRequest{
-				WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Delete{Delete: &loadv1.DeleteDataRequest{Path: "/a"}}},
+			request: &bulkv1.BulkRWRequest{
+				WritesData: []*bulkv1.BulkRWRequest_WriteDataRequest{
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Delete{Delete: &datav1.DeleteDataRequest{Path: "/a"}}},
 				},
 			},
-			expResponse: &loadv1.BulkRWResponse{
-				WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
-					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Delete{Delete: &loadv1.DeleteDataResponse{}}},
+			expResponse: &bulkv1.BulkRWResponse{
+				WritesData: []*bulkv1.BulkRWResponse_WriteDataResponse{
+					{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Delete{Delete: &datav1.DeleteDataResponse{}}},
 				},
 			},
 		},
 		// Policy writes (single req/resp).
 		{
 			note: "single policy create",
-			request: &loadv1.BulkRWRequest{
-				WritesPolicy: []*loadv1.BulkRWRequest_WritePolicyRequest{
-					{Req: &loadv1.BulkRWRequest_WritePolicyRequest_Create{Create: &loadv1.CreatePolicyRequest{Policy: &loadv1.Policy{Path: "/a", Text: "package a\n\nx { true }\ny { false }\n"}}}},
+			request: &bulkv1.BulkRWRequest{
+				WritesPolicy: []*bulkv1.BulkRWRequest_WritePolicyRequest{
+					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/a", Text: "package a\n\nx { true }\ny { false }\n"}}}},
 				},
 			},
-			expResponse: &loadv1.BulkRWResponse{
-				WritesPolicy: []*loadv1.BulkRWResponse_WritePolicyResponse{
-					{Resp: &loadv1.BulkRWResponse_WritePolicyResponse_Create{Create: &loadv1.CreatePolicyResponse{}}},
+			expResponse: &bulkv1.BulkRWResponse{
+				WritesPolicy: []*bulkv1.BulkRWResponse_WritePolicyResponse{
+					{Resp: &bulkv1.BulkRWResponse_WritePolicyResponse_Create{Create: &policyv1.CreatePolicyResponse{}}},
 				},
 			},
 		},
@@ -91,14 +93,14 @@ func TestBulkRW(t *testing.T) {
 			storePolicy: map[string]string{
 				"/a": "package a\n\nx { false }\ny { false }\n",
 			},
-			request: &loadv1.BulkRWRequest{
-				WritesPolicy: []*loadv1.BulkRWRequest_WritePolicyRequest{
-					{Req: &loadv1.BulkRWRequest_WritePolicyRequest_Create{Create: &loadv1.CreatePolicyRequest{Policy: &loadv1.Policy{Path: "/a", Text: "package a\n\nx { true }\ny { false }\n"}}}},
+			request: &bulkv1.BulkRWRequest{
+				WritesPolicy: []*bulkv1.BulkRWRequest_WritePolicyRequest{
+					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/a", Text: "package a\n\nx { true }\ny { false }\n"}}}},
 				},
 			},
-			expResponse: &loadv1.BulkRWResponse{
-				WritesPolicy: []*loadv1.BulkRWResponse_WritePolicyResponse{
-					{Resp: &loadv1.BulkRWResponse_WritePolicyResponse_Create{Create: &loadv1.CreatePolicyResponse{}}},
+			expResponse: &bulkv1.BulkRWResponse{
+				WritesPolicy: []*bulkv1.BulkRWResponse_WritePolicyResponse{
+					{Resp: &bulkv1.BulkRWResponse_WritePolicyResponse_Create{Create: &policyv1.CreatePolicyResponse{}}},
 				},
 			},
 		},
@@ -107,14 +109,14 @@ func TestBulkRW(t *testing.T) {
 			storePolicy: map[string]string{
 				"/a": "package a\n\nx { true }\ny { false }\n",
 			},
-			request: &loadv1.BulkRWRequest{
-				WritesPolicy: []*loadv1.BulkRWRequest_WritePolicyRequest{
-					{Req: &loadv1.BulkRWRequest_WritePolicyRequest_Create{Create: &loadv1.CreatePolicyRequest{Policy: &loadv1.Policy{Path: "/a", Text: "package a\n\nx { true }\ny { false }\n"}}}},
+			request: &bulkv1.BulkRWRequest{
+				WritesPolicy: []*bulkv1.BulkRWRequest_WritePolicyRequest{
+					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/a", Text: "package a\n\nx { true }\ny { false }\n"}}}},
 				},
 			},
-			expResponse: &loadv1.BulkRWResponse{
-				WritesPolicy: []*loadv1.BulkRWResponse_WritePolicyResponse{
-					{Resp: &loadv1.BulkRWResponse_WritePolicyResponse_Create{Create: &loadv1.CreatePolicyResponse{}}},
+			expResponse: &bulkv1.BulkRWResponse{
+				WritesPolicy: []*bulkv1.BulkRWResponse_WritePolicyResponse{
+					{Resp: &bulkv1.BulkRWResponse_WritePolicyResponse_Create{Create: &policyv1.CreatePolicyResponse{}}},
 				},
 			},
 		},
@@ -122,14 +124,14 @@ func TestBulkRW(t *testing.T) {
 		{
 			note:      "single data read",
 			storeData: `{"a": 27}`,
-			request: &loadv1.BulkRWRequest{
-				ReadsData: []*loadv1.BulkRWRequest_ReadDataRequest{
-					{Req: &loadv1.GetDataRequest{Path: "/a"}},
+			request: &bulkv1.BulkRWRequest{
+				ReadsData: []*bulkv1.BulkRWRequest_ReadDataRequest{
+					{Req: &datav1.GetDataRequest{Path: "/a"}},
 				},
 			},
-			expResponse: &loadv1.BulkRWResponse{
-				ReadsData: []*loadv1.BulkRWResponse_ReadDataResponse{
-					{Resp: &loadv1.GetDataResponse{Result: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}},
+			expResponse: &bulkv1.BulkRWResponse{
+				ReadsData: []*bulkv1.BulkRWResponse_ReadDataResponse{
+					{Resp: &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}},
 				},
 			},
 		},
@@ -139,110 +141,110 @@ func TestBulkRW(t *testing.T) {
 			storePolicy: map[string]string{
 				"/a": "package a\n\nx { true }\ny { false }\n",
 			},
-			request: &loadv1.BulkRWRequest{
-				ReadsPolicy: []*loadv1.BulkRWRequest_ReadPolicyRequest{
-					{Req: &loadv1.GetPolicyRequest{Path: "/a"}},
+			request: &bulkv1.BulkRWRequest{
+				ReadsPolicy: []*bulkv1.BulkRWRequest_ReadPolicyRequest{
+					{Req: &policyv1.GetPolicyRequest{Path: "/a"}},
 				},
 			},
-			expResponse: &loadv1.BulkRWResponse{
-				ReadsPolicy: []*loadv1.BulkRWResponse_ReadPolicyResponse{
-					{Resp: &loadv1.GetPolicyResponse{Result: &loadv1.Policy{Path: "/a", Text: "package a\n\nx { true }\ny { false }\n"}}},
+			expResponse: &bulkv1.BulkRWResponse{
+				ReadsPolicy: []*bulkv1.BulkRWResponse_ReadPolicyResponse{
+					{Resp: &policyv1.GetPolicyResponse{Result: &policyv1.Policy{Path: "/a", Text: "package a\n\nx { true }\ny { false }\n"}}},
 				},
 			},
 		},
 		// Bulk, sequential writes + reads to check for ordering.
 		{
 			note: "gradual object construction + policy + reads from base/virtual documents",
-			request: &loadv1.BulkRWRequest{
-				WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}}},
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/b", Document: structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{"c": structpb.NewNumberValue(1), "d": structpb.NewNumberValue(2), "e": structpb.NewNumberValue(3)}})}}}},
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Update{Update: &loadv1.UpdateDataRequest{Data: &loadv1.DataDocument{Path: "/b/d", Document: structpb.NewNumberValue(10)}}}},
+			request: &bulkv1.BulkRWRequest{
+				WritesData: []*bulkv1.BulkRWRequest_WriteDataRequest{
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}}},
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/b", Document: structpb.NewStructValue(&structpb.Struct{Fields: map[string]*structpb.Value{"c": structpb.NewNumberValue(1), "d": structpb.NewNumberValue(2), "e": structpb.NewNumberValue(3)}})}}}},
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Update{Update: &datav1.UpdateDataRequest{Data: &datav1.DataDocument{Path: "/b/d", Document: structpb.NewNumberValue(10)}}}},
 				},
-				WritesPolicy: []*loadv1.BulkRWRequest_WritePolicyRequest{
-					{Req: &loadv1.BulkRWRequest_WritePolicyRequest_Create{Create: &loadv1.CreatePolicyRequest{Policy: &loadv1.Policy{Path: "/test", Text: "package test\n\nx { true }\ny = false\nz = data.a + data.b.c + data.b.d\n"}}}},
+				WritesPolicy: []*bulkv1.BulkRWRequest_WritePolicyRequest{
+					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/test", Text: "package test\n\nx { true }\ny = false\nz = data.a + data.b.c + data.b.d\n"}}}},
 				},
-				ReadsData: []*loadv1.BulkRWRequest_ReadDataRequest{
-					{Req: &loadv1.GetDataRequest{Path: "/test/x"}},
-					{Req: &loadv1.GetDataRequest{Path: "/test/y"}},
-					{Req: &loadv1.GetDataRequest{Path: "/test/z"}},
+				ReadsData: []*bulkv1.BulkRWRequest_ReadDataRequest{
+					{Req: &datav1.GetDataRequest{Path: "/test/x"}},
+					{Req: &datav1.GetDataRequest{Path: "/test/y"}},
+					{Req: &datav1.GetDataRequest{Path: "/test/z"}},
 				},
-				ReadsPolicy: []*loadv1.BulkRWRequest_ReadPolicyRequest{
-					{Req: &loadv1.GetPolicyRequest{Path: "/test"}},
+				ReadsPolicy: []*bulkv1.BulkRWRequest_ReadPolicyRequest{
+					{Req: &policyv1.GetPolicyRequest{Path: "/test"}},
 				},
 			},
-			expResponse: &loadv1.BulkRWResponse{
-				WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
-					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
-					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
-					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Update{Update: &loadv1.UpdateDataResponse{}}},
+			expResponse: &bulkv1.BulkRWResponse{
+				WritesData: []*bulkv1.BulkRWResponse_WriteDataResponse{
+					{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Create{Create: &datav1.CreateDataResponse{}}},
+					{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Create{Create: &datav1.CreateDataResponse{}}},
+					{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Update{Update: &datav1.UpdateDataResponse{}}},
 				},
-				WritesPolicy: []*loadv1.BulkRWResponse_WritePolicyResponse{
-					{Resp: &loadv1.BulkRWResponse_WritePolicyResponse_Create{Create: &loadv1.CreatePolicyResponse{}}},
+				WritesPolicy: []*bulkv1.BulkRWResponse_WritePolicyResponse{
+					{Resp: &bulkv1.BulkRWResponse_WritePolicyResponse_Create{Create: &policyv1.CreatePolicyResponse{}}},
 				},
-				ReadsData: []*loadv1.BulkRWResponse_ReadDataResponse{
-					{Resp: &loadv1.GetDataResponse{Result: &loadv1.DataDocument{Path: "/test/x", Document: structpb.NewBoolValue(true)}}},
-					{Resp: &loadv1.GetDataResponse{Result: &loadv1.DataDocument{Path: "/test/y", Document: structpb.NewBoolValue(false)}}},
-					{Resp: &loadv1.GetDataResponse{Result: &loadv1.DataDocument{Path: "/test/z", Document: structpb.NewNumberValue(38)}}},
+				ReadsData: []*bulkv1.BulkRWResponse_ReadDataResponse{
+					{Resp: &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: "/test/x", Document: structpb.NewBoolValue(true)}}},
+					{Resp: &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: "/test/y", Document: structpb.NewBoolValue(false)}}},
+					{Resp: &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: "/test/z", Document: structpb.NewNumberValue(38)}}},
 				},
-				ReadsPolicy: []*loadv1.BulkRWResponse_ReadPolicyResponse{
-					{Resp: &loadv1.GetPolicyResponse{Result: &loadv1.Policy{Path: "/test", Text: "package test\n\nx { true }\ny = false\nz = data.a + data.b.c + data.b.d\n"}}},
+				ReadsPolicy: []*bulkv1.BulkRWResponse_ReadPolicyResponse{
+					{Resp: &policyv1.GetPolicyResponse{Result: &policyv1.Policy{Path: "/test", Text: "package test\n\nx { true }\ny = false\nz = data.a + data.b.c + data.b.d\n"}}},
 				},
 			},
 		},
 		// Policy + empty input.
 		{
 			note: "Empty input for policy",
-			request: &loadv1.BulkRWRequest{
-				WritesPolicy: []*loadv1.BulkRWRequest_WritePolicyRequest{
-					{Req: &loadv1.BulkRWRequest_WritePolicyRequest_Create{Create: &loadv1.CreatePolicyRequest{Policy: &loadv1.Policy{Path: "/test", Text: "package test\nz := data.x * data.y\n"}}}},
+			request: &bulkv1.BulkRWRequest{
+				WritesPolicy: []*bulkv1.BulkRWRequest_WritePolicyRequest{
+					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/test", Text: "package test\nz := data.x * data.y\n"}}}},
 				},
-				WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/x", Document: structpb.NewNumberValue(2)}}}},
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/y", Document: structpb.NewNumberValue(3)}}}},
+				WritesData: []*bulkv1.BulkRWRequest_WriteDataRequest{
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/x", Document: structpb.NewNumberValue(2)}}}},
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/y", Document: structpb.NewNumberValue(3)}}}},
 				},
-				ReadsData: []*loadv1.BulkRWRequest_ReadDataRequest{
-					{Req: &loadv1.GetDataRequest{Path: "/test/z", Input: &loadv1.InputDocument{Document: structpb.NewNullValue().GetStructValue()}}},
+				ReadsData: []*bulkv1.BulkRWRequest_ReadDataRequest{
+					{Req: &datav1.GetDataRequest{Path: "/test/z", Input: &datav1.InputDocument{Document: structpb.NewNullValue().GetStructValue()}}},
 				},
 			},
-			expResponse: &loadv1.BulkRWResponse{
-				WritesPolicy: []*loadv1.BulkRWResponse_WritePolicyResponse{
-					{Resp: &loadv1.BulkRWResponse_WritePolicyResponse_Create{Create: &loadv1.CreatePolicyResponse{}}},
+			expResponse: &bulkv1.BulkRWResponse{
+				WritesPolicy: []*bulkv1.BulkRWResponse_WritePolicyResponse{
+					{Resp: &bulkv1.BulkRWResponse_WritePolicyResponse_Create{Create: &policyv1.CreatePolicyResponse{}}},
 				},
-				WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
-					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
-					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
+				WritesData: []*bulkv1.BulkRWResponse_WriteDataResponse{
+					{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Create{Create: &datav1.CreateDataResponse{}}},
+					{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Create{Create: &datav1.CreateDataResponse{}}},
 				},
-				ReadsData: []*loadv1.BulkRWResponse_ReadDataResponse{
-					{Resp: &loadv1.GetDataResponse{Result: &loadv1.DataDocument{Path: "/test/z", Document: structpb.NewNumberValue(6)}}},
+				ReadsData: []*bulkv1.BulkRWResponse_ReadDataResponse{
+					{Resp: &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: "/test/z", Document: structpb.NewNumberValue(6)}}},
 				},
 			},
 		},
 		// Policy + input.
 		{
 			note: "Miro example - march example",
-			request: &loadv1.BulkRWRequest{
-				WritesPolicy: []*loadv1.BulkRWRequest_WritePolicyRequest{
-					{Req: &loadv1.BulkRWRequest_WritePolicyRequest_Create{Create: &loadv1.CreatePolicyRequest{Policy: &loadv1.Policy{Path: "/march1", Text: "package march1\ny := data.k * input.x + data.b\n"}}}},
+			request: &bulkv1.BulkRWRequest{
+				WritesPolicy: []*bulkv1.BulkRWRequest_WritePolicyRequest{
+					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/march1", Text: "package march1\ny := data.k * input.x + data.b\n"}}}},
 				},
-				WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/k", Document: structpb.NewNumberValue(2)}}}},
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/b", Document: structpb.NewNumberValue(3)}}}},
+				WritesData: []*bulkv1.BulkRWRequest_WriteDataRequest{
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/k", Document: structpb.NewNumberValue(2)}}}},
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/b", Document: structpb.NewNumberValue(3)}}}},
 				},
-				ReadsData: []*loadv1.BulkRWRequest_ReadDataRequest{
-					{Req: &loadv1.GetDataRequest{Path: "/march1/y", Input: &loadv1.InputDocument{Document: &structpb.Struct{Fields: map[string]*structpb.Value{"x": structpb.NewNumberValue(45)}}}}},
+				ReadsData: []*bulkv1.BulkRWRequest_ReadDataRequest{
+					{Req: &datav1.GetDataRequest{Path: "/march1/y", Input: &datav1.InputDocument{Document: &structpb.Struct{Fields: map[string]*structpb.Value{"x": structpb.NewNumberValue(45)}}}}},
 				},
 			},
-			expResponse: &loadv1.BulkRWResponse{
-				WritesPolicy: []*loadv1.BulkRWResponse_WritePolicyResponse{
-					{Resp: &loadv1.BulkRWResponse_WritePolicyResponse_Create{Create: &loadv1.CreatePolicyResponse{}}},
+			expResponse: &bulkv1.BulkRWResponse{
+				WritesPolicy: []*bulkv1.BulkRWResponse_WritePolicyResponse{
+					{Resp: &bulkv1.BulkRWResponse_WritePolicyResponse_Create{Create: &policyv1.CreatePolicyResponse{}}},
 				},
-				WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
-					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
-					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
+				WritesData: []*bulkv1.BulkRWResponse_WriteDataResponse{
+					{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Create{Create: &datav1.CreateDataResponse{}}},
+					{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Create{Create: &datav1.CreateDataResponse{}}},
 				},
-				ReadsData: []*loadv1.BulkRWResponse_ReadDataResponse{
-					{Resp: &loadv1.GetDataResponse{Result: &loadv1.DataDocument{Path: "/march1/y", Document: structpb.NewNumberValue(93)}}},
+				ReadsData: []*bulkv1.BulkRWResponse_ReadDataResponse{
+					{Resp: &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: "/march1/y", Document: structpb.NewNumberValue(93)}}},
 				},
 			},
 		},
@@ -254,39 +256,39 @@ func TestBulkRW(t *testing.T) {
 		// - Read failures are reported inline, and do not fail the transaction.
 		{
 			note: "gradual object construction + policy + reads from base/virtual documents",
-			request: &loadv1.BulkRWRequest{
-				WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}}},
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Delete{Delete: &loadv1.DeleteDataRequest{Path: "/b"}}}, // will fail because of non-existent path.
+			request: &bulkv1.BulkRWRequest{
+				WritesData: []*bulkv1.BulkRWRequest_WriteDataRequest{
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}}},
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Delete{Delete: &datav1.DeleteDataRequest{Path: "/b"}}}, // will fail because of non-existent path.
 				},
-				ReadsData: []*loadv1.BulkRWRequest_ReadDataRequest{
-					{Req: &loadv1.GetDataRequest{Path: "/a"}},
+				ReadsData: []*bulkv1.BulkRWRequest_ReadDataRequest{
+					{Req: &datav1.GetDataRequest{Path: "/a"}},
 				},
 			},
 			expErr: fmt.Errorf("rpc error: code = NotFound desc = storage_not_found_error: /b: document does not exist"),
 		},
 		{
 			note: "reading non-existent value does not break entire request",
-			request: &loadv1.BulkRWRequest{
-				WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}}},
-					{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/c", Document: structpb.NewNumberValue(4)}}}},
+			request: &bulkv1.BulkRWRequest{
+				WritesData: []*bulkv1.BulkRWRequest_WriteDataRequest{
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}}},
+					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/c", Document: structpb.NewNumberValue(4)}}}},
 				},
-				ReadsData: []*loadv1.BulkRWRequest_ReadDataRequest{
-					{Req: &loadv1.GetDataRequest{Path: "/a"}},
-					{Req: &loadv1.GetDataRequest{Path: "/b"}},
-					{Req: &loadv1.GetDataRequest{Path: "/c"}},
+				ReadsData: []*bulkv1.BulkRWRequest_ReadDataRequest{
+					{Req: &datav1.GetDataRequest{Path: "/a"}},
+					{Req: &datav1.GetDataRequest{Path: "/b"}},
+					{Req: &datav1.GetDataRequest{Path: "/c"}},
 				},
 			},
-			expResponse: &loadv1.BulkRWResponse{
-				WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
-					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
-					{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
+			expResponse: &bulkv1.BulkRWResponse{
+				WritesData: []*bulkv1.BulkRWResponse_WriteDataResponse{
+					{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Create{Create: &datav1.CreateDataResponse{}}},
+					{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Create{Create: &datav1.CreateDataResponse{}}},
 				},
-				ReadsData: []*loadv1.BulkRWResponse_ReadDataResponse{
-					{Resp: &loadv1.GetDataResponse{Result: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}},
-					{Resp: &loadv1.GetDataResponse{Result: &loadv1.DataDocument{Path: "/b"}}},
-					{Resp: &loadv1.GetDataResponse{Result: &loadv1.DataDocument{Path: "/c", Document: structpb.NewNumberValue(4)}}},
+				ReadsData: []*bulkv1.BulkRWResponse_ReadDataResponse{
+					{Resp: &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}},
+					{Resp: &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: "/b"}}},
+					{Resp: &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: "/c", Document: structpb.NewNumberValue(4)}}},
 				},
 			},
 		},
@@ -311,7 +313,7 @@ func TestBulkRW(t *testing.T) {
 				t.Fatalf("Failed to dial bufnet: %v", err)
 			}
 			defer conn.Close()
-			client := loadv1.NewBulkServiceClient(conn)
+			client := bulkv1.NewBulkServiceClient(conn)
 			resp, err := client.BulkRW(ctx, tc.request)
 			if err != nil {
 				// No error expected? Fail test.
@@ -338,8 +340,8 @@ func TestBulkRW(t *testing.T) {
 // potentially never closed, causing Load to hang indefinitely.
 func TestBulkRWSeq(t *testing.T) {
 	type BulkRWSeqStep struct {
-		request     *loadv1.BulkRWRequest
-		expResponse *loadv1.BulkRWResponse
+		request     *bulkv1.BulkRWRequest
+		expResponse *bulkv1.BulkRWResponse
 		expErr      error
 	}
 	tests := []struct {
@@ -353,16 +355,16 @@ func TestBulkRWSeq(t *testing.T) {
 			note: "Multiple empty requests",
 			steps: []BulkRWSeqStep{
 				{
-					request:     &loadv1.BulkRWRequest{},
-					expResponse: &loadv1.BulkRWResponse{},
+					request:     &bulkv1.BulkRWRequest{},
+					expResponse: &bulkv1.BulkRWResponse{},
 				},
 				{
-					request:     &loadv1.BulkRWRequest{},
-					expResponse: &loadv1.BulkRWResponse{},
+					request:     &bulkv1.BulkRWRequest{},
+					expResponse: &bulkv1.BulkRWResponse{},
 				},
 				{
-					request:     &loadv1.BulkRWRequest{},
-					expResponse: &loadv1.BulkRWResponse{},
+					request:     &bulkv1.BulkRWRequest{},
+					expResponse: &bulkv1.BulkRWResponse{},
 				},
 			},
 		},
@@ -370,38 +372,38 @@ func TestBulkRWSeq(t *testing.T) {
 			note: "Multiple data writes",
 			steps: []BulkRWSeqStep{
 				{
-					request: &loadv1.BulkRWRequest{
-						WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
-							{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}}},
+					request: &bulkv1.BulkRWRequest{
+						WritesData: []*bulkv1.BulkRWRequest_WriteDataRequest{
+							{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}}},
 						},
 					},
-					expResponse: &loadv1.BulkRWResponse{
-						WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
-							{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
-						},
-					},
-				},
-				{
-					request: &loadv1.BulkRWRequest{
-						WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
-							{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(28)}}}},
-						},
-					},
-					expResponse: &loadv1.BulkRWResponse{
-						WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
-							{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
+					expResponse: &bulkv1.BulkRWResponse{
+						WritesData: []*bulkv1.BulkRWResponse_WriteDataResponse{
+							{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Create{Create: &datav1.CreateDataResponse{}}},
 						},
 					},
 				},
 				{
-					request: &loadv1.BulkRWRequest{
-						WritesData: []*loadv1.BulkRWRequest_WriteDataRequest{
-							{Req: &loadv1.BulkRWRequest_WriteDataRequest_Create{Create: &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(29)}}}},
+					request: &bulkv1.BulkRWRequest{
+						WritesData: []*bulkv1.BulkRWRequest_WriteDataRequest{
+							{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(28)}}}},
 						},
 					},
-					expResponse: &loadv1.BulkRWResponse{
-						WritesData: []*loadv1.BulkRWResponse_WriteDataResponse{
-							{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: &loadv1.CreateDataResponse{}}},
+					expResponse: &bulkv1.BulkRWResponse{
+						WritesData: []*bulkv1.BulkRWResponse_WriteDataResponse{
+							{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Create{Create: &datav1.CreateDataResponse{}}},
+						},
+					},
+				},
+				{
+					request: &bulkv1.BulkRWRequest{
+						WritesData: []*bulkv1.BulkRWRequest_WriteDataRequest{
+							{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(29)}}}},
+						},
+					},
+					expResponse: &bulkv1.BulkRWResponse{
+						WritesData: []*bulkv1.BulkRWResponse_WriteDataResponse{
+							{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Create{Create: &datav1.CreateDataResponse{}}},
 						},
 					},
 				},
@@ -428,7 +430,7 @@ func TestBulkRWSeq(t *testing.T) {
 				t.Fatalf("Failed to dial bufnet: %v", err)
 			}
 			defer conn.Close()
-			client := loadv1.NewBulkServiceClient(conn)
+			client := bulkv1.NewBulkServiceClient(conn)
 
 			// Run each test's steps in sequence on the live service instance.
 			for _, step := range tc.steps {

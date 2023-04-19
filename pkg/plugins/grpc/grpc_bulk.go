@@ -9,7 +9,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	bjson "github.com/styrainc/load-private/pkg/json"
-	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
+	bulkv1 "github.com/styrainc/load-private/proto/gen/go/load/bulk/v1"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -35,17 +35,17 @@ import (
 // run in parallel to allow for greater throughput.
 
 // Parsing function for individual Policy write payloads.
-func bulkRWParsePolicyFromRequest(req *loadv1.BulkRWRequest_WritePolicyRequest) (*ast.Module, error) {
+func bulkRWParsePolicyFromRequest(req *bulkv1.BulkRWRequest_WritePolicyRequest) (*ast.Module, error) {
 	var path string
 	var rawPolicy string
 
 	switch x := req.GetReq().(type) {
-	case *loadv1.BulkRWRequest_WritePolicyRequest_Create:
+	case *bulkv1.BulkRWRequest_WritePolicyRequest_Create:
 		wr := x.Create
 		policy := wr.GetPolicy()
 		path = policy.GetPath()
 		rawPolicy = policy.GetText()
-	case *loadv1.BulkRWRequest_WritePolicyRequest_Update:
+	case *bulkv1.BulkRWRequest_WritePolicyRequest_Update:
 		wr := x.Update
 		policy := wr.GetPolicy()
 		path = policy.GetPath()
@@ -70,15 +70,15 @@ func bulkRWParsePolicyFromRequest(req *loadv1.BulkRWRequest_WritePolicyRequest) 
 
 // Parsing function for individual Data write payloads.
 // Returns a bjson.BJSON under-the-hood.
-func bulkRWParseDataFromRequest(req *loadv1.BulkRWRequest_WriteDataRequest) (interface{}, error) {
+func bulkRWParseDataFromRequest(req *bulkv1.BulkRWRequest_WriteDataRequest) (interface{}, error) {
 	var data *structpb.Value
 
 	switch x := req.GetReq().(type) {
-	case *loadv1.BulkRWRequest_WriteDataRequest_Create:
+	case *bulkv1.BulkRWRequest_WriteDataRequest_Create:
 		wr := x.Create
 		dataDoc := wr.GetData()
 		data = dataDoc.GetDocument()
-	case *loadv1.BulkRWRequest_WriteDataRequest_Update:
+	case *bulkv1.BulkRWRequest_WriteDataRequest_Update:
 		wr := x.Update
 		dataDoc := wr.GetData()
 		data = dataDoc.GetDocument()
@@ -97,8 +97,8 @@ func bulkRWParseDataFromRequest(req *loadv1.BulkRWRequest_WriteDataRequest) (int
 }
 
 // BulkRW endpoint handler.
-func (s *Server) BulkRW(ctx context.Context, req *loadv1.BulkRWRequest) (*loadv1.BulkRWResponse, error) {
-	out := loadv1.BulkRWResponse{}
+func (s *Server) BulkRW(ctx context.Context, req *bulkv1.BulkRWRequest) (*bulkv1.BulkRWResponse, error) {
+	out := bulkv1.BulkRWResponse{}
 	// Open initial write transaction.
 	{
 		txn, err := s.store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext(), Write: true})
@@ -147,33 +147,33 @@ func (s *Server) BulkRW(ctx context.Context, req *loadv1.BulkRWRequest) (*loadv1
 			// Errors coming from the xFromRequest functions should all be
 			// pre-wrapped with status.Error, so we can simply forward them
 			// up the call chain.
-			out.WritesPolicy = make([]*loadv1.BulkRWResponse_WritePolicyResponse, len(writesPolicy))
+			out.WritesPolicy = make([]*bulkv1.BulkRWResponse_WritePolicyResponse, len(writesPolicy))
 			for i := range writesPolicy {
 				switch x := writesPolicy[i].GetReq().(type) {
-				case *loadv1.BulkRWRequest_WritePolicyRequest_Create:
+				case *bulkv1.BulkRWRequest_WritePolicyRequest_Create:
 					wr := x.Create
 					resp, err := s.createPolicyFromRequest(ctx, txn, wr, parsedPolicies[i])
 					if err != nil {
 						s.store.Abort(ctx, txn)
 						return nil, err
 					}
-					out.WritesPolicy[i] = &loadv1.BulkRWResponse_WritePolicyResponse{Resp: &loadv1.BulkRWResponse_WritePolicyResponse_Create{Create: resp}}
-				case *loadv1.BulkRWRequest_WritePolicyRequest_Update:
+					out.WritesPolicy[i] = &bulkv1.BulkRWResponse_WritePolicyResponse{Resp: &bulkv1.BulkRWResponse_WritePolicyResponse_Create{Create: resp}}
+				case *bulkv1.BulkRWRequest_WritePolicyRequest_Update:
 					wr := x.Update
 					resp, err := s.updatePolicyFromRequest(ctx, txn, wr, parsedPolicies[i])
 					if err != nil {
 						s.store.Abort(ctx, txn)
 						return nil, err
 					}
-					out.WritesPolicy[i] = &loadv1.BulkRWResponse_WritePolicyResponse{Resp: &loadv1.BulkRWResponse_WritePolicyResponse_Update{Update: resp}}
-				case *loadv1.BulkRWRequest_WritePolicyRequest_Delete:
+					out.WritesPolicy[i] = &bulkv1.BulkRWResponse_WritePolicyResponse{Resp: &bulkv1.BulkRWResponse_WritePolicyResponse_Update{Update: resp}}
+				case *bulkv1.BulkRWRequest_WritePolicyRequest_Delete:
 					wr := x.Delete
 					resp, err := s.deletePolicyFromRequest(ctx, txn, wr)
 					if err != nil {
 						s.store.Abort(ctx, txn)
 						return nil, err
 					}
-					out.WritesPolicy[i] = &loadv1.BulkRWResponse_WritePolicyResponse{Resp: &loadv1.BulkRWResponse_WritePolicyResponse_Delete{Delete: resp}}
+					out.WritesPolicy[i] = &bulkv1.BulkRWResponse_WritePolicyResponse{Resp: &bulkv1.BulkRWResponse_WritePolicyResponse_Delete{Delete: resp}}
 				case nil:
 					// Field was not set.
 					s.store.Abort(ctx, txn)
@@ -220,33 +220,33 @@ func (s *Server) BulkRW(ctx context.Context, req *loadv1.BulkRWRequest) (*loadv1
 				return nil, err
 			}
 
-			out.WritesData = make([]*loadv1.BulkRWResponse_WriteDataResponse, len(writesData))
+			out.WritesData = make([]*bulkv1.BulkRWResponse_WriteDataResponse, len(writesData))
 			for i := range writesData {
 				switch x := writesData[i].GetReq().(type) {
-				case *loadv1.BulkRWRequest_WriteDataRequest_Create:
+				case *bulkv1.BulkRWRequest_WriteDataRequest_Create:
 					wr := x.Create
 					resp, err := s.createDataFromRequest(ctx, txn, wr, parsedData[i])
 					if err != nil {
 						s.store.Abort(ctx, txn)
 						return nil, err
 					}
-					out.WritesData[i] = &loadv1.BulkRWResponse_WriteDataResponse{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Create{Create: resp}}
-				case *loadv1.BulkRWRequest_WriteDataRequest_Update:
+					out.WritesData[i] = &bulkv1.BulkRWResponse_WriteDataResponse{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Create{Create: resp}}
+				case *bulkv1.BulkRWRequest_WriteDataRequest_Update:
 					wr := x.Update
 					resp, err := s.updateDataFromRequest(ctx, txn, wr, parsedData[i])
 					if err != nil {
 						s.store.Abort(ctx, txn)
 						return nil, err
 					}
-					out.WritesData[i] = &loadv1.BulkRWResponse_WriteDataResponse{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Update{Update: resp}}
-				case *loadv1.BulkRWRequest_WriteDataRequest_Delete:
+					out.WritesData[i] = &bulkv1.BulkRWResponse_WriteDataResponse{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Update{Update: resp}}
+				case *bulkv1.BulkRWRequest_WriteDataRequest_Delete:
 					wr := x.Delete
 					resp, err := s.deleteDataFromRequest(ctx, txn, wr)
 					if err != nil {
 						s.store.Abort(ctx, txn)
 						return nil, err
 					}
-					out.WritesData[i] = &loadv1.BulkRWResponse_WriteDataResponse{Resp: &loadv1.BulkRWResponse_WriteDataResponse_Delete{Delete: resp}}
+					out.WritesData[i] = &bulkv1.BulkRWResponse_WriteDataResponse{Resp: &bulkv1.BulkRWResponse_WriteDataResponse_Delete{Delete: resp}}
 				case nil:
 					// Field was not set.
 					s.store.Abort(ctx, txn)
@@ -269,7 +269,7 @@ func (s *Server) BulkRW(ctx context.Context, req *loadv1.BulkRWRequest) (*loadv1
 		// We skip all allocs / worker pool creation if no policy reads are required.
 		readsPolicy := req.GetReadsPolicy()
 		if len(readsPolicy) > 0 {
-			out.ReadsPolicy = make([]*loadv1.BulkRWResponse_ReadPolicyResponse, len(readsPolicy))
+			out.ReadsPolicy = make([]*bulkv1.BulkRWResponse_ReadPolicyResponse, len(readsPolicy))
 			wg, errCtx := errgroup.WithContext(ctx)
 			for i := range readsPolicy {
 				// Note(philip): This local copy of i is necessary,
@@ -299,10 +299,10 @@ func (s *Server) BulkRW(ctx context.Context, req *loadv1.BulkRWRequest) (*loadv1
 							if err != nil {
 								return status.Error(codes.Internal, "error serialization failed")
 							}
-							out.ReadsPolicy[i] = &loadv1.BulkRWResponse_ReadPolicyResponse{Errors: &loadv1.ErrorList{Errors: []*anypb.Any{serializedErr}}}
+							out.ReadsPolicy[i] = &bulkv1.BulkRWResponse_ReadPolicyResponse{Errors: &bulkv1.ErrorList{Errors: []*anypb.Any{serializedErr}}}
 							return nil
 						}
-						out.ReadsPolicy[i] = &loadv1.BulkRWResponse_ReadPolicyResponse{Resp: resp}
+						out.ReadsPolicy[i] = &bulkv1.BulkRWResponse_ReadPolicyResponse{Resp: resp}
 						s.store.Abort(ctx, txn)
 						return nil
 					}
@@ -317,7 +317,7 @@ func (s *Server) BulkRW(ctx context.Context, req *loadv1.BulkRWRequest) (*loadv1
 		// We skip all allocs / worker pool creation if no data reads are required.
 		readsData := req.GetReadsData()
 		if len(readsData) > 0 {
-			out.ReadsData = make([]*loadv1.BulkRWResponse_ReadDataResponse, len(readsData))
+			out.ReadsData = make([]*bulkv1.BulkRWResponse_ReadDataResponse, len(readsData))
 			wg, errCtx := errgroup.WithContext(ctx)
 			for i := range readsData {
 				// Note(philip): This local copy of i is necessary,
@@ -347,10 +347,10 @@ func (s *Server) BulkRW(ctx context.Context, req *loadv1.BulkRWRequest) (*loadv1
 							if err != nil {
 								return status.Error(codes.Internal, "error serialization failed")
 							}
-							out.ReadsData[i] = &loadv1.BulkRWResponse_ReadDataResponse{Errors: &loadv1.ErrorList{Errors: []*anypb.Any{serializedErr}}}
+							out.ReadsData[i] = &bulkv1.BulkRWResponse_ReadDataResponse{Errors: &bulkv1.ErrorList{Errors: []*anypb.Any{serializedErr}}}
 							return nil
 						}
-						out.ReadsData[i] = &loadv1.BulkRWResponse_ReadDataResponse{Resp: resp}
+						out.ReadsData[i] = &bulkv1.BulkRWResponse_ReadDataResponse{Resp: resp}
 						s.store.Abort(ctx, txn)
 						return nil
 					}

@@ -1,5 +1,5 @@
 syntax = "proto3";
-package load.v1;
+package load.data.v1;
 
 import "google/protobuf/struct.proto";
 

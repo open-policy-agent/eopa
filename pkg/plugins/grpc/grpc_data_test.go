@@ -18,7 +18,7 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/discovery"
 	grpc_plugin "github.com/styrainc/load-private/pkg/plugins/grpc"
 	inmem "github.com/styrainc/load-private/pkg/store"
-	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
+	datav1 "github.com/styrainc/load-private/proto/gen/go/load/data/v1"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -130,18 +130,18 @@ func TestCreateData(t *testing.T) {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
 	defer conn.Close()
-	client := loadv1.NewDataServiceClient(conn)
+	client := datav1.NewDataServiceClient(conn)
 
 	// Create new data store item.
 	{
-		_, err := client.CreateData(ctx, &loadv1.CreateDataRequest{Data: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}})
+		_, err := client.CreateData(ctx, &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}})
 		if err != nil {
 			t.Fatalf("CreateData failed: %v", err)
 		}
 	}
 	// Fetch down the new data item.
 	{
-		resp, err := client.GetData(ctx, &loadv1.GetDataRequest{Path: "/a"})
+		resp, err := client.GetData(ctx, &datav1.GetDataRequest{Path: "/a"})
 		if err != nil {
 			t.Fatalf("GetData failed: %v", err)
 		}
@@ -167,11 +167,11 @@ func TestGetDataBaseDocument(t *testing.T) {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
 	defer conn.Close()
-	client := loadv1.NewDataServiceClient(conn)
+	client := datav1.NewDataServiceClient(conn)
 
 	// Fetch down the data item.
 	{
-		resp, err := client.GetData(ctx, &loadv1.GetDataRequest{Path: "/a"})
+		resp, err := client.GetData(ctx, &datav1.GetDataRequest{Path: "/a"})
 		if err != nil {
 			t.Fatalf("GetData failed: %v", err)
 		}
@@ -196,18 +196,18 @@ func TestUpdateData(t *testing.T) {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
 	defer conn.Close()
-	client := loadv1.NewDataServiceClient(conn)
+	client := datav1.NewDataServiceClient(conn)
 
 	// Update the data item.
 	{
-		_, err := client.UpdateData(ctx, &loadv1.UpdateDataRequest{Op: loadv1.PatchOp_PATCH_OP_REPLACE, Data: &loadv1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(4)}})
+		_, err := client.UpdateData(ctx, &datav1.UpdateDataRequest{Op: datav1.PatchOp_PATCH_OP_REPLACE, Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(4)}})
 		if err != nil {
 			t.Fatalf("UpdateData failed: %v", err)
 		}
 	}
 	// Fetch down the altered data item.
 	{
-		resp, err := client.GetData(ctx, &loadv1.GetDataRequest{Path: "/a"})
+		resp, err := client.GetData(ctx, &datav1.GetDataRequest{Path: "/a"})
 		if err != nil {
 			t.Fatalf("GetData failed: %v", err)
 		}
@@ -232,18 +232,18 @@ func TestDeleteData(t *testing.T) {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
 	defer conn.Close()
-	client := loadv1.NewDataServiceClient(conn)
+	client := datav1.NewDataServiceClient(conn)
 
 	// Delete the data item.
 	{
-		_, err := client.DeleteData(ctx, &loadv1.DeleteDataRequest{Path: "/a"})
+		_, err := client.DeleteData(ctx, &datav1.DeleteDataRequest{Path: "/a"})
 		if err != nil {
 			t.Fatalf("DeleteData failed: %v", err)
 		}
 	}
 	// Try fetching the deleted data item.
 	{
-		resp, err := client.GetData(ctx, &loadv1.GetDataRequest{Path: "/a"})
+		resp, err := client.GetData(ctx, &datav1.GetDataRequest{Path: "/a"})
 		if err != nil {
 			t.Fatalf("GetData failed: %v", err)
 		}

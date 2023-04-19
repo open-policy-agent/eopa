@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
+	policyv1 "github.com/styrainc/load-private/proto/gen/go/load/policy/v1"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -34,10 +34,10 @@ d := 27
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
 	defer conn.Close()
-	client := loadv1.NewPolicyServiceClient(conn)
+	client := policyv1.NewPolicyServiceClient(conn)
 
 	// Fetch the policy.
-	resp, err := client.ListPolicies(ctx, &loadv1.ListPoliciesRequest{})
+	resp, err := client.ListPolicies(ctx, &policyv1.ListPoliciesRequest{})
 	if err != nil {
 		t.Fatalf("ListPolicies failed: %v", err)
 	}
@@ -77,11 +77,11 @@ func TestCreatePolicy(t *testing.T) {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
 	defer conn.Close()
-	client := loadv1.NewPolicyServiceClient(conn)
+	client := policyv1.NewPolicyServiceClient(conn)
 
 	// Create new policy in the store.
 	{
-		_, err := client.CreatePolicy(ctx, &loadv1.CreatePolicyRequest{Policy: &loadv1.Policy{Path: "/a", Text: `package a
+		_, err := client.CreatePolicy(ctx, &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/a", Text: `package a
 
 x { true }
 y { false }
@@ -92,7 +92,7 @@ y { false }
 	}
 	// Fetch the new policy.
 	{
-		resp, err := client.GetPolicy(ctx, &loadv1.GetPolicyRequest{Path: "/a"})
+		resp, err := client.GetPolicy(ctx, &policyv1.GetPolicyRequest{Path: "/a"})
 		if err != nil {
 			t.Fatalf("GetPolicy failed: %v", err)
 		}
@@ -127,10 +127,10 @@ y { false }
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
 	defer conn.Close()
-	client := loadv1.NewPolicyServiceClient(conn)
+	client := policyv1.NewPolicyServiceClient(conn)
 
 	// Fetch the policy.
-	resp, err := client.GetPolicy(ctx, &loadv1.GetPolicyRequest{Path: "/a"})
+	resp, err := client.GetPolicy(ctx, &policyv1.GetPolicyRequest{Path: "/a"})
 	if err != nil {
 		t.Fatalf("GetPolicy failed: %v", err)
 	}
@@ -160,12 +160,12 @@ y { false }
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
 	defer conn.Close()
-	client := loadv1.NewPolicyServiceClient(conn)
+	client := policyv1.NewPolicyServiceClient(conn)
 
 	// Update the policy in the store.
 	{
-		_, err := client.UpdatePolicy(ctx, &loadv1.UpdatePolicyRequest{
-			Policy: &loadv1.Policy{
+		_, err := client.UpdatePolicy(ctx, &policyv1.UpdatePolicyRequest{
+			Policy: &policyv1.Policy{
 				Path: "/a", Text: `package a
 
 r { true }
@@ -179,7 +179,7 @@ s { false }
 	}
 	// Fetch the updated policy.
 	{
-		resp, err := client.GetPolicy(ctx, &loadv1.GetPolicyRequest{Path: "/a"})
+		resp, err := client.GetPolicy(ctx, &policyv1.GetPolicyRequest{Path: "/a"})
 		if err != nil {
 			t.Fatalf("GetPolicy failed: %v", err)
 		}
@@ -213,18 +213,18 @@ y { false }
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
 	defer conn.Close()
-	client := loadv1.NewPolicyServiceClient(conn)
+	client := policyv1.NewPolicyServiceClient(conn)
 
 	// Delete the policy from the store.
 	{
-		_, err := client.DeletePolicy(ctx, &loadv1.DeletePolicyRequest{Path: "/a"})
+		_, err := client.DeletePolicy(ctx, &policyv1.DeletePolicyRequest{Path: "/a"})
 		if err != nil {
 			t.Fatalf("DeletePolicy failed: %v", err)
 		}
 	}
 	// Try fetching the deleted policy.
 	{
-		resp, err := client.GetPolicy(ctx, &loadv1.GetPolicyRequest{Path: "/a"})
+		resp, err := client.GetPolicy(ctx, &policyv1.GetPolicyRequest{Path: "/a"})
 		if err == nil {
 			t.Fatalf("GetPolicy was expected to error, got response: %v", resp)
 		}

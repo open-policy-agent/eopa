@@ -4,7 +4,7 @@ import (
 	"context"
 
 	bjson "github.com/styrainc/load-private/pkg/json"
-	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
+	datav1 "github.com/styrainc/load-private/proto/gen/go/load/data/v1"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -32,7 +32,7 @@ import (
 
 // Handles all validation and store reads/writes. Transaction commit/abort is handled by the caller.
 // preParsedValue is an optional parameter, allowing JSON parsing to be done elsewhere.
-func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.CreateDataRequest, preParsedValue interface{}) (*loadv1.CreateDataResponse, error) {
+func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transaction, req *datav1.CreateDataRequest, preParsedValue interface{}) (*datav1.CreateDataResponse, error) {
 	dataDoc := req.GetData()
 	path := dataDoc.GetPath()
 	p, ok := storage.ParsePath(path)
@@ -74,10 +74,10 @@ func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transact
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &loadv1.CreateDataResponse{}, nil
+	return &datav1.CreateDataResponse{}, nil
 }
 
-func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.GetDataRequest) (*loadv1.GetDataResponse, error) {
+func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction, req *datav1.GetDataRequest) (*datav1.GetDataResponse, error) {
 	path := req.GetPath()
 
 	rawInput := req.GetInput().GetDocument().AsMap()
@@ -169,7 +169,7 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 		// if err != nil {
 		// 	return nil, status.Errorf(codes.Internal, "evaluation failed: %v", err)
 		// }
-		return &loadv1.GetDataResponse{Result: &loadv1.DataDocument{Path: path}}, nil
+		return &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: path}}, nil
 	}
 
 	resultValue := &rs[0].Expressions[0].Value
@@ -187,10 +187,10 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &loadv1.GetDataResponse{Result: &loadv1.DataDocument{Path: path, Document: bv}}, nil
+	return &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: path, Document: bv}}, nil
 }
 
-func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.UpdateDataRequest, preParsedValue interface{}) (*loadv1.UpdateDataResponse, error) {
+func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transaction, req *datav1.UpdateDataRequest, preParsedValue interface{}) (*datav1.UpdateDataResponse, error) {
 	dataDoc := req.GetData()
 	path := dataDoc.GetPath()
 	p, ok := storage.ParsePath(path)
@@ -209,13 +209,13 @@ func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transact
 	var patchOp storage.PatchOp
 	op := req.GetOp()
 	switch op {
-	case loadv1.PatchOp_PATCH_OP_UNSPECIFIED:
+	case datav1.PatchOp_PATCH_OP_UNSPECIFIED:
 		patchOp = storage.ReplaceOp // Default to replace.
-	case loadv1.PatchOp_PATCH_OP_ADD:
+	case datav1.PatchOp_PATCH_OP_ADD:
 		patchOp = storage.AddOp
-	case loadv1.PatchOp_PATCH_OP_REMOVE:
+	case datav1.PatchOp_PATCH_OP_REMOVE:
 		patchOp = storage.RemoveOp
-	case loadv1.PatchOp_PATCH_OP_REPLACE:
+	case datav1.PatchOp_PATCH_OP_REPLACE:
 		patchOp = storage.ReplaceOp
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "invalid op: %v", op)
@@ -233,10 +233,10 @@ func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transact
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &loadv1.UpdateDataResponse{}, nil
+	return &datav1.UpdateDataResponse{}, nil
 }
 
-func (s *Server) deleteDataFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.DeleteDataRequest) (*loadv1.DeleteDataResponse, error) {
+func (s *Server) deleteDataFromRequest(ctx context.Context, txn storage.Transaction, req *datav1.DeleteDataRequest) (*datav1.DeleteDataResponse, error) {
 	path := req.GetPath()
 	p, ok := storage.ParsePath(path)
 	if !ok {
@@ -254,7 +254,7 @@ func (s *Server) deleteDataFromRequest(ctx context.Context, txn storage.Transact
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &loadv1.DeleteDataResponse{}, nil
+	return &datav1.DeleteDataResponse{}, nil
 }
 
 // --------------------------------------------------------
@@ -262,7 +262,7 @@ func (s *Server) deleteDataFromRequest(ctx context.Context, txn storage.Transact
 
 // Creates or overwrites a data document, creating any necessary containing documents to make the path valid.
 // Equivalent to the Data REST API's PUT method.
-func (s *Server) CreateData(ctx context.Context, req *loadv1.CreateDataRequest) (*loadv1.CreateDataResponse, error) {
+func (s *Server) CreateData(ctx context.Context, req *datav1.CreateDataRequest) (*datav1.CreateDataResponse, error) {
 	txn, err := s.store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext(), Write: true})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "transaction failed")
@@ -284,7 +284,7 @@ func (s *Server) CreateData(ctx context.Context, req *loadv1.CreateDataRequest) 
 
 // Retrieves/evaluates a document requiring input.
 // Equivalent to the Data REST API's GET (with Input) method.
-func (s *Server) GetData(ctx context.Context, req *loadv1.GetDataRequest) (*loadv1.GetDataResponse, error) {
+func (s *Server) GetData(ctx context.Context, req *datav1.GetDataRequest) (*datav1.GetDataResponse, error) {
 	// decisionID := s.generateDecisionID()
 	// ctx := logging.WithDecisionID(r.Context(), decisionID)
 	// annotateSpan(ctx, decisionID)
@@ -300,7 +300,7 @@ func (s *Server) GetData(ctx context.Context, req *loadv1.GetDataRequest) (*load
 }
 
 // Creates/Updates/Deletes a document. Roughly equivalent to the Data REST API's PATCH method.
-func (s *Server) UpdateData(ctx context.Context, req *loadv1.UpdateDataRequest) (*loadv1.UpdateDataResponse, error) {
+func (s *Server) UpdateData(ctx context.Context, req *datav1.UpdateDataRequest) (*datav1.UpdateDataResponse, error) {
 	// Start a transaction, so that we can do reads/writes.
 	txn, err := s.store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext(), Write: true})
 	if err != nil {
@@ -322,7 +322,7 @@ func (s *Server) UpdateData(ctx context.Context, req *loadv1.UpdateDataRequest) 
 }
 
 // Deletes a document. Equivalent to the Data REST API's DELETE method.
-func (s *Server) DeleteData(ctx context.Context, req *loadv1.DeleteDataRequest) (*loadv1.DeleteDataResponse, error) {
+func (s *Server) DeleteData(ctx context.Context, req *datav1.DeleteDataRequest) (*datav1.DeleteDataResponse, error) {
 	// Start a transaction, so that we can do reads/writes.
 	txn, err := s.store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext(), Write: true})
 	if err != nil {

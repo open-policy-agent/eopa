@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             (unknown)
-// source: load/v1/bulk.proto
+// source: load/bulk/v1/bulk.proto
 
-package loadv1
+package bulkv1
 
 import (
 	context "context"
@@ -46,7 +46,7 @@ func NewBulkServiceClient(cc grpc.ClientConnInterface) BulkServiceClient {
 
 func (c *bulkServiceClient) BulkRW(ctx context.Context, in *BulkRWRequest, opts ...grpc.CallOption) (*BulkRWResponse, error) {
 	out := new(BulkRWResponse)
-	err := c.cc.Invoke(ctx, "/load.v1.BulkService/BulkRW", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/load.bulk.v1.BulkService/BulkRW", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func _BulkService_BulkRW_Handler(srv interface{}, ctx context.Context, dec func(
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/load.v1.BulkService/BulkRW",
+		FullMethod: "/load.bulk.v1.BulkService/BulkRW",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BulkServiceServer).BulkRW(ctx, req.(*BulkRWRequest))
@@ -114,7 +114,7 @@ func _BulkService_BulkRW_Handler(srv interface{}, ctx context.Context, dec func(
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var BulkService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "load.v1.BulkService",
+	ServiceName: "load.bulk.v1.BulkService",
 	HandlerType: (*BulkServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -123,5 +123,5 @@ var BulkService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "load/v1/bulk.proto",
+	Metadata: "load/bulk/v1/bulk.proto",
 }

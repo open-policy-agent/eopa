@@ -8,7 +8,7 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/storage"
 
-	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
+	policyv1 "github.com/styrainc/load-private/proto/gen/go/load/policy/v1"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,7 +26,7 @@ import (
 // parameters, and querying the store. They defer transaction creation /
 // destruction to the caller.
 
-func (s *Server) listPoliciesFromRequest(ctx context.Context, txn storage.Transaction, _ *loadv1.ListPoliciesRequest) (*loadv1.ListPoliciesResponse, error) {
+func (s *Server) listPoliciesFromRequest(ctx context.Context, txn storage.Transaction, _ *policyv1.ListPoliciesRequest) (*policyv1.ListPoliciesResponse, error) {
 	// Note(philip): We take a similar approach to the OPA REST API's
 	// handler, but we only return the raw policy text at this time, not
 	// the ASTs.
@@ -35,21 +35,21 @@ func (s *Server) listPoliciesFromRequest(ctx context.Context, txn storage.Transa
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	policies := make([]*loadv1.Policy, 0, len(ids))
+	policies := make([]*policyv1.Policy, 0, len(ids))
 	for _, id := range ids {
 		bs, err := s.store.GetPolicy(ctx, txn, id)
 		if err != nil {
 			// No need to check for IsNotFound errors; these policies should always exist.
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		policies = append(policies, &loadv1.Policy{Path: id, Text: string(bs)})
+		policies = append(policies, &policyv1.Policy{Path: id, Text: string(bs)})
 	}
 
-	return &loadv1.ListPoliciesResponse{Results: policies}, nil
+	return &policyv1.ListPoliciesResponse{Results: policies}, nil
 }
 
 // preParsedModule is an optional parameter, allowing module parsing to be done elsewhere.
-func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.CreatePolicyRequest, preParsedModule *ast.Module) (*loadv1.CreatePolicyResponse, error) {
+func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transaction, req *policyv1.CreatePolicyRequest, preParsedModule *ast.Module) (*policyv1.CreatePolicyResponse, error) {
 	policy := req.GetPolicy()
 	path := policy.GetPath()
 	rawPolicy := policy.GetText()
@@ -63,7 +63,7 @@ func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transa
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else if bytes.Equal([]byte(rawPolicy), bs) {
-		return &loadv1.CreatePolicyResponse{}, nil
+		return &policyv1.CreatePolicyResponse{}, nil
 	}
 
 	// Parse the incoming Rego module.
@@ -120,14 +120,14 @@ func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transa
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &loadv1.CreatePolicyResponse{}, nil
+	return &policyv1.CreatePolicyResponse{}, nil
 }
 
 // Note(philip): For the Miro PoC, we're simply dropping the alternative
 // fields, like ID and AST, since we can add them directly to the protobuf
 // definition later when we've decided how to solve the compiler state
 // problem for the plugin.
-func (s *Server) getPolicyFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.GetPolicyRequest) (*loadv1.GetPolicyResponse, error) {
+func (s *Server) getPolicyFromRequest(ctx context.Context, txn storage.Transaction, req *policyv1.GetPolicyRequest) (*policyv1.GetPolicyResponse, error) {
 	path := req.GetPath()
 
 	policyBytes, err := s.store.GetPolicy(ctx, txn, path)
@@ -156,11 +156,11 @@ func (s *Server) getPolicyFromRequest(ctx context.Context, txn storage.Transacti
 	// 	return nil, status.Error(codes.Internal, err.Error())
 	// }
 	// bs := bjsonItem.String()
-	return &loadv1.GetPolicyResponse{Result: &loadv1.Policy{Path: path, Text: string(policyBytes)}}, nil
+	return &policyv1.GetPolicyResponse{Result: &policyv1.Policy{Path: path, Text: string(policyBytes)}}, nil
 }
 
 // preParsedModule is an optional parameter, allowing module parsing to be done elsewhere.
-func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.UpdatePolicyRequest, preParsedModule *ast.Module) (*loadv1.UpdatePolicyResponse, error) {
+func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transaction, req *policyv1.UpdatePolicyRequest, preParsedModule *ast.Module) (*policyv1.UpdatePolicyResponse, error) {
 	policy := req.GetPolicy()
 	path := policy.GetPath()
 	rawPolicy := policy.GetText()
@@ -173,7 +173,7 @@ func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transa
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else if bytes.Equal([]byte(rawPolicy), bs) {
-		return &loadv1.UpdatePolicyResponse{}, nil
+		return &policyv1.UpdatePolicyResponse{}, nil
 	}
 
 	// Parse the incoming Rego module.
@@ -231,10 +231,10 @@ func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transa
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &loadv1.UpdatePolicyResponse{}, nil
+	return &policyv1.UpdatePolicyResponse{}, nil
 }
 
-func (s *Server) deletePolicyFromRequest(ctx context.Context, txn storage.Transaction, req *loadv1.DeletePolicyRequest) (*loadv1.DeletePolicyResponse, error) {
+func (s *Server) deletePolicyFromRequest(ctx context.Context, txn storage.Transaction, req *policyv1.DeletePolicyRequest) (*policyv1.DeletePolicyResponse, error) {
 	path := req.GetPath()
 	if err := s.checkPolicyIDScope(ctx, txn, path); err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
@@ -264,14 +264,14 @@ func (s *Server) deletePolicyFromRequest(ctx context.Context, txn storage.Transa
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &loadv1.DeletePolicyResponse{}, nil
+	return &policyv1.DeletePolicyResponse{}, nil
 }
 
 // --------------------------------------------------------
 // Top-level gRPC API request handlers
 
 // Lists all stored policy modules. Equivalent to the Policy REST API's List method.
-func (s *Server) ListPolicies(ctx context.Context, req *loadv1.ListPoliciesRequest) (*loadv1.ListPoliciesResponse, error) {
+func (s *Server) ListPolicies(ctx context.Context, req *policyv1.ListPoliciesRequest) (*policyv1.ListPoliciesResponse, error) {
 	txn, err := s.store.NewTransaction(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "transaction failed")
@@ -282,7 +282,7 @@ func (s *Server) ListPolicies(ctx context.Context, req *loadv1.ListPoliciesReque
 }
 
 // Parses, compiles, and installs a policy. Equivalent to the Policy REST API's PUT method.
-func (s *Server) CreatePolicy(ctx context.Context, req *loadv1.CreatePolicyRequest) (*loadv1.CreatePolicyResponse, error) {
+func (s *Server) CreatePolicy(ctx context.Context, req *policyv1.CreatePolicyRequest) (*policyv1.CreatePolicyResponse, error) {
 	// Open a write transaction.
 	txn, err := s.store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext(), Write: true})
 	if err != nil {
@@ -304,7 +304,7 @@ func (s *Server) CreatePolicy(ctx context.Context, req *loadv1.CreatePolicyReque
 }
 
 // Retrieves a policy module. Equivalent to the Policy REST API's GET method.
-func (s *Server) GetPolicy(ctx context.Context, req *loadv1.GetPolicyRequest) (*loadv1.GetPolicyResponse, error) {
+func (s *Server) GetPolicy(ctx context.Context, req *policyv1.GetPolicyRequest) (*policyv1.GetPolicyResponse, error) {
 	txn, err := s.store.NewTransaction(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "transaction failed")
@@ -315,7 +315,7 @@ func (s *Server) GetPolicy(ctx context.Context, req *loadv1.GetPolicyRequest) (*
 }
 
 // Parses, compiles, and installs a policy. Equivalent to the Policy REST API's PUT method.
-func (s *Server) UpdatePolicy(ctx context.Context, req *loadv1.UpdatePolicyRequest) (*loadv1.UpdatePolicyResponse, error) {
+func (s *Server) UpdatePolicy(ctx context.Context, req *policyv1.UpdatePolicyRequest) (*policyv1.UpdatePolicyResponse, error) {
 	// Open a write transaction.
 	txn, err := s.store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext(), Write: true})
 	if err != nil {
@@ -338,7 +338,7 @@ func (s *Server) UpdatePolicy(ctx context.Context, req *loadv1.UpdatePolicyReque
 // Deletes a policy module. If other policy modules in the same package
 // depend on rules in the policy module to be deleted, the server will
 // return an error. Equivalent to the Policy REST API's DELETE method.
-func (s *Server) DeletePolicy(ctx context.Context, req *loadv1.DeletePolicyRequest) (*loadv1.DeletePolicyResponse, error) {
+func (s *Server) DeletePolicy(ctx context.Context, req *policyv1.DeletePolicyRequest) (*policyv1.DeletePolicyResponse, error) {
 	txn, err := s.store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext(), Write: true})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "transaction failed")

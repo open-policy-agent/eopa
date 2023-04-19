@@ -30,7 +30,9 @@ import (
 	"github.com/open-policy-agent/opa/topdown"
 	iCache "github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/styrainc/load-private/pkg/plugins/bundle"
-	loadv1 "github.com/styrainc/load-private/proto/gen/go/load/v1"
+	bulkv1 "github.com/styrainc/load-private/proto/gen/go/load/bulk/v1"
+	datav1 "github.com/styrainc/load-private/proto/gen/go/load/data/v1"
+	policyv1 "github.com/styrainc/load-private/proto/gen/go/load/policy/v1"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -109,9 +111,9 @@ type Server struct {
 	certLoopHaltChannel             chan struct{}
 	certLoopShutdownCompleteChannel chan struct{}
 
-	loadv1.UnimplementedDataServiceServer
-	loadv1.UnimplementedPolicyServiceServer
-	loadv1.UnimplementedBulkServiceServer
+	datav1.UnimplementedDataServiceServer
+	policyv1.UnimplementedPolicyServiceServer
+	bulkv1.UnimplementedBulkServiceServer
 }
 
 const pqMaxCacheSize = 100
@@ -191,9 +193,9 @@ func (s *Server) initGRPCServer(creds credentials.TransportCredentials) error {
 	// The RegisterXXXServiceServer calls enable each service's API methods
 	// individually. This allows generating code for multiple services, but
 	// only using a subset of those services on a gRPC server instance.
-	loadv1.RegisterDataServiceServer(s.grpcServer, s)
-	loadv1.RegisterPolicyServiceServer(s.grpcServer, s)
-	loadv1.RegisterBulkServiceServer(s.grpcServer, s)
+	datav1.RegisterDataServiceServer(s.grpcServer, s)
+	policyv1.RegisterPolicyServiceServer(s.grpcServer, s)
+	bulkv1.RegisterBulkServiceServer(s.grpcServer, s)
 	reflection.Register(s.grpcServer)
 	s.mtx.Unlock()
 

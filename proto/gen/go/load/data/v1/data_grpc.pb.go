@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             (unknown)
-// source: load/v1/data.proto
+// source: load/data/v1/data.proto
 
-package loadv1
+package datav1
 
 import (
 	context "context"
@@ -64,7 +64,7 @@ func NewDataServiceClient(cc grpc.ClientConnInterface) DataServiceClient {
 
 func (c *dataServiceClient) GetData(ctx context.Context, in *GetDataRequest, opts ...grpc.CallOption) (*GetDataResponse, error) {
 	out := new(GetDataResponse)
-	err := c.cc.Invoke(ctx, "/load.v1.DataService/GetData", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/load.data.v1.DataService/GetData", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (c *dataServiceClient) GetData(ctx context.Context, in *GetDataRequest, opt
 
 func (c *dataServiceClient) CreateData(ctx context.Context, in *CreateDataRequest, opts ...grpc.CallOption) (*CreateDataResponse, error) {
 	out := new(CreateDataResponse)
-	err := c.cc.Invoke(ctx, "/load.v1.DataService/CreateData", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/load.data.v1.DataService/CreateData", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (c *dataServiceClient) CreateData(ctx context.Context, in *CreateDataReques
 
 func (c *dataServiceClient) UpdateData(ctx context.Context, in *UpdateDataRequest, opts ...grpc.CallOption) (*UpdateDataResponse, error) {
 	out := new(UpdateDataResponse)
-	err := c.cc.Invoke(ctx, "/load.v1.DataService/UpdateData", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/load.data.v1.DataService/UpdateData", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (c *dataServiceClient) UpdateData(ctx context.Context, in *UpdateDataReques
 
 func (c *dataServiceClient) DeleteData(ctx context.Context, in *DeleteDataRequest, opts ...grpc.CallOption) (*DeleteDataResponse, error) {
 	out := new(DeleteDataResponse)
-	err := c.cc.Invoke(ctx, "/load.v1.DataService/DeleteData", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/load.data.v1.DataService/DeleteData", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func _DataService_GetData_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/load.v1.DataService/GetData",
+		FullMethod: "/load.data.v1.DataService/GetData",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DataServiceServer).GetData(ctx, req.(*GetDataRequest))
@@ -192,7 +192,7 @@ func _DataService_CreateData_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/load.v1.DataService/CreateData",
+		FullMethod: "/load.data.v1.DataService/CreateData",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DataServiceServer).CreateData(ctx, req.(*CreateDataRequest))
@@ -210,7 +210,7 @@ func _DataService_UpdateData_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/load.v1.DataService/UpdateData",
+		FullMethod: "/load.data.v1.DataService/UpdateData",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DataServiceServer).UpdateData(ctx, req.(*UpdateDataRequest))
@@ -228,7 +228,7 @@ func _DataService_DeleteData_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/load.v1.DataService/DeleteData",
+		FullMethod: "/load.data.v1.DataService/DeleteData",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DataServiceServer).DeleteData(ctx, req.(*DeleteDataRequest))
@@ -240,7 +240,7 @@ func _DataService_DeleteData_Handler(srv interface{}, ctx context.Context, dec f
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var DataService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "load.v1.DataService",
+	ServiceName: "load.data.v1.DataService",
 	HandlerType: (*DataServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -261,5 +261,5 @@ var DataService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "load/v1/data.proto",
+	Metadata: "load/data/v1/data.proto",
 }
