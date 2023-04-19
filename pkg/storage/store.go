@@ -9,6 +9,7 @@ import (
 	"github.com/open-policy-agent/opa/bundle"
 	bundleApi "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/logging"
+	"github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -37,7 +38,9 @@ type (
 		root storage.Store // read-write root storage
 		tree *tree         // attached read-only storages
 		ops  vm.DataOperations
-		// TODO: Should the data plugins be registered here?
+
+		dataPluginsMutex sync.Mutex
+		dataPlugins      map[string]storage.Path // data plugins
 	}
 
 	Options struct {
@@ -111,7 +114,8 @@ func NewFromObject(data interface{}) storage.Store {
 
 func newInternal(ctx context.Context, logger logging.Logger, prom prometheus.Registerer, opts Options) (storage.Store, error) {
 	s := store{root: inmem.New(),
-		tree: newTree(nil),
+		tree:        newTree(nil),
+		dataPlugins: map[string]storage.Path{},
 	}
 
 	for _, opt := range opts.Stores {
@@ -202,7 +206,14 @@ func (s *store) underlying(txn storage.Transaction) *transaction {
 }
 
 func (s *store) RegisterDataPlugin(name string, path storage.Path) {
-	s.root.(DataPlugins).RegisterDataPlugin(name, path)
+	s.dataPluginsMutex.Lock()
+	defer s.dataPluginsMutex.Unlock()
+
+	if path == nil {
+		delete(s.dataPlugins, name)
+	} else {
+		s.dataPlugins[name] = path
+	}
 }
 
 // NewTransaction is called create a new transaction in the store.
@@ -238,11 +249,30 @@ func (s *store) ReadBJSON(ctx context.Context, txn storage.Transaction, path sto
 }
 
 func (s *store) WriteUnchecked(ctx context.Context, txn storage.Transaction, op storage.PatchOp, path storage.Path, doc interface{}) error {
-	return s.underlying(txn).WriteUnchecked(ctx, op, path, doc)
+	return s.underlying(txn).Write(ctx, op, path, doc)
+}
+
+func (s *store) checkDataPlugins(path storage.Path) error {
+	s.dataPluginsMutex.Lock()
+	defer s.dataPluginsMutex.Unlock()
+
+	for name, plugin := range s.dataPlugins {
+		if path.HasPrefix(plugin) {
+			return types.BadRequestErr(fmt.Sprintf("path %q is owned by plugin %q", path.String(), name))
+		}
+	}
+	return nil
 }
 
 // Write is called to modify a document referred to by path.
 func (s *store) Write(ctx context.Context, txn storage.Transaction, op storage.PatchOp, path storage.Path, doc interface{}) error {
+	// check dataplugins path
+	if len(path) != 0 && s.dataPlugins != nil {
+		if err := s.checkDataPlugins(path); err != nil {
+			return err
+		}
+	}
+
 	return s.underlying(txn).Write(ctx, op, path, doc)
 }
 
@@ -307,20 +337,6 @@ func (txn *transaction) ReadBJSON(ctx context.Context, path storage.Path) (bjson
 	}
 
 	return s.(BJSONReader).ReadBJSON(ctx, t, path)
-}
-
-func (txn *transaction) WriteUnchecked(ctx context.Context, op storage.PatchOp, path storage.Path, doc interface{}) error {
-	s := txn.tree.Find(path)
-	if s == nil {
-		s = txn.store.root
-	}
-
-	t, err := txn.dispatch(ctx, s, true)
-	if err != nil {
-		return err
-	}
-
-	return s.(WriterUnchecked).WriteUnchecked(ctx, t, op, path, doc)
 }
 
 func (txn *transaction) Write(ctx context.Context, op storage.PatchOp, path storage.Path, doc interface{}) error {
