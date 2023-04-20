@@ -35,7 +35,7 @@ type (
 	}
 
 	keygenLogger struct {
-		level keygen.LogLevel
+		logger logging.Logger
 	}
 
 	// offline license embedded-data: https://keygen.sh/docs/api/cryptography/#cryptographic-keys-template-vars
@@ -73,7 +73,9 @@ func NewLicense() *License {
 	keygen.PublicKey = "8b8ff31c1d3031add9b1b734e09e81c794731718c2cac2e601b8dfbc95daa4fc"
 	//keygen.APIURL = "https://2.2.2.99" // simulate offline network (timeout)
 	//keygen.APIURL = "https://api.keygenx.sh" // simulate offline network (DNS not found)
-	keygen.Logger = &keygenLogger{level: keygen.LogLevelNone}
+
+	logger := logging.New()
+	keygen.Logger = &keygenLogger{logger}
 
 	// validate licensekey or licensetoken
 	keygen.LicenseKey = os.Getenv(loadLicenseKey)
@@ -84,38 +86,26 @@ func NewLicense() *License {
 	// remove licenses from environment! (opa.runtime.env)
 	os.Unsetenv(loadLicenseKey)
 	os.Unsetenv(loadLicenseToken)
-	return &License{logger: logging.Get()}
+	return &License{logger: logger}
 }
 
+// NOTE(sr): We're mapping ALL keygen errors to "debug" level. We don't want to show
+// them under ordinary conditions, but if we're debugging license trouble, they need
+// to be surfaced.
 func (l *keygenLogger) Errorf(format string, v ...interface{}) {
-	if l.level < keygen.LogLevelError {
-		return
-	}
-	fmt.Fprintf(os.Stderr, "[ERROR] "+format+"\n", v...)
+	l.logger.Debug(format, v...)
 }
 
 func (l *keygenLogger) Warnf(format string, v ...interface{}) {
-	if l.level < keygen.LogLevelWarn {
-		return
-	}
-
-	fmt.Fprintf(os.Stderr, "[WARN] "+format+"\n", v...)
+	l.logger.Debug(format, v...)
 }
 
 func (l *keygenLogger) Infof(format string, v ...interface{}) {
-	if l.level < keygen.LogLevelInfo {
-		return
-	}
-
-	fmt.Fprintf(os.Stdout, "[INFO] "+format+"\n", v...)
+	l.logger.Debug(format, v...)
 }
 
 func (l *keygenLogger) Debugf(format string, v ...interface{}) {
-	if l.level < keygen.LogLevelDebug {
-		return
-	}
-
-	fmt.Fprintf(os.Stdout, "[DEBUG] "+format+"\n", v...)
+	l.logger.Debug(format, v...)
 }
 
 // stopped: see if ReleaseLicense was called
@@ -337,7 +327,7 @@ func (l *License) ReleaseLicense() {
 	if l == nil {
 		return
 	}
-	// tell validateLicense to stop (if its still running)
+	// tell validateLicense to stop (if it's still running)
 	atomic.AddInt32(&l.stop, 1)
 
 	l.mutex.Lock()
@@ -347,7 +337,9 @@ func (l *License) ReleaseLicense() {
 	}
 	if l.license != nil {
 		l.logger.Debug("Licensing deactivation")
-		l.license.Deactivate(l.fingerprint)
+		if err := l.license.Deactivate(l.fingerprint); err != nil {
+			l.logger.Error("License deactivation: %v", err)
+		}
 	}
 	l.released = true
 }
