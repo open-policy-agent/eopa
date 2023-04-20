@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/Jeffail/gabs/v2 v2.7.0
 	github.com/OneOfOne/xxhash v1.2.8
-	github.com/aws/aws-sdk-go v1.44.240
+	github.com/aws/aws-sdk-go v1.44.246
 	github.com/benthosdev/benthos/v4 v4.13.1-0.20230417162539-33a65f2d3ee1
 	github.com/charmbracelet/bubbles v0.15.0
 	github.com/charmbracelet/bubbletea v0.23.2
