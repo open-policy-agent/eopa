@@ -9,3 +9,4 @@ The API definitions are pushed to the [`buf.build/styra/load`][buf-styra-load] r
    [buf]: https://github.com/bufbuild/buf
    [gh-styra-load]: https://github.com/StyraInc/load
    [buf-styra-load]: https://buf.build/styra/load
+

@@ -1,6 +1,77 @@
-## Changelog
+# Changelog
 
-### v1.0.1
+## v1.1.0
+
+This release includes a host of runtime performance improvements, bugfixes, and a new gRPC plugin.
+Startup times have also been dramatically improved over older releases, thanks to upstream fixes in some of our dependencies.
+
+### New protocol support via the `grpc` plugin
+
+Load now supports gRPC versions of OPA's [Policy][opa-rest-policy] and [Data][opa-rest-data] [REST APIs][opa-rest-docs], as well as a new experimental bulk operations API.
+The gRPC server is enabled via the `grpc` plugin.
+
+   [opa-rest-policy]: https://www.openpolicyagent.org/docs/latest/rest-api/#policy-api
+   [opa-rest-data]: https://www.openpolicyagent.org/docs/latest/rest-api/#data-api
+   [opa-rest-docs]: https://www.openpolicyagent.org/docs/latest/rest-api/
+
+The plugin can be enabled in your Load config file like so:
+
+```yaml
+plugins:
+  grpc:
+    addr: ":9090"
+```
+
+Or if you prefer the CLI, try: `load run -s --set plugins.grpc.addr=:9090`
+
+In addition to the normal Load HTTP server, this will start up an unsecured gRPC server on the port you specified in the plugin's options.
+This mode is great for testing with tools like [grpcurl][grpcurl], but we strongly recommend that you protect your gRPC server using one of the TLS options detailed below if you intend to make the gRPC port visible to other systems.
+
+   [grpcurl]: https://github.com/fullstorydev/grpcurl
+
+#### TLS Support
+
+To secure the gRPC server, server-side TLS support is available.
+Given the files `cert.pem` and `key.pem`, you could configure your Load instance to secure your gRPC connections like so:
+
+```yaml
+plugins:
+  grpc:
+    addr: ":9090"
+    tls:
+      cert_file: "cert.pem"
+      cert_key_file: "key.pem"
+```
+
+#### mTLS Support
+
+For additional security, mutual TLS (mTLS) connections can be used, where the client must present a certificate signed by the same Root CA as the server's certificate.
+Given the root CA file `ca.pem`, we can add on to the configuration example for server-side TLS, and require clients to authenticate themselves using mTLS:
+
+```yaml
+plugins:
+  grpc:
+    addr: ":9090"
+    authentication: "tls"
+    tls:
+      cert_file: "cert.pem"
+      cert_key_file: "key.pem"
+      ca_cert_file: "ca.pem"
+```
+
+Any client whose certificate was signed with `ca.pem` will be able to authenticate to the server.
+All others will get disconnections or TLS errors.
+
+### Runtime
+
+ - Improved iteration speeds over large Rego Object types.
+ - Improved memory efficiency via interning for some types.
+
+### Fixes
+
+ - Fixed a minor Rego incompatibility to match OPA's behavior.
+
+## v1.0.1
 
 * Performance improvements for queries of "all of `data`", like `load eval [...] data` or
   `GET /v1/data` with Load's API.
@@ -10,7 +81,7 @@
 * Change the exit code for license validation related errors from 2 to 3 -- to differentiate them
   from any other errors.
 
-### v1.0.0
+## v1.0.0
 
 This release marks the first general availability release of Styra Load.
 Load provides a number of improvements over open source OPA, including:
@@ -19,26 +90,26 @@ Load provides a number of improvements over open source OPA, including:
  - Datasource integrations
  - Live Impact Analysis
 
-### v0.102.5
+## v0.102.5
 
  * This release is a release engineering fix to sort out part of our gRPC documentation system.
 
-### v0.102.4
+## v0.102.4
 
 * Fix `--disable-telemetry` being ignored for `load run --server`.
 * Use `google.protobuf.Value` and `google.protobuf.Struct` in the gRPC API instead of raw JSON strings.
 * Further performance improvements to the Rego VM and bundle loading.
 
-### v0.102.3
+## v0.102.3
 
 * Fix `load bundle convert` regression
 
-### v0.102.1, v0.102.2
+## v0.102.1, v0.102.2
 
 These releases have been release engineering fixes to sort out MacOS binary signing
 of published executables.
 
-### v0.102.0
+## v0.102.0
 
 * `load eval` now has a CLI flag for changing the instruction limit.
 * Various BJSON bundle loading issues have been identified and fixed.
@@ -51,11 +122,11 @@ of published executables.
 * Updated the internal OPA version to v0.50.2.
 * Various other third-party dependency bumps.
 
-### v0.101.1
+## v0.101.1
 
  * Fixed a hang triggered by sending the gRPC `BulkRW` endpoint multiple blank messages in sequence.
 
-### v0.101.0
+## v0.101.0
 
 * Updated the internal OPA version to v0.50.0.
   See the [OPA Release Notes](https://github.com/open-policy-agent/opa/releases/tag/v0.50.0) for details.
