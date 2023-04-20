@@ -6,7 +6,6 @@ import (
 
 	"github.com/open-policy-agent/opa/storage"
 
-	"github.com/styrainc/load-private/pkg/json"
 	"github.com/styrainc/load-private/pkg/vm"
 )
 
@@ -18,7 +17,7 @@ type (
 	// node is the interface all the elements in the namespace tree implement.
 	node interface {
 		vm.IterableObject
-		Find(path storage.Path) storage.Store
+		Find(path storage.Path) (storage.Store, error)
 		Insert(path storage.Path, child node) error
 		Clone(txn *transaction) node
 	}
@@ -26,6 +25,7 @@ type (
 	tree struct {
 		children map[string]node
 		path     storage.Path
+		store    storage.Store
 		txn      *transaction
 	}
 
@@ -41,8 +41,8 @@ type (
 	}
 )
 
-func newTree(path storage.Path) *tree {
-	return &tree{children: make(map[string]node), path: path}
+func newTree(path storage.Path, store storage.Store) *tree {
+	return &tree{children: make(map[string]node), path: path, store: store}
 }
 
 func (n *tree) Insert(path storage.Path, child node) error {
@@ -55,7 +55,7 @@ func (n *tree) Insert(path storage.Path, child node) error {
 	key := path[0]
 	c, ok := n.children[key]
 	if !ok {
-		c = newTree(append(n.path, key))
+		c = newTree(append(n.path, key), nil)
 		n.children[key] = c
 	}
 
@@ -80,26 +80,29 @@ func (n *tree) Get(ctx context.Context, key interface{}) (interface{}, bool, err
 		return child.Clone(n.txn), true, nil
 	}
 
-	// Revert to the root storage if nothing found.
-	return n.txn.read(ctx, n.txn.store.root, append(n.path, skey))
+	if len(n.children) == 0 && n.store != nil {
+		return n.txn.read(ctx, n.store, append(n.path, skey))
+	}
+
+	return nil, false, nil
 }
 
 func (n *tree) Iter(ctx context.Context, f func(key, value interface{}) bool) error {
-	for key, child := range n.children {
-		if f(json.NewString(key), child) {
+	if len(n.children) == 0 && n.store != nil {
+		v, ok, err := n.txn.read(ctx, n.store, n.path)
+		if err != nil {
+			return err
+		} else if !ok {
 			return nil
 		}
+
+		return n.txn.store.ops.Iter(ctx, v, f)
 	}
 
-	// Check the root storage as well.
-	v, ok, err := n.txn.read(ctx, n.txn.store.root, n.path)
-	if err != nil {
-		return err
-	} else if !ok {
-		return nil
+	return &storage.Error{
+		Code:    ReadsNotSupportedErr,
+		Message: n.path.String(),
 	}
-
-	return n.txn.store.ops.Iter(ctx, v, f)
 }
 
 func (n *tree) Len(ctx context.Context) (int, error) {
@@ -111,16 +114,33 @@ func (n *tree) Len(ctx context.Context) (int, error) {
 	return i, err
 }
 
-func (n *tree) Find(path storage.Path) storage.Store {
+// Find returns the store corresping the path.
+func (n *tree) Find(path storage.Path) (storage.Store, error) {
 	if len(path) == 0 {
-		return nil
+		if len(n.children) == 0 {
+			return n.store, nil
+		}
+
+		// Path is not specific enough to resolve the ambiguity.
+		return nil, &storage.Error{
+			Code:    ReadsNotSupportedErr,
+			Message: n.path.String(),
+		}
+
 	}
 
 	if child, ok := n.children[path[0]]; ok {
 		return child.Find(path[1:])
 	}
 
-	return nil
+	if n.store == nil {
+		return nil, &storage.Error{
+			Code:    ReadsNotSupportedErr,
+			Message: storage.Path(append(n.path, path...)).String(),
+		}
+	}
+
+	return n.store, nil
 }
 
 func (n tree) Clone(txn *transaction) node {
@@ -159,11 +179,15 @@ func (t *lazyTree) Get(ctx context.Context, key interface{}) (interface{}, bool,
 	return &lt, true, nil
 }
 
-func (t *lazyTree) Find(storage.Path) storage.Store {
-	return t.store
+func (t *lazyTree) Find(storage.Path) (storage.Store, error) {
+	return t.store, nil
 }
 
 func (t *lazyTree) Iter(ctx context.Context, f func(key, value interface{}) bool) error {
+	// TODO: Ideally the store would have a native iteration
+	// interface, to avoid loading the whole document in memory at
+	// once.
+
 	doc, ok, err := t.txn.read(ctx, t.store, t.path)
 	if err != nil {
 		return err

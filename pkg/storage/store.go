@@ -30,6 +30,10 @@ type DataPlugins interface {
 	RegisterDataPlugin(name string, path storage.Path)
 }
 
+// ReadsNotSupportedErr indicate the caller attempted to perform a read
+// against a store at a location that does not support them.
+const ReadsNotSupportedErr = "storage_reads_not_supported_error"
+
 type (
 	// store implements a virtual store spanning a single
 	// read-write-storage and multiple read-only storage backends.
@@ -79,7 +83,8 @@ func init() {
 
 // New constructs a new store that can also act as a namespace for the evaluation VM.
 func New() storage.Store {
-	s, err := newInternal(context.Background(), nil, nil, Options{})
+	root := inmem.New()
+	s, err := newInternal(context.Background(), nil, nil, root, Options{})
 	if err != nil {
 		panic(err)
 	}
@@ -94,7 +99,7 @@ func NewFromObject(data interface{}) storage.Store {
 	}
 
 	if _, ok := v.(bjson.Object); !ok {
-		panic("XXX")
+		panic("not reached")
 	}
 
 	db := New()
@@ -112,9 +117,10 @@ func NewFromObject(data interface{}) storage.Store {
 	return db
 }
 
-func newInternal(ctx context.Context, logger logging.Logger, prom prometheus.Registerer, opts Options) (storage.Store, error) {
-	s := store{root: inmem.New(),
-		tree:        newTree(nil),
+func newInternal(ctx context.Context, logger logging.Logger, prom prometheus.Registerer, root storage.Store, opts Options) (storage.Store, error) {
+	s := store{
+		root:        root,
+		tree:        newTree(nil, root),
 		dataPlugins: map[string]storage.Path{},
 	}
 
@@ -128,7 +134,9 @@ func newInternal(ctx context.Context, logger logging.Logger, prom prometheus.Reg
 			path, complete := path[0], path[1]
 
 			if len(path) == 0 {
-				s.root = store
+				// For simplicity, the root is hardcoded to inmem storage. Eventually we can
+				// support other storage types too.
+				return nil, fmt.Errorf("too short path: %v", path)
 			}
 
 			if len(path) > len(complete) {
@@ -312,9 +320,9 @@ func (txn *transaction) ID() uint64 {
 }
 
 func (txn *transaction) Read(ctx context.Context, path storage.Path) (interface{}, error) {
-	s := txn.tree.Find(path)
-	if s == nil {
-		s = txn.store.root
+	s, err := txn.tree.Find(path)
+	if err != nil {
+		return nil, err
 	}
 
 	t, err := txn.dispatch(ctx, s, false)
@@ -326,9 +334,9 @@ func (txn *transaction) Read(ctx context.Context, path storage.Path) (interface{
 }
 
 func (txn *transaction) ReadBJSON(ctx context.Context, path storage.Path) (bjson.Json, error) {
-	s := txn.tree.Find(path)
-	if s == nil {
-		s = txn.store.root
+	s, err := txn.tree.Find(path)
+	if err != nil {
+		return nil, err
 	}
 
 	t, err := txn.dispatch(ctx, s, false)
@@ -340,9 +348,16 @@ func (txn *transaction) ReadBJSON(ctx context.Context, path storage.Path) (bjson
 }
 
 func (txn *transaction) Write(ctx context.Context, op storage.PatchOp, path storage.Path, doc interface{}) error {
-	s := txn.tree.Find(path)
-	if s == nil {
-		s = txn.store.root
+	s, err := txn.tree.Find(path)
+	if err != nil {
+		switch err := err.(type) {
+		case *storage.Error:
+			if err.Code == ReadsNotSupportedErr {
+				err.Code = storage.WritesNotSupportedErr
+			}
+		}
+
+		return err
 	}
 
 	t, err := txn.dispatch(ctx, s, true)

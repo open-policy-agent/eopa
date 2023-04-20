@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	_ BJSONReader     = &store{}
-	_ WriterUnchecked = &store{}
-	_ DataPlugins     = &store{}
+	_ BJSONReader     = (*store)(nil)
+	_ WriterUnchecked = (*store)(nil)
+	_ DataPlugins     = (*store)(nil)
 )
 
 func TestStoreRead(t *testing.T) {
@@ -136,12 +136,10 @@ func TestStoreRead(t *testing.T) {
 				}
 			}
 
-			s, err := newInternal(ctx, nil, nil, opts)
+			s, err := newInternal(ctx, nil, nil, root, opts)
 			if err != nil {
 				panic(err)
 			}
-
-			s.(*store).root = root
 
 			for _, op := range tc.ops {
 				op.Execute(ctx, t, s.(*store))
@@ -194,12 +192,10 @@ func TestStoreWrite(t *testing.T) {
 				}
 			}
 
-			s, err := newInternal(ctx, nil, nil, opts)
+			s, err := newInternal(ctx, nil, nil, root, opts)
 			if err != nil {
 				panic(err)
 			}
-
-			s.(*store).root = root
 
 			for _, op := range tc.ops {
 				op.Execute(ctx, t, s.(*store))
