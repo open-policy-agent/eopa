@@ -119,7 +119,7 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 			if err != nil {
 				return nil, err
 			}
-			c.outputHTTP.TLS = &httpAuthTLS{
+			c.outputHTTP.TLS = &sinkAuthTLS{
 				Enabled:      true,
 				Certificates: []certs{{Cert: string(cert), Key: string(key)}},
 			}
@@ -135,6 +135,35 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 		c.outputConsole = new(outputConsoleOpts)
 		if err := util.Unmarshal(c.Output, c.outputConsole); err != nil {
 			return nil, err
+		}
+	case "kafka":
+		c.outputKafka = new(outputKafkaOpts)
+		if err := util.Unmarshal(c.Output, c.outputKafka); err != nil {
+			return nil, err
+		}
+		if tls := c.outputKafka.TLS; tls != nil {
+			cert, err := os.ReadFile(tls.Cert)
+			if err != nil {
+				return nil, err
+			}
+			key, err := os.ReadFile(tls.PrivateKey)
+			if err != nil {
+				return nil, err
+			}
+			c.outputKafka.tls = &sinkAuthTLS{
+				Enabled: true,
+				Certificates: []certs{
+					{Cert: string(cert), Key: string(key)},
+				},
+			}
+			if ca := tls.CACert; ca != "" {
+				caCert, err := os.ReadFile(ca)
+				if err != nil {
+					return nil, err
+				}
+				c.outputKafka.tls.RootCAs = string(caCert)
+			}
+			c.outputKafka.TLS = nil
 		}
 	default:
 		return nil, fmt.Errorf("unknown output type: %q", output.Type)

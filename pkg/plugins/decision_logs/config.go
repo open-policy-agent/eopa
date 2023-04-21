@@ -18,8 +18,11 @@ type Config struct {
 
 	outputHTTP    *outputHTTPOpts
 	outputConsole *outputConsoleOpts
+	outputKafka   *outputKafkaOpts
 }
 
+// NOTE(sr): Maybe batching at the sink is good enough and batching here only complicates
+// things. Let's reconsider later.
 type memBufferOpts struct {
 	MaxBytes      int    `json:"max_bytes"`       // Maximum buffer size (in bytes) to allow before applying backpressure upstream
 	FlushAtCount  int    `json:"flush_at_count"`  // Number of messages at which the batch should be flushed. If 0 disables count based batching.
@@ -69,7 +72,7 @@ type outputHTTPOpts struct {
 	Compress bool              `json:"compress"`
 
 	OAuth2 *httpAuthOAuth2 `json:"oauth2,omitempty"`
-	TLS    *httpAuthTLS    `json:"tls,omitempty"`
+	TLS    *sinkAuthTLS    `json:"tls,omitempty"` // TODO(sr): figure out if we want to expose this as-is, or wrap (or reference files instead of raw certs)
 	// TODO(sr): add retry, batching
 }
 
@@ -81,7 +84,7 @@ type httpAuthOAuth2 struct {
 	Scopes       []string `json:"scopes,omitempty"`
 }
 
-type httpAuthTLS struct {
+type sinkAuthTLS struct {
 	Enabled      bool    `json:"enabled"`
 	Certificates []certs `json:"client_certs"`
 	RootCAs      string  `json:"root_cas,omitempty"`
@@ -107,7 +110,7 @@ func (s *outputHTTPOpts) String() string {
 		"url":     s.URL,
 		"timeout": s.Timeout,
 		"batching": map[string]any{
-			"period":     "10ms",
+			"period":     "10ms", // TODO(sr): make this configurable
 			"processors": processors,
 		},
 	}
@@ -128,4 +131,42 @@ type outputConsoleOpts struct{}
 
 func (*outputConsoleOpts) String() string {
 	return `stdout: {}`
+}
+
+type outputKafkaOpts struct {
+	URLs    []string `json:"urls"`
+	Topic   string   `json:"topic"`
+	Timeout string   `json:"timeout,omitempty"`
+	TLS     *tlsOpts `json:"tls,omitempty"`
+
+	// NOTE(sr): There are just too many configurables if we care about all of them
+	// at once. Let's introduce batching when someone needs it.
+
+	tls *sinkAuthTLS
+	// TODO(sr): SASL
+}
+
+type tlsOpts struct {
+	Cert       string `json:"cert"`
+	PrivateKey string `json:"private_key"`
+	CACert     string `json:"ca_cert"`
+}
+
+func (s *outputKafkaOpts) String() string {
+	m := map[string]any{
+		"seed_brokers": s.URLs,
+		"topic":        s.Topic,
+	}
+	if s.Timeout != "" {
+		m["timeout"] = s.Timeout
+	}
+
+	if s.tls != nil {
+		m["tls"] = s.tls
+	}
+	j, err := json.Marshal(map[string]any{"kafka_franz": m})
+	if err != nil {
+		panic(err)
+	}
+	return string(j)
 }

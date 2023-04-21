@@ -86,11 +86,11 @@ transform contains {"op": "add", "path": key, "value": val} if {
 		RootCAs:      caCertPool,
 	}
 
-	kafka := testRedPanda(t, []string{
+	_ = testRedPanda(t, []string{
 		`--set`, `redpanda.kafka_api_tls={'name':'internal','enabled':true,'require_client_auth':true,'cert_file':'/w/tls/server-cert.pem','key_file':'/w/tls/server-key.pem','truststore_file':'/w/tls/ca.pem'}`,
 		`--set`, `redpanda.admin_api_tls={'name':'internal','enabled':true,'require_client_auth':true,'cert_file':'/w/tls/server-cert.pem','key_file':'/w/tls/server-key.pem','truststore_file':'/w/tls/ca.pem'}`},
 		kgo.DialTLSConfig(&tc))
-	cl, err := kafkaClient(kafka, kgo.DialTLSConfig(&tc))
+	cl, err := kafkaClient(kgo.DialTLSConfig(&tc))
 	if err != nil {
 		t.Fatalf("kafka client: %v", err)
 	}
@@ -156,11 +156,11 @@ transform contains {"op": "add", "path": key, "value": val} if {
 		User: user,
 		Pass: pass,
 	}.AsSha256Mechanism())
-	kafka := testRedPanda(t, []string{
+	_ = testRedPanda(t, []string{
 		`--set`, `redpanda.enable_sasl=true`,
 		`--set`, fmt.Sprintf(`redpanda.superusers=["%s"]`, user),
 	}, sasl)
-	cl, err := kafkaClient(kafka, sasl)
+	cl, err := kafkaClient(sasl)
 	if err != nil {
 		t.Fatalf("kafka client: %v", err)
 	}
@@ -216,10 +216,10 @@ transform contains {"op": "add", "path": key, "value": val} if {
 `
 	store := storeWithPolicy(ctx, t, transform)
 
-	kafka := testRedPanda(t, []string{
+	_ = testRedPanda(t, []string{
 		`--set`, fmt.Sprintf(`redpanda.superusers=["%s"]`, user),
 	})
-	cl, err := kafkaClient(kafka)
+	cl, err := kafkaClient()
 	if err != nil {
 		t.Fatalf("kafka client: %v", err)
 	}
@@ -327,13 +327,13 @@ transform contains {"op": "add", "path": key, "value": val} if {
 		User: user,
 		Pass: pass,
 	}.AsSha256Mechanism())
-	kafka := testRedPanda(t, []string{
+	_ = testRedPanda(t, []string{
 		`--set`, `redpanda.enable_sasl=true`,
 		`--set`, fmt.Sprintf(`redpanda.superusers=["%s"]`, user),
 		`--set`, `redpanda.kafka_api_tls={'name':'internal','enabled':true,'require_client_auth':true,'cert_file':'/w/tls/server-cert.pem','key_file':'/w/tls/server-key.pem','truststore_file':'/w/tls/ca.pem'}`,
 		`--set`, `redpanda.admin_api_tls={'name':'internal','enabled':true,'require_client_auth':true,'cert_file':'/w/tls/server-cert.pem','key_file':'/w/tls/server-key.pem','truststore_file':'/w/tls/ca.pem'}`},
 		kgo.DialTLSConfig(&tc), sasl)
-	cl, err := kafkaClient(kafka, kgo.DialTLSConfig(&tc), sasl)
+	cl, err := kafkaClient(kgo.DialTLSConfig(&tc), sasl)
 	if err != nil {
 		t.Fatalf("kafka client: %v", err)
 	}
@@ -437,7 +437,7 @@ func testRedPanda(t *testing.T, flags []string, extra ...kgo.Opt) *dockertest.Re
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		client, err := kafkaClient(kafkaResource, extra...)
+		client, err := kafkaClient(extra...)
 		if err != nil {
 			t.Logf("kafkaClient: %v", err)
 			return err

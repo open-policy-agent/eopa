@@ -76,9 +76,9 @@ func TestSimple(t *testing.T) {
 				}
 			})
 
-			kafka := tc.kafka(t, network)
+			_ = tc.kafka(t, network)
 
-			cl, err := kafkaClient(kafka)
+			cl, err := kafkaClient()
 			if err != nil {
 				t.Fatalf("client: %v", err)
 			}
@@ -141,9 +141,6 @@ transform contains {"op": "add", "path": key, "value": val} if {
 				if err != nil {
 					t.Fatal(err)
 				}
-				// if testing.Verbose() {
-				// 	t.Logf("body: %s", string(body))
-				// }
 				act := map[string]any{}
 				if err := json.Unmarshal(body, &act); err != nil {
 					t.Fatal(err)
@@ -248,23 +245,7 @@ func testKafka(t *testing.T, network *docker.Network) *dockertest.Resource {
 	if err != nil {
 		t.Fatalf("could not start kafka: %s", err)
 	}
-
-	if err := dockerPool.Retry(func() error {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		client, err := kafkaClient(kafkaResource)
-		if err != nil {
-			return err
-		}
-		if err := client.Ping(ctx); err != nil {
-			return err
-		}
-
-		record := &kgo.Record{Topic: "ping", Value: []byte(`true`)}
-		return client.ProduceSync(ctx, record).FirstErr()
-
-	}); err != nil {
+	if err := dockerPool.Retry(kafkaPing); err != nil {
 		t.Fatalf("could not connect to kafka: %s", err)
 	}
 
@@ -306,23 +287,7 @@ func testRedPanda(t *testing.T, network *docker.Network) *dockertest.Resource {
 	if err != nil {
 		t.Fatalf("could not start kafka: %s", err)
 	}
-
-	if err := dockerPool.Retry(func() error {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		client, err := kafkaClient(kafkaResource)
-		if err != nil {
-			return err
-		}
-		if err := client.Ping(ctx); err != nil {
-			return err
-		}
-
-		record := &kgo.Record{Topic: "ping", Value: []byte(`true`)}
-		return client.ProduceSync(ctx, record).FirstErr()
-
-	}); err != nil {
+	if err := dockerPool.Retry(kafkaPing); err != nil {
 		t.Fatalf("could not connect to kafka: %s", err)
 	}
 
@@ -335,12 +300,28 @@ func testRedPanda(t *testing.T, network *docker.Network) *dockertest.Resource {
 	return kafkaResource
 }
 
-func kafkaClient(k *dockertest.Resource) (*kgo.Client, error) {
+func kafkaPing() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	client, err := kafkaClient()
+	if err != nil {
+		return err
+	}
+	if err := client.Ping(ctx); err != nil {
+		return err
+	}
+
+	record := &kgo.Record{Topic: "ping", Value: []byte(`true`)}
+	return client.ProduceSync(ctx, record).FirstErr()
+}
+
+func kafkaClient() (*kgo.Client, error) {
 	// logger := zerolog.New(os.Stderr) // for debugging
 	logger := zerolog.New(io.Discard)
 
 	opts := []kgo.Opt{
-		kgo.SeedBrokers(fmt.Sprintf("localhost:%s", k.GetPort("9092/tcp"))),
+		kgo.SeedBrokers("localhost:9092"),
 		kgo.WithLogger(kzerolog.New(&logger)),
 		kgo.AllowAutoTopicCreation(),
 	}

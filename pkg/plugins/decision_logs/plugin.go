@@ -54,6 +54,8 @@ func (p *Logger) Start(ctx context.Context) error {
 		output = p.config.outputConsole
 	case p.config.outputHTTP != nil:
 		output = p.config.outputHTTP
+	case p.config.outputKafka != nil:
+		output = p.config.outputKafka
 	default:
 		return fmt.Errorf("no output configured")
 	}

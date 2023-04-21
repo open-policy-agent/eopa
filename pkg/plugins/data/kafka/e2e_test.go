@@ -68,8 +68,8 @@ transform contains {"op": "add", "path": key, "value": val} if {
 	store := storeWithPolicy(ctx, t, transform)
 	mgr := pluginMgr(ctx, t, store, config)
 
-	kafka := testKafka(t)
-	cl, err := kafkaClient(kafka)
+	_ = testKafka(t)
+	cl, err := kafkaClient()
 	if err != nil {
 		t.Fatalf("kafka client: %v", err)
 	}
@@ -169,7 +169,7 @@ transform contains {"op": "add", "path": key, "value": val} if {
 
 func TestKafkaTransforms(t *testing.T) {
 	ctx := context.Background()
-	kafka := testKafka(t)
+	_ = testKafka(t)
 	topic := "cipot"
 	store := inmem.New()
 	config := fmt.Sprintf(`
@@ -208,7 +208,7 @@ transform contains json.unmarshal(base64.decode(input.value)) if print(input)
 	}
 	mgr.Register(discovery.Name, disco)
 
-	cl, err := kafkaClient(kafka)
+	cl, err := kafkaClient()
 	if err != nil {
 		t.Fatalf("kafka client: %v", err)
 	}
@@ -315,23 +315,7 @@ func testKafka(t *testing.T) *dockertest.Resource {
 	if err != nil {
 		t.Fatalf("could not start kafka: %s", err)
 	}
-
-	if err := dockerPool.Retry(func() error {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		client, err := kafkaClient(kafkaResource)
-		if err != nil {
-			return err
-		}
-		if err := client.Ping(ctx); err != nil {
-			return err
-		}
-
-		record := &kgo.Record{Topic: "ping", Value: []byte(`true`)}
-		return client.ProduceSync(ctx, record).FirstErr()
-
-	}); err != nil {
+	if err := dockerPool.Retry(kafkaPing); err != nil {
 		t.Fatalf("could not connect to kafka: %s", err)
 	}
 
@@ -344,7 +328,23 @@ func testKafka(t *testing.T) *dockertest.Resource {
 	return kafkaResource
 }
 
-func kafkaClient(_ *dockertest.Resource, extra ...kgo.Opt) (*kgo.Client, error) {
+func kafkaPing() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	client, err := kafkaClient()
+	if err != nil {
+		return err
+	}
+	if err := client.Ping(ctx); err != nil {
+		return err
+	}
+
+	record := &kgo.Record{Topic: "ping", Value: []byte(`true`)}
+	return client.ProduceSync(ctx, record).FirstErr()
+}
+
+func kafkaClient(extra ...kgo.Opt) (*kgo.Client, error) {
 	var logger zerolog.Logger
 	if testing.Verbose() {
 		logger = zerolog.New(os.Stderr)

@@ -12,7 +12,11 @@ import (
 )
 
 func isConfig(exp Config) func(testing.TB, any, error) {
-	opt := []cmp.Option{cmpopts.IgnoreFields(Config{}, "Buffer", "Output"), cmp.AllowUnexported(Config{})}
+	opt := []cmp.Option{
+		cmpopts.IgnoreFields(Config{}, "Buffer", "Output"),
+		cmp.AllowUnexported(Config{}),
+		cmp.AllowUnexported(outputKafkaOpts{}),
+	}
 	diff := func(x, y any) string {
 		return cmp.Diff(x, y, opt...)
 	}
@@ -317,7 +321,7 @@ output:
 					Timeout:  "10s",
 					Array:    true,
 					Compress: true,
-					TLS: &httpAuthTLS{
+					TLS: &sinkAuthTLS{
 						Enabled: true,
 						Certificates: []certs{
 							{Key: "key\n", Cert: "cert\n"},
@@ -338,6 +342,55 @@ output:
 					MaxBytes: defaultMemoryMaxBytes,
 				},
 				outputHTTP: &outputHTTPOpts{URL: "https://logs.logs.logs:1234/post"},
+			}),
+		},
+		{
+			note: "kafka output",
+			config: `
+output:
+  type: kafka
+  topic: logs
+  timeout: 30s
+  urls:
+  - 127.0.0.1:9091`,
+			checks: isConfig(Config{
+				memoryBuffer: &memBufferOpts{
+					MaxBytes: defaultMemoryMaxBytes,
+				},
+				outputKafka: &outputKafkaOpts{
+					URLs:    []string{"127.0.0.1:9091"},
+					Topic:   "logs",
+					Timeout: "30s",
+				},
+			}),
+		},
+		{
+			note: "kafka output with TLS",
+			config: `
+output:
+  type: kafka
+  topic: logs
+  urls:
+  - 127.0.0.1:9091
+  tls:
+    cert: testdata/cert.pem
+    private_key: testdata/key.pem
+    ca_cert: testdata/ca.pem`,
+			checks: isConfig(Config{
+				memoryBuffer: &memBufferOpts{
+					MaxBytes: defaultMemoryMaxBytes,
+				},
+				outputKafka: &outputKafkaOpts{
+					URLs:  []string{"127.0.0.1:9091"},
+					Topic: "logs",
+					tls: &sinkAuthTLS{
+						Enabled: true,
+						Certificates: []certs{
+							{Key: "key\n", Cert: "cert\n"},
+						},
+						RootCAs: "ca\n",
+					},
+				},
 			}),
 		},
 	}

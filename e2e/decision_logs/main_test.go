@@ -35,7 +35,7 @@ type payload struct {
 	DecisionID string         `json:"decision_id"`
 	Labels     payloadLabels  `json:"labels"`
 	NDBC       map[string]any `json:"nd_builtin_cache"`
-	Input      map[string]any `json:"input"`
+	Input      any            `json:"input"`
 	Erased     []string       `json:"erased"`
 	Masked     []string       `json:"masked"`
 }
