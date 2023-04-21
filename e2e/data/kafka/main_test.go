@@ -27,7 +27,7 @@ import (
 	"github.com/open-policy-agent/opa/util"
 )
 
-const defaultImage = "ko.local:edge" // built via `make build-local`
+const defaultImage = "ko.local/load-private:edge" // built via `make build-local`
 
 // number of messages to produce
 const messageCount = 1_000
@@ -228,6 +228,7 @@ func testKafka(t *testing.T, network *docker.Network) *dockertest.Resource {
 		Env: []string{
 			"BITNAMI_DEBUG=yes", // show an error if this config is wrong
 			"KAFKA_BROKER_ID=1",
+			"KAFKA_CFG_NODE_ID=1",
 			"KAFKA_ENABLE_KRAFT=yes",
 			"KAFKA_CFG_PROCESS_ROLES=broker,controller",
 			"KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER",

@@ -296,6 +296,7 @@ func testKafka(t *testing.T) *dockertest.Resource {
 		Hostname:   "kafka",
 		Env: []string{
 			"KAFKA_BROKER_ID=1",
+			"KAFKA_CFG_NODE_ID=1",
 			"KAFKA_ENABLE_KRAFT=yes",
 			"KAFKA_CFG_PROCESS_ROLES=broker,controller",
 			"KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER",
