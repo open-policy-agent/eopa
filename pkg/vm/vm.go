@@ -553,7 +553,8 @@ func (s *State) Return() (Local, bool) {
 func (s *State) Set(target Local, source LocalOrConst) {
 	switch v := source.(type) {
 	case Local:
-		s.findReg(target).registers[int(target)%registersSize] = s.findReg(v).registers[int(v)%registersSize]
+		r1, r2 := s.find2Regs(target, v)
+		r1.registers[int(target)%registersSize] = r2.registers[int(v)%registersSize]
 
 	case BoolConst:
 		s.findReg(target).registers[int(target)%registersSize] = s.Globals.vm.ops.MakeBoolean(bool(v))
@@ -657,6 +658,35 @@ func (s *State) findReg(v Local) *registersList {
 	}
 
 	return r
+}
+
+func (s *State) find2Regs(v1, v2 Local) (*registersList, *registersList) {
+	buckets1 := int(v1) / registersSize
+	buckets2 := int(v2) / registersSize
+
+	r := s.locals.registers
+	r1, r2 := r, r
+
+	for i := 0; i < buckets1 || i < buckets2; {
+		next := r.next
+		if next == nil {
+			next = s.Globals.registersPool.Get().(*registersList)
+			r.next = next
+		}
+
+		r = next
+		i++
+
+		if i == buckets1 {
+			r1 = next
+		}
+
+		if i == buckets2 {
+			r2 = next
+		}
+	}
+
+	return r1, r2
 }
 
 func (Local) localOrConst()            {}
