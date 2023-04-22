@@ -16,6 +16,8 @@ import (
 	"github.com/open-policy-agent/opa/topdown/builtins"
 	"github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/open-policy-agent/opa/topdown/print"
+
+	fjson "github.com/styrainc/load-private/pkg/json"
 )
 
 var (
@@ -36,8 +38,7 @@ type (
 		executable   Executable
 		data         *interface{}
 		ops          DataOperations
-		mu           sync.RWMutex
-		stringsCache []Value
+		stringsCache []atomic.Pointer[fjson.String]
 	}
 
 	EvalOpts struct {
@@ -158,7 +159,7 @@ func NewVM() *VM {
 
 func (vm *VM) WithExecutable(executable Executable) *VM {
 	vm.executable = executable
-	vm.stringsCache = make([]Value, executable.Strings().Len())
+	vm.stringsCache = make([]atomic.Pointer[fjson.String], executable.Strings().Len())
 	return vm
 }
 
@@ -394,22 +395,16 @@ func (vm *VM) runtime(ctx context.Context, v interface{}) (*ast.Term, error) {
 }
 
 func (vm *VM) getCachedString(i StringIndexConst) (Value, bool) {
-	vm.mu.RLock()
-	defer vm.mu.RUnlock()
-
 	if int(i) >= len(vm.stringsCache) {
 		return nil, false
 	}
 
-	value := vm.stringsCache[int(i)]
+	value := vm.stringsCache[int(i)].Load()
 	return value, value != nil
 }
 
-func (vm *VM) setCachedString(i StringIndexConst, value Value) {
-	vm.mu.Lock()
-	defer vm.mu.Unlock()
-
-	vm.stringsCache[int(i)] = value
+func (vm *VM) setCachedString(i StringIndexConst, value *fjson.String) {
+	vm.stringsCache[int(i)].Store(value)
 }
 
 type bitset struct {
