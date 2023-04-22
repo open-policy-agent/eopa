@@ -93,6 +93,7 @@ last_pid=$!
 sleep 2
 curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X GET localhost:8183/v1/data
 kill $last_pid
+wait
 echo "::endgroup::"
 
 # Data files - correct namespaces
