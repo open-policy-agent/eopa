@@ -95,7 +95,7 @@ func record() *cobra.Command {
 		},
 	}
 	// Load connectivity and LIA request options
-	c.Flags().StringP(addr, "a", "http://127.0.0.1:8181", `Load address to connect to (e.g. "https://staging.load.corp.com:8443")`)
+	c.Flags().StringP(addr, "a", "http://127.0.0.1:8181", `Load address to connect to (e.g. "https://staging.load.example.com:8443")`)
 	c.Flags().DurationP(duration, "d", 30*time.Second, `Live Impact Analysis duration (e.g. "5m")`)
 	c.Flags().Bool(equals, false, `Include equal results (e.g. for assessing performance differences)`)
 	c.Flags().Float64(rate, 0.1, "Sample rate of evaluations to include (e.g. 0.1 for 10%, or 1 for all requests)")
