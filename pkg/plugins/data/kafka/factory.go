@@ -5,12 +5,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/util"
 	"github.com/twmb/franz-go/pkg/sasl"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
 	"github.com/twmb/franz-go/pkg/sasl/scram"
+
+	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/util"
 
 	"github.com/styrainc/load-private/pkg/plugins/data/utils"
 )

@@ -17,6 +17,7 @@ import (
 	"github.com/styrainc/load-private/pkg/plugins/data/ldap"
 	"github.com/styrainc/load-private/pkg/plugins/data/okta"
 	"github.com/styrainc/load-private/pkg/plugins/data/s3"
+	"github.com/styrainc/load-private/pkg/plugins/data/types"
 	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
@@ -53,6 +54,11 @@ func (c *Data) Start(ctx context.Context) error {
 		dp := c.plugins[i].(dataPlugin)
 		c.manager.Store.(inmem.DataPlugins).RegisterDataPlugin(dp.Name(), dp.Path())
 	}
+
+	// NOTE(sr): The registered trigger is run whenever a store write happens.
+	// So while we have a `ctx` in scope here, it's not sensible to put that into
+	// the closure.
+	c.manager.RegisterCompilerTrigger(func(txn storage.Transaction) { c.compilerTrigger(context.TODO(), txn) })
 	c.manager.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateOK})
 	return nil
 }
@@ -137,6 +143,16 @@ func (c *Data) Reconfigure(ctx context.Context, cfg interface{}) {
 
 		dp := c.plugins[path].(dataPlugin)
 		c.manager.Store.(inmem.DataPlugins).RegisterDataPlugin(dp.Name(), dp.Path())
+	}
+}
+
+func (c *Data) compilerTrigger(ctx context.Context, txn storage.Transaction) {
+	for path := range c.plugins {
+		if tr, ok := c.plugins[path].(types.Triggerer); ok {
+			if err := tr.Trigger(ctx, txn); err != nil {
+				c.manager.Logger().Warn("%s plugin trigger failed: %v", Name, err)
+			}
+		}
 	}
 }
 

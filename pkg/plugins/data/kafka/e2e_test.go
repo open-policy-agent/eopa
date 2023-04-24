@@ -288,6 +288,108 @@ transform contains json.unmarshal(base64.decode(input.value)) if print(input)
 	}
 }
 
+func TestKafkaPolicyUpdate(t *testing.T) {
+	ctx := context.Background()
+	topic := "cipot"
+	config := fmt.Sprintf(`
+plugins:
+  data:
+    kafka.messages:
+      type: kafka
+      urls: [localhost:19092]
+      topics: [%[1]s]
+      rego_transform: "data.e2e.transform"
+`, topic)
+
+	transform := `package e2e
+import future.keywords
+transform contains {"op": "add", "path": key, "value": val} if {
+	print(input)
+	payload := json.unmarshal(base64.decode(input.value))
+	key := base64.decode(input.key)
+	val := {
+		"value": payload,
+		"headers": input.headers,
+	}
+}
+`
+
+	noop := `package nothing`
+	store := storeWithPolicy(ctx, t, noop)
+	mgr := pluginMgr(ctx, t, store, config)
+
+	_ = testKafka(t)
+	cl, err := kafkaClient()
+	if err != nil {
+		t.Fatalf("kafka client: %v", err)
+	}
+
+	// record written before we're consuming messages
+	// this one is NOT to be ignored: we don't have a data transform yet but we might just
+	// be waiting for a bundle to be activated
+	record := &kgo.Record{Topic: topic, Key: []byte("one"), Value: []byte(`{"foo":"bar"}`)}
+	if err := cl.ProduceSync(ctx, record).FirstErr(); err != nil {
+		t.Fatalf("produce messages: %v", err)
+	}
+
+	if err := mgr.Start(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	// Give the plugin some time to process the first message before we're updating the
+	// transform policy.
+	time.Sleep(100 * time.Millisecond)
+
+	// update transform
+	if err := storage.Txn(ctx, mgr.Store, storage.WriteParams, func(txn storage.Transaction) error {
+		return store.UpsertPolicy(ctx, txn, "e2e.rego", []byte(transform))
+	}); err != nil {
+		t.Fatalf("store transform policy: %v", err)
+	}
+
+	// Storage triggers are all run before the store write returns, so the transform
+	// should be in place by now.
+
+	// this record should be transformed and stored
+	record = &kgo.Record{
+		Topic: topic,
+		Key:   []byte("two"),
+		Value: []byte(`{"fox":"box"}`),
+		Headers: []kgo.RecordHeader{
+			{Key: "header", Value: []byte("value")},
+		},
+	}
+	if err := cl.ProduceSync(ctx, record).FirstErr(); err != nil {
+		t.Fatalf("produce messages: %v", err)
+	}
+
+	waitForStorePath(ctx, t, store, "/kafka/messages/one")
+	waitForStorePath(ctx, t, store, "/kafka/messages/two")
+	{
+		act, err := storage.ReadOne(ctx, store, storage.MustParsePath("/kafka/messages/one"))
+		if err != nil {
+			t.Fatalf("read back data: %v", err)
+		}
+		exp := map[string]any{"headers": []any{}, "value": map[string]any{"foo": "bar"}}
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Errorf("data value mismatch (-want +got):\n%s", diff)
+		}
+	}
+	{
+		act, err := storage.ReadOne(ctx, store, storage.MustParsePath("/kafka/messages/two"))
+		if err != nil {
+			t.Fatalf("read back data: %v", err)
+		}
+		exp := map[string]any{
+			"headers": []any{map[string]any{"key": "header", "value": "dmFsdWU="}},
+			"value":   map[string]any{"fox": "box"},
+		}
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Errorf("data value mismatch (-want +got):\n%s", diff)
+		}
+	}
+}
+
 func testKafka(t *testing.T) *dockertest.Resource {
 	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "kafka",

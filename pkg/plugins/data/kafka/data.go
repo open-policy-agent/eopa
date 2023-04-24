@@ -18,6 +18,7 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
 
+	"github.com/styrainc/load-private/pkg/plugins/data/types"
 	inmem "github.com/styrainc/load-private/pkg/store"
 )
 
@@ -34,6 +35,10 @@ type Data struct {
 	transformRule ast.Ref
 	transform     *rego.PreparedEvalQuery
 }
+
+// Ensure that the kafka sub-plugin will be triggered by the data umbrella plugin,
+// because it implements types.Triggerer.
+var _ types.Triggerer = (*Data)(nil)
 
 func (c *Data) Start(ctx context.Context) error {
 	c.exit = make(chan struct{})
@@ -119,6 +124,10 @@ LOOP:
 		case <-c.exit:
 			break LOOP
 		default:
+			if !c.ready() { // don't fetch and drop if we're not ready
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
 			pollCtx, done := context.WithTimeout(ctx, 100*time.Millisecond)
 			rs := c.client.PollFetches(pollCtx)
 			done()
@@ -142,6 +151,10 @@ LOOP:
 		}
 	}
 	close(c.doneExit)
+}
+
+func (c *Data) ready() bool {
+	return c.transform != nil
 }
 
 func mapFromRecord(r *kgo.Record) any {
@@ -203,42 +216,50 @@ func (c *Data) transformAndSave(ctx context.Context, n int, iter *kgo.FetchesRec
 }
 
 func (c *Data) prepareTransform(ctx context.Context) error {
-	// p.transformMutex.Lock() // TODO(sr): think about whether this could ever be called concurrently (reconfigure?)
-	// defer p.transformMutex.Unlock()
-
 	return storage.Txn(ctx, c.manager.Store, storage.TransactionParams{}, func(txn storage.Transaction) error {
-		query := ast.NewBody(
-			ast.NewExpr(ast.NewTerm(ast.MustParseRef(c.Config.RegoTransformRule).Append(
-				ast.NewTerm(ast.NewObject(
-					ast.Item(ast.StringTerm("op"), ast.VarTerm("op")),
-					ast.Item(ast.StringTerm("value"), ast.VarTerm("value")),
-					ast.Item(ast.StringTerm("path"), ast.VarTerm("path")),
-				)),
-			))),
-		)
-
-		buf := bytes.Buffer{}
-		r := rego.New(
-			rego.ParsedQuery(query),
-			rego.Compiler(c.manager.GetCompiler()),
-			rego.Store(c.manager.Store),
-			rego.Transaction(txn),
-			rego.Runtime(c.manager.Info),
-			rego.EnablePrintStatements(c.manager.EnablePrintStatements()),
-			rego.PrintHook(topdown.NewPrintHook(&buf)),
-		)
-
-		pq, err := r.PrepareForEval(context.Background())
-		if err != nil {
-			return err
-		}
-
-		if buf.Len() > 0 {
-			c.log.Debug("prepare print(): %s", buf.String())
-		}
-		c.transform = &pq
-		return nil
+		return c.Trigger(ctx, txn)
 	})
+}
+
+func (c *Data) Trigger(ctx context.Context, txn storage.Transaction) error {
+	transformRef := ast.MustParseRef(c.Config.RegoTransformRule)
+	query := ast.NewBody(
+		ast.NewExpr(ast.NewTerm(transformRef.Append(
+			ast.NewTerm(ast.NewObject(
+				ast.Item(ast.StringTerm("op"), ast.VarTerm("op")),
+				ast.Item(ast.StringTerm("value"), ast.VarTerm("value")),
+				ast.Item(ast.StringTerm("path"), ast.VarTerm("path")),
+			)),
+		))),
+	)
+
+	comp := c.manager.GetCompiler()
+	if comp == nil || comp.RuleTree == nil || comp.RuleTree.Find(transformRef) == nil {
+		c.manager.Logger().Warn("kafka plugin (path %s): transform rule %q does not exist yet", c.Path(), transformRef)
+		return nil
+	}
+
+	buf := bytes.Buffer{}
+	r := rego.New(
+		rego.ParsedQuery(query),
+		rego.Compiler(comp),
+		rego.Store(c.manager.Store),
+		rego.Transaction(txn),
+		rego.Runtime(c.manager.Info),
+		rego.EnablePrintStatements(c.manager.EnablePrintStatements()),
+		rego.PrintHook(topdown.NewPrintHook(&buf)),
+	)
+
+	pq, err := r.PrepareForEval(ctx)
+	if err != nil {
+		return err
+	}
+
+	if buf.Len() > 0 {
+		c.log.Debug("prepare print(): %s", buf.String())
+	}
+	c.transform = &pq
+	return nil
 }
 
 type processed struct {
@@ -308,7 +329,7 @@ func (w *wrap) Level() kgo.LogLevel {
 	case logging.Warn:
 		return kgo.LogLevelWarn
 	case logging.Info:
-		return kgo.LogLevelInfo
+		return kgo.LogLevelWarn
 	case logging.Debug:
 		return kgo.LogLevelDebug
 	default:
