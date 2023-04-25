@@ -9,6 +9,8 @@ import (
 
 func setupKeygen(expiry string, code string) {
 
+	licenseRetries = 1
+
 	// Intercept Keygen's HTTP client
 	gock.InterceptClient(keygen.HTTPClient)
 
@@ -45,9 +47,12 @@ func setupKeygen(expiry string, code string) {
 		Delete(`/v1/accounts/([^\/]+)/machines/([^\/]+)`).
 		Reply(200)
 
+	// test RateLimit and off-line with https://api.keygenx.sh URL; returns 429 errors
 	gock.New("https://api.keygenx.sh").
+		Persist().
 		Get(`/v1/me`).
 		Reply(429).
+		SetHeader("Retry-After", "1").
 		BodyString(`429 Too Many Requests`)
 }
 

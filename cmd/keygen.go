@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -23,12 +21,15 @@ const loadLicenseToken = "STYRA_LOAD_LICENSE_TOKEN"
 const loadLicenseKey = "STYRA_LOAD_LICENSE_KEY"
 const licenseErrorExitCode = 3
 
+var licenseRetries = 6   // up to 30 seconds total
+var defaultRateSleep = 5 // seconds
+
 type (
 	License struct {
 		mutex       sync.Mutex
 		license     *keygen.License
 		released    bool
-		stop        int32
+		shutdown    chan struct{}
 		fingerprint string
 		logger      *logging.StandardLogger
 		expiry      time.Time
@@ -86,7 +87,7 @@ func NewLicense() *License {
 	// remove licenses from environment! (opa.runtime.env)
 	os.Unsetenv(loadLicenseKey)
 	os.Unsetenv(loadLicenseToken)
-	return &License{logger: logger}
+	return &License{logger: logger, shutdown: make(chan struct{}, 1)}
 }
 
 // NOTE(sr): We're mapping ALL keygen errors to "debug" level. We don't want to show
@@ -104,13 +105,8 @@ func (l *keygenLogger) Infof(format string, v ...interface{}) {
 	l.logger.Debug(format, v...)
 }
 
-func (l *keygenLogger) Debugf(format string, v ...interface{}) {
-	l.logger.Debug(format, v...)
-}
-
-// stopped: see if ReleaseLicense was called
-func (l *License) stopped() bool {
-	return atomic.LoadInt32(&l.stop) != 0
+func (l *keygenLogger) Debugf(string, ...interface{}) {
+	// l.logger.Debug(format, v...) // very noisy
 }
 
 func readLicense(file string) (string, error) {
@@ -146,6 +142,22 @@ func stringToTime(data string, param string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("off-line license verification failed: %w", lerr)
 	}
 	return t, nil
+}
+
+func isOfflineKey(key string) bool {
+	return strings.HasPrefix(key, "key/")
+}
+
+func rateLimitRetrySeconds(lerr error) time.Duration {
+	var e *keygen.RateLimitError
+	if errors.As(lerr, &e) {
+		r := e.RetryAfter
+		if r == 0 {
+			r = defaultRateSleep
+		}
+		return time.Duration(r) * time.Second
+	}
+	return 0
 }
 
 func (l *License) validateOffline() error {
@@ -232,22 +244,40 @@ func (l *License) ValidateLicense(key string, token string, terminate func(code 
 		return
 	}
 
-	// use random fingerprint: floating concurrent license
-	l.fingerprint = uuid.New().String()
-
-	// Validate the license for the current fingerprint
-	license, lerr := keygen.Validate(l.fingerprint)
-	if lerr == nil {
-		err = fmt.Errorf("invalid license: expected LicenseNotActivated")
+	// try offline license
+	if isOfflineKey(keygen.LicenseKey) {
+		err = l.validateOffline()
 		return
 	}
 
-	if lerr == keygen.ErrLicenseNotActivated {
-		// Handle SIGINT and gracefully deactivate the machine
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGSEGV) // disable default os.Interrupt handler
+	// use random fingerprint: floating concurrent license
+	l.fingerprint = uuid.New().String()
 
+	var lerr error
+	var license *keygen.License
+	for i := 0; i < licenseRetries; i++ {
+		// Validate the license for the current fingerprint
+		license, lerr = keygen.Validate(l.fingerprint)
+		if lerr == nil {
+			err = fmt.Errorf("invalid license: expected LicenseNotActivated")
+			return
+		}
+		if r := rateLimitRetrySeconds(lerr); r != 0 {
+			l.logger.Info("ValidateLicense rate limit error: Retry-After=%v", r)
+			if !l.sleep(r) {
+				return
+			}
+			continue
+		}
+		break
+	}
+
+	if lerr == keygen.ErrLicenseNotActivated {
 		go func() {
+			// Handle SIGINT and gracefully deactivate the machine
+			sigs := make(chan os.Signal, 1)
+			signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGSEGV) // disable default os.Interrupt handler
+
 			for s := range sigs {
 				l.ReleaseLicense()
 				time.Sleep(100 * time.Millisecond)              // give load server sometime to finish
@@ -267,10 +297,22 @@ func (l *License) ValidateLicense(key string, token string, terminate func(code 
 			return
 		}
 
-		machine, lerr := license.Activate(l.fingerprint)
-		if lerr != nil {
-			err = fmt.Errorf("license activation failed: %w", lerr)
-			return
+		var lerr error
+		var machine *keygen.Machine
+		for i := 0; i < licenseRetries; i++ {
+			machine, lerr = license.Activate(l.fingerprint)
+			if lerr != nil {
+				if r := rateLimitRetrySeconds(lerr); r != 0 {
+					l.logger.Info("ActivateLicense rate limit error: Retry-After=%v", r)
+					if !l.sleep(r) {
+						return
+					}
+					continue
+				}
+				err = fmt.Errorf("license activation failed: %w", lerr)
+				return
+			}
+			break
 		}
 
 		if l.stopped() { // if ReleaseLicense was called, exit now
@@ -280,16 +322,6 @@ func (l *License) ValidateLicense(key string, token string, terminate func(code 
 		// Start heartbeat monitor for machine (also set policy "Heartbeat Basis": FROM_CREATION)
 		go l.monitor(machine)
 		return
-	}
-
-	// try offline license if validation network error or timeout
-	if keygen.LicenseKey != "" && strings.HasPrefix(keygen.LicenseKey, "key/") {
-		var netError net.Error
-		var keygenError *keygen.Error
-		if errors.As(lerr, &netError) || errors.As(lerr, &keygenError) && keygenError.Response != nil && keygenError.Response.Status == 429 {
-			err = l.validateOffline()
-			return
-		}
 	}
 
 	if isTimeout(lerr) { // fix output message
@@ -323,22 +355,56 @@ func (l *License) setLicense(license *keygen.License) bool {
 	return stopped
 }
 
+// stopped: see if ReleaseLicense was called
+func (l *License) stopped() bool {
+	select {
+	case <-l.shutdown:
+		return true
+	default:
+		return false
+	}
+}
+
+func (l *License) sleep(dur time.Duration) bool {
+	delay := time.NewTimer(dur)
+	select {
+	case <-l.shutdown:
+		if !delay.Stop() {
+			<-delay.C // if the timer has been stopped then read from the channel.
+		}
+		return false
+	case <-delay.C:
+		return true
+	}
+}
+
 func (l *License) ReleaseLicense() {
 	if l == nil {
 		return
 	}
-	// tell validateLicense to stop (if it's still running)
-	atomic.AddInt32(&l.stop, 1)
 
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
+
 	if l.released {
 		return
 	}
+
+	close(l.shutdown) // wakeup any sleeps
+
 	if l.license != nil {
 		l.logger.Debug("Licensing deactivation")
-		if err := l.license.Deactivate(l.fingerprint); err != nil {
-			l.logger.Error("License deactivation: %v", err)
+		for i := 0; i < 1; i++ { // 1 retry on shutdown
+			err := l.license.Deactivate(l.fingerprint)
+			if err != nil {
+				if r := rateLimitRetrySeconds(err); r != 0 {
+					l.logger.Info("ReleaseLicense rate limit error: Retry-After=%v", r)
+					time.Sleep(r)
+					continue
+				}
+				l.logger.Error("License deactivation: %v", err)
+			}
+			break
 		}
 	}
 	l.released = true

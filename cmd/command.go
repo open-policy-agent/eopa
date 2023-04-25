@@ -59,6 +59,11 @@ func LoadCommand(license *License) *cobra.Command {
 					format := getFormatter(logFormat.String())
 					license.logger.SetFormatter(format)
 					license.logger.SetLevel(lvl)
+				} else {
+					lvl, _ := getLevel(cmd.Flag("log-level").Value.String())
+					format := getFormatter(cmd.Flag("log-format").Value.String())
+					license.logger.SetFormatter(format)
+					license.logger.SetLevel(lvl)
 				}
 
 				go func() {
