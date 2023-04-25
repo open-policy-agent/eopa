@@ -22,9 +22,6 @@ func Factory() plugins.Factory {
 }
 
 func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
-
-	m.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateNotReady})
-
 	c := config.(Config)
 	return &Data{
 		Config:  c,
