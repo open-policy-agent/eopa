@@ -1,3 +1,5 @@
-transform: source
-	opa build -b source
-	mv bundle.tar.gz transform
+all: transform overlap no-roots prefix
+
+%: %-source
+	opa build -b $<
+	mv bundle.tar.gz $@

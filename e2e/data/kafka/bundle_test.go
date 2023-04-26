@@ -28,21 +28,6 @@ import (
 // `make transform` in testdata/bundles.
 func TestTransformFromBundle(t *testing.T) {
 	ctx := context.Background()
-	configFmt := `
-services:
-- name: bundles
-  url: %[1]s
-bundles:
-  transform:
-    service: bundles
-plugins:
-  data:
-    kafka.messages:
-      type: kafka
-      urls: [localhost:9092]
-      topics: [foo]
-      rego_transform: "data.transform.transform"`
-
 	_ = testKafka(t, network(t))
 	cl, err := kafkaClient()
 	if err != nil {
@@ -57,14 +42,20 @@ plugins:
 		t.Fatalf("produce msg: %v", err)
 	}
 
-	ts := httptest.NewServer(http.FileServer(http.Dir("testdata")))
-	config := fmt.Sprintf(configFmt, ts.URL)
-	load, loadOut := loadRun(t, config)
+	load, loadOut := loadRun(t, config("transform", testserver.URL))
 	if err := load.Start(); err != nil {
 		t.Fatal(err)
 	}
 	waitForLog(ctx, t, loadOut, 1, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
 	waitForLog(ctx, t, loadOut, 1, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
+
+	statusOK := map[string]any{"state": "OK"}
+	assertStatus(t, map[string]any{
+		"bundle":    statusOK,
+		"data":      statusOK,
+		"discovery": statusOK,
+		"status":    statusOK,
+	})
 
 	if err := cl.ProduceSync(ctx, &kgo.Record{
 		Topic: "foo",
@@ -107,6 +98,112 @@ plugins:
 		return diff == ""
 	}, 500*time.Millisecond, 5*time.Second); err != nil {
 		t.Error(err)
+	}
+}
+
+// The bundle used in this test declares no roots, so it owns all of 'data'.
+func TestOverlapBundleWithoutRoots(t *testing.T) {
+	ctx := context.Background()
+	load, loadOut := loadRun(t, config("no-roots", testserver.URL))
+	if err := load.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waitForLog(ctx, t, loadOut, 1, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	waitForLog(ctx, t, loadOut, 1, equals(`data plugin: kafka path kafka/messages overlaps with bundle root []`), 2*time.Second)
+	waitForLog(ctx, t, loadOut, 1, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
+
+	statusOK := map[string]any{"state": "OK"}
+	assertStatus(t, map[string]any{
+		"bundle":    statusOK,
+		"data":      map[string]any{"state": "ERROR"},
+		"discovery": statusOK,
+		"status":    statusOK,
+	})
+}
+
+// The bundle used here declares the root "data.kafka.messages"
+func TestOverlapBundleOverlappingRoots(t *testing.T) {
+	ctx := context.Background()
+	load, loadOut := loadRun(t, config("overlap", testserver.URL))
+	if err := load.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waitForLog(ctx, t, loadOut, 1, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	waitForLog(ctx, t, loadOut, 1, equals(`Bundle activation failed: path "/kafka/messages" is owned by plugin "kafka"`), 2*time.Second)
+
+	statusOK := map[string]any{"state": "OK"}
+	assertStatus(t, map[string]any{
+		"bundle":    map[string]any{"state": "NOT_READY"},
+		"data":      statusOK,
+		"discovery": statusOK,
+		"status":    statusOK,
+	})
+}
+
+// The bundle used here declares the root "data.kafka", a prefix of "data.kafka.messages"
+func TestOverlapBundlePrefixRoot(t *testing.T) {
+	ctx := context.Background()
+	config := fmt.Sprintf(config("prefix", testserver.URL))
+	load, loadOut := loadRun(t, config)
+	if err := load.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waitForLog(ctx, t, loadOut, 1, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	waitForLog(ctx, t, loadOut, 1, equals(`data plugin: kafka path kafka/messages overlaps with bundle root [transform kafka]`), 2*time.Second)
+	waitForLog(ctx, t, loadOut, 1, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
+
+	statusOK := map[string]any{"state": "OK"}
+	assertStatus(t, map[string]any{
+		"bundle":    statusOK,
+		"data":      map[string]any{"state": "ERROR"},
+		"discovery": statusOK,
+		"status":    statusOK,
+	})
+}
+
+var testserver = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/status" {
+		return // ignore status POSTs
+	}
+	http.FileServer(http.Dir("testdata")).ServeHTTP(w, r)
+}))
+
+func config(bndl, service string) string {
+	return fmt.Sprintf(`
+services:
+- name: testserver
+  url: %[2]s
+bundles:
+  %[1]s:
+    service: testserver
+status:
+  service: testserver
+plugins:
+  data:
+    kafka.messages:
+      type: kafka
+      urls: [localhost:9092]
+      topics: [foo]
+      rego_transform: "data.transform.transform"`, bndl, service)
+}
+
+func assertStatus(t *testing.T, exp map[string]any) {
+	resp, err := http.Get("http://127.0.0.1:8181/v1/status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	type pluginStatus struct { // subset of the status payload we're interested in
+		Plugins map[string]any
+	}
+	var act struct {
+		Result pluginStatus
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&act); err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(exp, act.Result.Plugins); diff != "" {
+		t.Errorf("unexpected status response (-want, +got):\n%s", diff)
 	}
 }
 

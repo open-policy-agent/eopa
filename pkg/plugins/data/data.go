@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"strings"
 
+	opa_bundle "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/util"
 
 	bjson "github.com/styrainc/load-private/pkg/json"
+	"github.com/styrainc/load-private/pkg/plugins/bundle"
 	"github.com/styrainc/load-private/pkg/plugins/data/git"
 	"github.com/styrainc/load-private/pkg/plugins/data/http"
 	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
@@ -154,6 +156,36 @@ func (c *Data) compilerTrigger(ctx context.Context, txn storage.Transaction) {
 			}
 		}
 	}
+
+	// Check if any of the bundle roots overlap with our data plugin roots.
+	// If they do, we'll log an error-level message and flick the data plugin status to ERROR.
+	bndles, err := bundle.ReadBundleNamesFromStore(ctx, c.manager.Store, txn)
+	if err != nil {
+		c.Error("data plugin: read bundle names from store: %v", err)
+		return
+	}
+	roots := make([]string, 0, len(bndles))
+	for i := range bndles {
+		rs, err := bundle.ReadBundleRootsFromStore(ctx, c.manager.Store, txn, bndles[i])
+		if err != nil {
+			c.Error("data plugin: read bundle roots for %s from store: %v", bndles[i], err)
+			return
+		}
+		roots = append(roots, rs...)
+	}
+	for path := range c.plugins {
+		dp := c.plugins[path].(dataPlugin)
+		pluginRoot := dp.Path().String()[1:] // drop first `/`
+		if opa_bundle.RootPathsContain(roots, pluginRoot) {
+			c.Error("data plugin: %s path %s overlaps with bundle root %v", dp.Name(), pluginRoot, roots)
+			// continue here, there could be more than one overlap
+		}
+	}
+}
+
+func (c *Data) Error(fmt string, fs ...any) {
+	c.manager.Logger().WithFields(map[string]any{"plugin": Name}).Error(fmt, fs...)
+	c.manager.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateErr})
 }
 
 // Lookup returns the data plugin registered with the manager.
