@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -31,14 +30,17 @@ func LicenseCmd(license *License, key *string, token *string) *cobra.Command {
 			c.SilenceErrors = true
 			c.SilenceUsage = true
 
-			license.logger.SetOutput(io.Discard) // suppress ValidateLicense logging messages
+			lvl, _ := getLevel("info")
+			format := getFormatter("json")
+			license.logger.SetFormatter(format)
+			license.logger.SetLevel(lvl)
 
 			fmt.Printf("Validating license...\n")
 
 			var err error
-			license.ValidateLicense(*key, *token, func(code int, lerr error) { err = lerr })
+			license.ValidateLicense(*key, *token, func(code int, lerr error) { license.logger.Error("license error: %v", lerr); err = lerr })
 			if err != nil {
-				fmt.Println(err)
+				fmt.Printf("license validate error: %v", err)
 				return err
 			}
 			showExp(license.license != nil, license.expiry)
@@ -46,7 +48,7 @@ func LicenseCmd(license *License, key *string, token *string) *cobra.Command {
 			if license.license != nil { // online - lookup license policy and count
 				p, err := license.Policy()
 				if err != nil {
-					fmt.Println(err)
+					fmt.Printf("license policy error: %v", err)
 					return err
 				}
 				fmt.Printf("Max machines: %d, current machine count: %d\n", p.Data.Attributes.MaxMachines, p.Data.RelationShips.Machines.Meta.Count)

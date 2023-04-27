@@ -394,7 +394,7 @@ func (l *License) ReleaseLicense() {
 
 	if l.license != nil {
 		l.logger.Debug("Licensing deactivation")
-		for i := 0; i < 1; i++ { // 1 retry on shutdown
+		for i := 0; i < licenseRetries; i++ {
 			err := l.license.Deactivate(l.fingerprint)
 			if err != nil {
 				if r := rateLimitRetrySeconds(err); r != 0 {
@@ -416,10 +416,20 @@ func (l *License) monitorRetry(m *keygen.Machine) error {
 	c := 32
 
 	for range time.Tick(t) {
-		if err := heartbeat(m); err != nil {
+		for i := 0; i < licenseRetries; i++ {
+			err := heartbeat(m)
+			if err == nil {
+				return nil
+			}
+			if r := rateLimitRetrySeconds(err); r != 0 {
+				l.logger.Info("monitorRetry rate limit error: Retry-After=%v", r)
+				time.Sleep(r)
+				continue
+			}
 			if c = c - 1; c < 0 {
 				return err
 			}
+			break
 		}
 	}
 	return nil
@@ -434,12 +444,20 @@ func (l *License) monitor(m *keygen.Machine) {
 	t := (time.Duration(m.HeartbeatDuration) * time.Second) - (30 * time.Second)
 
 	for range time.Tick(t) {
-		if err := heartbeat(m); err != nil {
-			if err := l.monitorRetry(m); err != nil {
-				// give up - leak license
-				l.logger.Error("Licensing heartbeat error: %v", err)
-				return
+		for i := 0; i < licenseRetries; i++ {
+			if err := heartbeat(m); err != nil {
+				if r := rateLimitRetrySeconds(err); r != 0 {
+					l.logger.Info("monitor rate limit error: Retry-After=%v", r)
+					time.Sleep(r)
+					continue
+				}
+				if err := l.monitorRetry(m); err != nil {
+					// give up - leak license
+					l.logger.Error("Licensing heartbeat error: %v", err)
+					return
+				}
 			}
+			break
 		}
 	}
 }
@@ -458,9 +476,21 @@ func (l *License) Machines() (int, error) {
 
 func (l *License) Policy() (*keygenLicense, error) {
 	client := keygen.NewClient()
-	license, err := client.Get("licenses/"+l.license.ID, nil, nil)
-	if err != nil {
-		return nil, err
+	var license *keygen.Response
+	for i := 0; i < licenseRetries; i++ {
+		var err error
+		license, err = client.Get("licenses/"+l.license.ID, nil, nil)
+		if r := rateLimitRetrySeconds(err); r != 0 {
+			l.logger.Info("Policy rate limit error: Retry-After=%v", r)
+			if !l.sleep(r) {
+				return nil, err
+			}
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		break
 	}
 	var data keygenLicense
 	if err := json.Unmarshal(license.Body, &data); err != nil {

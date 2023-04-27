@@ -46,7 +46,7 @@ func initRun(opa *cobra.Command, brand string) *cobra.Command {
 
 		rt, err := initRuntime(ctx, params, args)
 		if err != nil {
-			fmt.Println("error:", err)
+			fmt.Println("run error:", err)
 			return err
 		}
 		return startRuntime(ctx, rt, params.serverMode)
