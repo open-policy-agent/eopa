@@ -1,6 +1,7 @@
 package decisionlogs
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 )
@@ -19,6 +20,7 @@ type Config struct {
 	outputHTTP    *outputHTTPOpts
 	outputConsole *outputConsoleOpts
 	outputKafka   *outputKafkaOpts
+	outputExp     *outputExpOpts
 }
 
 // NOTE(sr): Maybe batching at the sink is good enough and batching here only complicates
@@ -169,4 +171,22 @@ func (s *outputKafkaOpts) String() string {
 		panic(err)
 	}
 	return string(j)
+}
+
+// This output is for experimentation and not part of the public feature set.
+// NOTE(sr): Because OPA's config-env-var replacement mechanism messes with
+// Benthos' interpolation functions, we'll replace any "%" by "$". So to use
+// and interpolation function like
+//
+//	path: '${json("field")}'
+//
+// you'll have to put this into your config:
+//
+//	path: '%{json("field")}'
+type outputExpOpts struct {
+	Config json.RawMessage `json:"config"`
+}
+
+func (s *outputExpOpts) String() string {
+	return string(bytes.ReplaceAll(s.Config, []byte("%"), []byte("$")))
 }

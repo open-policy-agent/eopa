@@ -165,6 +165,11 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 			}
 			c.outputKafka.TLS = nil
 		}
+	case "experimental":
+		c.outputExp = new(outputExpOpts)
+		if err := util.Unmarshal(c.Output, c.outputExp); err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("unknown output type: %q", output.Type)
 	}
