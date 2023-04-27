@@ -107,7 +107,11 @@ func (r *report) ToPretty(ctx context.Context, w io.Writer) error {
 		return err
 	}
 	_, err = io.Copy(w, strings.NewReader(out))
-	return err
+	if err != nil {
+		return err
+	}
+	fmt.Fprint(w, "\n")
+	return nil
 }
 
 func headersFromCols(cols []string) []table.Field {
@@ -124,6 +128,9 @@ func headersFromCols(cols []string) []table.Field {
 }
 
 func (r *report) Output(ctx context.Context, w io.Writer, fmt format) error {
+	if fmt == pretty {
+		return r.ToPretty(ctx, w)
+	}
 	if _, err := r.db.ExecContext(ctx, `SET @@FORMAT TO `+string(fmt)); err != nil {
 		return err
 	}

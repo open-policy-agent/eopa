@@ -33,7 +33,6 @@ func (r *rec) httpRequest(ctx context.Context, u *url.URL, bndl io.Reader) (io.R
 	q.Add("rate", fmt.Sprint(r.rate)) // strconv.FormatFloat? or treat as string all the way?
 	q.Add("equals", fmt.Sprint(r.equals))
 	req.URL.RawQuery = q.Encode()
-
 	req = req.WithContext(ctx)
 
 	cl, err := r.client()
