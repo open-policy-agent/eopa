@@ -18,7 +18,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/jarcoal/httpmock v1.2.0
 	github.com/json-iterator/go v1.1.12
-	github.com/keygen-sh/keygen-go/v2 v2.4.0
+	github.com/keygen-sh/keygen-go/v2 v2.4.1
 	github.com/mithrandie/csvq v1.18.1
 	github.com/mithrandie/csvq-driver v1.7.0
 	github.com/mithrandie/go-text v1.6.0
@@ -309,4 +309,4 @@ replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.51.1-0.20230413180734-2cad43f93983
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.51.1-0.20230424181209-83f1b62eedcc

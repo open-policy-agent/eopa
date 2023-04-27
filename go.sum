@@ -91,8 +91,8 @@ github.com/Shopify/sarama v1.30.1 h1:z47lP/5PBw2UVKf1lvfS5uWXaJws6ggk9PLnKEHtZiQ
 github.com/Shopify/sarama v1.30.1/go.mod h1:hGgx05L/DiW8XYBXeJdKIN6V2QUy2H6JqME5VT1NLRw=
 github.com/Shopify/toxiproxy/v2 v2.1.6-0.20210914104332-15ea381dcdae h1:ePgznFqEG1v3AjMklnK8H7BSc++FDSo7xfK9K7Af+0Y=
 github.com/Shopify/toxiproxy/v2 v2.1.6-0.20210914104332-15ea381dcdae/go.mod h1:/cvHQkZ1fst0EmZnA5dFtiQdWCNCFYzb+uE2vqVgvx0=
-github.com/StyraInc/opa v0.51.1-0.20230413180734-2cad43f93983 h1:IVumMHyLpGHLrwxvHUs4INWxEVJbCmG5RAkrJkdb43M=
-github.com/StyraInc/opa v0.51.1-0.20230413180734-2cad43f93983/go.mod h1:OjmwLfXdeR7skSxrt8Yd3ScXTqPxyJn7GeTRJrcEerU=
+github.com/StyraInc/opa v0.51.1-0.20230424181209-83f1b62eedcc h1:nRXjV8uxH53m3wDBPX5MIMrNEID1qDOxpkyPHIF+p7w=
+github.com/StyraInc/opa v0.51.1-0.20230424181209-83f1b62eedcc/go.mod h1:OjmwLfXdeR7skSxrt8Yd3ScXTqPxyJn7GeTRJrcEerU=
 github.com/acomagu/bufpipe v1.0.4 h1:e3H4WUzM3npvo5uv95QuJM3cQspFNtFBzvJ2oNjKIDQ=
 github.com/acomagu/bufpipe v1.0.4/go.mod h1:mxdxdup/WdsKVreO5GpW4+M/1CE2sMG4jeGJ2sYmHc4=
 github.com/agnivade/levenshtein v1.1.1 h1:QY8M92nrzkmr798gCo3kmMyqXFzdQVpxLlGPRBij0P8=
@@ -554,8 +554,8 @@ github.com/keygen-sh/go-update v1.0.0 h1:M65sTVUHUO07tEK4l1Hq7u5D4kdEqkcgfdzUt3q
 github.com/keygen-sh/go-update v1.0.0/go.mod h1:wn0UWRHLnBP5hwXtj1IdHZqWlHvIadh2Nn+becFf8Ro=
 github.com/keygen-sh/jsonapi-go v1.2.0 h1:BXVX9YAZt4itgTs9sV0ame0/+6WQMZHhbF8f62paNwo=
 github.com/keygen-sh/jsonapi-go v1.2.0/go.mod h1:8j9vsLiKyJyDqmt8r3tYaYNmXszq2+cFhoO6QdMdAes=
-github.com/keygen-sh/keygen-go/v2 v2.4.0 h1:p6i5ZyV6c6jVKfr3ybq4KF+zhomV6gyOhgLNMMa8iwU=
-github.com/keygen-sh/keygen-go/v2 v2.4.0/go.mod h1:npC1vHkQzB/PmsHWQmzHQvcPMTUnRQD3F9W4iDdif38=
+github.com/keygen-sh/keygen-go/v2 v2.4.1 h1:oXzmkZXbssyKAsAs556HBfOClLg2gWbGgXAADS1kvoQ=
+github.com/keygen-sh/keygen-go/v2 v2.4.1/go.mod h1:npC1vHkQzB/PmsHWQmzHQvcPMTUnRQD3F9W4iDdif38=
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=

@@ -30,6 +30,7 @@ type (
 		license     *keygen.License
 		released    bool
 		shutdown    chan struct{}
+		finished    chan struct{}
 		fingerprint string
 		logger      *logging.StandardLogger
 		expiry      time.Time
@@ -87,7 +88,7 @@ func NewLicense() *License {
 	// remove licenses from environment! (opa.runtime.env)
 	os.Unsetenv(loadLicenseKey)
 	os.Unsetenv(loadLicenseToken)
-	return &License{logger: logger, shutdown: make(chan struct{}, 1)}
+	return &License{logger: logger, shutdown: make(chan struct{}, 1), finished: make(chan struct{}, 1)}
 }
 
 // NOTE(sr): We're mapping ALL keygen errors to "debug" level. We don't want to show
@@ -309,10 +310,11 @@ func (l *License) ValidateLicense(key string, token string, terminate func(code 
 					}
 					continue
 				}
-				err = fmt.Errorf("license activation failed: %w", lerr)
-				return
 			}
 			break
+		}
+		if lerr != nil {
+			err = fmt.Errorf("license activation failed: %w", lerr)
 		}
 
 		if l.stopped() { // if ReleaseLicense was called, exit now
@@ -365,6 +367,20 @@ func (l *License) stopped() bool {
 	}
 }
 
+// wait: wait for monitor to stop
+func (l *License) wait(dur time.Duration) bool {
+	delay := time.NewTimer(dur)
+	select {
+	case <-l.finished:
+		if !delay.Stop() {
+			<-delay.C // if the timer has been stopped then read from the channel.
+		}
+		return false
+	case <-delay.C:
+		return true
+	}
+}
+
 func (l *License) sleep(dur time.Duration) bool {
 	delay := time.NewTimer(dur)
 	select {
@@ -399,7 +415,7 @@ func (l *License) ReleaseLicense() {
 			if err != nil {
 				if r := rateLimitRetrySeconds(err); r != 0 {
 					l.logger.Info("ReleaseLicense rate limit error: Retry-After=%v", r)
-					time.Sleep(r)
+					time.Sleep(r) // must use time.Sleep; already shutdown
 					continue
 				}
 				l.logger.Error("License deactivation: %v", err)
@@ -415,21 +431,13 @@ func (l *License) monitorRetry(m *keygen.Machine) error {
 	t := 30 * time.Second
 	c := 32
 
-	for range time.Tick(t) {
-		for i := 0; i < licenseRetries; i++ {
-			err := heartbeat(m)
-			if err == nil {
-				return nil
-			}
-			if r := rateLimitRetrySeconds(err); r != 0 {
-				l.logger.Info("monitorRetry rate limit error: Retry-After=%v", r)
-				time.Sleep(r)
-				continue
-			}
-			if c = c - 1; c < 0 {
-				return err
-			}
+	for l.sleep(t) {
+		err := l.heartbeat(m)
+		if err == nil {
 			break
+		}
+		if c = c - 1; c < 0 {
+			return err
 		}
 	}
 	return nil
@@ -437,36 +445,49 @@ func (l *License) monitorRetry(m *keygen.Machine) error {
 
 // monitor: send keygen SaaS heartbeat
 func (l *License) monitor(m *keygen.Machine) {
-	if err := heartbeat(m); err != nil {
-		l.logger.Debug("Licensing heartbeat error: %v", err)
+	defer close(l.finished) // signal monitor has completed
+
+	if l.stopped() {
+		return
+	}
+	if err := l.heartbeat(m); err != nil {
+		l.logger.Warn("Licensing heartbeat error: %v", err)
 	}
 
+	if m.HeartbeatDuration < 60 { // set up some minimum
+		m.HeartbeatDuration = 60
+	}
 	t := (time.Duration(m.HeartbeatDuration) * time.Second) - (30 * time.Second)
 
-	for range time.Tick(t) {
-		for i := 0; i < licenseRetries; i++ {
-			if err := heartbeat(m); err != nil {
-				if r := rateLimitRetrySeconds(err); r != 0 {
-					l.logger.Info("monitor rate limit error: Retry-After=%v", r)
-					time.Sleep(r)
-					continue
-				}
-				if err := l.monitorRetry(m); err != nil {
-					// give up - leak license
-					l.logger.Error("Licensing heartbeat error: %v", err)
-					return
-				}
+	for l.sleep(t) {
+		if err := l.heartbeat(m); err != nil {
+			if err := l.monitorRetry(m); err != nil {
+				// give up - leak license
+				l.logger.Error("Licensing heartbeat error: %v", err)
+				return
 			}
-			break
 		}
 	}
 }
 
-func heartbeat(m *keygen.Machine) error {
-	client := keygen.NewClient()
-
-	_, err := client.Post("machines/"+m.ID+"/actions/ping", nil, m)
-	return err
+func (l *License) heartbeat(m *keygen.Machine) error {
+	var err error
+	for i := 0; i < licenseRetries; i++ {
+		client := keygen.NewClient()
+		_, err = client.Post("machines/"+m.ID+"/actions/ping", nil, m)
+		if err == nil {
+			return nil
+		}
+		if r := rateLimitRetrySeconds(err); r != 0 {
+			l.logger.Info("monitorRetry rate limit error: Retry-After=%v", r)
+			if !l.sleep(r) {
+				return nil
+			}
+			continue
+		}
+		break
+	}
+	return fmt.Errorf("heartbeat failure: %w", err)
 }
 
 func (l *License) Machines() (int, error) {
@@ -475,11 +496,14 @@ func (l *License) Machines() (int, error) {
 }
 
 func (l *License) Policy() (*keygenLicense, error) {
-	client := keygen.NewClient()
 	var license *keygen.Response
+	var err error
 	for i := 0; i < licenseRetries; i++ {
-		var err error
+		client := keygen.NewClient()
 		license, err = client.Get("licenses/"+l.license.ID, nil, nil)
+		if err == nil {
+			break
+		}
 		if r := rateLimitRetrySeconds(err); r != 0 {
 			l.logger.Info("Policy rate limit error: Retry-After=%v", r)
 			if !l.sleep(r) {
@@ -487,10 +511,10 @@ func (l *License) Policy() (*keygenLicense, error) {
 			}
 			continue
 		}
-		if err != nil {
-			return nil, err
-		}
 		break
+	}
+	if err != nil {
+		return nil, fmt.Errorf("policy failure: %w", err)
 	}
 	var data keygenLicense
 	if err := json.Unmarshal(license.Body, &data); err != nil {
