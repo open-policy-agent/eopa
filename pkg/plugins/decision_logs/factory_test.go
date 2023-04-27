@@ -53,7 +53,7 @@ func TestValidate(t *testing.T) {
 				memoryBuffer: &memBufferOpts{
 					MaxBytes: defaultMemoryMaxBytes,
 				},
-				outputConsole: &outputConsoleOpts{},
+				outputs: []output{&outputConsoleOpts{}},
 			}),
 		},
 		{
@@ -69,7 +69,7 @@ output:
 				memoryBuffer: &memBufferOpts{
 					MaxBytes: defaultMemoryMaxBytes,
 				},
-				outputConsole: &outputConsoleOpts{},
+				outputs: []output{&outputConsoleOpts{}},
 			}),
 		},
 		{
@@ -91,7 +91,7 @@ output:
 					FlushAtPeriod: "10s",
 					MaxBytes:      120,
 				},
-				outputConsole: &outputConsoleOpts{},
+				outputs: []output{&outputConsoleOpts{}},
 			}),
 		},
 		{
@@ -107,7 +107,7 @@ output:
 				diskBuffer: &diskBufferOpts{
 					Path: "/what/ev/er.sqlite",
 				},
-				outputConsole: &outputConsoleOpts{},
+				outputs: []output{&outputConsoleOpts{}},
 			}),
 		},
 		{
@@ -119,7 +119,7 @@ output:
   type: console
 `,
 			checks: isConfig(Config{
-				outputConsole: &outputConsoleOpts{},
+				outputs: []output{&outputConsoleOpts{}},
 			}),
 		},
 		{
@@ -163,7 +163,7 @@ output:
 				memoryBuffer: &memBufferOpts{
 					MaxBytes: defaultMemoryMaxBytes,
 				},
-				outputConsole: &outputConsoleOpts{},
+				outputs: []output{&outputConsoleOpts{}},
 			}),
 		},
 		{
@@ -197,12 +197,12 @@ output:
 				memoryBuffer: &memBufferOpts{
 					MaxBytes: defaultMemoryMaxBytes,
 				},
-				outputHTTP: &outputHTTPOpts{
+				outputs: []output{&outputHTTPOpts{
 					URL:      "http://knownservice/prefix/decisionlogs",
 					Timeout:  "12s",
 					Array:    true,
 					Compress: true,
-				},
+				}},
 			}),
 		},
 		{
@@ -219,12 +219,12 @@ output:
 				memoryBuffer: &memBufferOpts{
 					MaxBytes: defaultMemoryMaxBytes,
 				},
-				outputHTTP: &outputHTTPOpts{
+				outputs: []output{&outputHTTPOpts{
 					URL:      "http://knownservice/prefix/logs",
 					Timeout:  "10s",
 					Array:    true,
 					Compress: true,
-				},
+				}},
 			}),
 		},
 		{
@@ -245,7 +245,7 @@ output:
 				memoryBuffer: &memBufferOpts{
 					MaxBytes: defaultMemoryMaxBytes,
 				},
-				outputHTTP: &outputHTTPOpts{
+				outputs: []output{&outputHTTPOpts{
 					URL:     "http://knownservice/prefix/decisionlogs",
 					Timeout: "10s",
 					Headers: map[string]string{
@@ -254,7 +254,7 @@ output:
 					},
 					Array:    true,
 					Compress: true,
-				},
+				}},
 			}),
 		},
 		{
@@ -280,7 +280,7 @@ output:
 				memoryBuffer: &memBufferOpts{
 					MaxBytes: defaultMemoryMaxBytes,
 				},
-				outputHTTP: &outputHTTPOpts{
+				outputs: []output{&outputHTTPOpts{
 					URL:      "http://knownservice/prefix/decisionlogs",
 					Timeout:  "10s",
 					Array:    true,
@@ -292,7 +292,7 @@ output:
 						ClientSecret: "sesamememe",
 						Scopes:       []string{"foo", "bar"},
 					},
-				},
+				}},
 			}),
 		},
 		{
@@ -316,7 +316,7 @@ output:
 				memoryBuffer: &memBufferOpts{
 					MaxBytes: defaultMemoryMaxBytes,
 				},
-				outputHTTP: &outputHTTPOpts{
+				outputs: []output{&outputHTTPOpts{
 					URL:      "http://knownservice/prefix/decisionlogs",
 					Timeout:  "10s",
 					Array:    true,
@@ -328,7 +328,7 @@ output:
 						},
 						RootCAs: "ca\n",
 					},
-				},
+				}},
 			}),
 		},
 		{
@@ -341,7 +341,7 @@ output:
 				memoryBuffer: &memBufferOpts{
 					MaxBytes: defaultMemoryMaxBytes,
 				},
-				outputHTTP: &outputHTTPOpts{URL: "https://logs.logs.logs:1234/post"},
+				outputs: []output{&outputHTTPOpts{URL: "https://logs.logs.logs:1234/post"}},
 			}),
 		},
 		{
@@ -357,10 +357,38 @@ output:
 				memoryBuffer: &memBufferOpts{
 					MaxBytes: defaultMemoryMaxBytes,
 				},
-				outputKafka: &outputKafkaOpts{
+				outputs: []output{&outputKafkaOpts{
 					URLs:    []string{"127.0.0.1:9091"},
 					Topic:   "logs",
 					Timeout: "30s",
+				}},
+			}),
+		},
+		{
+			note: "http+kafka+console output",
+			config: `
+output:
+- type: http
+  url: https://logs.logs.logs:1234/post
+- type: kafka
+  topic: logs
+  timeout: 30s
+  urls:
+  - 127.0.0.1:9091
+- type: console
+`,
+			checks: isConfig(Config{
+				memoryBuffer: &memBufferOpts{
+					MaxBytes: defaultMemoryMaxBytes,
+				},
+				outputs: []output{
+					&outputHTTPOpts{URL: "https://logs.logs.logs:1234/post"},
+					&outputKafkaOpts{
+						URLs:    []string{"127.0.0.1:9091"},
+						Topic:   "logs",
+						Timeout: "30s",
+					},
+					&outputConsoleOpts{},
 				},
 			}),
 		},
@@ -380,7 +408,7 @@ output:
 				memoryBuffer: &memBufferOpts{
 					MaxBytes: defaultMemoryMaxBytes,
 				},
-				outputKafka: &outputKafkaOpts{
+				outputs: []output{&outputKafkaOpts{
 					URLs:  []string{"127.0.0.1:9091"},
 					Topic: "logs",
 					tls: &sinkAuthTLS{
@@ -390,7 +418,7 @@ output:
 						},
 						RootCAs: "ca\n",
 					},
-				},
+				}},
 			}),
 		},
 	}

@@ -5,13 +5,11 @@ package decisionlogs
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -56,8 +54,6 @@ var standardLabels = payloadLabels{
 // This tests sends three API requests: one is logged as-is, one is dropped, and one is masked.
 // It uses each of the three different buffer options (unbuffered, memory, disk).
 func TestDecisionLogsConsoleOutput(t *testing.T) {
-	ctx := context.Background()
-
 	policy := `
 package test
 import future.keywords
@@ -97,15 +93,12 @@ plugins:
 			}
 			wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-
 			{ // act 1: request is logged as-is
 				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
 				if err != nil {
 					t.Fatalf("http request: %v", err)
 				}
-				resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -121,7 +114,7 @@ plugins:
 				if err != nil {
 					t.Fatalf("http request: %v", err)
 				}
-				resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -137,7 +130,7 @@ plugins:
 				if err != nil {
 					t.Fatalf("http request: %v", err)
 				}
-				resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -148,7 +141,7 @@ plugins:
 			}
 
 			// assert: check that DL logs have been output as expected
-			logs := collectDL(ctx, t, loadOut, false, 2)
+			logs := collectDL(t, loadOut, false, 2)
 
 			{ // log for act 1
 				dl := payload{
@@ -221,8 +214,6 @@ plugins:
 // We're asserting two things here: that an object result is marshalled into
 // a DL entry properly, and that we can mask parts of it.
 func TestDecisionLogsComplexResult(t *testing.T) {
-	ctx := context.Background()
-
 	policy := `
 package test
 import future.keywords
@@ -254,7 +245,7 @@ plugins:
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
-		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -264,7 +255,7 @@ plugins:
 		}
 	}
 
-	logs := collectDL(ctx, t, loadOut, false, 1)
+	logs := collectDL(t, loadOut, false, 1)
 	{ // log for act 1
 		dl := payload{
 			Result: map[string]any{
@@ -285,8 +276,6 @@ plugins:
 }
 
 func TestDecisionLogsMemoryBatching(t *testing.T) {
-	ctx := context.Background()
-
 	policy := `
 package test
 import future.keywords
@@ -343,7 +332,7 @@ plugins:
 			}
 		}
 
-		_ = collectDL(ctx, t, loadOut, false, 2) // if we pass this, we've got two logs
+		_ = collectDL(t, loadOut, false, 2) // if we pass this, we've got two logs
 	})
 
 	t.Run("flush_at_period", func(t *testing.T) {
@@ -384,14 +373,13 @@ plugins:
 		}
 
 		time.Sleep(3 * time.Second)
-		_ = collectDL(ctx, t, loadOut, false, 1) // if we pass this, we've got one log
+		_ = collectDL(t, loadOut, false, 1) // if we pass this, we've got one log
 	})
 }
 
 const jsonType = "application/json"
 
 func TestDecisionLogsServiceOutput(t *testing.T) {
-	ctx := context.Background()
 	policy := `
 package test
 import future.keywords
@@ -453,15 +441,12 @@ plugins:
 			}
 			wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-			ctx, cancel := context.WithTimeout(ctx, time.Second)
-			defer cancel()
-
 			{ // act: send API request
 				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
 				if err != nil {
 					t.Fatalf("http request: %v", err)
 				}
-				resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -471,7 +456,7 @@ plugins:
 				}
 			}
 
-			logs := collectDL(ctx, t, &buf, tc.compressed, 1)
+			logs := collectDL(t, &buf, tc.compressed, 1)
 			dl := payload{
 				Result: true,
 				ID:     1,
@@ -484,8 +469,75 @@ plugins:
 	}
 }
 
+func TestDecisionLogsServiceAndConsoleOutput(t *testing.T) {
+	policy := `
+package test
+import future.keywords
+
+coin if rand.intn("coin", 2)
+`
+
+	configFmt := `
+services:
+- name: "dl-sink"
+  url: "%s/prefix"
+plugins:
+  load_decision_logger:
+    output:
+    - type: service
+      service: dl-sink
+    - type: console
+`
+	var buf bytes.Buffer
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path != "/prefix/logs":
+		case r.Method != http.MethodPost:
+		default: // all matches
+			src, _ := gzip.NewReader(r.Body)
+			io.Copy(&buf, src)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	t.Cleanup(ts.Close)
+	load, loadOut, loadErr := loadLoad(t, fmt.Sprintf(configFmt, ts.URL), policy, false)
+	if err := load.Start(); err != nil {
+		t.Fatal(err)
+	}
+	wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+
+	{ // act: send API request
+		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
+		if err != nil {
+			t.Fatalf("http request: %v", err)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if exp, act := 200, resp.StatusCode; exp != act {
+			t.Fatalf("expected status %d, got %d", exp, act)
+		}
+	}
+
+	logsHTTP := collectDL(t, &buf, true, 1)
+	logsConsole := collectDL(t, loadOut, false, 1)
+	dl := payload{
+		Result: true,
+		ID:     1,
+		Labels: standardLabels,
+	}
+	if diff := cmp.Diff(dl, logsHTTP[0], cmpopts.IgnoreFields(payload{}, "Metrics", "DecisionID", "Labels.ID", "NDBC")); diff != "" {
+		t.Errorf("diff: (-want +got):\n%s", diff)
+	}
+	if diff := cmp.Diff(logsHTTP, logsConsole); diff != "" {
+		t.Errorf("HTTP vs console sink diff: (-want +got):\n%s", diff)
+	}
+}
+
 func TestDecisionLogsServiceOutputWithOAuth2(t *testing.T) {
-	ctx := context.Background()
 	policy := `
 package test
 import future.keywords
@@ -532,15 +584,12 @@ plugins:
 	}
 	wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-
 	{ // act: send API request
 		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
-		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -550,12 +599,10 @@ plugins:
 		}
 	}
 
-	_ = collectDL(ctx, t, &buf, true, 1)
+	_ = collectDL(t, &buf, true, 1)
 }
 
 func TestDecisionLogsServiceOutputWithTLS(t *testing.T) {
-	log.SetFlags(log.Llongfile)
-	ctx := context.Background()
 	policy := `
 package test
 import future.keywords
@@ -616,15 +663,12 @@ plugins:
 	}
 	wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-
 	{ // act: send API request
 		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
-		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -634,7 +678,7 @@ plugins:
 		}
 	}
 
-	_ = collectDL(ctx, t, &buf, true, 1)
+	_ = collectDL(t, &buf, true, 1)
 }
 
 func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
@@ -751,7 +795,7 @@ func binary() string {
 }
 
 // collectDL either returns `exp` decision log payloads, or calls t.Fatal
-func collectDL(ctx context.Context, t *testing.T, rdr io.Reader, array bool, exp int) []payload {
+func collectDL(t *testing.T, rdr io.Reader, array bool, exp int) []payload {
 	t.Helper()
 	for i := 0; i <= 3; i++ {
 		if i != 0 {
@@ -765,7 +809,7 @@ func collectDL(ctx context.Context, t *testing.T, rdr io.Reader, array bool, exp
 				}
 			}
 		} else {
-			ms = retrieveDLs(ctx, t, rdr)
+			ms = retrieveDLs(t, rdr)
 		}
 		if act := len(ms); act == exp {
 			return ms
@@ -776,7 +820,7 @@ func collectDL(ctx context.Context, t *testing.T, rdr io.Reader, array bool, exp
 	return nil
 }
 
-func retrieveDLs(ctx context.Context, t *testing.T, rdr io.Reader) []payload {
+func retrieveDLs(t *testing.T, rdr io.Reader) []payload {
 	t.Helper()
 	ms := []payload{}
 	dec := json.NewDecoder(rdr)

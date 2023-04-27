@@ -35,34 +35,20 @@ type Logger struct {
 }
 
 func (p *Logger) Start(ctx context.Context) error {
-	// TODO(sr): check that this works as expected, and won't depend on the order of
-	// plugin instantiations.
 	if logs.Lookup(p.manager) != nil {
 		return fmt.Errorf("%s cannot be used together with OPA's decision logging", Name)
 	}
 
 	var err error
-	var buffer, output fmt.Stringer
+	var buffer fmt.Stringer
 	switch {
 	case p.config.diskBuffer != nil:
 		buffer = p.config.diskBuffer
 	case p.config.memoryBuffer != nil:
 		buffer = p.config.memoryBuffer
 	}
-	switch {
-	case p.config.outputConsole != nil:
-		output = p.config.outputConsole
-	case p.config.outputHTTP != nil:
-		output = p.config.outputHTTP
-	case p.config.outputKafka != nil:
-		output = p.config.outputKafka
-	case p.config.outputExp != nil:
-		output = p.config.outputExp
-	default:
-		return fmt.Errorf("no output configured")
-	}
 
-	p.stream, err = NewStream(ctx, p, p, buffer, output, p.manager.Logger())
+	p.stream, err = NewStream(ctx, p, p, buffer, p.config.outputs, p.manager.Logger())
 	if err != nil {
 		return err
 	}

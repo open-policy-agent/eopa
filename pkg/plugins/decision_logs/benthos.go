@@ -2,6 +2,7 @@ package decisionlogs
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -36,7 +37,7 @@ func (s *stream) Consume(ctx context.Context, msg, meta map[string]any) error {
 	return s.prod(ctx, m)
 }
 
-func NewStream(_ context.Context, mask masker, drop dropper, buf, output fmt.Stringer, logger logging.Logger) (Stream, error) {
+func NewStream(_ context.Context, mask masker, drop dropper, buf fmt.Stringer, out output, logger logging.Logger) (Stream, error) {
 	if err := service.RegisterProcessor("dl_drop", service.NewConfigSpec(), func(*service.ParsedConfig, *service.Resources) (service.Processor, error) {
 		return &DropProcessor{dropper: drop}, nil
 	}); err != nil {
@@ -73,7 +74,11 @@ func NewStream(_ context.Context, mask masker, drop dropper, buf, output fmt.Str
   meta = deleted()`); err != nil {
 		return nil, err
 	}
-	if err := builder.AddOutputYAML(output.String()); err != nil {
+	cfg, err := json.Marshal(out.Benthos())
+	if err != nil {
+		return nil, err
+	}
+	if err := builder.AddOutputYAML(string(cfg)); err != nil {
 		return nil, err
 	}
 

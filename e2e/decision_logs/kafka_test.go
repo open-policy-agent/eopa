@@ -171,7 +171,7 @@ plugins:
 				if err != nil {
 					t.Fatalf("http request: %v", err)
 				}
-				resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -181,7 +181,7 @@ plugins:
 				}
 			}
 
-			logs := collectDL(ctx, t, &buf, false, 2)
+			logs := collectDL(t, &buf, false, 2)
 			{ // request 1
 				dl := payload{
 					Result: true,

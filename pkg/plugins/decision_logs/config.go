@@ -17,10 +17,25 @@ type Config struct {
 	memoryBuffer *memBufferOpts
 	diskBuffer   *diskBufferOpts
 
-	outputHTTP    *outputHTTPOpts
-	outputConsole *outputConsoleOpts
-	outputKafka   *outputKafkaOpts
-	outputExp     *outputExpOpts
+	outputs outputs
+}
+
+type output interface {
+	Benthos() map[string]any
+}
+
+type outputs []output
+
+func (x outputs) Benthos() map[string]any {
+	outputs := make([]map[string]any, len(x))
+	for i := range x {
+		outputs[i] = x[i].Benthos()
+	}
+	return map[string]any{
+		"broker": map[string]any{
+			"outputs": outputs,
+		},
+	}
 }
 
 // NOTE(sr): Maybe batching at the sink is good enough and batching here only complicates
@@ -97,7 +112,7 @@ type certs struct {
 	Cert string `json:"cert"`
 }
 
-func (s *outputHTTPOpts) String() string {
+func (s *outputHTTPOpts) Benthos() map[string]any {
 	processors := make([]map[string]any, 0, 2)
 	if s.Array {
 		processors = append(processors, map[string]any{"archive": map[string]any{"format": "json_array"}})
@@ -122,17 +137,13 @@ func (s *outputHTTPOpts) String() string {
 	if s.TLS != nil {
 		m["tls"] = s.TLS
 	}
-	j, err := json.Marshal(map[string]any{"http_client": m})
-	if err != nil {
-		panic(err)
-	}
-	return string(j)
+	return map[string]any{"http_client": m}
 }
 
 type outputConsoleOpts struct{}
 
-func (*outputConsoleOpts) String() string {
-	return `stdout: {}`
+func (*outputConsoleOpts) Benthos() map[string]any {
+	return map[string]any{"stdout": struct{}{}}
 }
 
 type outputKafkaOpts struct {
@@ -154,7 +165,7 @@ type tlsOpts struct {
 	CACert     string `json:"ca_cert"`
 }
 
-func (s *outputKafkaOpts) String() string {
+func (s *outputKafkaOpts) Benthos() map[string]any {
 	m := map[string]any{
 		"seed_brokers": s.URLs,
 		"topic":        s.Topic,
@@ -166,11 +177,7 @@ func (s *outputKafkaOpts) String() string {
 	if s.tls != nil {
 		m["tls"] = s.tls
 	}
-	j, err := json.Marshal(map[string]any{"kafka_franz": m})
-	if err != nil {
-		panic(err)
-	}
-	return string(j)
+	return map[string]any{"kafka_franz": m}
 }
 
 // This output is for experimentation and not part of the public feature set.
@@ -187,6 +194,10 @@ type outputExpOpts struct {
 	Config json.RawMessage `json:"config"`
 }
 
-func (s *outputExpOpts) String() string {
-	return string(bytes.ReplaceAll(s.Config, []byte("%"), []byte("$")))
+func (s *outputExpOpts) Benthos() map[string]any {
+	m := map[string]any{}
+	if err := json.NewDecoder(bytes.NewReader(bytes.ReplaceAll(s.Config, []byte("%"), []byte("$")))).Decode(&m); err != nil {
+		panic(err)
+	}
+	return m
 }

@@ -1,6 +1,7 @@
 package decisionlogs
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -23,14 +24,15 @@ func (factory) New(m *plugins.Manager, config any) plugins.Plugin {
 	}
 }
 
+type typ struct {
+	Type string `json:"type"`
+}
+
 func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 	c := Config{}
 	err := util.Unmarshal(config, &c)
 	if err != nil {
 		return nil, err
-	}
-	type typ struct {
-		Type string `json:"type"`
 	}
 
 	// Defaults
@@ -65,20 +67,47 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 		return nil, fmt.Errorf("unknown buffer type: %q", buffer.Type)
 	}
 
-	// Outputs
-	output := new(typ)
-	if err := util.Unmarshal(c.Output, output); err != nil {
-		return nil, err
-	}
-	switch output.Type { // TODO(sr): benefit from generics?
-	case "http":
-		c.outputHTTP = new(outputHTTPOpts)
-		if err := util.Unmarshal(c.Output, c.outputHTTP); err != nil {
+	// Outputs, one:
+	out := new(typ)
+	if err := util.Unmarshal(c.Output, out); err == nil && out.Type != "" {
+		out, err := outputFromRaw(m, c.Output)
+		if err != nil {
 			return nil, err
 		}
+		c.outputs = []output{out}
+		return c, nil
+	}
+
+	// Outputs, multiple:
+	outputs := make([]json.RawMessage, 0)
+	if err := util.Unmarshal(c.Output, &outputs); err != nil {
+		return nil, err
+	}
+	for _, outputRaw := range outputs {
+		output, err := outputFromRaw(m, outputRaw)
+		if err != nil {
+			return nil, err
+		}
+		c.outputs = append(c.outputs, output)
+	}
+	return c, nil
+}
+
+func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
+	out := new(typ)
+	if err := util.Unmarshal(outputRaw, out); err != nil {
+		return nil, err
+	}
+	switch out.Type { // TODO(sr): benefit from generics?
+	case "http":
+		outputHTTP := new(outputHTTPOpts)
+		if err := util.Unmarshal(outputRaw, outputHTTP); err != nil {
+			return nil, err
+		}
+		return outputHTTP, nil
 	case "service":
 		service := new(outputServiceOpts)
-		if err := util.Unmarshal(c.Output, service); err != nil {
+		if err := util.Unmarshal(outputRaw, service); err != nil {
 			return nil, err
 		}
 		if service.Resource == "" {
@@ -90,19 +119,19 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 		if cfg.Name == "" {
 			return nil, fmt.Errorf("unknown service %q", service.Service)
 		}
-		c.outputHTTP = new(outputHTTPOpts)
-		c.outputHTTP.URL = fmt.Sprintf("%s/%s", cfg.URL, service.Resource)
+		outputHTTP := new(outputHTTPOpts)
+		outputHTTP.URL = fmt.Sprintf("%s/%s", cfg.URL, service.Resource)
 		if sec := cfg.ResponseHeaderTimeoutSeconds; sec != nil {
-			c.outputHTTP.Timeout = fmt.Sprintf("%ds", *sec)
+			outputHTTP.Timeout = fmt.Sprintf("%ds", *sec)
 		} else {
-			c.outputHTTP.Timeout = "10s"
+			outputHTTP.Timeout = "10s"
 		}
-		c.outputHTTP.Headers = cfg.Headers
-		c.outputHTTP.Array = true
-		c.outputHTTP.Compress = true
+		outputHTTP.Headers = cfg.Headers
+		outputHTTP.Array = true
+		outputHTTP.Compress = true
 
 		if oauth2 := cfg.Credentials.OAuth2; oauth2 != nil {
-			c.outputHTTP.OAuth2 = &httpAuthOAuth2{
+			outputHTTP.OAuth2 = &httpAuthOAuth2{
 				Enabled:      true,
 				ClientKey:    oauth2.ClientID,
 				ClientSecret: oauth2.ClientSecret,
@@ -119,7 +148,7 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 			if err != nil {
 				return nil, err
 			}
-			c.outputHTTP.TLS = &sinkAuthTLS{
+			outputHTTP.TLS = &sinkAuthTLS{
 				Enabled:      true,
 				Certificates: []certs{{Cert: string(cert), Key: string(key)}},
 			}
@@ -128,20 +157,22 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 				if err != nil {
 					return nil, err
 				}
-				c.outputHTTP.TLS.RootCAs = string(caCert)
+				outputHTTP.TLS.RootCAs = string(caCert)
 			}
 		}
+		return outputHTTP, nil
 	case "console":
-		c.outputConsole = new(outputConsoleOpts)
-		if err := util.Unmarshal(c.Output, c.outputConsole); err != nil {
+		outputConsole := new(outputConsoleOpts)
+		if err := util.Unmarshal(outputRaw, outputConsole); err != nil {
 			return nil, err
 		}
+		return outputConsole, nil
 	case "kafka":
-		c.outputKafka = new(outputKafkaOpts)
-		if err := util.Unmarshal(c.Output, c.outputKafka); err != nil {
+		outputKafka := new(outputKafkaOpts)
+		if err := util.Unmarshal(outputRaw, outputKafka); err != nil {
 			return nil, err
 		}
-		if tls := c.outputKafka.TLS; tls != nil {
+		if tls := outputKafka.TLS; tls != nil {
 			cert, err := os.ReadFile(tls.Cert)
 			if err != nil {
 				return nil, err
@@ -150,7 +181,7 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 			if err != nil {
 				return nil, err
 			}
-			c.outputKafka.tls = &sinkAuthTLS{
+			outputKafka.tls = &sinkAuthTLS{
 				Enabled: true,
 				Certificates: []certs{
 					{Cert: string(cert), Key: string(key)},
@@ -161,17 +192,18 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 				if err != nil {
 					return nil, err
 				}
-				c.outputKafka.tls.RootCAs = string(caCert)
+				outputKafka.tls.RootCAs = string(caCert)
 			}
-			c.outputKafka.TLS = nil
+			outputKafka.TLS = nil
 		}
+		return outputKafka, nil
 	case "experimental":
-		c.outputExp = new(outputExpOpts)
-		if err := util.Unmarshal(c.Output, c.outputExp); err != nil {
+		outputExp := new(outputExpOpts)
+		if err := util.Unmarshal(outputRaw, outputExp); err != nil {
 			return nil, err
 		}
+		return outputExp, nil
 	default:
-		return nil, fmt.Errorf("unknown output type: %q", output.Type)
+		return nil, fmt.Errorf("unknown output type: %q", out.Type)
 	}
-	return c, nil
 }
