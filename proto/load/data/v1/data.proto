@@ -101,7 +101,7 @@ service DataService {
   //
   // This is equivalent in functionality to OPA's
   // [Data REST API Create/Overwrite method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-overwrite-a-document).
-  rpc GetData(GetDataRequest) returns (GetDataResponse);
+  rpc CreateData(CreateDataRequest) returns (CreateDataResponse);
 
   // GetData looks up the document by path. This can be either a plain JSON
   // value (a "Base" document in OPA parlance), or a rule head (a
@@ -113,7 +113,7 @@ service DataService {
   // Note that the input field should not be wrapped with
   // `{ "input": <value> }`, you can simply put the JSON serialized `<value>`
   // in the input field directly.
-  rpc CreateData(CreateDataRequest) returns (CreateDataResponse);
+  rpc GetData(GetDataRequest) returns (GetDataResponse);
 
   // UpdateData looks up the document by path, and then attempts to perform
   // one of three patching operations at that location: add, remove, or

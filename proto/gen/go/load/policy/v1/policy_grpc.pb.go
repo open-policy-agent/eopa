@@ -31,13 +31,6 @@ type PolicyServiceClient interface {
 	// instance. This can have substantial overheads if the policies are large
 	// in size.
 	ListPolicies(ctx context.Context, in *ListPoliciesRequest, opts ...grpc.CallOption) (*ListPoliciesResponse, error)
-	// GetPolicy fetches a policy module's code from the policy store.
-	//
-	// This is roughly equivalent in functionality to OPA's
-	// [Policy REST API Get method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-policy).
-	//
-	// Note: Only the raw policy text is returned in this version of the API.
-	GetPolicy(ctx context.Context, in *GetPolicyRequest, opts ...grpc.CallOption) (*GetPolicyResponse, error)
 	// CreatePolicy inserts a new policy module into the policy store.
 	//
 	// This is equivalent in functionality to OPA's
@@ -50,6 +43,13 @@ type PolicyServiceClient interface {
 	// number of policies down, or using Bundles are the recommended
 	// workarounds for most OPA users.
 	CreatePolicy(ctx context.Context, in *CreatePolicyRequest, opts ...grpc.CallOption) (*CreatePolicyResponse, error)
+	// GetPolicy fetches a policy module's code from the policy store.
+	//
+	// This is roughly equivalent in functionality to OPA's
+	// [Policy REST API Get method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-policy).
+	//
+	// Note: Only the raw policy text is returned in this version of the API.
+	GetPolicy(ctx context.Context, in *GetPolicyRequest, opts ...grpc.CallOption) (*GetPolicyResponse, error)
 	// UpdatePolicy updates a policy module in the policy store.
 	//
 	// This is equivalent in functionality to OPA's
@@ -93,18 +93,18 @@ func (c *policyServiceClient) ListPolicies(ctx context.Context, in *ListPolicies
 	return out, nil
 }
 
-func (c *policyServiceClient) GetPolicy(ctx context.Context, in *GetPolicyRequest, opts ...grpc.CallOption) (*GetPolicyResponse, error) {
-	out := new(GetPolicyResponse)
-	err := c.cc.Invoke(ctx, "/load.policy.v1.PolicyService/GetPolicy", in, out, opts...)
+func (c *policyServiceClient) CreatePolicy(ctx context.Context, in *CreatePolicyRequest, opts ...grpc.CallOption) (*CreatePolicyResponse, error) {
+	out := new(CreatePolicyResponse)
+	err := c.cc.Invoke(ctx, "/load.policy.v1.PolicyService/CreatePolicy", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *policyServiceClient) CreatePolicy(ctx context.Context, in *CreatePolicyRequest, opts ...grpc.CallOption) (*CreatePolicyResponse, error) {
-	out := new(CreatePolicyResponse)
-	err := c.cc.Invoke(ctx, "/load.policy.v1.PolicyService/CreatePolicy", in, out, opts...)
+func (c *policyServiceClient) GetPolicy(ctx context.Context, in *GetPolicyRequest, opts ...grpc.CallOption) (*GetPolicyResponse, error) {
+	out := new(GetPolicyResponse)
+	err := c.cc.Invoke(ctx, "/load.policy.v1.PolicyService/GetPolicy", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -142,13 +142,6 @@ type PolicyServiceServer interface {
 	// instance. This can have substantial overheads if the policies are large
 	// in size.
 	ListPolicies(context.Context, *ListPoliciesRequest) (*ListPoliciesResponse, error)
-	// GetPolicy fetches a policy module's code from the policy store.
-	//
-	// This is roughly equivalent in functionality to OPA's
-	// [Policy REST API Get method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-policy).
-	//
-	// Note: Only the raw policy text is returned in this version of the API.
-	GetPolicy(context.Context, *GetPolicyRequest) (*GetPolicyResponse, error)
 	// CreatePolicy inserts a new policy module into the policy store.
 	//
 	// This is equivalent in functionality to OPA's
@@ -161,6 +154,13 @@ type PolicyServiceServer interface {
 	// number of policies down, or using Bundles are the recommended
 	// workarounds for most OPA users.
 	CreatePolicy(context.Context, *CreatePolicyRequest) (*CreatePolicyResponse, error)
+	// GetPolicy fetches a policy module's code from the policy store.
+	//
+	// This is roughly equivalent in functionality to OPA's
+	// [Policy REST API Get method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-policy).
+	//
+	// Note: Only the raw policy text is returned in this version of the API.
+	GetPolicy(context.Context, *GetPolicyRequest) (*GetPolicyResponse, error)
 	// UpdatePolicy updates a policy module in the policy store.
 	//
 	// This is equivalent in functionality to OPA's
@@ -195,11 +195,11 @@ type UnimplementedPolicyServiceServer struct {
 func (UnimplementedPolicyServiceServer) ListPolicies(context.Context, *ListPoliciesRequest) (*ListPoliciesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPolicies not implemented")
 }
-func (UnimplementedPolicyServiceServer) GetPolicy(context.Context, *GetPolicyRequest) (*GetPolicyResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetPolicy not implemented")
-}
 func (UnimplementedPolicyServiceServer) CreatePolicy(context.Context, *CreatePolicyRequest) (*CreatePolicyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreatePolicy not implemented")
+}
+func (UnimplementedPolicyServiceServer) GetPolicy(context.Context, *GetPolicyRequest) (*GetPolicyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPolicy not implemented")
 }
 func (UnimplementedPolicyServiceServer) UpdatePolicy(context.Context, *UpdatePolicyRequest) (*UpdatePolicyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePolicy not implemented")
@@ -238,24 +238,6 @@ func _PolicyService_ListPolicies_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _PolicyService_GetPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetPolicyRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(PolicyServiceServer).GetPolicy(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/load.policy.v1.PolicyService/GetPolicy",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PolicyServiceServer).GetPolicy(ctx, req.(*GetPolicyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _PolicyService_CreatePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreatePolicyRequest)
 	if err := dec(in); err != nil {
@@ -270,6 +252,24 @@ func _PolicyService_CreatePolicy_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PolicyServiceServer).CreatePolicy(ctx, req.(*CreatePolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PolicyService_GetPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PolicyServiceServer).GetPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/load.policy.v1.PolicyService/GetPolicy",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PolicyServiceServer).GetPolicy(ctx, req.(*GetPolicyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -322,12 +322,12 @@ var PolicyService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _PolicyService_ListPolicies_Handler,
 		},
 		{
-			MethodName: "GetPolicy",
-			Handler:    _PolicyService_GetPolicy_Handler,
-		},
-		{
 			MethodName: "CreatePolicy",
 			Handler:    _PolicyService_CreatePolicy_Handler,
+		},
+		{
+			MethodName: "GetPolicy",
+			Handler:    _PolicyService_GetPolicy_Handler,
 		},
 		{
 			MethodName: "UpdatePolicy",

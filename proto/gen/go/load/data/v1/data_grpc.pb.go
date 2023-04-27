@@ -27,7 +27,7 @@ type DataServiceClient interface {
 	//
 	// This is equivalent in functionality to OPA's
 	// [Data REST API Create/Overwrite method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-overwrite-a-document).
-	GetData(ctx context.Context, in *GetDataRequest, opts ...grpc.CallOption) (*GetDataResponse, error)
+	CreateData(ctx context.Context, in *CreateDataRequest, opts ...grpc.CallOption) (*CreateDataResponse, error)
 	// GetData looks up the document by path. This can be either a plain JSON
 	// value (a "Base" document in OPA parlance), or a rule head (a
 	// "Virtual"/computed document).
@@ -38,7 +38,7 @@ type DataServiceClient interface {
 	// Note that the input field should not be wrapped with
 	// `{ "input": <value> }`, you can simply put the JSON serialized `<value>`
 	// in the input field directly.
-	CreateData(ctx context.Context, in *CreateDataRequest, opts ...grpc.CallOption) (*CreateDataResponse, error)
+	GetData(ctx context.Context, in *GetDataRequest, opts ...grpc.CallOption) (*GetDataResponse, error)
 	// UpdateData looks up the document by path, and then attempts to perform
 	// one of three patching operations at that location: add, remove, or
 	// replace.
@@ -62,18 +62,18 @@ func NewDataServiceClient(cc grpc.ClientConnInterface) DataServiceClient {
 	return &dataServiceClient{cc}
 }
 
-func (c *dataServiceClient) GetData(ctx context.Context, in *GetDataRequest, opts ...grpc.CallOption) (*GetDataResponse, error) {
-	out := new(GetDataResponse)
-	err := c.cc.Invoke(ctx, "/load.data.v1.DataService/GetData", in, out, opts...)
+func (c *dataServiceClient) CreateData(ctx context.Context, in *CreateDataRequest, opts ...grpc.CallOption) (*CreateDataResponse, error) {
+	out := new(CreateDataResponse)
+	err := c.cc.Invoke(ctx, "/load.data.v1.DataService/CreateData", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *dataServiceClient) CreateData(ctx context.Context, in *CreateDataRequest, opts ...grpc.CallOption) (*CreateDataResponse, error) {
-	out := new(CreateDataResponse)
-	err := c.cc.Invoke(ctx, "/load.data.v1.DataService/CreateData", in, out, opts...)
+func (c *dataServiceClient) GetData(ctx context.Context, in *GetDataRequest, opts ...grpc.CallOption) (*GetDataResponse, error) {
+	out := new(GetDataResponse)
+	err := c.cc.Invoke(ctx, "/load.data.v1.DataService/GetData", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ type DataServiceServer interface {
 	//
 	// This is equivalent in functionality to OPA's
 	// [Data REST API Create/Overwrite method](https://www.openpolicyagent.org/docs/latest/rest-api/#create-or-overwrite-a-document).
-	GetData(context.Context, *GetDataRequest) (*GetDataResponse, error)
+	CreateData(context.Context, *CreateDataRequest) (*CreateDataResponse, error)
 	// GetData looks up the document by path. This can be either a plain JSON
 	// value (a "Base" document in OPA parlance), or a rule head (a
 	// "Virtual"/computed document).
@@ -118,7 +118,7 @@ type DataServiceServer interface {
 	// Note that the input field should not be wrapped with
 	// `{ "input": <value> }`, you can simply put the JSON serialized `<value>`
 	// in the input field directly.
-	CreateData(context.Context, *CreateDataRequest) (*CreateDataResponse, error)
+	GetData(context.Context, *GetDataRequest) (*GetDataResponse, error)
 	// UpdateData looks up the document by path, and then attempts to perform
 	// one of three patching operations at that location: add, remove, or
 	// replace.
@@ -139,11 +139,11 @@ type DataServiceServer interface {
 type UnimplementedDataServiceServer struct {
 }
 
-func (UnimplementedDataServiceServer) GetData(context.Context, *GetDataRequest) (*GetDataResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetData not implemented")
-}
 func (UnimplementedDataServiceServer) CreateData(context.Context, *CreateDataRequest) (*CreateDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateData not implemented")
+}
+func (UnimplementedDataServiceServer) GetData(context.Context, *GetDataRequest) (*GetDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetData not implemented")
 }
 func (UnimplementedDataServiceServer) UpdateData(context.Context, *UpdateDataRequest) (*UpdateDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateData not implemented")
@@ -164,24 +164,6 @@ func RegisterDataServiceServer(s grpc.ServiceRegistrar, srv DataServiceServer) {
 	s.RegisterService(&DataService_ServiceDesc, srv)
 }
 
-func _DataService_GetData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetDataRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DataServiceServer).GetData(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/load.data.v1.DataService/GetData",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DataServiceServer).GetData(ctx, req.(*GetDataRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _DataService_CreateData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateDataRequest)
 	if err := dec(in); err != nil {
@@ -196,6 +178,24 @@ func _DataService_CreateData_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DataServiceServer).CreateData(ctx, req.(*CreateDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataService_GetData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataServiceServer).GetData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/load.data.v1.DataService/GetData",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataServiceServer).GetData(ctx, req.(*GetDataRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -244,12 +244,12 @@ var DataService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*DataServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetData",
-			Handler:    _DataService_GetData_Handler,
-		},
-		{
 			MethodName: "CreateData",
 			Handler:    _DataService_CreateData_Handler,
+		},
+		{
+			MethodName: "GetData",
+			Handler:    _DataService_GetData_Handler,
 		},
 		{
 			MethodName: "UpdateData",

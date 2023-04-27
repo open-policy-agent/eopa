@@ -78,14 +78,6 @@ service PolicyService {
   // in size.
   rpc ListPolicies(ListPoliciesRequest) returns (ListPoliciesResponse);
 
-  // GetPolicy fetches a policy module's code from the policy store.
-  //
-  // This is roughly equivalent in functionality to OPA's
-  // [Policy REST API Get method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-policy).
-  //
-  // Note: Only the raw policy text is returned in this version of the API.
-  rpc GetPolicy(GetPolicyRequest) returns (GetPolicyResponse);
-
   // CreatePolicy inserts a new policy module into the policy store.
   //
   // This is equivalent in functionality to OPA's
@@ -98,6 +90,14 @@ service PolicyService {
   // number of policies down, or using Bundles are the recommended
   // workarounds for most OPA users.
   rpc CreatePolicy(CreatePolicyRequest) returns (CreatePolicyResponse);
+
+  // GetPolicy fetches a policy module's code from the policy store.
+  //
+  // This is roughly equivalent in functionality to OPA's
+  // [Policy REST API Get method](https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-policy).
+  //
+  // Note: Only the raw policy text is returned in this version of the API.
+  rpc GetPolicy(GetPolicyRequest) returns (GetPolicyResponse);
 
   // UpdatePolicy updates a policy module in the policy store.
   //
