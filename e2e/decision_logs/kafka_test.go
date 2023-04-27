@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -23,6 +24,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/plugin/kzerolog"
+
+	"github.com/styrainc/load-private/e2e/wait"
 )
 
 var dockerPool = func() *dockertest.Pool {
@@ -160,7 +163,7 @@ plugins:
 			if err := load.Start(); err != nil {
 				t.Fatal(err)
 			}
-			waitForLog(ctx, t, loadErr, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+			wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			for i := 0; i < 2; i++ { // act: send API requests
 				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin",
@@ -307,8 +310,8 @@ func testKafka(t *testing.T) *dockertest.Resource {
 }
 
 func kafkaClient(topic string, o ...kgo.Opt) (*kgo.Client, error) {
-	logger := zerolog.New(os.Stderr) // for debugging
-	// logger := zerolog.New(io.Discard)
+	// logger := zerolog.New(os.Stderr) // for debugging
+	logger := zerolog.New(io.Discard)
 
 	opts := []kgo.Opt{
 		kgo.SeedBrokers("localhost:29092"),

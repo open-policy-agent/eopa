@@ -26,6 +26,8 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/open-policy-agent/opa/version"
+
+	"github.com/styrainc/load-private/e2e/wait"
 )
 
 type payload struct {
@@ -93,7 +95,7 @@ plugins:
 			if err := load.Start(); err != nil {
 				t.Fatal(err)
 			}
-			waitForLog(ctx, t, loadErr, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+			wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
@@ -216,6 +218,72 @@ plugins:
 	}
 }
 
+// We're asserting two things here: that an object result is marshalled into
+// a DL entry properly, and that we can mask parts of it.
+func TestDecisionLogsComplexResult(t *testing.T) {
+	ctx := context.Background()
+
+	policy := `
+package test
+import future.keywords
+
+p := {"foo": "bar", "replace": "box", "remove": {"this": 42}} if input.a == "b"
+
+mask contains {"op": "upsert", "path": "/result/replace", "value": "fox"}
+mask contains {"op": "remove", "path": "/result/remove/this"}
+`
+
+	config := `
+plugins:
+  load_decision_logger:
+    drop_decision: /test/drop
+    mask_decision: /test/mask
+    buffer:
+      type: memory
+    output:
+      type: console
+`
+	load, loadOut, loadErr := loadLoad(t, config, policy, false)
+	if err := load.Start(); err != nil {
+		t.Fatal(err)
+	}
+	wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+
+	{ // act: send request
+		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/p", strings.NewReader(`{"input": {"a": "b"}}`))
+		if err != nil {
+			t.Fatalf("http request: %v", err)
+		}
+		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if exp, act := 200, resp.StatusCode; exp != act {
+			t.Fatalf("expected status %d, got %d", exp, act)
+		}
+	}
+
+	logs := collectDL(ctx, t, loadOut, false, 1)
+	{ // log for act 1
+		dl := payload{
+			Result: map[string]any{
+				"foo":     "bar",
+				"remove":  map[string]any{},
+				"replace": "fox",
+			},
+			Input:  map[string]any{"a": "b"},
+			Erased: []string{"/result/remove/this"},
+			Masked: []string{"/result/replace"},
+			ID:     1,
+			Labels: standardLabels,
+		}
+		if diff := cmp.Diff(dl, logs[0], cmpopts.IgnoreFields(payload{}, "Metrics", "DecisionID", "Labels.ID", "NDBC")); diff != "" {
+			t.Errorf("diff: (-want +got):\n%s", diff)
+		}
+	}
+}
+
 func TestDecisionLogsMemoryBatching(t *testing.T) {
 	ctx := context.Background()
 
@@ -243,7 +311,7 @@ plugins:
 		if err := load.Start(); err != nil {
 			t.Fatal(err)
 		}
-		waitForLog(ctx, t, loadErr, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+		wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 		{ // act 1: first request, not logged yet
 			resp, err := http.Post("http://localhost:28181/v1/data/test/coin", jsonType, nil)
@@ -294,7 +362,7 @@ plugins:
 		if err := load.Start(); err != nil {
 			t.Fatal(err)
 		}
-		waitForLog(ctx, t, loadErr, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+		wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 		{ // act 1: first request, not logged yet
 			resp, err := http.Post("http://localhost:28181/v1/data/test/coin", jsonType, nil)
@@ -383,7 +451,7 @@ plugins:
 			if err := load.Start(); err != nil {
 				t.Fatal(err)
 			}
-			waitForLog(ctx, t, loadErr, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+			wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			ctx, cancel := context.WithTimeout(ctx, time.Second)
 			defer cancel()
@@ -462,7 +530,7 @@ plugins:
 	if err := load.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitForLog(ctx, t, loadErr, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
@@ -546,7 +614,7 @@ plugins:
 	if err := load.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitForLog(ctx, t, loadErr, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
@@ -680,42 +748,6 @@ func binary() string {
 		return "load"
 	}
 	return bin
-}
-
-func waitForLog(ctx context.Context, t *testing.T, rdr io.Reader, exp int, assert func(string) bool, dur time.Duration) {
-	t.Helper()
-	for i := 0; i <= 3; i++ {
-		if i != 0 {
-			time.Sleep(dur)
-		}
-		if act := retrieveReqCount(ctx, t, rdr, assert); act == exp {
-			return
-		} else if i == 3 {
-			t.Fatalf("expected %d requests, got %d", exp, act)
-		}
-	}
-	return
-}
-
-func retrieveReqCount(ctx context.Context, t *testing.T, rdr io.Reader, assert func(string) bool) int {
-	t.Helper()
-	c := 0
-	dec := json.NewDecoder(rdr)
-	for {
-		m := struct {
-			Msg string `json:"msg"`
-		}{}
-		if err := dec.Decode(&m); err != nil {
-			if err == io.EOF {
-				break
-			}
-			t.Fatalf("decode recorded logs: %v", err)
-		}
-		if assert(m.Msg) {
-			c++
-		}
-	}
-	return c
 }
 
 // collectDL either returns `exp` decision log payloads, or calls t.Fatal

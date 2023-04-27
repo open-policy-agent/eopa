@@ -202,17 +202,21 @@ func Log(ctx context.Context, ectx EvalContext, result ast.Value, evalErr error)
 		// TODO(sr): this roundtrip is to get from `ast.Value` to `any`, but different from
 		// ast.ValueToInterface -- the VM code doesn't deal well with certain types.
 		var err error
-		in, err = dataOps.FromInterface(ctx, input)
-		if err != nil {
-			return err
-		}
-		in, err = dataOps.ToInterface(ctx, in)
+		in, err = roundtrip(ctx, dataOps, input)
 		if err != nil {
 			return err
 		}
 	}
 
 	res := unwrap(result)
+	var r any
+	if res != nil {
+		var err error
+		r, err = roundtrip(ctx, dataOps, res)
+		if err != nil {
+			return err
+		}
+	}
 
 	meta := map[string]any{
 		"labels":      singleton.manager.Labels(),
@@ -230,7 +234,7 @@ func Log(ctx context.Context, ectx EvalContext, result ast.Value, evalErr error)
 		ev["input"] = in
 	}
 	if res != nil {
-		ev["result"] = res
+		ev["result"] = r
 	}
 	if evalErr != nil {
 		ev["error"] = evalErr.Error()
@@ -296,4 +300,12 @@ func parseDataPath(s string) (ast.Ref, error) {
 	}
 
 	return path.Ref(ast.DefaultRootDocument), nil
+}
+
+func roundtrip(ctx context.Context, dataOps *vm.DataOperations, x ast.Value) (any, error) {
+	y, err := dataOps.FromInterface(ctx, x)
+	if err != nil {
+		return nil, err
+	}
+	return dataOps.ToInterface(ctx, y)
 }

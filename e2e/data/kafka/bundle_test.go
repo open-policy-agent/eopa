@@ -3,7 +3,6 @@
 package kafka
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -18,9 +17,12 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/open-policy-agent/opa/util"
 	"github.com/ory/dockertest/docker"
 	"github.com/twmb/franz-go/pkg/kgo"
+
+	"github.com/open-policy-agent/opa/util"
+
+	"github.com/styrainc/load-private/e2e/wait"
 )
 
 // Uses a httptest.Server for serving bundles from testdata/bundles.
@@ -46,8 +48,8 @@ func TestTransformFromBundle(t *testing.T) {
 	if err := load.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitForLog(ctx, t, loadOut, 1, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
-	waitForLog(ctx, t, loadOut, 1, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
+	wait.ForLog(t, loadOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, loadOut, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
 
 	statusOK := map[string]any{"state": "OK"}
 	assertStatus(t, map[string]any{
@@ -103,14 +105,13 @@ func TestTransformFromBundle(t *testing.T) {
 
 // The bundle used in this test declares no roots, so it owns all of 'data'.
 func TestOverlapBundleWithoutRoots(t *testing.T) {
-	ctx := context.Background()
 	load, loadOut := loadRun(t, config("no-roots", testserver.URL))
 	if err := load.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitForLog(ctx, t, loadOut, 1, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
-	waitForLog(ctx, t, loadOut, 1, equals(`data plugin: kafka path kafka/messages overlaps with bundle root []`), 2*time.Second)
-	waitForLog(ctx, t, loadOut, 1, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
+	wait.ForLog(t, loadOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, loadOut, equals(`data plugin: kafka path kafka/messages overlaps with bundle root []`), 2*time.Second)
+	wait.ForLog(t, loadOut, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
 
 	statusOK := map[string]any{"state": "OK"}
 	assertStatus(t, map[string]any{
@@ -123,13 +124,12 @@ func TestOverlapBundleWithoutRoots(t *testing.T) {
 
 // The bundle used here declares the root "data.kafka.messages"
 func TestOverlapBundleOverlappingRoots(t *testing.T) {
-	ctx := context.Background()
 	load, loadOut := loadRun(t, config("overlap", testserver.URL))
 	if err := load.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitForLog(ctx, t, loadOut, 1, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
-	waitForLog(ctx, t, loadOut, 1, equals(`Bundle activation failed: path "/kafka/messages" is owned by plugin "kafka"`), 2*time.Second)
+	wait.ForLog(t, loadOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, loadOut, equals(`Bundle activation failed: path "/kafka/messages" is owned by plugin "kafka"`), 2*time.Second)
 
 	statusOK := map[string]any{"state": "OK"}
 	assertStatus(t, map[string]any{
@@ -142,15 +142,14 @@ func TestOverlapBundleOverlappingRoots(t *testing.T) {
 
 // The bundle used here declares the root "data.kafka", a prefix of "data.kafka.messages"
 func TestOverlapBundlePrefixRoot(t *testing.T) {
-	ctx := context.Background()
 	config := fmt.Sprintf(config("prefix", testserver.URL))
 	load, loadOut := loadRun(t, config)
 	if err := load.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitForLog(ctx, t, loadOut, 1, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
-	waitForLog(ctx, t, loadOut, 1, equals(`data plugin: kafka path kafka/messages overlaps with bundle root [transform kafka]`), 2*time.Second)
-	waitForLog(ctx, t, loadOut, 1, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
+	wait.ForLog(t, loadOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, loadOut, equals(`data plugin: kafka path kafka/messages overlaps with bundle root [transform kafka]`), 2*time.Second)
+	wait.ForLog(t, loadOut, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
 
 	statusOK := map[string]any{"state": "OK"}
 	assertStatus(t, map[string]any{
@@ -265,42 +264,6 @@ func binary() string {
 		return "load"
 	}
 	return bin
-}
-
-func waitForLog(ctx context.Context, t *testing.T, buf *bytes.Buffer, exp int, assert func(string) bool, dur time.Duration) {
-	t.Helper()
-	for i := 0; i <= 3; i++ {
-		if retrieveMsg(ctx, t, buf, assert) {
-			return
-		}
-		time.Sleep(dur)
-	}
-	t.Fatalf("timeout waiting for log")
-}
-
-func retrieveMsg(ctx context.Context, t *testing.T, buf *bytes.Buffer, assert func(string) bool) bool {
-	t.Helper()
-	b := bytes.NewReader(buf.Bytes())
-	scanner := bufio.NewScanner(b)
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		var m struct {
-			Msg string
-		}
-		if err := json.NewDecoder(bytes.NewReader(line)).Decode(&m); err != nil {
-			if err == io.EOF {
-				break
-			}
-			t.Fatalf("decode console logs: %v", err)
-		}
-		if assert(m.Msg) {
-			return true
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scanner: %v", err)
-	}
-	return false
 }
 
 func equals[T comparable](s T) func(T) bool {
