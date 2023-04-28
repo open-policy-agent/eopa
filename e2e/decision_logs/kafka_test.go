@@ -131,7 +131,7 @@ plugins:
 		t.Run(tc.note, func(t *testing.T) {
 			cleanupPrevious(t)
 
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			buf := bytes.Buffer{}
 

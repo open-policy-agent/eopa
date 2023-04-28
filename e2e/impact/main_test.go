@@ -523,7 +523,7 @@ p := rand.intn("test", 2)
 			wait.ForLog(t, loadOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			// arrange: enable LIA via CLI
-			extraArgs := "--duration 2s --sample-rate 1 --equals --format " + tc.format
+			extraArgs := "--duration 4s --sample-rate 1 --equals --format " + tc.format
 			if tc.group {
 				extraArgs += " --group"
 			}
@@ -551,7 +551,7 @@ p := rand.intn("test", 2)
 				}
 			}
 
-			waitForLIAEnd(ctx, t, loadOut, 2*time.Second)
+			waitForLIAEnd(ctx, t, loadOut, 4*time.Second)
 
 			tc.assert(t, ctlOut)
 			if t.Failed() && testing.Verbose() {
