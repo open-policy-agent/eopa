@@ -161,7 +161,6 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
     - build
-    - goreleaser
     environment: ci
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
@@ -195,11 +194,15 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: image
-      - name: Download release binaries
-        uses: actions/download-artifact@v3
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v4
         with:
-          name: binaries
-          path: dist
+          install-only: true
+      - name: GoReleaser (single)
+        run: make release-single
+        env:
+          HOSTNAME: github.actions.local
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
       - name: Load image and binary
         id: load
         run: |

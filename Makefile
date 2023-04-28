@@ -80,9 +80,12 @@ auth-deploy-ci-debug:
 	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) $(KO_BUILD_DEPLOY) --disable-optimizations --tags $(LOAD_VERSION)-debug $(LATEST_DEBUG)
 
 # goreleaser uses latest version tag.
-.PHONY: release release-ci release-wasm
+.PHONY: release release-ci release-wasm release-single
 release:
 	HOSTNAME=$(HOSTNAME) goreleaser release --snapshot --skip-publish --clean
+
+release-single:
+	HOSTNAME=$(HOSTNAME) goreleaser build --snapshot --clean --single-target --id linux-windows-build
 
 release-ci:
 	HOSTNAME=$(HOSTNAME) goreleaser release --clean --release-notes CHANGELOG.md
