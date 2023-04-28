@@ -69,23 +69,23 @@ func TestTree(t *testing.T) {
 			[]operation{
 				{get: "/a/b/c", result: `"d"`},
 				{get: "/a/c/d/e", result: `"f"`},
-				{iter: "/", err: &storage.Error{Code: ReadsNotSupportedErr, Message: "/"}},
-				{iter: "/a", err: &storage.Error{Code: ReadsNotSupportedErr, Message: "/a"}},
+				{iter: "/", err: &storage.Error{Code: readsNotSupportedErr, Message: "/"}},
+				{iter: "/a", err: &storage.Error{Code: readsNotSupportedErr, Message: "/a"}},
 				{iter: "/a/b", results: []string{"c"}},
 				{iter: "/a/c", results: []string{"d"}},
 				{iter: "/a/c/d", results: []string{"e"}},
-				{len: "/", err: &storage.Error{Code: ReadsNotSupportedErr, Message: "/"}},
-				{len: "/a", err: &storage.Error{Code: ReadsNotSupportedErr, Message: "/a"}},
+				{len: "/", err: &storage.Error{Code: readsNotSupportedErr, Message: "/"}},
+				{len: "/a", err: &storage.Error{Code: readsNotSupportedErr, Message: "/a"}},
 				{len: "/a/b", n: 1},
 				{len: "/a/c", n: 1},
 				{len: "/a/c/d", n: 1},
-				{find: "/", err: &storage.Error{Code: ReadsNotSupportedErr, Message: "/"}},   // not specific enough to determine the store
-				{find: "/a", err: &storage.Error{Code: ReadsNotSupportedErr, Message: "/a"}}, // no store at this level
+				{find: "/", err: &storage.Error{Code: readsNotSupportedErr, Message: "/"}},   // not specific enough to determine the store
+				{find: "/a", err: &storage.Error{Code: readsNotSupportedErr, Message: "/a"}}, // no store at this level
 				{find: "/a/b", store: "/a/b"},
 				{find: "/a/b/c", store: "/a/b"},
 				{find: "/a/c", store: "/a/c"},
 				{find: "/a/c/d", store: "/a/c"},
-				{find: "/a/d", err: &storage.Error{Code: ReadsNotSupportedErr, Message: "/a/d"}},
+				{find: "/a/d", err: &storage.Error{Code: readsNotSupportedErr, Message: "/a/d"}},
 				{find: "/b", store: "/"}, // specific enough to determine the store
 			},
 		},

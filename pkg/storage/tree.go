@@ -100,7 +100,7 @@ func (n *tree) Iter(ctx context.Context, f func(key, value interface{}) bool) er
 	}
 
 	return &storage.Error{
-		Code:    ReadsNotSupportedErr,
+		Code:    readsNotSupportedErr,
 		Message: n.path.String(),
 	}
 }
@@ -123,7 +123,7 @@ func (n *tree) Find(path storage.Path) (storage.Store, error) {
 
 		// Path is not specific enough to resolve the ambiguity.
 		return nil, &storage.Error{
-			Code:    ReadsNotSupportedErr,
+			Code:    readsNotSupportedErr,
 			Message: n.path.String(),
 		}
 
@@ -135,7 +135,7 @@ func (n *tree) Find(path storage.Path) (storage.Store, error) {
 
 	if n.store == nil {
 		return nil, &storage.Error{
-			Code:    ReadsNotSupportedErr,
+			Code:    readsNotSupportedErr,
 			Message: storage.Path(append(n.path, path...)).String(),
 		}
 	}

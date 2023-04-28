@@ -30,10 +30,6 @@ type DataPlugins interface {
 	RegisterDataPlugin(name string, path storage.Path)
 }
 
-// ReadsNotSupportedErr indicate the caller attempted to perform a read
-// against a store at a location that does not support them.
-const ReadsNotSupportedErr = "storage_reads_not_supported_error"
-
 type (
 	// store implements a virtual store spanning a single
 	// read-write-storage and multiple read-only storage backends.
@@ -352,7 +348,7 @@ func (txn *transaction) Write(ctx context.Context, op storage.PatchOp, path stor
 	if err != nil {
 		switch err := err.(type) {
 		case *storage.Error:
-			if err.Code == ReadsNotSupportedErr {
+			if err.Code == readsNotSupportedErr {
 				err.Code = storage.WritesNotSupportedErr
 			}
 		}
