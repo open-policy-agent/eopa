@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.2.0
+
+This release contains an update to the [latest version of OPA][gh-opa-v52] (`v0.52.0`), as well as bugfixes and performance improvements.
+
+### CLI
+
+ - LIA: Output now displays time values in human-friendly units, instead of always nanoseconds.
+
+### Runtime
+
+ - Small performance improvements around internal string caching.
+
+### Fixes
+
+ - Improved logging around licensing errors.
+ - `data`: Plugin now detects and errors when a [bundle's roots][opa-bundle-format] would clash with the namespace owned by a [`data` plugin][load-data-plugins-reference].
+
+   [gh-opa-v52]: https://github.com/open-policy-agent/opa/releases/tag/v0.52.0
+   [opa-bundle-format]: https://www.openpolicyagent.org/docs/latest/management-bundles/#bundle-file-format
+   [load-data-plugins-reference]: https://docs.styra.com/load/configuration/data/
+
+
 ## v1.1.0
 
 This release includes a host of runtime performance improvements, bugfixes, and a new gRPC plugin.
