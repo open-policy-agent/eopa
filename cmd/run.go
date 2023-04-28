@@ -297,6 +297,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 
 	params.rt.NDBCacheEnabled = true // We need this for LIA.
 
+	params.rt.AddrSetByUser = true // silence the warning: Load's default isn't unsafe
+
 	a := &bundle.CustomActivator{}
 	bundleApi.RegisterActivator("_load", a)
 	params.rt.BundleActivatorPlugin = "_load"

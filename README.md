@@ -1,6 +1,6 @@
 # Styra Load-Private
 
-![OPA v0.51.0](https://openpolicyagent.org/badge/v0.51.0)
+![OPA v0.52.0](https://openpolicyagent.org/badge/v0.52.0)
 
 ## Github Source and Project
 

@@ -23,7 +23,7 @@ require (
 	github.com/mithrandie/csvq-driver v1.7.0
 	github.com/mithrandie/go-text v1.6.0
 	github.com/okta/okta-sdk-golang/v3 v3.0.2
-	github.com/open-policy-agent/opa v0.51.0
+	github.com/open-policy-agent/opa v0.52.0
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/rs/zerolog v1.29.1
@@ -212,9 +212,9 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/sftp v1.13.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.14.0 // indirect
+	github.com/prometheus/client_golang v1.15.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
-	github.com/prometheus/common v0.39.0 // indirect
+	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/quipo/dependencysolver v0.0.0-20170801134659-2b009cb4ddcc // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
@@ -267,10 +267,10 @@ require (
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/mod v0.9.0 // indirect
-	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/net v0.9.0 // indirect
 	golang.org/x/oauth2 v0.5.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
-	golang.org/x/text v0.8.0 // indirect
+	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
@@ -309,4 +309,4 @@ replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.51.1-0.20230424181209-83f1b62eedcc
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.52.1-0.20230428080933-295567e9a092

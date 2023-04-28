@@ -113,7 +113,7 @@ fuzz:
 	go test ./pkg/json -fuzz FuzzDecode -fuzztime ${FUZZ_TIME} -v -run '^$$'
 
 update:
-	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@load-0.51.0
+	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@load-0.52.0
 	go mod tidy
 
 # ci-smoke-test
