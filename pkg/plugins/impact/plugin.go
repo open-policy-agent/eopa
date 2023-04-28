@@ -13,6 +13,7 @@ import (
 	"github.com/sourcegraph/conc/pool"
 
 	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/plugins"
@@ -114,7 +115,11 @@ func (i *Impact) sample(reqPath string, query *ast.Expr) bool {
 	if !requestPath[2:].Equal(path) { // this won't be the case for DL drop/mask decisions
 		return false
 	}
-	return rand.Float32() <= i.job.SampleRate()
+	sr, err := i.jobSampleRate()
+	if err != nil {
+		return false
+	}
+	return rand.Float32() <= sr
 }
 
 func (i *Impact) Start(ctx context.Context) error {
@@ -154,6 +159,11 @@ func (i *Impact) eval(ctx context.Context, ectx EvalContext, rctx *logging.Reque
 	input := ectx.ParsedInput()
 	mA := ectx.Metrics()
 
+	b, err := i.jobBundle()
+	if err != nil {
+		return err
+	}
+
 	store := inmem.New()
 	txn := storage.NewTransactionOrDie(ctx, store, storage.WriteParams) // never fails, the store is new
 	mB := metrics.New()
@@ -161,7 +171,7 @@ func (i *Impact) eval(ctx context.Context, ectx EvalContext, rctx *logging.Reque
 		rego.ParsedQuery(ast.NewBody(ast.NewExpr(queryT))),
 		rego.Store(store),
 		rego.Transaction(txn),
-		rego.ParsedBundle(i.job.Bundle().Etag, i.job.Bundle()), // TODO(sr): Etag appropriate?
+		rego.ParsedBundle(b.Etag, b), // TODO(sr): Etag appropriate?
 		rego.NDBuiltinCache(ectx.NDBCache()),
 		rego.Metrics(mB),
 	}
@@ -179,8 +189,13 @@ func (i *Impact) eval(ctx context.Context, ectx EvalContext, rctx *logging.Reque
 		return err
 	}
 
+	pe, err := i.jobPublishEquals()
+	if err != nil {
+		return err
+	}
+
 	eq := i.equalResults(ctx, primaryResult, secondaryResult)
-	if eq && !i.job.PublishEquals() {
+	if eq && !pe {
 		return nil
 	}
 	var in any
@@ -252,7 +267,9 @@ func (i *Impact) publish(ctx context.Context, rctx *logging.RequestContext, path
 		res.RequestID = rctx.ReqID
 		res.Path = dropDataPrefix(rctx.ReqPath)
 	}
-	i.job.Result(&res)
+	if err := i.jobResult(&res); err != nil {
+		return err
+	}
 
 	// DL for resultA has already been published by the primary eval path
 	return i.dlog(ctx, rctx, input, resultB, ndbc, mB)
@@ -293,6 +310,43 @@ func (i *Impact) StartJob(ctx context.Context, j Job) error {
 	})
 	i.job = j
 	i.log.Info("started live impact analysis job %s", j.ID())
+	return nil
+}
+
+func (i *Impact) jobSampleRate() (float32, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	if i.job == nil {
+		return 0, fmt.Errorf("Job canceled")
+	}
+	return i.job.SampleRate(), nil
+}
+
+func (i *Impact) jobBundle() (*bundle.Bundle, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	if i.job == nil {
+		return nil, fmt.Errorf("Job canceled")
+	}
+	return i.job.Bundle(), nil
+}
+
+func (i *Impact) jobPublishEquals() (bool, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	if i.job == nil {
+		return false, fmt.Errorf("Job canceled")
+	}
+	return i.job.PublishEquals(), nil
+}
+
+func (i *Impact) jobResult(res *Result) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+	if i.job == nil {
+		return fmt.Errorf("Job canceled")
+	}
+	i.job.Result(res)
 	return nil
 }
 

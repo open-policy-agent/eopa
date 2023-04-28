@@ -98,7 +98,7 @@ release-wasm:
 # utilities
 .PHONY: test e2e benchmark fmt check fuzz update
 test:
-	go test ./...
+	go test ./... --race
 
 e2e:
 	go test -p 1 -tags e2e ./e2e/... -v -count=1 # always run, no parallelism

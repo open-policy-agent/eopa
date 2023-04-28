@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -33,7 +34,7 @@ type Data struct {
 	exit, doneExit chan struct{}
 
 	transformRule ast.Ref
-	transform     *rego.PreparedEvalQuery
+	transform     atomic.Pointer[rego.PreparedEvalQuery]
 }
 
 // Ensure that the kafka sub-plugin will be triggered by the data umbrella plugin,
@@ -154,7 +155,7 @@ LOOP:
 }
 
 func (c *Data) ready() bool {
-	return c.transform != nil
+	return c.transform.Load() != nil
 }
 
 func mapFromRecord(r *kgo.Record) any {
@@ -258,7 +259,7 @@ func (c *Data) Trigger(ctx context.Context, txn storage.Transaction) error {
 	if buf.Len() > 0 {
 		c.log.Debug("prepare print(): %s", buf.String())
 	}
-	c.transform = &pq
+	c.transform.Store(&pq)
 	return nil
 }
 
@@ -269,7 +270,7 @@ type processed struct {
 }
 
 func (c *Data) transformOne(ctx context.Context, txn storage.Transaction, message any, buf io.Writer) ([]processed, error) {
-	rs, err := c.transform.Eval(ctx,
+	rs, err := c.transform.Load().Eval(ctx,
 		rego.EvalInput(message),
 		rego.EvalTransaction(txn),
 		rego.EvalPrintHook(topdown.NewPrintHook(buf)),

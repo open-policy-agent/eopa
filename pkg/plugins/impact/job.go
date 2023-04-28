@@ -34,7 +34,6 @@ func NewJob(_ context.Context, rate float32, publishEquals bool, bundle *bundle.
 		bundle:        bundle,
 		dur:           dur,
 		results:       make(chan *Result),
-		done:          make(chan struct{}),
 	}
 }
 
@@ -48,7 +47,6 @@ type job struct {
 	cancel        context.CancelFunc
 
 	results chan *Result
-	done    chan struct{}
 }
 
 func (j *job) ID() JobID {
@@ -75,8 +73,8 @@ func (j *job) Start(ctx context.Context, cleanup func()) {
 	j.ctx, j.cancel = context.WithTimeout(ctx, j.Duration())
 	go func() {
 		<-j.ctx.Done()
-		close(j.results)
 		cleanup()
+		close(j.results)
 	}()
 }
 
