@@ -1,11 +1,15 @@
 package git
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/protocol/packp/capability"
 	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport/client"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
+	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/open-policy-agent/opa/storage"
 )
 
@@ -21,6 +25,12 @@ func init() {
 		caps = append(caps, c)
 	}
 	transport.UnsupportedCapabilities = caps
+
+	c := githttp.NewClient(&http.Client{Transport: newErrorsInterceptor(http.DefaultTransport)})
+	// Support only http, https, and ssh protocols to access git.
+	client.InstallProtocol("http", c)
+	client.InstallProtocol("https", c)
+	client.InstallProtocol("ssh", gitssh.DefaultClient)
 }
 
 // Config represents the configuration of the git data plugin
