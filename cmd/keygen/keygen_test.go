@@ -1,4 +1,4 @@
-package cmd
+package keygen
 
 import (
 	"testing"
@@ -61,6 +61,7 @@ func setupKeygen(expiry string, code string) {
 func TestKeygen(t *testing.T) {
 	t.Setenv("STYRA_LOAD_LICENSE_KEY", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
 	license := NewLicense()
+
 	keygen.PublicKey = "" // don't validate the signature
 
 	defer gock.Off()
@@ -69,7 +70,8 @@ func TestKeygen(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"NO_MACHINE\"")
 
 	var result int
-	license.ValidateLicense("", "", func(code int, _ error) { result = code })
+
+	license.ValidateLicense(NewLicenseParams(), func(code int, err error) { result = code })
 	if exp, act := 0, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -84,6 +86,7 @@ func TestKeygen(t *testing.T) {
 func TestKeygenExpiry(t *testing.T) {
 	t.Setenv("STYRA_LOAD_LICENSE_KEY", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
 	license := NewLicense()
+
 	keygen.PublicKey = "" // don't validate the signature
 
 	defer gock.Off()
@@ -92,7 +95,8 @@ func TestKeygenExpiry(t *testing.T) {
 	setupKeygen("null", "\"NO_MACHINE\"")
 
 	var result int
-	license.ValidateLicense("", "", func(code int, _ error) { result = code })
+
+	license.ValidateLicense(NewLicenseParams(), func(code int, err error) { result = code })
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -101,6 +105,7 @@ func TestKeygenExpiry(t *testing.T) {
 func TestKeygenExpired(t *testing.T) {
 	t.Setenv("STYRA_LOAD_LICENSE_KEY", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
 	license := NewLicense()
+
 	keygen.PublicKey = "" // don't validate the signature
 
 	defer gock.Off()
@@ -109,7 +114,8 @@ func TestKeygenExpired(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"EXPIRED\"")
 
 	var result int
-	license.ValidateLicense("", "", func(code int, _ error) { result = code })
+
+	license.ValidateLicense(NewLicenseParams(), func(code int, err error) { result = code })
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -119,6 +125,7 @@ func TestKeygenToken(t *testing.T) {
 	t.Setenv("STYRA_LOAD_LICENSE_KEY", "")
 	t.Setenv("STYRA_LOAD_LICENSE_TOKEN", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
 	license := NewLicense()
+
 	keygen.PublicKey = "" // don't validate the signature
 
 	defer gock.Off()
@@ -127,7 +134,8 @@ func TestKeygenToken(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"NOT_FOUND\"")
 
 	var result int
-	license.ValidateLicense("", "", func(code int, _ error) { result = code })
+
+	license.ValidateLicense(NewLicenseParams(), func(code int, err error) { result = code })
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -144,7 +152,8 @@ func TestKeygenSignature(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"NOT_FOUND\"")
 
 	var result int
-	license.ValidateLicense("", "", func(code int, _ error) { result = code })
+
+	license.ValidateLicense(NewLicenseParams(), func(code int, err error) { result = code })
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -154,6 +163,7 @@ func TestKeygenValid(t *testing.T) {
 	t.Setenv("STYRA_LOAD_LICENSE_KEY", "")
 	t.Setenv("STYRA_LOAD_LICENSE_TOKEN", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
 	license := NewLicense()
+
 	keygen.PublicKey = "" // don't validate the signature
 
 	defer gock.Off()
@@ -162,7 +172,8 @@ func TestKeygenValid(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"VALID\"")
 
 	var result int
-	license.ValidateLicense("", "", func(code int, _ error) { result = code })
+
+	license.ValidateLicense(NewLicenseParams(), func(code int, err error) { result = code })
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -171,6 +182,7 @@ func TestKeygenValid(t *testing.T) {
 func TestKeygenRateLimit(t *testing.T) {
 	t.Setenv("STYRA_LOAD_LICENSE_KEY", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
 	license := NewLicense()
+
 	keygen.APIURL = "https://api.keygenx.sh" // simulate RateLimitExceeded
 
 	defer gock.Off()
@@ -180,7 +192,8 @@ func TestKeygenRateLimit(t *testing.T) {
 
 	var result int
 	var err error
-	license.ValidateLicense("", "", func(code int, lerr error) { result, err = code, lerr })
+
+	license.ValidateLicense(NewLicenseParams(), func(code int, lerr error) { result, err = code, lerr })
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -194,6 +207,7 @@ func TestKeygenRateLimit(t *testing.T) {
 func TestKeygenOffline(t *testing.T) {
 	t.Setenv("STYRA_LOAD_LICENSE_KEY", "key/7F08EC970E9D.B0214E4CF0C7354C97")
 	license := NewLicense()
+
 	keygen.APIURL = "https://api.keygenx.sh" // simulate RateLimitExceeded
 
 	defer gock.Off()
@@ -204,7 +218,8 @@ func TestKeygenOffline(t *testing.T) {
 	var result int
 	var err error
 	expected := "off-line license verification failed: license key is not genuine"
-	license.ValidateLicense("", "", func(code int, lerr error) { result, err = code, lerr })
+
+	license.ValidateLicense(NewLicenseParams(), func(code int, lerr error) { result, err = code, lerr })
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -216,6 +231,7 @@ func TestKeygenOffline(t *testing.T) {
 func TestKeygenOfflineExpired(t *testing.T) {
 	t.Setenv("STYRA_LOAD_LICENSE_KEY", "key/eyJhY2NvdW50Ijp7ImlkIjoiZGQwMTA1ZDEtOTU2NC00ZjU4LWFlMWMtOWRlZmRkMGJmZWE3In0sInByb2R1Y3QiOnsiaWQiOiJmN2RhNGFlNS03YmY1LTQ2ZjYtOTYzNC0wMjZiZWM1ZTg1OTkifSwicG9saWN5Ijp7ImlkIjoiZTVjYjZmMTgtZTVjOS00OTJjLTgyMmYtMDFiYzUxNjYxNmI2IiwiZHVyYXRpb24iOjI1OTIwMDB9LCJ1c2VyIjpudWxsLCJsaWNlbnNlIjp7ImlkIjoiYWJmNWMxYWItODYwYy00NzUxLTlhODItNTc5Mjk0OWIxNjFlIiwiY3JlYXRlZCI6IjIwMjMtMDItMTJUMTc6MzM6MjIuNzcxWiIsImV4cGlyeSI6IjIwMjMtMDItMDFUMDA6MDA6MDAuMDAwWiJ9fQ==.2NLHJjiAiXkO7HsBoQFrmXG32gC0ZH9SDxUEcacqqHPgvZq0RcczFV603XuJ7mzAtN5OEPa6XoETksjsBteqCQ==")
 	license := NewLicense()
+
 	keygen.APIURL = "https://api.keygenx.sh" // simulate RateLimitExceeded
 
 	defer gock.Off()
@@ -226,7 +242,8 @@ func TestKeygenOfflineExpired(t *testing.T) {
 	var result int
 	var err error
 	expected := "off-line license verification failed: license expired 2023-02-01 00:00:00 +0000 UTC"
-	license.ValidateLicense("", "", func(code int, lerr error) { result, err = code, lerr })
+
+	license.ValidateLicense(NewLicenseParams(), func(code int, lerr error) { result, err = code, lerr })
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}

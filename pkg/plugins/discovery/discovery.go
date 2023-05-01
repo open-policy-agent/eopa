@@ -20,6 +20,7 @@ import (
 	bundleApi "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/config"
 	"github.com/open-policy-agent/opa/download"
+	"github.com/open-policy-agent/opa/keys"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/plugins"
@@ -93,7 +94,7 @@ func New(manager *plugins.Manager, opts ...func(*Discovery)) (*Discovery, error)
 
 	result.config = config
 	restClient := manager.Client(config.service)
-	result.downloader = download.New(config.Config, restClient, config.path).WithCallback(result.oneShot)
+	result.downloader = download.New(config.Config, restClient, config.path).WithCallback(result.oneShot).WithBundleVerificationConfig(config.Signing)
 
 	result.status = &opa_bundle.Status{
 		Name: Name,
@@ -253,6 +254,14 @@ func (c *Discovery) processBundle(ctx context.Context, b *bundleApi.Bundle) (*pl
 		return nil, err
 	}
 
+	// Apply EKM overrides to config and services
+	if c.manager.EKM != nil {
+		config, err = c.manager.EKM.ProcessEKM(plugins.EkmDiscovery, c.logger, config)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Note: We don't currently support changes to the discovery
 	// configuration. These changes are risky because errors would be
 	// unrecoverable (without keeping track of changes and rolling back...)
@@ -273,6 +282,22 @@ func (c *Discovery) processBundle(ctx context.Context, b *bundleApi.Bundle) (*pl
 		dClient := c.manager.Client(c.config.service)
 		if !client.Config().Equal(dClient.Config()) {
 			return nil, fmt.Errorf("updates to the discovery service are not allowed")
+		}
+	}
+
+	// check for updates to the keys provided in the boot config
+	keys, err := keys.ParseKeysConfig(config.Keys)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.config.Signing != nil {
+		for key, kc := range keys {
+			if curr, ok := c.config.Signing.PublicKeys[key]; ok {
+				if !curr.Equal(kc) {
+					return nil, fmt.Errorf("updates to keys specified in the boot configuration are not allowed")
+				}
+			}
 		}
 	}
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra/doc"
 	loadCmd "github.com/styrainc/load-private/cmd"
+	"github.com/styrainc/load-private/cmd/keygen"
 )
 
 const fileHeader = `---
@@ -31,7 +32,7 @@ func main() {
 	}
 	out := os.Args[1]
 
-	command := loadCmd.LoadCommand(loadCmd.NewLicense())
+	command := loadCmd.LoadCommand(keygen.NewLicense())
 	command.Use = "load [command]"
 	command.DisableAutoGenTag = true
 

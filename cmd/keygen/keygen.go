@@ -1,4 +1,4 @@
-package cmd
+package keygen
 
 import (
 	"encoding/json"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/keygen-sh/keygen-go/v2"
+	"github.com/sirupsen/logrus"
 
 	"github.com/open-policy-agent/opa/logging"
 )
@@ -24,16 +25,31 @@ const licenseErrorExitCode = 3
 var licenseRetries = 6   // up to 30 seconds total
 var defaultRateSleep = 5 // seconds
 
+type Source int
+
+const (
+	SourceCommandLine Source = iota
+	SourceOverride
+)
+
 type (
 	License struct {
 		mutex       sync.Mutex
 		license     *keygen.License
+		logger      logging.Logger
+		expiry      time.Time
 		released    bool
 		shutdown    chan struct{}
 		finished    chan struct{}
+		started     bool
+		mustStartBy *time.Timer
 		fingerprint string
-		logger      *logging.StandardLogger
-		expiry      time.Time
+	}
+
+	LicenseParams struct {
+		Source Source // EKM override or command line
+		Key    string
+		Token  string
 	}
 
 	keygenLogger struct {
@@ -88,7 +104,17 @@ func NewLicense() *License {
 	// remove licenses from environment! (opa.runtime.env)
 	os.Unsetenv(loadLicenseKey)
 	os.Unsetenv(loadLicenseToken)
-	return &License{logger: logger, shutdown: make(chan struct{}, 1), finished: make(chan struct{}, 1)}
+
+	l := &License{logger: logger, shutdown: make(chan struct{}, 1), finished: make(chan struct{}, 1)}
+	l.mustStartBy = time.AfterFunc(10*time.Minute, l.timerCallback) // 10 minutes to start license check limit
+	return l
+}
+
+func NewLicenseParams() *LicenseParams {
+	lp := &LicenseParams{
+		Source: SourceCommandLine,
+	}
+	return lp
 }
 
 // NOTE(sr): We're mapping ALL keygen errors to "debug" level. We don't want to show
@@ -108,6 +134,39 @@ func (l *keygenLogger) Infof(format string, v ...interface{}) {
 
 func (l *keygenLogger) Debugf(string, ...interface{}) {
 	// l.logger.Debug(format, v...) // very noisy
+}
+
+func (l *License) IsOnline() bool {
+	return l.license != nil
+}
+
+func (l *License) Expiry() time.Time {
+	return l.expiry
+}
+
+func (l *License) Logger() logging.Logger {
+	return l.logger
+}
+
+func (l *License) SetLogger(logger logging.Logger) {
+	l.logger = logger
+}
+
+func (l *License) SetLevel(level logging.Level) {
+	if std, ok := l.logger.(*logging.StandardLogger); ok {
+		std.SetLevel(level)
+	}
+}
+
+func (l *License) SetFormatter(formatter logrus.Formatter) {
+	if std, ok := l.logger.(*logging.StandardLogger); ok {
+		std.SetFormatter(formatter)
+	}
+}
+
+func (l *License) timerCallback() {
+	l.logger.Error("licensing error: timeout")
+	os.Exit(licenseErrorExitCode)
 }
 
 func readLicense(file string) (string, error) {
@@ -209,7 +268,7 @@ func (l *License) validateOffline() error {
 //     - i. keygen.Activate
 //     - ii. setup signal handler SIGINT, SIGTERM
 //     - iii. start keygen machine monitor
-func (l *License) ValidateLicense(key string, token string, terminate func(code int, err error)) {
+func (l *License) ValidateLicense(params *LicenseParams, terminate func(code int, err error)) {
 	var err error
 	defer func() {
 		if err != nil {
@@ -218,19 +277,42 @@ func (l *License) ValidateLicense(key string, token string, terminate func(code 
 		}
 	}()
 
+	// stop background timer
+	l.mustStartBy.Stop()
+
+	l.mutex.Lock()
+	if l.started { // only run once
+		l.mutex.Unlock()
+		return
+	}
+	l.started = true
+	l.mutex.Unlock()
+
+	if l.logger == nil {
+		l.logger = logging.Get()
+	}
+
 	// validate licensekey or licensetoken
 	if keygen.LicenseKey == "" && keygen.Token == "" {
 		var dat string
-		if key != "" {
-			dat, err = readLicense(key)
-			if err != nil {
-				return
+		if params.Key != "" {
+			if params.Source == SourceOverride {
+				dat = params.Key
+			} else {
+				dat, err = readLicense(params.Key)
+				if err != nil {
+					return
+				}
 			}
 			keygen.LicenseKey = dat
-		} else if token != "" {
-			dat, err = readLicense(token)
-			if err != nil {
-				return
+		} else if params.Token != "" {
+			if params.Source == SourceOverride {
+				dat = params.Token
+			} else {
+				dat, err = readLicense(params.Token)
+				if err != nil {
+					return
+				}
 			}
 			keygen.Token = dat
 		} else {

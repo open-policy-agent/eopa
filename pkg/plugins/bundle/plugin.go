@@ -425,6 +425,7 @@ func (p *Plugin) newDownloader(name string, source *opa_bundle.Source) Loader {
 
 	return download.New(conf, client, path).
 		WithCallback(callback).
+		WithBundleVerificationConfig(source.Signing).
 		WithSizeLimitBytes(source.SizeLimitBytes).
 		WithBundlePersistence(p.persistBundle(name)).
 		WithLazyLoadingMode(true).WithBundleName(name)

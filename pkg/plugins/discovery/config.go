@@ -11,18 +11,21 @@ import (
 	"github.com/open-policy-agent/opa/keys"
 
 	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/download"
 	"github.com/open-policy-agent/opa/util"
 )
 
 // Config represents the configuration for the discovery feature.
 type Config struct {
-	download.Config         // bundle downloader configuration
-	Name            *string `json:"name"`               // name of the discovery bundle
-	Prefix          *string `json:"prefix,omitempty"`   // Deprecated: use `Resource` instead.
-	Decision        *string `json:"decision"`           // the name of the query to run on the bundle to get the config
-	Service         string  `json:"service"`            // the name of the service used to download discovery bundle from
-	Resource        *string `json:"resource,omitempty"` // the resource path which will be downloaded from the service
+	download.Config                            // bundle downloader configuration
+	Name            *string                    `json:"name"`               // name of the discovery bundle
+	Prefix          *string                    `json:"prefix,omitempty"`   // Deprecated: use `Resource` instead.
+	Decision        *string                    `json:"decision"`           // the name of the query to run on the bundle to get the config
+	Service         string                     `json:"service"`            // the name of the service used to download discovery bundle from
+	Resource        *string                    `json:"resource,omitempty"` // the resource path which will be downloaded from the service
+	Signing         *bundle.VerificationConfig `json:"signing,omitempty"`  // configuration used to verify a signed bundle
+	Persist         bool                       `json:"persist"`            // control whether to persist activated discovery bundle to disk
 
 	service string
 	path    string
@@ -71,7 +74,7 @@ func (b *ConfigBuilder) Parse() (*Config, error) {
 		return nil, err
 	}
 
-	return &result, result.validateAndInjectDefaults(b.services)
+	return &result, result.validateAndInjectDefaults(b.services, b.keys)
 }
 
 // ParseConfig returns a valid Config object with defaults injected.
@@ -79,10 +82,27 @@ func ParseConfig(bs []byte, services []string) (*Config, error) {
 	return NewConfigBuilder().WithBytes(bs).WithServices(services).Parse()
 }
 
-func (c *Config) validateAndInjectDefaults(services []string) error {
+func (c *Config) validateAndInjectDefaults(services []string, confKeys map[string]*keys.Config) error {
 
 	if c.Resource == nil && c.Name == nil {
 		return fmt.Errorf("missing required discovery.resource field")
+	}
+
+	// make a copy of the keys map
+	lcopy := map[string]*keys.Config{}
+	for key, kc := range confKeys {
+		lcopy[key] = kc
+	}
+
+	if c.Signing != nil {
+		err := c.Signing.ValidateAndInjectDefaults(lcopy)
+		if err != nil {
+			return fmt.Errorf("invalid configuration for discovery service: %s", err.Error())
+		}
+	} else {
+		if len(confKeys) > 0 {
+			c.Signing = bundle.NewVerificationConfig(lcopy, "", "", nil)
+		}
 	}
 
 	if c.Resource != nil {

@@ -9,6 +9,7 @@ import (
 
 	_ "github.com/styrainc/load-private/capabilities"
 	loadCmd "github.com/styrainc/load-private/cmd"
+	"github.com/styrainc/load-private/cmd/keygen"
 	internal "github.com/styrainc/load-private/internal/cmd"
 	_ "github.com/styrainc/load-private/pkg/rego_vm"
 )
@@ -26,7 +27,7 @@ func main() {
 		}
 	}() // orderly shutdown, run all defer routines
 
-	license := loadCmd.NewLicense()
+	license := keygen.NewLicense()
 	root := loadCmd.LoadCommand(license)
 
 	defer func() {

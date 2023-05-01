@@ -31,6 +31,7 @@ Install using brew or directly from download page.
 - [goreleaser-cross](https://github.com/goreleaser/goreleaser-cross): `make release` (1.5GB)
 - [visual studio code](https://code.visualstudio.com/download)
 - [delve](https://github.com/go-delve/delve/blob/master/Documentation/installation/osx/install.md): `brew install delve`
+- [vault](https://developer.hashicorp.com/vault/downloads)
 
 Build with `make build`, run with `make run`, publish with `make push`.
 

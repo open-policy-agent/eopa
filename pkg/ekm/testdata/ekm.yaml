@@ -1,0 +1,27 @@
+services:
+  acmecorp:
+
+keys:
+  rsa:
+
+ekm:
+  vault:
+    url: "http://127.0.0.1:8200"
+    access_type: "token"
+    token: "dev-only-token"
+
+    license: 
+      key: "secret/data/license:data/key"
+
+    services:
+      acmecorp.credentials.bearer.token: "secret/data/acmecorp/bearer:data/token"
+      acmecorp.credentials.bearer.scheme: "secret/data/acmecorp/bearer:data/scheme"
+      acmecorp.url: "secret/data/acmecorp:data/url"
+
+    keys:
+      rsa.key: "secret/data/rsa:data/key"
+
+    httpsend: 
+      https://www.acmecorp.com:
+        bearer: "secret/data/tls/bearer:data/token"
+        scheme: "secret/data/tls/bearer:data/scheme"

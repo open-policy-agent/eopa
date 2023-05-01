@@ -18,6 +18,8 @@ import (
 	"github.com/open-policy-agent/opa/runtime"
 	"github.com/open-policy-agent/opa/server"
 
+	"github.com/styrainc/load-private/cmd/keygen"
+	"github.com/styrainc/load-private/pkg/ekm"
 	"github.com/styrainc/load-private/pkg/plugins/bundle"
 	"github.com/styrainc/load-private/pkg/plugins/data"
 	dl "github.com/styrainc/load-private/pkg/plugins/decision_logs"
@@ -31,7 +33,7 @@ import (
 const defaultBindAddress = "localhost:8181"
 
 // Run provides the CLI entrypoint for the `run` subcommand
-func initRun(opa *cobra.Command, brand string) *cobra.Command {
+func initRun(opa *cobra.Command, brand string, license *keygen.License, lparams *keygen.LicenseParams) *cobra.Command {
 	// Only override Run, so we keep the args and usage texts
 	opa.RunE = func(c *cobra.Command, args []string) error {
 		c.SilenceErrors = true
@@ -44,7 +46,7 @@ func initRun(opa *cobra.Command, brand string) *cobra.Command {
 		}
 		params.rt.Brand = brand
 
-		rt, err := initRuntime(ctx, params, args)
+		rt, err := initRuntime(ctx, params, args, license, lparams)
 		if err != nil {
 			fmt.Println("run error:", err)
 			return err
@@ -226,7 +228,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 }
 
 // initRuntime is taken from OPA's cmd/run.go
-func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*runtime.Runtime, error) {
+func initRuntime(ctx context.Context, params *runCmdParams, args []string, license *keygen.License, lparams *keygen.LicenseParams) (*runtime.Runtime, error) {
 	authenticationSchemes := map[string]server.AuthenticationScheme{
 		"token": server.AuthenticationToken,
 		"tls":   server.AuthenticationTLS,
@@ -302,6 +304,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	a := &bundle.CustomActivator{}
 	bundleApi.RegisterActivator("_load", a)
 	params.rt.BundleActivatorPlugin = "_load"
+
+	params.rt.EKM = ekm.NewEKM(license, lparams)
 
 	params.rt.Router = loadRouter()
 

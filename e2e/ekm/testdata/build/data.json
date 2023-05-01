@@ -1,0 +1,32 @@
+{
+  "discovery": {
+    "service": "acmecorp",
+    "resource": "discovery.tar.gz",
+    "signing": {
+      "keyid": "rsa"
+    }
+  },
+  "services": {
+    "acmecorp": {
+    }
+  },
+  "ekm": {
+    "vault": {
+      "url": "https://127.0.0.1:9001",
+      "access_type": "token",
+      "insecure": true,
+
+      "license": {
+        "key": "kv/data/license:data/key"
+      },
+      "services" : {
+        "acmecorp.credentials.bearer.token": "kv/data/acmecorp/bearer:data/token",
+        "acmecorp.credentials.bearer.scheme": "kv/data/acmecorp/bearer:data/scheme",
+        "acmecorp.url": "kv/data/acmecorp:data/url"
+      },
+      "keys" : {
+        "rsa.key": "kv/data/discovery/rsa:data/key"
+      }
+    }
+  }
+}
