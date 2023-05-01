@@ -41,7 +41,7 @@ plugins:
       username: %s
       password: %s
       file_path: data/ds-test.json
-      reference: refs/heads/%s
+      branch: %s
       polling_interval: 10s
 `
 )

@@ -163,7 +163,10 @@ func (c *Data) fetch(ctx context.Context) error {
 		refspec = config.RefSpec(fmt.Sprintf("+%s:%s", c.ref, c.ref))
 	case c.Config.commit != plumbing.ZeroHash: // scenario 1: pinned to commit
 		refspec = config.RefSpec(fmt.Sprintf("%s:refs/heads/branch", c.Config.commit))
-	case c.Config.Ref != "": // scenario 2: pinned to a ref
+	case c.Config.Branch != "": // scenario 2: pinned to a branch
+		c.ref = plumbing.NewBranchReferenceName(c.Config.Branch)
+		refspec = config.RefSpec(fmt.Sprintf("+%s:%s", c.ref, c.ref))
+	case c.Config.Ref != "": // scenario 3: pinned to a reference
 		c.ref = plumbing.ReferenceName(c.Config.Ref)
 		refspec = config.RefSpec(fmt.Sprintf("+%s:%s", c.Config.Ref, c.Config.Ref))
 	}

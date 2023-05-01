@@ -9,7 +9,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/client"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
-	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/open-policy-agent/opa/storage"
 )
 
@@ -27,18 +26,18 @@ func init() {
 	transport.UnsupportedCapabilities = caps
 
 	c := githttp.NewClient(&http.Client{Transport: newErrorsInterceptor(http.DefaultTransport)})
-	// Support only http, https, and ssh protocols to access git.
+	// Override http and https protocols to enrich the errors with the response bodies
 	client.InstallProtocol("http", c)
 	client.InstallProtocol("https", c)
-	client.InstallProtocol("ssh", gitssh.DefaultClient)
 }
 
 // Config represents the configuration of the git data plugin
 type Config struct {
 	URL      string `json:"url"`
 	FilePath string `json:"file_path"`           // if path points to a file, then only that file is loaded, otherwise scans for any json/yaml/xml files recursively, from root if path is empty
-	Commit   string `json:"commit,omitempty"`    // if empty then Ref is used
-	Ref      string `json:"reference,omitempty"` // if empty then `main`, if `main` failed, then `master`
+	Commit   string `json:"commit,omitempty"`    // if empty then Branch is used
+	Branch   string `json:"branch,omitempty"`    // if empty then Ref is used
+	Ref      string `json:"reference,omitempty"` // if empty then `refs/heads/main`, if `main` failed, then `refs/heads/master`
 
 	// Basic auth
 	Username string `json:"username,omitempty"`
