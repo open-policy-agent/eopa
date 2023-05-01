@@ -798,9 +798,7 @@ func binary() string {
 func collectDL(t *testing.T, rdr io.Reader, array bool, exp int) []payload {
 	t.Helper()
 	for i := 0; i <= 3; i++ {
-		if i != 0 {
-			time.Sleep(100 * time.Millisecond)
-		}
+		time.Sleep(100 * time.Millisecond)
 		var ms []payload
 		if array {
 			if err := json.NewDecoder(rdr).Decode(&ms); err != nil {

@@ -791,9 +791,7 @@ q := true
 func collectDL(ctx context.Context, t *testing.T, rdr io.Reader, exp int) []payload {
 	t.Helper()
 	for i := 0; i <= 3; i++ {
-		if i != 0 {
-			time.Sleep(100 * time.Millisecond)
-		}
+		time.Sleep(100 * time.Millisecond)
 		ms := retrieveDLs(ctx, t, rdr)
 		if act := len(ms); act == exp {
 			return ms
