@@ -130,3 +130,8 @@ ci-smoke-test:
 	test -f "$(BINARY)"
 	chmod +x "$(BINARY)"
 	./build/binary-smoke-test.sh "$(BINARY)" rego
+
+generate-cli-docs:
+	rm -rf tmp-docs
+	mkdir tmp-docs
+	go run build/generate-cli-docs/generate.go tmp-docs

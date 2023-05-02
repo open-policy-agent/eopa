@@ -141,6 +141,16 @@ npm run start
 ```
 from browser: http://localhost:3000/load
 
+### Generate/Update CLI documentation
+
+Run the following command to regenerate the CLI documentation.
+Apply diff manually to fetchdb
+
+```
+make generate-cli-docs
+diff tmp-docs/cli.md ../fetchdb/docs/public/docs/load/cli-reference.md
+```
+
 ### Permission denied when running 'load'
 
 If you get "permission denied: ./load"

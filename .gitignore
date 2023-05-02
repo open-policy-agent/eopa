@@ -2,3 +2,4 @@ bin/
 dist/
 .idea/
 capabilities.json
+tmp-docs/
