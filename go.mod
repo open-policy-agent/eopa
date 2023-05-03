@@ -33,7 +33,7 @@ require (
 	github.com/open-policy-agent/opa v0.52.0
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.10.0
-	github.com/prometheus/client_golang v1.15.0
+	github.com/prometheus/client_golang v1.15.1
 	github.com/rs/zerolog v1.29.1
 	github.com/sbabiv/xml2map v1.2.1
 	github.com/sirupsen/logrus v1.9.0
