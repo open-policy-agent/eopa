@@ -12,12 +12,12 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+	hckv "github.com/hashicorp/vault-plugin-secrets-kv"
 	vault "github.com/hashicorp/vault/api"
-	vaulthttp "github.com/hashicorp/vault/http"
+	hchttp "github.com/hashicorp/vault/http"
 	hclogging "github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
-	hashivault "github.com/hashicorp/vault/vault"
+	hclogical "github.com/hashicorp/vault/sdk/logical"
+	hcvault "github.com/hashicorp/vault/vault"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
@@ -37,16 +37,16 @@ import (
 
 const testpath = "/test"
 
-func createVaultTestCluster(t *testing.T, url string) *hashivault.TestCluster {
+func createVaultTestCluster(t *testing.T, url string) *hcvault.TestCluster {
 	t.Helper()
 
-	coreConfig := &hashivault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": kv.Factory,
+	coreConfig := &hcvault.CoreConfig{
+		LogicalBackends: map[string]hclogical.Factory{
+			"kv": hckv.Factory,
 		},
 	}
-	cluster := hashivault.NewTestCluster(t, coreConfig, &hashivault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
+	cluster := hcvault.NewTestCluster(t, coreConfig, &hcvault.TestClusterOptions{
+		HandlerFunc: hchttp.Handler,
 		NumCores:    1,
 		Logger:      hclogging.NewVaultLogger(hclog.Info),
 	})

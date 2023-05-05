@@ -29,6 +29,7 @@ type (
 	RoleAuth struct {
 		RoleID   string `json:"role_id,omitempty"`
 		SecretID string `json:"secret_id,omitempty"`
+		Wrapped  bool   `json:"wrapped,omitempty"`
 	}
 
 	K8sAuth struct {
@@ -120,7 +121,7 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 	// use kubernetes
 	switch vc.Vault.AccessType {
 	case "kubernetes":
-		if vc.Vault.AppRole == nil {
+		if vc.Vault.K8sService == nil {
 			return conf, fmt.Errorf("unable to initialize kubernetes auth method")
 		}
 
@@ -147,9 +148,16 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 
 		s := &approle.SecretID{FromString: vc.Vault.AppRole.SecretID}
 
+		// wrapped secrets: https://developer.hashicorp.com/vault/tutorials/auth-methods/approle-best-practices#approle-response-wrapping
+		var opts []approle.LoginOption
+		if vc.Vault.AppRole.Wrapped {
+			opts = append(opts, approle.WithWrappingToken())
+		}
+
 		appRoleAuth, err := approle.NewAppRoleAuth(
 			vc.Vault.AppRole.RoleID,
 			s,
+			opts...,
 		)
 		if err != nil {
 			return conf, fmt.Errorf("unable to initialize AppRole auth method: %w", err)
