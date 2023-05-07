@@ -45,7 +45,7 @@ require (
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	go.uber.org/goleak v1.2.1
 	golang.org/x/exp v0.0.0-20230131120322-dfa7d7a641b0
-	golang.org/x/sync v0.1.0
+	golang.org/x/sync v0.2.0
 	golang.org/x/term v0.7.0
 	google.golang.org/grpc v1.54.0
 	google.golang.org/protobuf v1.30.0
