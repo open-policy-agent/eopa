@@ -127,8 +127,11 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 			outputHTTP.Timeout = "10s"
 		}
 		outputHTTP.Headers = cfg.Headers
-		outputHTTP.Array = true
-		outputHTTP.Compress = true
+		outputHTTP.Batching = &batchOpts{
+			Array:    true,
+			Compress: true,
+			Period:   "10ms", // TODO(sr): make this configurable for services
+		}
 
 		if oauth2 := cfg.Credentials.OAuth2; oauth2 != nil {
 			outputHTTP.OAuth2 = &httpAuthOAuth2{

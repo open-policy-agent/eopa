@@ -198,10 +198,13 @@ output:
 					MaxBytes: defaultMemoryMaxBytes,
 				},
 				outputs: []output{&outputHTTPOpts{
-					URL:      "http://knownservice/prefix/decisionlogs",
-					Timeout:  "12s",
-					Array:    true,
-					Compress: true,
+					URL:     "http://knownservice/prefix/decisionlogs",
+					Timeout: "12s",
+					Batching: &batchOpts{
+						Period:   "10ms",
+						Array:    true,
+						Compress: true,
+					},
 				}},
 			}),
 		},
@@ -220,10 +223,13 @@ output:
 					MaxBytes: defaultMemoryMaxBytes,
 				},
 				outputs: []output{&outputHTTPOpts{
-					URL:      "http://knownservice/prefix/logs",
-					Timeout:  "10s",
-					Array:    true,
-					Compress: true,
+					URL:     "http://knownservice/prefix/logs",
+					Timeout: "10s",
+					Batching: &batchOpts{
+						Period:   "10ms",
+						Array:    true,
+						Compress: true,
+					},
 				}},
 			}),
 		},
@@ -252,8 +258,11 @@ output:
 						"content-type": "application/foobear",
 						"x-token":      "y",
 					},
-					Array:    true,
-					Compress: true,
+					Batching: &batchOpts{
+						Period:   "10ms",
+						Array:    true,
+						Compress: true,
+					},
 				}},
 			}),
 		},
@@ -281,10 +290,13 @@ output:
 					MaxBytes: defaultMemoryMaxBytes,
 				},
 				outputs: []output{&outputHTTPOpts{
-					URL:      "http://knownservice/prefix/decisionlogs",
-					Timeout:  "10s",
-					Array:    true,
-					Compress: true,
+					URL:     "http://knownservice/prefix/decisionlogs",
+					Timeout: "10s",
+					Batching: &batchOpts{
+						Period:   "10ms",
+						Array:    true,
+						Compress: true,
+					},
 					OAuth2: &httpAuthOAuth2{
 						Enabled:      true,
 						TokenURL:     "https://otherservice.com",
@@ -317,10 +329,13 @@ output:
 					MaxBytes: defaultMemoryMaxBytes,
 				},
 				outputs: []output{&outputHTTPOpts{
-					URL:      "http://knownservice/prefix/decisionlogs",
-					Timeout:  "10s",
-					Array:    true,
-					Compress: true,
+					URL:     "http://knownservice/prefix/decisionlogs",
+					Timeout: "10s",
+					Batching: &batchOpts{
+						Period:   "10ms",
+						Array:    true,
+						Compress: true,
+					},
 					TLS: &sinkAuthTLS{
 						Enabled: true,
 						Certificates: []certs{
@@ -417,6 +432,38 @@ output:
 							{Key: "key\n", Cert: "cert\n"},
 						},
 						RootCAs: "ca\n",
+					},
+				}},
+			}),
+		},
+		{
+			note: "kafka output with batching",
+			config: `
+output:
+  type: kafka
+  topic: logs
+  urls:
+  - 127.0.0.1:9091
+  batching:
+    at_count: 42
+    at_bytes: 43
+    at_period: "300ms"
+    array: true
+    compress: true
+`,
+			checks: isConfig(Config{
+				memoryBuffer: &memBufferOpts{
+					MaxBytes: defaultMemoryMaxBytes,
+				},
+				outputs: []output{&outputKafkaOpts{
+					URLs:  []string{"127.0.0.1:9091"},
+					Topic: "logs",
+					Batching: &batchOpts{
+						Period:   "300ms",
+						Count:    42,
+						Bytes:    43,
+						Array:    true,
+						Compress: true,
 					},
 				}},
 			}),

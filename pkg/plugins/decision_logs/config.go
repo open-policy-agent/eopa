@@ -82,15 +82,15 @@ type outputServiceOpts struct {
 }
 
 type outputHTTPOpts struct {
-	URL      string            `json:"url"`
-	Timeout  string            `json:"timeout,omitempty"`
-	Headers  map[string]string `json:"headers,omitempty"`
-	Array    bool              `json:"array"` // send batches as arrays of json blobs (default: lines of json blobs)
-	Compress bool              `json:"compress"`
+	URL     string            `json:"url"`
+	Timeout string            `json:"timeout,omitempty"`
+	Headers map[string]string `json:"headers,omitempty"`
 
-	OAuth2 *httpAuthOAuth2 `json:"oauth2,omitempty"`
-	TLS    *sinkAuthTLS    `json:"tls,omitempty"` // TODO(sr): figure out if we want to expose this as-is, or wrap (or reference files instead of raw certs)
-	// TODO(sr): add retry, batching
+	OAuth2   *httpAuthOAuth2 `json:"oauth2,omitempty"`
+	TLS      *sinkAuthTLS    `json:"tls,omitempty"` // TODO(sr): figure out if we want to expose this as-is, or wrap (or reference files instead of raw certs)
+	Batching *batchOpts      `json:"batching,omitempty"`
+
+	// TODO(sr): add retry
 }
 
 type httpAuthOAuth2 struct {
@@ -113,29 +113,18 @@ type certs struct {
 }
 
 func (s *outputHTTPOpts) Benthos() map[string]any {
-	processors := make([]map[string]any, 0, 2)
-	if s.Array {
-		processors = append(processors, map[string]any{"archive": map[string]any{"format": "json_array"}})
-	} else {
-		processors = append(processors, map[string]any{"archive": map[string]any{"format": "lines"}})
-	}
-	if s.Compress {
-		processors = append(processors, map[string]any{"compress": map[string]any{"algorithm": "gzip"}})
-	}
-
 	m := map[string]any{
 		"url":     s.URL,
 		"timeout": s.Timeout,
-		"batching": map[string]any{
-			"period":     "10ms", // TODO(sr): make this configurable
-			"processors": processors,
-		},
 	}
 	if s.OAuth2 != nil {
 		m["oauth2"] = s.OAuth2
 	}
 	if s.TLS != nil {
 		m["tls"] = s.TLS
+	}
+	if b := s.Batching; b != nil {
+		m["batching"] = b.Benthos()
 	}
 	return map[string]any{"http_client": m}
 }
@@ -152,11 +141,39 @@ type outputKafkaOpts struct {
 	Timeout string   `json:"timeout,omitempty"`
 	TLS     *tlsOpts `json:"tls,omitempty"`
 
+	Batching *batchOpts `json:"batching,omitempty"`
+
 	// NOTE(sr): There are just too many configurables if we care about all of them
 	// at once. Let's introduce batching when someone needs it.
 
 	tls *sinkAuthTLS
 	// TODO(sr): SASL
+}
+
+type batchOpts struct {
+	Count    int    `json:"at_count,omitempty"`
+	Bytes    int    `json:"at_bytes,omitempty"`
+	Period   string `json:"at_period,omitempty"`
+	Array    bool   `json:"array"`    // send batches as arrays of json blobs (default: lines of json blobs)
+	Compress bool   `json:"compress"` // TODO(sr): decide if want to expose the algorithm (gzip vs lz4, snappy, ..)
+}
+
+func (b *batchOpts) Benthos() map[string]any {
+	processors := make([]map[string]any, 0, 2)
+	if b.Array {
+		processors = append(processors, map[string]any{"archive": map[string]any{"format": "json_array"}})
+	} else {
+		processors = append(processors, map[string]any{"archive": map[string]any{"format": "lines"}})
+	}
+	if b.Compress {
+		processors = append(processors, map[string]any{"compress": map[string]any{"algorithm": "gzip"}})
+	}
+	return map[string]any{
+		"count":      b.Count,
+		"byte_size":  b.Bytes,
+		"period":     b.Period,
+		"processors": processors,
+	}
 }
 
 type tlsOpts struct {
@@ -173,9 +190,11 @@ func (s *outputKafkaOpts) Benthos() map[string]any {
 	if s.Timeout != "" {
 		m["timeout"] = s.Timeout
 	}
-
 	if s.tls != nil {
 		m["tls"] = s.tls
+	}
+	if b := s.Batching; b != nil {
+		m["batching"] = b.Benthos()
 	}
 	return map[string]any{"kafka_franz": m}
 }

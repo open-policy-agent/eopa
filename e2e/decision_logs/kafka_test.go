@@ -64,6 +64,13 @@ plugins:
       topic: logs
 `
 
+	batchConfig := plaintextConfig + `
+      batching:
+        at_count: 2
+        compress: false
+        array: true
+`
+
 	tlsConfig := plaintextConfig + `
       tls:
         cert: testdata/tls/client-cert.pem
@@ -99,6 +106,7 @@ plugins:
 		config string
 		opts   []kgo.Opt
 		kafka  func(*testing.T) *dockertest.Resource
+		array  bool
 	}{
 		{
 			note:   "kafka/plaintext",
@@ -127,6 +135,12 @@ plugins:
 				}
 			}(),
 		},
+		{
+			note:   "kafka/plaintext/batching",
+			config: batchConfig,
+			array:  true,
+			kafka:  testKafka,
+		},
 	} {
 		t.Run(tc.note, func(t *testing.T) {
 			cleanupPrevious(t)
@@ -152,7 +166,9 @@ plugins:
 					}
 					iter := rs.RecordIter()
 					for !iter.Done() {
-						if _, err := buf.Write(iter.Next().Value); err != nil {
+						val := iter.Next().Value
+						t.Logf("value: %s", string(val))
+						if _, err := buf.Write(val); err != nil {
 							panic(err)
 						}
 					}
@@ -181,7 +197,7 @@ plugins:
 				}
 			}
 
-			logs := collectDL(t, &buf, false, 2)
+			logs := collectDL(t, &buf, tc.array, 2)
 			{ // request 1
 				dl := payload{
 					Result: true,
