@@ -6,7 +6,7 @@ require (
 	github.com/Jeffail/gabs/v2 v2.7.0
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/aws/aws-sdk-go v1.44.255
-	github.com/benthosdev/benthos/v4 v4.13.1-0.20230417162539-33a65f2d3ee1
+	github.com/benthosdev/benthos/v4 v4.15.0
 	github.com/charmbracelet/bubbles v0.15.0
 	github.com/charmbracelet/bubbletea v0.23.2
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
@@ -63,7 +63,7 @@ require (
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.1 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
-	github.com/Azure/azure-sdk-for-go v67.2.0+incompatible // indirect
+	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible // indirect
 	github.com/Azure/azure-storage-blob-go v0.15.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
@@ -247,6 +247,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.1 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-5 // indirect
 	github.com/hashicorp/hcp-sdk-go v0.23.0 // indirect
 	github.com/hashicorp/mdns v1.0.4 // indirect
@@ -380,6 +381,7 @@ require (
 	github.com/tilinna/z85 v1.0.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.4.0 // indirect
+	github.com/trinodb/trino-go-client v0.309.0 // indirect
 	github.com/tv42/httpunix v0.0.0-20191220191345-2ba4b9c3382c // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.4.0 // indirect
 	github.com/urfave/cli/v2 v2.25.1 // indirect
@@ -428,6 +430,10 @@ require (
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
+	gopkg.in/jcmturner/aescts.v1 v1.0.1 // indirect
+	gopkg.in/jcmturner/dnsutils.v1 v1.0.1 // indirect
+	gopkg.in/jcmturner/gokrb5.v6 v6.1.1 // indirect
+	gopkg.in/jcmturner/rpc.v1 v1.1.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/resty.v1 v1.12.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
@@ -455,12 +461,20 @@ require (
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
+	zvelo.io/ttlru v1.0.10 // indirect
 )
 
 // glog's init function does a lookup of the current user, and that can be quite
 // expensive on windows. We only need glog as a third-party dependency (of badger),
 // and badger only calls it to die with a log messsage.
 replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
+
+// These are transitive dependencies of vault's tests. We don't run those tests.
+// The original depends on an outdated version of the Azure SDK that kept blocking
+// us from upgrading Benthos.
+replace github.com/hashicorp/vault-plugin-auth-azure => ./build/replacements/github.com/hashicorp/vault-plugin-auth-azure
+
+replace github.com/hashicorp/vault-plugin-secrets-azure => ./build/replacements/github.com/hashicorp/vault-plugin-secrets-azure
 
 // keyring is used as an upstream dependency for a few libraries (including
 // benthos), and has an ongoing bug that has to be worked around:
