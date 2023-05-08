@@ -193,12 +193,13 @@ func (c *Data) transformAndSave(ctx context.Context, n int, iter *kgo.FetchesRec
 		printOut := bytes.Buffer{}
 		for i := range batch {
 			res, err := c.transformOne(ctx, txn, batch[i], &printOut)
-			if err != nil {
-				return err
-			}
-			if printOut.Len() > 0 {
+			if printOut.Len() > 0 { // print any debug output we might have gotten, error or not
 				c.log.Debug("printOut(): %s", printOut.String())
 				printOut.Reset()
+			}
+			if err != nil {
+				c.log.Error("transform: skipped input %v: %v", batch[i], err)
+				continue // don't discard batch because one transform was bad
 			}
 			if res != nil {
 				results = append(results, res...)
@@ -207,7 +208,7 @@ func (c *Data) transformAndSave(ctx context.Context, n int, iter *kgo.FetchesRec
 		for i := range results {
 			op, path, value := results[i].op, results[i].path, results[i].value
 			if err := c.manager.Store.(inmem.WriterUnchecked).WriteUnchecked(ctx, txn, op, path, value); err != nil {
-				return err
+				c.log.Error("store: %s failed: %v", results[i].String(), err)
 			}
 		}
 		return nil
@@ -224,15 +225,8 @@ func (c *Data) prepareTransform(ctx context.Context) error {
 
 func (c *Data) Trigger(ctx context.Context, txn storage.Transaction) error {
 	transformRef := ast.MustParseRef(c.Config.RegoTransformRule)
-	query := ast.NewBody(
-		ast.NewExpr(ast.NewTerm(transformRef.Append(
-			ast.NewTerm(ast.NewObject(
-				ast.Item(ast.StringTerm("op"), ast.VarTerm("op")),
-				ast.Item(ast.StringTerm("value"), ast.VarTerm("value")),
-				ast.Item(ast.StringTerm("path"), ast.VarTerm("path")),
-			)),
-		))),
-	)
+	// ref: data.x.transform => query: data.x.transform[op]
+	query := ast.NewBody(ast.NewExpr(ast.NewTerm(transformRef.Append(ast.VarTerm("op")))))
 
 	comp := c.manager.GetCompiler()
 	if comp == nil || comp.RuleTree == nil || comp.RuleTree.Find(transformRef) == nil {
@@ -269,6 +263,18 @@ type processed struct {
 	value any
 }
 
+func (p *processed) String() string {
+	switch p.op {
+	case storage.RemoveOp:
+		return fmt.Sprintf("remove %v", p.path)
+	case storage.AddOp:
+		return fmt.Sprintf("add %v to %v", p.value, p.path)
+	case storage.ReplaceOp:
+		return fmt.Sprintf("replace %v by %v", p.path, p.value)
+	}
+	panic("unreachable")
+}
+
 func (c *Data) transformOne(ctx context.Context, txn storage.Transaction, message any, buf io.Writer) ([]processed, error) {
 	rs, err := c.transform.Load().Eval(ctx,
 		rego.EvalInput(message),
@@ -284,35 +290,51 @@ func (c *Data) transformOne(ctx context.Context, txn storage.Transaction, messag
 	}
 	proc := make([]processed, len(rs))
 	for i := range rs {
-		p0, ok := rs[i].Bindings["path"]
-		if !ok {
-			return nil, fmt.Errorf("no path in transform bindings %v", rs[i].Bindings)
+		path, op, value, err := dissect(rs[i].Bindings["op"])
+		if err != nil {
+			return nil, err
 		}
-		p, ok := p0.(string)
-		if !ok {
-			return nil, fmt.Errorf("failed to parse path %q", rs[i].Bindings["path"])
-		}
-		path := c.Config.path[:]
-		for _, piece := range strings.Split(p, "/") {
-			path = append(path, piece)
-		}
-		var op storage.PatchOp
-		switch rs[i].Bindings["op"] {
-		case "replace":
-			op = storage.ReplaceOp
-		case "add":
-			op = storage.AddOp
-		case "remove":
-			op = storage.RemoveOp
+
+		// target path is `path` appeneded to the plugins subtree root
+		pathTgt := c.Config.path[:]
+		for _, piece := range strings.Split(path, "/") {
+			pathTgt = append(pathTgt, piece)
 		}
 
 		proc[i] = processed{
 			op:    op,
-			path:  path,
-			value: rs[i].Bindings["value"], // nil if not bound
+			path:  pathTgt,
+			value: value,
 		}
 	}
 	return proc, nil
+}
+
+func dissect(x any) (string, storage.PatchOp, any, error) {
+	m, ok := x.(map[string]any)
+	if !ok {
+		return "", 0, nil, fmt.Errorf("transform returned %T (expected object)", x)
+	}
+	pathAny := m["path"]
+	path, ok := pathAny.(string)
+	if !ok {
+		return "", 0, nil, fmt.Errorf("transform returned path %v of type %[1]T (expected string)", pathAny)
+	}
+	if path == "" {
+		return "", 0, nil, fmt.Errorf("transform returned empty path")
+	}
+	var op storage.PatchOp
+	switch o := m["op"]; o {
+	case "replace":
+		op = storage.ReplaceOp
+	case "add":
+		op = storage.AddOp
+	case "remove":
+		op = storage.RemoveOp
+	default:
+		return "", 0, nil, fmt.Errorf(`transform returned unexpected op %v (must be one of "replace", "add", "remove")`, o)
+	}
+	return path, op, m["value"], nil
 }
 
 func (c *Data) kgoLogger() kgo.Logger {

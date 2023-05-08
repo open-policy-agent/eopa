@@ -257,11 +257,14 @@ transform contains json.unmarshal(base64.decode(input.value)) if print(input)
 			val:  true,
 		},
 	} {
-		payload, err := json.Marshal(map[string]any{
-			"value": op.val,
-			"op":    op.op,
-			"path":  op.path,
-		})
+		m := map[string]any{
+			"op":   op.op,
+			"path": op.path,
+		}
+		if op.val != nil {
+			m["value"] = op.val
+		}
+		payload, err := json.Marshal(m)
 		if err != nil {
 			t.Fatal(err)
 		}

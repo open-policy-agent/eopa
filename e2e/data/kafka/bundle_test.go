@@ -30,6 +30,7 @@ import (
 // `make transform` in testdata/bundles.
 func TestTransformFromBundle(t *testing.T) {
 	ctx := context.Background()
+	cleanupPrevious(t)
 	_ = testKafka(t, network(t))
 	cl, err := kafkaClient()
 	if err != nil {
@@ -219,7 +220,7 @@ func network(t *testing.T) *docker.Network {
 	return network
 }
 
-func loadRun(t *testing.T, config string) (*exec.Cmd, *bytes.Buffer) {
+func loadRun(t *testing.T, config string, extra ...string) (*exec.Cmd, *bytes.Buffer) {
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
 	args := []string{
@@ -234,6 +235,9 @@ func loadRun(t *testing.T, config string) (*exec.Cmd, *bytes.Buffer) {
 			t.Fatalf("write config: %v", err)
 		}
 		args = append(args, "--config-file", configPath)
+	}
+	if len(extra) > 0 {
+		args = append(args, extra...)
 	}
 	load := exec.Command(binary(), args...)
 	load.Stderr = &buf

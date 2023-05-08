@@ -160,6 +160,9 @@ func (c *Data) compilerTrigger(ctx context.Context, txn storage.Transaction) {
 	// Check if any of the bundle roots overlap with our data plugin roots.
 	// If they do, we'll log an error-level message and flick the data plugin status to ERROR.
 	bndles, err := bundle.ReadBundleNamesFromStore(ctx, c.manager.Store, txn)
+	if storage.IsNotFound(err) { // nothing to check
+		return
+	}
 	if err != nil {
 		c.Error("data plugin: read bundle names from store: %v", err)
 		return

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -25,6 +26,8 @@ import (
 	"github.com/twmb/franz-go/plugin/kzerolog"
 
 	"github.com/open-policy-agent/opa/util"
+
+	"github.com/styrainc/load-private/e2e/wait"
 )
 
 const defaultImage = "ko.local/load-private:edge" // built via `make build-local`
@@ -152,6 +155,122 @@ transform contains {"op": "add", "path": key, "value": val} if {
 
 			// if we reach this, the diff was "" => our expectation was met
 		})
+	}
+}
+
+func TestLogsFromBadTransforms(t *testing.T) {
+	ctx := context.Background()
+	cleanupPrevious(t)
+	_ = testKafka(t, network(t))
+	cl, err := kafkaClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	config := `
+plugins:
+  data:
+    kafka.messages:
+      type: kafka
+      urls: [localhost:9092]
+      topics: [foo]
+      rego_transform: "data.e2e.transform"
+`
+	// this transform lets use drive the transform output from kafka message payloads
+	transform := `package e2e
+import future.keywords
+transform contains json.unmarshal(base64.decode(input.value)) if print(input)
+`
+	load, loadOut := loadRun(t, config)
+	if err := load.Start(); err != nil {
+		t.Fatal(err)
+	}
+	wait.ForLog(t, loadOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.e2e.transform" does not exist yet`), 2*time.Second)
+
+	{ // setup transform rego
+		req, err := http.NewRequest("PUT", "http://localhost:8181/v1/policies/transform", strings.NewReader(transform))
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if act, exp := resp.StatusCode, 200; act != exp {
+			t.Fatalf("unexpected response status: got %d, want %d", act, exp)
+		}
+	}
+	logs := []string{}
+	for _, tc := range []struct {
+		log     string
+		key     byte
+		payload any
+	}{
+		{
+			log:     `transform: skipped input map\[headers:\[\] key:\[1\] timestamp:[0-9]+ topic:foo value:\[123 125\]\]: transform returned path <nil> of type <nil> \(expected string\)`,
+			key:     1,
+			payload: map[string]any{},
+		},
+		{
+			log: `transform: skipped input map\[headers:\[\] key:\[2\] timestamp:[0-9]+ topic:foo value:\[[ 0-9]+\]\]: transform returned path true of type bool \(expected string\)`,
+			key: 2,
+			payload: map[string]any{
+				"op":    "add",
+				"value": 123,
+				"path":  true,
+			},
+		},
+		{
+			log: `transform: skipped input map\[headers:\[\] key:\[3\] timestamp:[0-9]+ topic:foo value:\[[ 0-9]+\]\]: transform returned empty path`,
+			key: 3,
+			payload: map[string]any{
+				"op":    "add",
+				"value": 123,
+				"path":  "",
+			},
+		},
+		{
+			log:     `transform: skipped input map\[headers:\[\] key:\[4\] timestamp:[0-9]+ topic:foo value:\[[ 0-9]+\]\]: transform returned bool \(expected object\)`,
+			key:     4,
+			payload: true,
+		},
+		{
+			log: `transform: skipped input map\[headers:\[\] key:\[5\] timestamp:[0-9]+ topic:foo value:\[[ 0-9]+\]\]: transform returned unexpected op nuke \(must be one of "replace", "add", "remove"\)`,
+			key: 5,
+			payload: map[string]any{
+				"op":    "nuke",
+				"value": 123,
+				"path":  "dev/null",
+			},
+		},
+		{
+			log: `store: add 123 to /kafka/messages/does/not/exist failed: storage_not_found_error: /kafka/messages/does/not/exist: document does not exist`,
+			key: 6,
+			payload: map[string]any{
+				"op":    "add",
+				"value": 123,
+				"path":  "does/not/exist",
+			},
+		},
+	} {
+		logs = append(logs, tc.log)
+		payload, err := json.Marshal(tc.payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		record := &kgo.Record{
+			Topic: "foo",
+			Key:   []byte{tc.key},
+			Value: payload,
+		}
+		if err := cl.ProduceSync(ctx, record).FirstErr(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for i := range logs {
+		wait.ForLog(t, loadOut, matches(logs[i]), time.Second)
 	}
 }
 
@@ -335,4 +454,8 @@ func cleanupPrevious(t *testing.T) {
 			t.Fatalf("remove %s: %v", n, err)
 		}
 	}
+}
+
+func matches(re string) func(string) bool {
+	return regexp.MustCompile(re).MatchString
 }
