@@ -7,17 +7,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
-	hckv "github.com/hashicorp/vault-plugin-secrets-kv"
-	vault "github.com/hashicorp/vault/api"
-	hchttp "github.com/hashicorp/vault/http"
-	hclogging "github.com/hashicorp/vault/sdk/helper/logging"
-	hclogical "github.com/hashicorp/vault/sdk/logical"
-	hcvault "github.com/hashicorp/vault/vault"
+	hcvault "github.com/hashicorp/vault/api"
+	"github.com/testcontainers/testcontainers-go"
+	testcontainervault "github.com/testcontainers/testcontainers-go/modules/vault"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
@@ -35,34 +32,38 @@ import (
 	"github.com/styrainc/load-private/pkg/vm"
 )
 
-const testpath = "/test"
+const (
+	testpath = "/test"
+	token    = "dev-only-token"
+)
 
-func createVaultTestCluster(t *testing.T, url string) *hcvault.TestCluster {
+func createVaultTestCluster(t *testing.T, url string) (*testcontainervault.VaultContainer, *hcvault.Client) {
 	t.Helper()
 
-	coreConfig := &hcvault.CoreConfig{
-		LogicalBackends: map[string]hclogical.Factory{
-			"kv": hckv.Factory,
-		},
+	opts := []testcontainers.ContainerCustomizer{
+		testcontainers.WithImage("hashicorp/vault:1.13.0"),
+		testcontainervault.WithToken(token),
+		testcontainervault.WithInitCommand("secrets enable -version=2 -path=kv kv"),
 	}
-	cluster := hcvault.NewTestCluster(t, coreConfig, &hcvault.TestClusterOptions{
-		HandlerFunc: hchttp.Handler,
-		NumCores:    1,
-		Logger:      hclogging.NewVaultLogger(hclog.Info),
-	})
-	cluster.Start()
 
-	// Create KV V2 mount
-	if err := cluster.Cores[0].Client.Sys().Mount("kv", &vault.MountInput{
-		Type: "kv-v2",
-		Options: map[string]string{
-			"version": "2",
-		},
-	}); err != nil {
+	vault, err := testcontainervault.RunContainer(context.Background(), opts...)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	vaultClient := cluster.Cores[0].Client
+	address, err := vault.HttpHostAddress(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vaultCfg := hcvault.DefaultConfig()
+	vaultCfg.Address = address
+	vaultClient, err := hcvault.NewClient(vaultCfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vaultClient.SetToken(token)
+
 	vlogical := vaultClient.Logical()
 
 	test := "abc"
@@ -84,7 +85,7 @@ func createVaultTestCluster(t *testing.T, url string) *hcvault.TestCluster {
 	if err := setKey(vlogical, "kv/data/acmecorp/bearer:data/token", map[string]string{"token": "token1"}); err != nil {
 		t.Error(err)
 	}
-	if err := setKey(vlogical, "kv/data/acmecorp:data/url", map[string]string{"url": "http://127.0.0.1:9000"}); err != nil {
+	if err := setKey(vlogical, "kv/data/acmecorp:data/url", map[string]string{"url": address}); err != nil {
 		t.Error(err)
 	}
 	if err := setKey(vlogical, "kv/data/tls/bearer:data/token", map[string]string{"url": url + testpath, "token": "token_good", "scheme": "Bearer"}); err != nil {
@@ -104,7 +105,7 @@ func createVaultTestCluster(t *testing.T, url string) *hcvault.TestCluster {
 		t.Error(err)
 	}
 
-	return cluster
+	return vault, vaultClient
 }
 
 func createHTTPServer(t *testing.T) *httptest.Server {
@@ -136,7 +137,7 @@ func createHTTPServer(t *testing.T) *httptest.Server {
 	return srv
 }
 
-func setKey(vlogical *vault.Logical, p string, value map[string]string) error {
+func setKey(vlogical *hcvault.Logical, p string, value map[string]string) error {
 	p = strings.TrimSpace(p)
 	arr := strings.Split(p, ":")
 	if len(arr) != 2 {
@@ -158,22 +159,34 @@ func setKey(vlogical *vault.Logical, p string, value map[string]string) error {
 	return err
 }
 
+func writeFile(file string, buffer string) error {
+	err := os.WriteFile(file, []byte(buffer), 0666)
+	if err != nil {
+		return fmt.Errorf("could not write %v: %w", file, err)
+	}
+	return nil
+}
+
 func TestEKM(t *testing.T) {
 	// create http server
 	srv := createHTTPServer(t)
 	defer srv.Close()
 
-	cluster := createVaultTestCluster(t, srv.URL)
-	defer cluster.Cleanup()
-	vaultClient := cluster.Cores[0].Client
+	vault, vaultClient := createVaultTestCluster(t, srv.URL)
+	defer vault.Terminate(context.Background())
 	vlogical := vaultClient.Logical()
 
-	rootToken := vaultClient.Token()
-	addr := cluster.Cores[0].Listeners[0].Address.String()
+	address, _ := vault.HttpHostAddress(context.Background())
+
+	err := writeFile("token_file", token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove("token_file")
 
 	t.Run("EKM", func(t *testing.T) {
 		conf := config.Config{
-			EKM:      []byte(`{"vault": {"license": {"key": "kv/data/license:data/key"}, "rootca": "` + strings.ReplaceAll(string(cluster.CACertPEM), "\n", "\\n") + `", "url": "https://` + addr + `", "access_type": "token", "token": "` + rootToken + `", "keys": {"jwt_signing.key": "kv/data/sign:data/private_key"}, "services": {"acmecorp.url": "kv/data/acmecorp:data/url", "acmecorp.credentials.bearer.token": "kv/data/acmecorp/bearer:data/token"}, "httpsend": {"https://www.acmecorp.com": {"url": "kv/data/tls/bearer:data/url", "bearer": "kv/data/tls/bearer:data/token", "scheme": "kv/data/tls/bearer:data/scheme"} } } }`),
+			EKM:      []byte(`{"vault": {"license": {"key": "kv/data/license:data/key"}, "url": "` + address + `", "access_type": "token", "token_file": "token_file", "keys": {"jwt_signing.key": "kv/data/sign:data/private_key"}, "services": {"acmecorp.url": "kv/data/acmecorp:data/url", "acmecorp.credentials.bearer.token": "kv/data/acmecorp/bearer:data/token"}, "httpsend": {"https://www.acmecorp.com": {"url": "kv/data/tls/bearer:data/url", "header_bearer": "kv/data/tls/bearer:data/token", "header_scheme": "kv/data/tls/bearer:data/scheme"} } } }`),
 			Services: []byte(`{"acmecorp": {"credentials": {"bearer": {"token": "bear"} } } }`),
 			Keys:     []byte(`{"jwt_signing": {"key": "test"} }`),
 		}
@@ -183,7 +196,7 @@ func TestEKM(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if !bytes.Equal(cnf.Services, []byte(`{"acmecorp":{"credentials":{"bearer":{"token":"token1"}},"url":"http://127.0.0.1:9000"}}`)) {
+		if !bytes.Equal(cnf.Services, []byte(`{"acmecorp":{"credentials":{"bearer":{"token":"token1"}},"url":"`+address+`"}}`)) {
 			t.Errorf("invalid services: got %v", string(cnf.Services))
 		}
 

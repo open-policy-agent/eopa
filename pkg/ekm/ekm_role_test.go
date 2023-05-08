@@ -2,56 +2,49 @@ package ekm
 
 import (
 	"bytes"
-	"strings"
+	"context"
 	"testing"
 
-	hclog "github.com/hashicorp/go-hclog"
-	kv "github.com/hashicorp/vault-plugin-secrets-kv"
-	vault "github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/credential/approle"
-	vaulthttp "github.com/hashicorp/vault/http"
-	hclogging "github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
-	hashivault "github.com/hashicorp/vault/vault"
+	hcvault "github.com/hashicorp/vault/api"
+	"github.com/testcontainers/testcontainers-go"
+	testcontainervault "github.com/testcontainers/testcontainers-go/modules/vault"
 
 	"github.com/open-policy-agent/opa/config"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
 )
 
-func createVaultTestRoleCluster(t *testing.T) (*hashivault.TestCluster, string, string) {
+func createVaultTestRoleCluster(t *testing.T) (*testcontainervault.VaultContainer, *hcvault.Client, string, string) {
 	t.Helper()
 
-	coreConfig := &hashivault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"approle": approle.Factory,
-		},
-		LogicalBackends: map[string]logical.Factory{
-			"kv": kv.Factory,
-		},
+	opts := []testcontainers.ContainerCustomizer{
+		testcontainers.WithImage("hashicorp/vault:1.13.0"),
+		testcontainervault.WithToken(token),
+		testcontainervault.WithInitCommand("secrets enable -version=2 -path=kv kv"),
 	}
-	cluster := hashivault.NewTestCluster(t, coreConfig, &hashivault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
-		Logger:      hclogging.NewVaultLogger(hclog.Info),
-	})
-	cluster.Start()
 
-	// Create KV V2 mount
-	if err := cluster.Cores[0].Client.Sys().Mount("kv", &vault.MountInput{
-		Type: "kv-v2",
-		Options: map[string]string{
-			"version": "2",
-		},
-	}); err != nil {
+	vault, err := testcontainervault.RunContainer(context.Background(), opts...)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	vaultClient := cluster.Cores[0].Client
+	address, err := vault.HttpHostAddress(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vaultCfg := hcvault.DefaultConfig()
+	vaultCfg.Address = address
+	vaultClient, err := hcvault.NewClient(vaultCfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vaultClient.SetToken(token)
+
 	vlogical := vaultClient.Logical()
 
 	// Enable approle
-	err := vaultClient.Sys().EnableAuthWithOptions("approle", &vault.EnableAuthOptions{
+	err = vaultClient.Sys().EnableAuthWithOptions("approle", &hcvault.EnableAuthOptions{
 		Type: "approle",
 	})
 	if err != nil {
@@ -83,6 +76,7 @@ func createVaultTestRoleCluster(t *testing.T) (*hashivault.TestCluster, string, 
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	// Use thre secretID later
 	secretID, ok := res.Data["secret_id"].(string)
 	if !ok {
@@ -117,7 +111,7 @@ path "*" {
 	if err := setKey(vlogical, "kv/data/acmecorp/bearer:data/token", map[string]string{"token": "token1"}); err != nil {
 		t.Error(err)
 	}
-	if err := setKey(vlogical, "kv/data/acmecorp:data/url", map[string]string{"url": "http://127.0.0.1:9000"}); err != nil {
+	if err := setKey(vlogical, "kv/data/acmecorp:data/url", map[string]string{"url": address}); err != nil {
 		t.Error(err)
 	}
 
@@ -129,18 +123,22 @@ path "*" {
 	if err != nil {
 		t.Error(err)
 	}
-	return cluster, roleID, secretID
+	return vault, vaultClient, roleID, secretID
 }
 
 func TestRoleEKM(t *testing.T) {
-	cluster, roleID, secretID := createVaultTestRoleCluster(t)
-	defer cluster.Cleanup()
+	vault, vaultClient, roleID, secretID := createVaultTestRoleCluster(t)
+	defer func() {
+		vlogical := vaultClient.Logical()
+		vlogical.Delete("auth/approle/role/unittest")
+		vault.Terminate(context.Background())
+	}()
 
-	addr := cluster.Cores[0].Listeners[0].Address.String()
+	address, _ := vault.HttpHostAddress(context.Background())
 
 	t.Run("EKM", func(t *testing.T) {
 		conf := config.Config{
-			EKM:      []byte(`{"vault": {"license": {"key": "kv/data/license:data/key"}, "rootca": "` + strings.ReplaceAll(string(cluster.CACertPEM), "\n", "\\n") + `", "url": "https://` + addr + `", "access_type": "approle", "approle": {"role_id": "` + roleID + `", "secret_id": "` + secretID + `"}, "keys": {"jwt_signing.key": "kv/data/sign:data/private_key"}, "services": {"acmecorp.url": "kv/data/acmecorp:data/url", "acmecorp.credentials.bearer.token": "kv/data/acmecorp/bearer:data/token"} } }`),
+			EKM:      []byte(`{"vault": {"license": {"key": "kv/data/license:data/key"}, "url": "` + address + `", "access_type": "approle", "approle": {"role_id": "` + roleID + `", "secret_id": "` + secretID + `"}, "keys": {"jwt_signing.key": "kv/data/sign:data/private_key"}, "services": {"acmecorp.url": "kv/data/acmecorp:data/url", "acmecorp.credentials.bearer.token": "kv/data/acmecorp/bearer:data/token"} } }`),
 			Services: []byte(`{"acmecorp": {"credentials": {"bearer": {"token": "bear"} } } }`),
 			Keys:     []byte(`{"jwt_signing": {"key": "test"} }`),
 		}
@@ -150,7 +148,7 @@ func TestRoleEKM(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if !bytes.Equal(cnf.Services, []byte(`{"acmecorp":{"credentials":{"bearer":{"token":"token1"}},"url":"http://127.0.0.1:9000"}}`)) {
+		if !bytes.Equal(cnf.Services, []byte(`{"acmecorp":{"credentials":{"bearer":{"token":"token1"}},"url":"`+address+`"}}`)) {
 			t.Errorf("invalid services: got %v", string(cnf.Services))
 		}
 

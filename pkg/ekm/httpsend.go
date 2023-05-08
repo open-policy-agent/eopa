@@ -92,11 +92,11 @@ func patchHTTPSend() {
 					state.logger.Error("lookupKey %v: failed %v", v, err)
 					continue
 				}
-				if k == "bearer" {
+				if k == "header_bearer" {
 					bearer = nv
 					continue
 				}
-				if k == "scheme" {
+				if k == "header_scheme" {
 					scheme = nv
 					continue
 				}

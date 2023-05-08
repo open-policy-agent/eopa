@@ -42,6 +42,7 @@ type (
 		RootCA     string    `json:"rootca"`
 		AccessType string    `json:"access_type"`
 		Token      string    `json:"token,omitempty"`
+		TokenFile  string    `json:"token_file,omitempty"`
 		AppRole    *RoleAuth `json:"approle,omitempty"`
 		K8sService *K8sAuth  `json:"kubernetes,omitempty"`
 
@@ -90,10 +91,7 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 	}
 
 	vaultCfg := vault.DefaultConfig()
-	// set URL or use environment variable VAULT_ADDR
-	if vc.Vault.URL != "" {
-		vaultCfg.Address = vc.Vault.URL
-	}
+	vaultCfg.Address = vc.Vault.URL
 
 	parsedURL, err := url.Parse(vc.Vault.URL)
 	if err != nil {
@@ -106,7 +104,8 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 			tlsconfig.CACertBytes = []byte(vc.Vault.RootCA)
 		}
 		if vc.Vault.Insecure {
-			tlsconfig.Insecure = true
+			tlsconfig.Insecure = vc.Vault.Insecure
+			os.Unsetenv("VAULT_SKIP_VERIFY")
 		}
 		vaultCfg.ConfigureTLS(tlsconfig)
 	}
@@ -175,6 +174,16 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 		// set token or use environment variable VAULT_TOKEN
 		if vc.Vault.Token != "" {
 			vaultClient.SetToken(vc.Vault.Token)
+		} else if vc.Vault.TokenFile != "" {
+			ltoken, err := readFile(vc.Vault.TokenFile)
+			if err != nil {
+				return conf, fmt.Errorf("invalid token file: %w", err)
+			}
+			vaultClient.SetToken(ltoken)
+		} else {
+			if os.Getenv("VAULT_TOKEN") == "" {
+				return conf, fmt.Errorf("no token specified")
+			}
 		}
 
 	default:
@@ -250,6 +259,18 @@ func (e *EKM) validateLicense() {
 	}
 }
 
+func readFile(file string) (string, error) {
+	dat, err := os.ReadFile(file)
+	if err != nil {
+		return "", fmt.Errorf("invalid token file %v: %w", file, err)
+	}
+	s := strings.TrimSpace(string(dat))
+	if len(s) == 0 {
+		return "", fmt.Errorf("invalid token file %v", file)
+	}
+	return s, nil
+}
+
 func lookupString(v any, field string) (string, error) {
 	switch v := v.(type) {
 	case string:
@@ -306,7 +327,11 @@ func unmarshalAndValidate(config []byte, c *Config) error {
 		return fmt.Errorf("unmarshalAndValidate failure: %w", err)
 	}
 	if c.Vault.URL == "" {
-		return fmt.Errorf("need at least one address to serve from")
+		s := os.Getenv("VAULT_ADDR")
+		if s == "" {
+			return fmt.Errorf("need at least one address to serve from")
+		}
+		c.Vault.URL = s
 	}
 	if _, err := url.Parse(c.Vault.URL); err != nil {
 		return fmt.Errorf("invalid url: %v", c.Vault.URL)

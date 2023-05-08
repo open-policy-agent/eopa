@@ -18,17 +18,15 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
-	kv "github.com/hashicorp/vault-plugin-secrets-kv"
-	vault "github.com/hashicorp/vault/api"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
-	hashivault "github.com/hashicorp/vault/vault"
+	hcvault "github.com/hashicorp/vault/api"
+	"github.com/testcontainers/testcontainers-go"
+	testcontainervault "github.com/testcontainers/testcontainers-go/modules/vault"
 )
 
 const (
-	waitIterations = 12
+	waitIterations = 5
+
+	token = "dev-only-token"
 )
 
 var testserver = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -43,45 +41,33 @@ func TestEKM(t *testing.T) {
 
 	mime.AddExtensionType(".gz", "application/gzip")
 
-	cluster := startVaultServer(t)
-	defer cluster.Cleanup()
+	vault := startVaultServer(t)
+	defer vault.Terminate(ctx)
 
 	load, loadOut := loadRun(t)
 	if err := load.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitForLog(ctx, t, loadOut, func(s string) bool { return strings.Contains(s, "Discovery update processed successfully") }, time.Second)
+	waitForLog(ctx, t, loadOut, func(s string) bool { return strings.Contains(s, "Bundle loaded and activated successfully") }, time.Second)
 }
 
-func createVaultTestCluster(t *testing.T) *hashivault.TestCluster {
+func createVaultTestCluster(t *testing.T) *testcontainervault.VaultContainer {
 	t.Helper()
 
-	coreConfig := &hashivault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": kv.Factory,
-		},
+	opts := []testcontainers.ContainerCustomizer{
+		testcontainers.WithImage("hashicorp/vault:1.13.0"),
+		testcontainervault.WithToken(token),
+		testcontainervault.WithInitCommand("secrets enable -version=2 -path=kv kv"),
 	}
-	cluster := hashivault.NewTestCluster(t, coreConfig, &hashivault.TestClusterOptions{
-		HandlerFunc:       vaulthttp.Handler,
-		NumCores:          1,
-		Logger:            logging.NewVaultLogger(hclog.Info),
-		BaseListenAddress: "127.0.0.1:9001",
-	})
-	cluster.Start()
 
-	// Create KV V2 mount
-	if err := cluster.Cores[0].Client.Sys().Mount("kv", &vault.MountInput{
-		Type: "kv-v2",
-		Options: map[string]string{
-			"version": "2",
-		},
-	}); err != nil {
+	vault, err := testcontainervault.RunContainer(context.Background(), opts...)
+	if err != nil {
 		t.Fatal(err)
 	}
-	return cluster
+	return vault
 }
 
-func setKey(logical *vault.Logical, p string, value map[string]any) error {
+func setKey(logical *hcvault.Logical, p string, value map[string]any) error {
 	p = strings.TrimSpace(p)
 	arr := strings.Split(p, ":")
 	if len(arr) != 2 {
@@ -101,37 +87,51 @@ func setKey(logical *vault.Logical, p string, value map[string]any) error {
 	return err
 }
 
-func startVaultServer(t *testing.T) *hashivault.TestCluster {
+func startVaultServer(t *testing.T) *testcontainervault.VaultContainer {
+	t.Helper()
 	cluster := createVaultTestCluster(t)
 	if cluster == nil {
 		t.Fatal("vault setup failed")
 	}
-	vaultClient := cluster.Cores[0].Client
-	logical := vaultClient.Logical()
+
+	vaultCfg := hcvault.DefaultConfig()
+	address, err := cluster.HttpHostAddress(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	vaultCfg.Address = address
+	vaultClient, err := hcvault.NewClient(vaultCfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vaultClient.SetToken(token)
+
+	vlogical := vaultClient.Logical()
 
 	// initialize database
-	if err := setKey(logical, "kv/data/acmecorp/bearer:data/token", map[string]any{"token": "token1", "scheme": "Bearer"}); err != nil {
+	if err := setKey(vlogical, "kv/data/acmecorp/bearer:data/token", map[string]any{"token": "token1", "scheme": "Bearer"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := setKey(logical, "kv/data/acmecorp:data/url", map[string]any{"url": testserver.URL}); err != nil {
+	if err := setKey(vlogical, "kv/data/acmecorp:data/url", map[string]any{"url": testserver.URL}); err != nil {
 		t.Fatal(err)
 	}
-	if err := setKey(logical, "kv/data/license:data/key", map[string]any{"key": os.Getenv("STYRA_LOAD_LICENSE_KEY")}); err != nil {
+	if err := setKey(vlogical, "kv/data/license:data/key", map[string]any{"key": os.Getenv("STYRA_LOAD_LICENSE_KEY")}); err != nil {
 		t.Fatal(err)
 	}
 	dat, err := os.ReadFile("testdata/public_key.pem")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := setKey(logical, "kv/data/discovery/rsa:data/key", map[string]any{"key": string(dat)}); err != nil {
+	if err := setKey(vlogical, "kv/data/signing/rsa:data/key", map[string]any{"key": string(dat)}); err != nil {
 		t.Fatal(err)
 	}
 
-	t.Setenv("VAULT_TOKEN", cluster.RootToken)
+	t.Setenv("VAULT_ADDR", address)
 	return cluster
 }
 
 func loadRun(t *testing.T, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
+	t.Helper()
 	logLevel := "debug"
 	buf := bytes.Buffer{}
 
