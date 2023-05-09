@@ -96,9 +96,12 @@ release-wasm:
 	docker run --rm -v $$(PWD):/cwd -w /cwd ghcr.io/goreleaser/goreleaser-cross:v1.19 release -f .goreleaser-wasm.yaml --snapshot --skip-publish --rm-dist
 
 # utilities
-.PHONY: test e2e benchmark fmt check fuzz update
+.PHONY: test test-race e2e benchmark fmt check fuzz update
 test:
-	go test ./... --race
+	go test ./...
+
+test-race:
+	go test ./... -race
 
 e2e:
 	go test -p 1 -tags e2e ./e2e/... -v -count=1 # always run, no parallelism
