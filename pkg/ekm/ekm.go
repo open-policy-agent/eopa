@@ -47,10 +47,10 @@ type (
 		K8sService *K8sAuth  `json:"kubernetes,omitempty"`
 
 		// override mappings
-		License  map[string]string            `json:"license,omitempty"`
-		Keys     map[string]string            `json:"keys,omitempty"`
-		Services map[string]string            `json:"services,omitempty"`
-		HTTPSend map[string]map[string]string `json:"httpsend,omitempty"`
+		License  map[string]string         `json:"license,omitempty"`
+		Keys     map[string]string         `json:"keys,omitempty"`
+		Services map[string]string         `json:"services,omitempty"`
+		HTTPSend map[string]map[string]any `json:"httpsend,omitempty"`
 	}
 
 	EKM struct {
@@ -230,7 +230,7 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 		}
 	}
 	if len(vc.Vault.HTTPSend) > 0 {
-		send := make(map[url.URL]map[string]string)
+		send := make(map[url.URL]map[string]any)
 		for k1, v1 := range vc.Vault.HTTPSend {
 			u, err := url.Parse(k1)
 			if err != nil {
@@ -241,7 +241,7 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 				logger.Warn("unexpected url path ignored: %v", u.String())
 			}
 			url := url.URL{Scheme: u.Scheme, Host: u.Host}
-			send[url] = make(map[string]string)
+			send[url] = make(map[string]any)
 			for k2, v2 := range v1 {
 				send[url][k2] = v2
 			}

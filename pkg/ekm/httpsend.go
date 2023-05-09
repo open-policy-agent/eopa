@@ -15,7 +15,7 @@ import (
 type (
 	httpsendState struct {
 		logger   logging.Logger
-		httpsend map[url.URL]map[string]string
+		httpsend map[url.URL]map[string]any
 		vlogical *vault.Logical
 	}
 )
@@ -25,7 +25,7 @@ var (
 	lState *httpsendState
 )
 
-func registerHTTPSend(l logging.Logger, h map[url.URL]map[string]string, v *vault.Logical) {
+func registerHTTPSend(l logging.Logger, h map[url.URL]map[string]any, v *vault.Logical) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if lState == nil {
@@ -42,6 +42,60 @@ func getState() *httpsendState {
 	mutex.Lock()
 	defer mutex.Unlock()
 	return lState
+}
+
+func insertHeaders(constraints ast.Object, state *httpsendState, key string, value string) {
+	hdrs := ast.StringTerm("headers")
+	h := constraints.Get(hdrs)
+
+	if h != nil { // add to existing headers
+		if hValue, ok := h.Value.(ast.Object); ok {
+			hValue.Insert(ast.StringTerm(key), ast.StringTerm(value))
+		} else {
+			state.logger.Info("httpsend invalid type: %T", h.Value)
+		}
+	} else { // new headers
+		obj := ast.NewObject()
+		obj.Insert(ast.StringTerm(key), ast.StringTerm(value))
+		constraints.Insert(hdrs, ast.NewTerm(obj))
+	}
+}
+
+func insertHeadersSchemeToken(constraints ast.Object, state *httpsendState, key string, value map[string]any) {
+	var scheme string // special case bearer and scheme
+	var bearer string
+
+	// extract scheme and bearer from map
+	for k, v := range value {
+		v, ok := v.(string)
+		if !ok {
+			state.logger.Error("headers %v invalid type %T", k, v)
+			continue
+		}
+		if k != "scheme" && k != "bearer" {
+			state.logger.Error("unexpected field %v", k)
+			continue
+		}
+		nv, err := lookupKey(state.vlogical, v)
+		if err != nil {
+			state.logger.Error("lookupKey %v: failed %v", v, err)
+			continue
+		}
+		if k == "scheme" {
+			scheme = nv
+		}
+		if k == "bearer" {
+			bearer = nv
+		}
+	}
+	if bearer == "" {
+		state.logger.Error("invalid headers %v, expected bearer", key)
+		return
+	}
+	if scheme == "" {
+		scheme = "Bearer"
+	}
+	insertHeaders(constraints, state, key, scheme+" "+bearer)
 }
 
 func patchHTTPSend() {
@@ -82,45 +136,53 @@ func patchHTTPSend() {
 				return original(bctx, operands, iter) // invoke original
 			}
 
-			var bearer string // special case bearer and scheme (authorization header)
-			var scheme string
-
 			// overwrite (non authorization) operands
 			for k, v := range value {
+
+				// insert headers
+				if k == "headers" {
+					v, ok := v.(map[string]any)
+					if !ok {
+						state.logger.Error("headers %v invalid type %T", k, v)
+						continue
+					}
+					for k2, v2 := range v {
+						switch v2 := v2.(type) {
+						case string:
+							nv, err := lookupKey(state.vlogical, v2)
+							if err != nil {
+								state.logger.Error("lookupKey %v: failed %v", k2, v2, err)
+								continue
+							}
+
+							// inject arbitrary header
+							insertHeaders(constraints, state, k2, nv)
+							continue
+
+						case map[string]any:
+							// inject header from scheme+token
+							insertHeadersSchemeToken(constraints, state, k2, v2)
+
+						default:
+							state.logger.Error("key %v unexpected value %T", k2, v2)
+						}
+					}
+					continue
+				}
+
+				// insert parameter
+				v, ok := v.(string)
+				if !ok {
+					state.logger.Error("value %v invalid type %T", k, v)
+					continue
+				}
+
 				nv, err := lookupKey(state.vlogical, v)
 				if err != nil {
 					state.logger.Error("lookupKey %v: failed %v", v, err)
 					continue
 				}
-				if k == "header_bearer" {
-					bearer = nv
-					continue
-				}
-				if k == "header_scheme" {
-					scheme = nv
-					continue
-				}
 				constraints.Insert(ast.StringTerm(k), ast.StringTerm(nv)) // add/overwrite existing
-			}
-
-			if bearer != "" {
-				// create Authorization token header
-				if scheme == "" {
-					scheme = "Bearer"
-				}
-				hdrs := ast.StringTerm("headers")
-				h := constraints.Get(hdrs)
-				if h != nil { // add to existing headers
-					if hValue, ok := h.Value.(ast.Object); ok {
-						hValue.Insert(ast.StringTerm("Authorization"), ast.StringTerm(scheme+" "+bearer))
-					} else {
-						state.logger.Info("httpsend invalid type: %T", h.Value)
-					}
-				} else { // new headers
-					obj := ast.NewObject()
-					obj.Insert(ast.StringTerm("Authorization"), ast.StringTerm(scheme+" "+bearer))
-					constraints.Insert(hdrs, ast.NewTerm(obj))
-				}
 			}
 
 			//state.logger.Info("operands", operands)

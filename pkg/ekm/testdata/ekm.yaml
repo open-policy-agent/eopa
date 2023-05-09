@@ -23,5 +23,8 @@ ekm:
 
     httpsend: 
       https://www.acmecorp.com:
-        header_bearer: "secret/data/tls/bearer:data/token"
-        header_scheme: "secret/data/tls/bearer:data/scheme"
+        headers:
+          Authorization:
+            bearer: "secret/data/tls/bearer:data/token"
+            scheme: "secret/data/tls/bearer:data/scheme"
+          Content-Type: "secret/data/tls/bearer:data/content-type"

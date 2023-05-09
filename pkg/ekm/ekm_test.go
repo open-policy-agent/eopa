@@ -88,7 +88,7 @@ func createVaultTestCluster(t *testing.T, url string) (*testcontainervault.Vault
 	if err := setKey(vlogical, "kv/data/acmecorp:data/url", map[string]string{"url": address}); err != nil {
 		t.Error(err)
 	}
-	if err := setKey(vlogical, "kv/data/tls/bearer:data/token", map[string]string{"url": url + testpath, "token": "token_good", "scheme": "Bearer"}); err != nil {
+	if err := setKey(vlogical, "kv/data/tls/bearer:data/token", map[string]string{"url": url + testpath, "token": "token_good", "scheme": "Bearer", "content-type": "application/json"}); err != nil {
 		t.Error(err)
 	}
 
@@ -101,6 +101,10 @@ func createVaultTestCluster(t *testing.T, url string) (*testcontainervault.Vault
 		t.Error(err)
 	}
 	_, err = lookupKey(vlogical, "kv/data/tls/bearer:data/token")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = lookupKey(vlogical, "kv/data/tls/bearer:data/content-type")
 	if err != nil {
 		t.Error(err)
 	}
@@ -186,7 +190,7 @@ func TestEKM(t *testing.T) {
 
 	t.Run("EKM", func(t *testing.T) {
 		conf := config.Config{
-			EKM:      []byte(`{"vault": {"license": {"key": "kv/data/license:data/key"}, "url": "` + address + `", "access_type": "token", "token_file": "token_file", "keys": {"jwt_signing.key": "kv/data/sign:data/private_key"}, "services": {"acmecorp.url": "kv/data/acmecorp:data/url", "acmecorp.credentials.bearer.token": "kv/data/acmecorp/bearer:data/token"}, "httpsend": {"https://www.acmecorp.com": {"url": "kv/data/tls/bearer:data/url", "header_bearer": "kv/data/tls/bearer:data/token", "header_scheme": "kv/data/tls/bearer:data/scheme"} } } }`),
+			EKM:      []byte(`{"vault": {"license": {"key": "kv/data/license:data/key"}, "url": "` + address + `", "access_type": "token", "token_file": "token_file", "keys": {"jwt_signing.key": "kv/data/sign:data/private_key"}, "services": {"acmecorp.url": "kv/data/acmecorp:data/url", "acmecorp.credentials.bearer.token": "kv/data/acmecorp/bearer:data/token"}, "httpsend": {"https://www.acmecorp.com": {"url": "kv/data/tls/bearer:data/url", "headers": {"Authorization": {"scheme": "kv/data/tls/bearer:data/scheme", "bearer": "kv/data/tls/bearer:data/token"}, "Content-Type": "kv/data/tls/bearer:data/content-type"} } } } }`),
 			Services: []byte(`{"acmecorp": {"credentials": {"bearer": {"token": "bear"} } } }`),
 			Keys:     []byte(`{"jwt_signing": {"key": "test"} }`),
 		}
@@ -223,7 +227,7 @@ allow {
 	})
 
 	// change the token
-	if err := setKey(vlogical, "kv/data/tls/bearer:data/token", map[string]string{"url": srv.URL + testpath, "token": "token_bad", "scheme": "Bearer"}); err != nil {
+	if err := setKey(vlogical, "kv/data/tls/bearer:data/token", map[string]string{"url": srv.URL + testpath, "token": "token_bad", "scheme": "Bearer", "content-type": "application/json"}); err != nil {
 		t.Error(err)
 	}
 
