@@ -19,6 +19,7 @@ import (
 	"github.com/open-policy-agent/opa/server"
 
 	"github.com/styrainc/load-private/cmd/keygen"
+	_ "github.com/styrainc/load-private/pkg/builtins" // Activate custom builtins.
 	"github.com/styrainc/load-private/pkg/ekm"
 	"github.com/styrainc/load-private/pkg/plugins/bundle"
 	"github.com/styrainc/load-private/pkg/plugins/data"
