@@ -62,7 +62,7 @@ func (c *Data) Start(ctx context.Context) error {
 		WithCredentials(credentials.NewCredentials(&credentialsProvider{c.Config.AccessID, c.Config.Secret})).
 		WithRegion(c.Config.region)
 	if c.Config.endpoint != "" {
-		cfg.WithEndpoint(c.Config.endpoint)
+		cfg = cfg.WithEndpoint(c.Config.endpoint)
 	}
 	s, err := session.NewSession(cfg)
 	if err != nil {

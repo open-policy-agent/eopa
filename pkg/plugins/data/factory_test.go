@@ -706,6 +706,26 @@ s3.placeholder:
 			}),
 		},
 		{
+			note: "s3 scheme with endpoint",
+			config: `
+s3.placeholder:
+  type: s3
+  endpoint: https://my.favorite.local:911/
+  url: s3://bucket/path
+  access_id: foo
+  secret: bar
+  polling_interval: 1m
+`,
+			checks: isConfig(t, s3.Name, "s3.placeholder", s3.Config{
+				URL:      "s3://bucket/path",
+				Endpoint: "https://my.favorite.local:911/",
+				AccessID: "foo",
+				Secret:   "bar",
+				Interval: "1m",
+				Region:   "us-east-1",
+			}),
+		},
+		{
 			note: "no scheme equals to s3",
 			config: `
 s3.placeholder:

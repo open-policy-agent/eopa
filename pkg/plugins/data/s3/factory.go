@@ -74,9 +74,9 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (any, error) {
 	} else {
 		u, err := url.Parse(c.Endpoint)
 		if err != nil {
-			return nil, fmt.Errorf("incorret endpoint %q: %w", c.Endpoint, err)
+			return nil, fmt.Errorf("incorrect endpoint %q: %w", c.Endpoint, err)
 		}
-		c.Endpoint = u.String()
+		c.endpoint = u.String()
 	}
 
 	if c.path, err = utils.AddDataPrefixAndParsePath(c.Path); err != nil {
