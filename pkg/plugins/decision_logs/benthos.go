@@ -37,18 +37,25 @@ func (s *stream) Consume(ctx context.Context, msg, meta map[string]any) error {
 	return s.prod(ctx, m)
 }
 
-func NewStream(_ context.Context, mask masker, drop dropper, buf fmt.Stringer, out output, logger logging.Logger) (Stream, error) {
+var dp = &DropProcessor{}
+var mp = &MaskProcessor{}
+
+func init() {
 	if err := service.RegisterProcessor("dl_drop", service.NewConfigSpec(), func(*service.ParsedConfig, *service.Resources) (service.Processor, error) {
-		return &DropProcessor{dropper: drop}, nil
+		return dp, nil
 	}); err != nil {
-		return nil, err
+		panic(err)
 	}
 	if err := service.RegisterProcessor("dl_mask", service.NewConfigSpec(), func(*service.ParsedConfig, *service.Resources) (service.Processor, error) {
-		return &MaskProcessor{masker: mask}, nil
+		return mp, nil
 	}); err != nil {
-		return nil, err
+		panic(err)
 	}
+}
 
+func NewStream(_ context.Context, mask masker, drop dropper, buf fmt.Stringer, out output, logger logging.Logger) (Stream, error) {
+	dp.dropper = drop
+	mp.masker = mask
 	builder := service.NewStreamBuilder()
 	builder.SetPrintLogger(&wrap{logger})
 

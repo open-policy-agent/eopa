@@ -24,12 +24,19 @@ type output interface {
 	Benthos() map[string]any
 }
 
+type extraProcessing interface {
+	Extra() []map[string]any
+}
+
 type outputs []output
 
 func (x outputs) Benthos() map[string]any {
 	outputs := make([]map[string]any, len(x))
-	for i := range x {
-		outputs[i] = x[i].Benthos()
+	for i, y := range x {
+		outputs[i] = y.Benthos()
+		if ep, ok := y.(extraProcessing); ok {
+			outputs[i]["processors"] = ep.Extra()
+		}
 	}
 	return map[string]any{
 		"broker": map[string]any{
@@ -103,8 +110,25 @@ type httpAuthOAuth2 struct {
 
 type sinkAuthTLS struct {
 	Enabled      bool    `json:"enabled"`
+	SkipVerify   bool    `json:"skip_cert_verify"`
 	Certificates []certs `json:"client_certs"`
 	RootCAs      string  `json:"root_cas,omitempty"`
+}
+
+func (t *sinkAuthTLS) Benthos() map[string]any {
+	certs := make([]map[string]any, len(t.Certificates))
+	for i := range certs {
+		certs[i] = map[string]any{
+			"key":  t.Certificates[i].Key,
+			"cert": t.Certificates[i].Cert,
+		}
+	}
+	return map[string]any{
+		"enabled":          true,
+		"skip_cert_verify": t.SkipVerify,
+		"client_certs":     certs,
+		"root_cas":         t.RootCAs,
+	}
 }
 
 type certs struct {
@@ -180,6 +204,7 @@ type tlsOpts struct {
 	Cert       string `json:"cert"`
 	PrivateKey string `json:"private_key"`
 	CACert     string `json:"ca_cert"`
+	SkipVerify bool   `json:"skip_cert_verify"`
 }
 
 func (s *outputKafkaOpts) Benthos() map[string]any {
@@ -191,12 +216,56 @@ func (s *outputKafkaOpts) Benthos() map[string]any {
 		m["timeout"] = s.Timeout
 	}
 	if s.tls != nil {
-		m["tls"] = s.tls
+		m["tls"] = s.tls.Benthos()
 	}
 	if b := s.Batching; b != nil {
 		m["batching"] = b.Benthos()
 	}
 	return map[string]any{"kafka_franz": m}
+}
+
+// outputSplunkOpts is transformed into http_client benthos output,
+// but not via outputHTTPOpts -- we need hardcoded transformers and headers
+type outputSplunkOpts struct {
+	URL   string `json:"url"`
+	Token string `json:"token"` // "event collector token"
+
+	TLS      *tlsOpts   `json:"tls,omitempty"`
+	Batching *batchOpts `json:"batching,omitempty"`
+
+	// TODO(sr): rate limit, retries, max_in_flight
+	tls *sinkAuthTLS
+}
+
+func (s *outputSplunkOpts) Benthos() map[string]any {
+	hdrs := map[string]any{
+		"Content-Type":  "application/json",
+		"Authorization": "Splunk " + s.Token,
+	}
+	m := map[string]any{
+		"url":  s.URL,
+		"verb": "POST",
+	}
+	if b := s.Batching; b != nil {
+		m["batching"] = b.Benthos()
+		if b.Compress {
+			hdrs["Content-Encoding"] = "gzip"
+		}
+	}
+	if s.tls != nil {
+		m["tls"] = s.tls.Benthos()
+	}
+	m["headers"] = hdrs
+	return map[string]any{"http_client": m}
+}
+
+var _ extraProcessing = (*outputSplunkOpts)(nil)
+
+// Splunk expects payloads that at least have "time" (epoch) and "event" set
+func (s *outputSplunkOpts) Extra() []map[string]any {
+	return []map[string]any{
+		{"mapping": `{ "event": this, "time": timestamp_unix() }`},
+	}
 }
 
 // This output is for experimentation and not part of the public feature set.

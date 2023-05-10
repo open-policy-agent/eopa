@@ -176,19 +176,22 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 			return nil, err
 		}
 		if tls := outputKafka.TLS; tls != nil {
-			cert, err := os.ReadFile(tls.Cert)
-			if err != nil {
-				return nil, err
-			}
-			key, err := os.ReadFile(tls.PrivateKey)
-			if err != nil {
-				return nil, err
-			}
 			outputKafka.tls = &sinkAuthTLS{
-				Enabled: true,
-				Certificates: []certs{
+				Enabled:    true,
+				SkipVerify: tls.SkipVerify,
+			}
+			if tls.Cert != "" && tls.PrivateKey != "" {
+				cert, err := os.ReadFile(tls.Cert)
+				if err != nil {
+					return nil, err
+				}
+				key, err := os.ReadFile(tls.PrivateKey)
+				if err != nil {
+					return nil, err
+				}
+				outputKafka.tls.Certificates = []certs{
 					{Cert: string(cert), Key: string(key)},
-				},
+				}
 			}
 			if ca := tls.CACert; ca != "" {
 				caCert, err := os.ReadFile(ca)
@@ -200,6 +203,42 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 			outputKafka.TLS = nil
 		}
 		return outputKafka, nil
+	case "splunk":
+		outputSplunk := new(outputSplunkOpts)
+		if err := util.Unmarshal(outputRaw, outputSplunk); err != nil {
+			return nil, err
+		}
+		if b := outputSplunk.Batching; b != nil {
+			b.Array = false
+		}
+		if tls := outputSplunk.TLS; tls != nil {
+			outputSplunk.tls = &sinkAuthTLS{
+				Enabled:    true,
+				SkipVerify: tls.SkipVerify,
+			}
+			if tls.Cert != "" && tls.PrivateKey != "" {
+				cert, err := os.ReadFile(tls.Cert)
+				if err != nil {
+					return nil, err
+				}
+				key, err := os.ReadFile(tls.PrivateKey)
+				if err != nil {
+					return nil, err
+				}
+				outputSplunk.tls.Certificates = []certs{
+					{Cert: string(cert), Key: string(key)},
+				}
+			}
+			if ca := tls.CACert; ca != "" {
+				caCert, err := os.ReadFile(ca)
+				if err != nil {
+					return nil, err
+				}
+				outputSplunk.tls.RootCAs = string(caCert)
+			}
+			outputSplunk.TLS = nil
+		}
+		return outputSplunk, nil
 	case "experimental":
 		outputExp := new(outputExpOpts)
 		if err := util.Unmarshal(outputRaw, outputExp); err != nil {

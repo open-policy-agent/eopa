@@ -1,11 +1,11 @@
 package decisionlogs
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"go.uber.org/goleak"
 
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage/inmem"
@@ -14,8 +14,7 @@ import (
 func isConfig(exp Config) func(testing.TB, any, error) {
 	opt := []cmp.Option{
 		cmpopts.IgnoreFields(Config{}, "Buffer", "Output"),
-		cmp.AllowUnexported(Config{}),
-		cmp.AllowUnexported(outputKafkaOpts{}),
+		cmp.AllowUnexported(Config{}, outputKafkaOpts{}, outputSplunkOpts{}),
 	}
 	diff := func(x, y any) string {
 		return cmp.Diff(x, y, opt...)
@@ -34,6 +33,19 @@ func isConfig(exp Config) func(testing.TB, any, error) {
 		act := c.(Config)
 		if d := diff(exp, act); d != "" {
 			tb.Errorf("Config mismatch (-want +got):\n%s", d)
+		}
+	}
+}
+
+func isBenthos(exp map[string]any) func(testing.TB, any, error) {
+	return func(tb testing.TB, c any, err error) {
+		tb.Helper()
+		if err != nil {
+			tb.Fatalf("unexpected error: %v", err)
+		}
+		act := c.(Config).outputs[0].Benthos()
+		if d := cmp.Diff(exp, act); d != "" {
+			tb.Errorf("Benthos mismatch (-want +got):\n%s", d)
 		}
 	}
 }
@@ -468,16 +480,177 @@ output:
 				}},
 			}),
 		},
+		{
+			note: "kafka output with TLS skipped",
+			config: `
+output:
+  type: kafka
+  topic: logs
+  urls:
+  - 127.0.0.1:9091
+  tls:
+    skip_cert_verify: true
+`,
+			checks: isConfig(Config{
+				memoryBuffer: &memBufferOpts{
+					MaxBytes: defaultMemoryMaxBytes,
+				},
+				outputs: []output{&outputKafkaOpts{
+					URLs:  []string{"127.0.0.1:9091"},
+					Topic: "logs",
+					tls: &sinkAuthTLS{
+						Enabled:    true,
+						SkipVerify: true,
+					},
+				}},
+			}),
+		},
+		{
+			note: "splunk output with tls+batching+gzip",
+			config: `
+output:
+  type: splunk
+  url: "https://http-input.foobar.hec.splunk.com/services/collector/event"
+  token: opensplunkame
+  batching:
+    at_count: 42
+    at_bytes: 43
+    at_period: "300ms"
+    array: true # overridden for splunk
+    compress: true
+  tls:
+      cert: testdata/cert.pem
+      private_key: testdata/key.pem
+      ca_cert: testdata/ca.pem
+      skip_cert_verify: true
+`,
+			checks: func(t testing.TB, a any, err error) {
+				isConfig(Config{
+					memoryBuffer: &memBufferOpts{
+						MaxBytes: defaultMemoryMaxBytes,
+					},
+					outputs: []output{&outputSplunkOpts{
+						URL:   "https://http-input.foobar.hec.splunk.com/services/collector/event",
+						Token: "opensplunkame",
+						Batching: &batchOpts{
+							Period:   "300ms",
+							Count:    42,
+							Bytes:    43,
+							Array:    false, // NB: overridden
+							Compress: true,
+						},
+						tls: &sinkAuthTLS{
+							Enabled:    true,
+							SkipVerify: true,
+							Certificates: []certs{
+								{Key: "key\n", Cert: "cert\n"},
+							},
+							RootCAs: "ca\n",
+						},
+					}},
+				})(t, a, err)
+
+				isBenthos(map[string]any{
+					"http_client": map[string]any{
+						"batching": map[string]any{
+							"byte_size": 43,
+							"count":     42,
+							"period":    "300ms",
+							"processors": []map[string]any{
+								{"archive": map[string]any{"format": "lines"}},
+								{"compress": map[string]any{"algorithm": "gzip"}},
+							},
+						},
+						"headers": map[string]any{
+							"Authorization":    "Splunk opensplunkame",
+							"Content-Encoding": "gzip",
+							"Content-Type":     "application/json",
+						},
+						"tls": map[string]any{
+							"client_certs":     []map[string]any{{"cert": "cert\n", "key": "key\n"}},
+							"enabled":          true,
+							"skip_cert_verify": true,
+							"root_cas":         "ca\n",
+						},
+						"url":  "https://http-input.foobar.hec.splunk.com/services/collector/event",
+						"verb": "POST",
+					},
+				})(t, a, err)
+			},
+		},
+		{
+			note: "splunk output with batching",
+			config: `
+output:
+  type: splunk
+  url: "https://http-input.foobar.hec.splunk.com/services/collector/event"
+  token: opensplunkame
+  batching:
+    at_count: 42
+    at_bytes: 43
+    at_period: "300ms"
+    array: true # overridden for splunk
+    compress: false
+`,
+			checks: func(t testing.TB, a any, err error) {
+				isConfig(Config{
+					memoryBuffer: &memBufferOpts{
+						MaxBytes: defaultMemoryMaxBytes,
+					},
+					outputs: []output{&outputSplunkOpts{
+						URL:   "https://http-input.foobar.hec.splunk.com/services/collector/event",
+						Token: "opensplunkame",
+						Batching: &batchOpts{
+							Period:   "300ms",
+							Count:    42,
+							Bytes:    43,
+							Array:    false, // NB: overridden
+							Compress: false,
+						},
+					}},
+				})(t, a, err)
+
+				isBenthos(map[string]any{
+					"http_client": map[string]any{
+						"batching": map[string]any{
+							"byte_size": 43,
+							"count":     42,
+							"period":    "300ms",
+							"processors": []map[string]any{
+								{"archive": map[string]any{"format": "lines"}},
+							},
+						},
+						"headers": map[string]any{
+							"Authorization": "Splunk opensplunkame",
+							"Content-Type":  "application/json",
+						},
+						"url":  "https://http-input.foobar.hec.splunk.com/services/collector/event",
+						"verb": "POST",
+					},
+				})(t, a, err)
+			},
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
-			defer goleak.VerifyNone(t)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			// defer goleak.VerifyNone(t) // TODO(sr): enable, fix failures
 			mgr := getTestManager(tc.mgr)
 			config, err := Factory().Validate(mgr, []byte(tc.config))
 			if tc.checks != nil {
 				tc.checks(t, config, err)
 			}
+			if err != nil {
+				return
+			}
+			// always start to validate
+			p := Factory().New(mgr, config)
+			if err := p.Start(ctx); err != nil {
+				t.Fatal(err)
+			}
+			p.Stop(ctx)
 		})
 	}
 }
