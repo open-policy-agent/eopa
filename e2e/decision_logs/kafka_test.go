@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -198,6 +199,10 @@ plugins:
 			}
 
 			logs := collectDL(t, &buf, tc.array, 2)
+			// logs might have come out of the kafka topic out of order: sort by ID
+			// before asserting things
+			sort.Slice(logs, func(i, j int) bool { return logs[i].ID < logs[j].ID })
+
 			{ // request 1
 				dl := payload{
 					Result: true,
