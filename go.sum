@@ -950,8 +950,8 @@ github.com/tchap/go-patricia/v2 v2.3.1 h1:6rQp39lgIYZ+MHmdEq4xzuk1t7OdC35z/xm0BG
 github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
 github.com/testcontainers/testcontainers-go v0.20.1 h1:mK15UPJ8c5P+NsQKmkqzs/jMdJt6JMs5vlw2y4j92c0=
 github.com/testcontainers/testcontainers-go v0.20.1/go.mod h1:zb+NOlCQBkZ7RQp4QI+YMIHyO2CQ/qsXzNF5eLJ24SY=
-github.com/testcontainers/testcontainers-go/modules/vault v0.20.0 h1:GtmexgcKV9aNvGhlLqGc3Is4KIU1wj8dIb07yP9kM5M=
-github.com/testcontainers/testcontainers-go/modules/vault v0.20.0/go.mod h1:DRBrf+EAwsJ3wAadmP3aXYjxBLcmH8/3zsDHqU9kQrg=
+github.com/testcontainers/testcontainers-go/modules/vault v0.20.1 h1:ozANMMCIsHVlQ51O5sccYIUgphR/izc0Sbud924/RFk=
+github.com/testcontainers/testcontainers-go/modules/vault v0.20.1/go.mod h1:NA+0ULdTu2KtxJcW5rnEhhVpEZHkDbDgW+eB0Wnxtc0=
 github.com/tidwall/gjson v1.14.4 h1:uo0p8EbA09J7RQaflQ1aBRffTR7xedD2bcIVSYxLnkM=
 github.com/tidwall/match v1.1.1 h1:+Ho715JplO36QYgwN9PGYNhgZvoUSc9X2c80KVTi+GA=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
