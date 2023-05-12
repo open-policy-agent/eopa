@@ -206,6 +206,7 @@ func Log(ctx context.Context, ectx EvalContext, result ast.Value, evalErr error)
 		}
 	}
 
+	m.Timer("server_handler").Stop() // close enough to what OPA does
 	meta := map[string]any{
 		"labels":      singleton.manager.Labels(),
 		"decision_id": decisionID,

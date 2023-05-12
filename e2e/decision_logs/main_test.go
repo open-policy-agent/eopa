@@ -166,6 +166,10 @@ plugins:
 					if diff := cmp.Diff(exp, act, cmpopts.SortSlices(func(a, b string) bool { return a < b })); diff != "" {
 						t.Errorf("unexpected log[0] metrics: (-want +got):\n%s", diff)
 					}
+					// Was: https://github.com/StyraInc/load-private/issues/625
+					if act := logs[0].Metrics["timer_server_handler_ns"]; act == 0 {
+						t.Error("expected timer_server_handler_ns > 0")
+					}
 				}
 				{
 					exp, act := []string{"rand.intn"}, maps.Keys(logs[0].NDBC)
