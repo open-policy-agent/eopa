@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.3.0
+
+This release unveils two new feature sets, and includes some smaller quality-of-life improvements:
+
+### External Key Management (EKM) via Hashicorp Vault
+
+The Styra Load Vault integration can be used to:
+
+* Retrieve the Styra Load License key from a Vault secret
+* Override the configuration for a Styra Load service or key configuration
+* Override the configuration of `http.send`
+
+[See the documentation for more details.](https://docs.styra.com/load/configuration/using-secrets/from-hashicorp-vault)
+
+### Enhanced Decision Logging
+
+Styra Load now features its own decision logging infrastructure!
+It gives you extra flexibility, and a multitude of new sinks, including
+**Apache Kafka** and **Splunk**.
+
+[Find out more about this by following the tutorial.](https://docs.styra.com/load/tutorials/decision-logs)
+
+### More Enhancements
+
+* The [Git data source](https://docs.styra.com/load/configuration/data/git) now allows configuring a `branch`.
+* The [S3 data source](https://docs.styra.com/load/configuration/data/s3) now lets you provide an `endpoint`.
+   This enables you to work with other S3-compatible APIs, like MinIO.
+
+
 ## v1.2.0
 
 This release contains an update to the [latest version of OPA][gh-opa-v52] (`v0.52.0`), as well as bugfixes and performance improvements.
