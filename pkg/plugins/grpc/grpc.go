@@ -3,14 +3,13 @@
 // much code from OPA as is reasonable.
 //
 // Several features of the OPA HTTP Server are missing, notably:
-//   - TLS support
 //   - Logging
-//   - Metrics
 //   - Provenance
 //   - Tracing/Explain
 package grpc
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -29,10 +28,12 @@ import (
 	"github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/topdown"
 	iCache "github.com/open-policy-agent/opa/topdown/cache"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/styrainc/load-private/pkg/plugins/bundle"
 	bulkv1 "github.com/styrainc/load-private/proto/gen/go/load/bulk/v1"
 	datav1 "github.com/styrainc/load-private/proto/gen/go/load/data/v1"
 	policyv1 "github.com/styrainc/load-private/proto/gen/go/load/policy/v1"
+	"go.opentelemetry.io/otel/trace"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -41,6 +42,8 @@ import (
 
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
+
+	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 )
 
 // AuthenticationScheme enumerates the supported authentication schemes. The
@@ -74,20 +77,18 @@ const defaultMinTLSVersion = tls.VersionTLS12
 // around an actual grpc.Server type. At runtime, the grpc.Server runs in
 // its own goroutine, and is optionally supported by a certLoop goroutine
 // that checks to see if certificates have changed on disk since the last
-// refresh. If the certificate files changed, the certLoop triggers a
-// complete shutdown-and-restart sequence for the grpc.Server, to ensure
-// that it comes back up under the correct TLS config. This sequence will
-// also result in the shutdown and respawning of the certLoop goroutine.
-// This process roughly mimics that of the OPA HTTP server's certLoop.
+// refresh. If the certificate files changed, the certLoop replaces the
+// in-memory certificate with an updated one. For more involved TLS
+// reconfiguration, the entire gRPC plugin must be restarted.
 type Server struct {
-	mtx                 sync.RWMutex
-	preparedEvalQueries *cache
-	manager             *plugins.Manager
-	grpcServer          *grpc.Server
-	decisionIDFactory   func() string
-	// metrics                Metrics
+	mtx                    sync.RWMutex
+	preparedEvalQueries    *cache
+	manager                *plugins.Manager
+	grpcServer             *grpc.Server
+	decisionIDFactory      func() string
+	metrics                *grpcprom.ServerMetrics
 	interQueryBuiltinCache iCache.InterQueryCache
-	// allPluginsOkOnce       bool
+
 	runtimeData     *ast.Term
 	ndbCacheEnabled bool
 	store           storage.Store
@@ -107,7 +108,6 @@ type Server struct {
 	tlsRootCACertFilename string
 	certPool              *x509.CertPool
 
-	// No certPool, since we aren't doing mTLS.
 	certLoopHaltChannel             chan struct{}
 	certLoopShutdownCompleteChannel chan struct{}
 
@@ -123,6 +123,7 @@ var unsafeBuiltinsMap = map[string]struct{}{ast.HTTPSend.Name: {}}
 
 // Validation of TLS config happens upstream in (factory).Validate().
 func New(manager *plugins.Manager, config Config) *Server {
+	options := make([]grpc.ServerOption, 0, 1)
 	creds := insecure.NewCredentials()
 
 	server := Server{
@@ -150,12 +151,44 @@ func New(manager *plugins.Manager, config Config) *Server {
 		server.certRefreshInterval = config.TLS.validatedCertRefreshDuration
 	}
 
-	if tlsCreds := server.getTLSCredentials(); tlsCreds != nil {
+	if tlsCreds := server.loadTLSCredentials(); tlsCreds != nil {
 		creds = tlsCreds
+	}
+	options = append(options, grpc.Creds(creds))
+
+	// Set up metrics.
+	// Derived from the example at:
+	//   https://github.com/grpc-ecosystem/go-grpc-middleware/blob/main/examples/server/main.go
+	srvMetrics := grpcprom.NewServerMetrics(
+		grpcprom.WithServerCounterOptions(
+			grpcprom.CounterOption(func(o *prometheus.CounterOpts) {
+				o.Namespace = "styra"
+				o.Subsystem = "load"
+			}),
+		),
+	)
+	// Bind metrics to the manager's registerer if it exists.
+	var metricsOption grpc.ServerOption
+	metricsOK := false
+	if reg := manager.PrometheusRegister(); reg != nil {
+		if err := reg.Register(srvMetrics); err == nil {
+			exemplarFromContext := func(ctx context.Context) prometheus.Labels {
+				if span := trace.SpanContextFromContext(ctx); span.IsSampled() {
+					return prometheus.Labels{"traceID": span.TraceID().String()}
+				}
+				return nil
+			}
+			metricsOption = grpc.ChainUnaryInterceptor(srvMetrics.UnaryServerInterceptor(grpcprom.WithExemplarFromContext(exemplarFromContext)))
+			metricsOK = true
+			options = append(options, metricsOption)
+		}
 	}
 
 	// Fills in all grpc.Server-related parts of the Server struct.
-	server.initGRPCServer(creds)
+	server.initGRPCServer(options...)
+	if metricsOK {
+		srvMetrics.InitializeMetrics(server.grpcServer)
+	}
 
 	return &server
 }
@@ -165,28 +198,29 @@ func (s *Server) Serve(lis net.Listener) error {
 }
 
 func (s *Server) Stop() {
+	if reg := s.manager.PrometheusRegister(); reg != nil {
+		reg.Unregister(s.metrics)
+	}
 	s.grpcServer.Stop()
 }
 
 func (s *Server) GracefulStop() {
+	if reg := s.manager.PrometheusRegister(); reg != nil {
+		reg.Unregister(s.metrics)
+	}
 	s.grpcServer.GracefulStop()
 }
 
 // This function initializes a gRPC server from the Server state, namely
 // certFile and certKeyFile. It should only be used by the plugin,
 // certLoop, and (*Server).New() method.
-func (s *Server) initGRPCServer(creds credentials.TransportCredentials) error {
-	var serverOptions []grpc.ServerOption
+func (s *Server) initGRPCServer(options ...grpc.ServerOption) error {
 	var stopCertLoopChannel chan struct{}
 	var certLoopShutdownCompleteChannel chan struct{}
 
-	if creds != nil {
-		serverOptions = append(serverOptions, grpc.Creds(creds))
-	}
-
 	// Lock the server during the gRPC server swapout process.
 	s.mtx.Lock()
-	s.grpcServer = grpc.NewServer(serverOptions...)
+	s.grpcServer = grpc.NewServer(options...)
 	s.certLoopHaltChannel = stopCertLoopChannel
 	s.certLoopShutdownCompleteChannel = certLoopShutdownCompleteChannel
 
@@ -202,7 +236,7 @@ func (s *Server) initGRPCServer(creds credentials.TransportCredentials) error {
 	return nil
 }
 
-func (s *Server) getTLSCredentials() credentials.TransportCredentials {
+func (s *Server) loadTLSCredentials() credentials.TransportCredentials {
 	// Load normal TLS public/private key pair.
 	// Note(philip): All other TLS options are gated behind the server
 	// being able to load up its own TLS config. As best I can tell, this
@@ -211,25 +245,39 @@ func (s *Server) getTLSCredentials() credentials.TransportCredentials {
 		var tlsConfig tls.Config
 		var err error
 		// Attempt to load the server's initial cert keypair.
-		cert, err := tls.LoadX509KeyPair(s.certFilename, s.certKeyFilename)
+		// Note(philip): Loading the files up manually here instead of
+		// using tls.LoadX509KeyPair() allows us to hit the disk just once,
+		// and reuse the file contents for both use cases (cert, hashes).
+		certPEMBlock, err := os.ReadFile(s.certFilename)
+		if err != nil {
+			s.logger.Error("Failed to reload server certificate: %s.", err.Error())
+			s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to reload server certificate: " + err.Error()})
+			return nil
+		}
+		keyPEMBlock, err := os.ReadFile(s.certKeyFilename)
+		if err != nil {
+			s.logger.Error("Failed to reload server certificate key: %s.", err.Error())
+			s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to reload server certificate key: " + err.Error()})
+			return nil
+		}
+		cert, err := tls.X509KeyPair(certPEMBlock, keyPEMBlock)
 		if err != nil {
 			s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to load public/private key pair: " + err.Error()})
 			return nil
 		}
+		s.certMtx.Lock()
 		s.cert = &cert
+		s.certMtx.Unlock()
 		tlsConfig.GetCertificate = s.getCertificate
-		// Load the files up again, and hash them.
-		// TODO(philip): We should fix this in the future to pull up the
-		// key pair just once, and then hash the byte buffers. That will
-		// require mirroring the changes to grpc/certs.go as well.
-		certHash, err := hash(s.certFilename)
+
+		certHash, err := hash(bytes.NewReader(certPEMBlock))
 		if err != nil {
 			s.logger.Error("Failed to refresh server certificate: %s.", err.Error())
 			s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to refresh server certificate: " + err.Error()})
 			return nil
 		}
 		s.certFileHash = certHash
-		certKeyHash, err := hash(s.certKeyFilename)
+		certKeyHash, err := hash(bytes.NewReader(keyPEMBlock))
 		if err != nil {
 			s.logger.Error("Failed to refresh server certificate: %s.", err.Error())
 			s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to refresh server certificate: " + err.Error()})

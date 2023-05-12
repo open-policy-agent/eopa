@@ -7,8 +7,8 @@ import (
 	"io"
 	"os"
 
+	"github.com/open-policy-agent/opa/plugins"
 	ftime "github.com/styrainc/load-private/pkg/plugins/grpc/utils"
-	"google.golang.org/grpc/credentials"
 )
 
 func (s *Server) getCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -33,8 +33,6 @@ func (s *Server) certLoop() Loop {
 				shutdownCompleteC <- struct{}{}
 				return nil
 			case <-timer.C:
-				var creds credentials.TransportCredentials
-
 				if s.certFilename == "" || s.certKeyFilename == "" {
 					// This condition can happen during misconfigurations,
 					// and will be resolved when the goroutine receives a
@@ -42,48 +40,58 @@ func (s *Server) certLoop() Loop {
 					continue
 				}
 
-				certHash, err := hash(s.certFilename)
+				// Read file contents off disk just once, use up to twice.
+				certPEMBlock, err := os.ReadFile(s.certFilename)
+				if err != nil {
+					s.logger.Info("Failed to reload server certificate: %s", err.Error())
+					continue
+				}
+				keyPEMBlock, err := os.ReadFile(s.certKeyFilename)
+				if err != nil {
+					s.logger.Info("Failed to reload server certificate key: %s", err.Error())
+					continue
+				}
+
+				// Compute hashes of each file's contents.
+				certHash, err := hash(bytes.NewReader(certPEMBlock))
 				if err != nil {
 					s.logger.Info("Failed to refresh server certificate: %s", err.Error())
 					continue
 				}
-				certKeyHash, err := hash(s.certKeyFilename)
+				certKeyHash, err := hash(bytes.NewReader(keyPEMBlock))
 				if err != nil {
 					s.logger.Info("Failed to refresh server certificate: %s", err.Error())
 					continue
 				}
 
-				s.certMtx.Lock()
-
+				// If there's a difference between hashes, then the
+				// certificate was updated, and we need to update the cert
+				// the gRPC server is using.
 				different := !bytes.Equal(s.certFileHash, certHash) ||
 					!bytes.Equal(s.certKeyFileHash, certKeyHash)
 
-				if different { // create new credentials
-					if tlsCreds := s.getTLSCredentials(); tlsCreds != nil {
-						creds = tlsCreds
-					}
-					s.logger.Debug("Refreshed server certificate")
-				}
-
-				s.certMtx.Unlock()
-
+				// Update server certificate. It will be automatically
+				// picked up on future TLS connections, courtesy of the
+				// TLSConfig's getCertificate() parameter.
 				if different {
-					return s.initGRPCServer(creds)
+					cert, err := tls.X509KeyPair(certPEMBlock, keyPEMBlock)
+					if err != nil {
+						s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to load public/private key pair: " + err.Error()})
+						return nil
+					}
+					s.certMtx.Lock()
+					s.cert = &cert
+					s.certMtx.Unlock()
+					s.logger.Debug("Refreshed server certificate")
 				}
 			}
 		}
 	}
 }
 
-func hash(file string) ([]byte, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
+func hash(src io.Reader) ([]byte, error) {
 	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
+	if _, err := io.Copy(h, src); err != nil {
 		return nil, err
 	}
 

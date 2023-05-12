@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/goleak"
 
 	"github.com/open-policy-agent/opa/plugins"
@@ -119,9 +120,33 @@ func getTestManagerWithOpts(config []byte, stores ...storage.Store) *plugins.Man
 		store = stores[0]
 	}
 
-	manager, err := plugins.New(config, "test-instance-id", store)
+	registerMock := &prometheusRegisterMock{
+		Collectors: map[prometheus.Collector]bool{},
+	}
+	manager, err := plugins.New(config, "test-instance-id", store, plugins.WithPrometheusRegister(registerMock))
 	if err != nil {
 		panic(err)
 	}
 	return manager
+}
+
+// Borrowed from OPA's plugins/status/plugin_test.go:
+type prometheusRegisterMock struct {
+	Collectors map[prometheus.Collector]bool
+}
+
+func (p prometheusRegisterMock) Register(collector prometheus.Collector) error {
+	p.Collectors[collector] = true
+	return nil
+}
+
+func (p prometheusRegisterMock) MustRegister(collector ...prometheus.Collector) {
+	for _, c := range collector {
+		p.Collectors[c] = true
+	}
+}
+
+func (p prometheusRegisterMock) Unregister(collector prometheus.Collector) bool {
+	delete(p.Collectors, collector)
+	return true
 }
