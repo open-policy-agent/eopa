@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,13 +31,17 @@ const (
 )
 
 var (
-	databases   = databasePool{dbs: make(map[[2]string]*databaseConnection)}
+	databases   = databasePool{dbs: make(map[databaseKey]*databaseConnection)}
 	allowedKeys = ast.NewSet(
 		ast.StringTerm("args"),
 		ast.StringTerm("cache"),
 		ast.StringTerm("cache_duration"),
-		ast.StringTerm("driver"),
+		ast.StringTerm("connection_max_idle_time"),
+		ast.StringTerm("connection_max_life_time"),
 		ast.StringTerm("data_source_name"),
+		ast.StringTerm("driver"),
+		ast.StringTerm("max_idle_connections"),
+		ast.StringTerm("max_open_connections"),
 		ast.StringTerm("query"),
 		ast.StringTerm("raise_error"),
 		ast.StringTerm("row_object"),
@@ -64,7 +69,16 @@ var (
 type (
 	databasePool struct {
 		mu  sync.Mutex
-		dbs map[[2]string]*databaseConnection
+		dbs map[databaseKey]*databaseConnection
+	}
+
+	databaseKey struct {
+		driver                string
+		dsn                   string
+		maxOpenConnections    int64
+		maxIdleConnections    int64
+		connectionMaxIdleTime time.Duration
+		connectionMaxLifetime time.Duration
 	}
 
 	databaseConnection struct {
@@ -118,6 +132,26 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 	}
 
 	dsn, err := getRequestString(obj, "data_source_name")
+	if err != nil {
+		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+	}
+
+	maxOpenConnections, err := getRequestIntWithDefault(obj, "max_open_connections", 0)
+	if err != nil {
+		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+	}
+
+	maxIdleConnections, err := getRequestIntWithDefault(obj, "max_idle_connections", 2)
+	if err != nil {
+		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+	}
+
+	connectionMaxIdleTime, err := getRequestTimeoutWithDefault(obj, "connection_max_idle_time", 0)
+	if err != nil {
+		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+	}
+
+	connectionMaxLifetime, err := getRequestTimeoutWithDefault(obj, "connection_max_life_time", 0)
 	if err != nil {
 		return handleBuiltinErr(sqlSendName, bctx.Location, err)
 	}
@@ -177,7 +211,7 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 	}
 
 	result, queryErr := func() ([]interface{}, error) {
-		db, err := databases.Get(bctx.Context, driver, dsn)
+		db, err := databases.Get(bctx.Context, driver, dsn, maxOpenConnections, maxIdleConnections, connectionMaxIdleTime, connectionMaxLifetime)
 		if err != nil {
 			return nil, err
 		}
@@ -268,10 +302,18 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 	return iter(ast.NewTerm(responseObj))
 }
 
-func (p *databasePool) Get(_ context.Context, driver string, dsn string) (*databaseConnection, error) {
+func (p *databasePool) Get(_ context.Context, driver string, dsn string, maxOpenConnections int64, maxIdleConnections int64, connectionMaxIdleTime time.Duration, connectionMaxLifetime time.Duration) (*databaseConnection, error) {
 	p.mu.Lock()
 
-	db, ok := p.dbs[[2]string{driver, dsn}]
+	key := databaseKey{
+		driver,
+		dsn,
+		maxOpenConnections,
+		maxIdleConnections,
+		connectionMaxIdleTime,
+		connectionMaxLifetime,
+	}
+	db, ok := p.dbs[key]
 	if ok {
 		p.mu.Unlock()
 		return db, nil
@@ -285,7 +327,7 @@ func (p *databasePool) Get(_ context.Context, driver string, dsn string) (*datab
 	}
 
 	p.mu.Lock()
-	existing, ok := p.dbs[[2]string{driver, dsn}]
+	existing, ok := p.dbs[key]
 	if ok {
 		p.mu.Unlock()
 
@@ -296,11 +338,26 @@ func (p *databasePool) Get(_ context.Context, driver string, dsn string) (*datab
 		return existing, nil
 	}
 
+	newDb.SetMaxOpenConns(convertToInt(maxOpenConnections))
+	newDb.SetMaxIdleConns(convertToInt(maxIdleConnections))
+	newDb.SetConnMaxIdleTime(connectionMaxIdleTime)
+	newDb.SetConnMaxLifetime(connectionMaxLifetime)
+
 	defer p.mu.Unlock()
 
 	db = &databaseConnection{db: newDb, statements: make(map[string]*sql.Stmt)}
-	p.dbs[[2]string{driver, dsn}] = db
+	p.dbs[key] = db
 	return db, nil
+}
+
+func convertToInt(n int64) int {
+	if n > math.MaxInt {
+		return math.MaxInt
+	} else if n < math.MinInt {
+		return math.MinInt
+	}
+
+	return int(n)
 }
 
 func (c *databaseConnection) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
@@ -323,7 +380,7 @@ func (c *databaseConnection) Query(ctx context.Context, query string, args ...an
 			stmt = existing
 		} else {
 			c.statements[query] = stmt
-			// TODO: Statement cleanup.
+			// TODO: Statement cleanup. TTL to remove the oldest entries first if size limit reached?
 			c.mu.Unlock()
 		}
 	}
@@ -401,6 +458,25 @@ func getRequestTimeoutWithDefault(obj ast.Object, key string, def time.Duration)
 
 	default:
 		return timeout, builtins.NewOperandErr(1, "'timeout' must be one of {string, number} but got %s", ast.TypeName(t))
+	}
+}
+
+func getRequestIntWithDefault(obj ast.Object, key string, def int64) (int64, error) {
+	v := obj.Get(ast.StringTerm(key))
+	if v == nil {
+		return def, nil
+	}
+
+	switch n := v.Value.(type) {
+	case ast.Number:
+		i, ok := n.Int64()
+		if !ok {
+			return 0, fmt.Errorf("invalid number value %v, must be int64", v)
+		}
+		return i, nil
+
+	default:
+		return 0, builtins.NewOperandErr(1, "'int64' must be one of {string, number} but got %s", ast.TypeName(n))
 	}
 }
 
