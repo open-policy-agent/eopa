@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/lib/pq"
 	"modernc.org/sqlite"
 
@@ -28,6 +28,7 @@ const (
 	// points to the sql.send() specific intra-query cache resides at.
 	sqlSendBuiltinCacheKey         sqlSendKey = "SQL_SEND_CACHE_KEY"
 	interQueryCacheDurationDefault            = 60 * time.Second
+	maxPreparedStatementsDefault              = 128
 )
 
 var (
@@ -42,6 +43,7 @@ var (
 		ast.StringTerm("driver"),
 		ast.StringTerm("max_idle_connections"),
 		ast.StringTerm("max_open_connections"),
+		ast.StringTerm("max_prepared_statements"),
 		ast.StringTerm("query"),
 		ast.StringTerm("raise_error"),
 		ast.StringTerm("row_object"),
@@ -62,8 +64,9 @@ var (
 		Nondeterministic: true,
 	}
 
-	sqlSendLatencyMetricKey    = "rego_builtin_" + strings.ReplaceAll(sqlSendName, ".", "_")
+	sqlSendLatencyMetricKey    = "rego_builtin_sql_send"
 	sqlSendInterQueryCacheHits = sqlSendLatencyMetricKey + "_interquery_cache_hits"
+	sqlSendPreparedQueries     = sqlSendLatencyMetricKey + "_prepared_queries"
 )
 
 type (
@@ -79,12 +82,19 @@ type (
 		maxIdleConnections    int64
 		connectionMaxIdleTime time.Duration
 		connectionMaxLifetime time.Duration
+		maxPreparedStatements int64
 	}
 
 	databaseConnection struct {
-		mu         sync.Mutex
 		db         *sql.DB
-		statements map[string]*sql.Stmt
+		statements *lru.Cache[string, *databaseStmt]
+	}
+
+	databaseStmt struct {
+		mu     sync.Mutex
+		closed bool
+		active int
+		stmt   *sql.Stmt
 	}
 
 	intraQueryCache struct {
@@ -156,6 +166,14 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 		return handleBuiltinErr(sqlSendName, bctx.Location, err)
 	}
 
+	maxPreparedStatements, err := getRequestIntWithDefault(obj, "max_prepared_statements", maxPreparedStatementsDefault)
+	if err != nil {
+		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+	}
+	if maxPreparedStatements <= 0 {
+		maxPreparedStatements = 1
+	}
+
 	query, err := getRequestString(obj, "query")
 	if err != nil {
 		return handleBuiltinErr(sqlSendName, bctx.Location, err)
@@ -211,12 +229,12 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 	}
 
 	result, queryErr := func() ([]interface{}, error) {
-		db, err := databases.Get(bctx.Context, driver, dsn, maxOpenConnections, maxIdleConnections, connectionMaxIdleTime, connectionMaxLifetime)
+		db, err := databases.Get(bctx.Context, driver, dsn, maxOpenConnections, maxIdleConnections, connectionMaxIdleTime, connectionMaxLifetime, maxPreparedStatements)
 		if err != nil {
 			return nil, err
 		}
 
-		rows, err := db.Query(bctx.Context, query, args...)
+		rows, err := db.Query(bctx, query, args...)
 		if err != nil {
 			return nil, err
 		}
@@ -302,7 +320,7 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 	return iter(ast.NewTerm(responseObj))
 }
 
-func (p *databasePool) Get(_ context.Context, driver string, dsn string, maxOpenConnections int64, maxIdleConnections int64, connectionMaxIdleTime time.Duration, connectionMaxLifetime time.Duration) (*databaseConnection, error) {
+func (p *databasePool) Get(_ context.Context, driver string, dsn string, maxOpenConnections int64, maxIdleConnections int64, connectionMaxIdleTime time.Duration, connectionMaxLifetime time.Duration, maxPreparedStatements int64) (*databaseConnection, error) {
 	p.mu.Lock()
 
 	key := databaseKey{
@@ -312,6 +330,7 @@ func (p *databasePool) Get(_ context.Context, driver string, dsn string, maxOpen
 		maxIdleConnections,
 		connectionMaxIdleTime,
 		connectionMaxLifetime,
+		maxPreparedStatements,
 	}
 	db, ok := p.dbs[key]
 	if ok {
@@ -345,7 +364,12 @@ func (p *databasePool) Get(_ context.Context, driver string, dsn string, maxOpen
 
 	defer p.mu.Unlock()
 
-	db = &databaseConnection{db: newDb, statements: make(map[string]*sql.Stmt)}
+	db = &databaseConnection{db: newDb}
+	db.statements, err = lru.NewWithEvict[string, *databaseStmt](convertToInt(maxPreparedStatements), db.evict)
+	if err != nil {
+		return nil, err
+	}
+
 	p.dbs[key] = db
 	return db, nil
 }
@@ -360,32 +384,85 @@ func convertToInt(n int64) int {
 	return int(n)
 }
 
-func (c *databaseConnection) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	c.mu.Lock()
-	stmt, ok := c.statements[query]
-	c.mu.Unlock()
+func (c *databaseConnection) Query(bctx topdown.BuiltinContext, query string, args ...any) (*sql.Rows, error) {
+	ctx := bctx.Context
 
-	if !ok {
-		var err error
-		stmt, err = c.db.PrepareContext(ctx, query)
+	for ctx.Err() == nil {
+		stmt, ok := c.statements.Get(query)
+		if ok && stmt.Acquire(1) {
+			defer stmt.Release(1, false)
+			return stmt.QueryContext(ctx, args...)
+		}
+
+		s, err := c.db.PrepareContext(ctx, query)
 		if err != nil {
 			return nil, err
 		}
 
-		c.mu.Lock()
-		if existing, ok := c.statements[query]; ok {
-			c.mu.Unlock()
+		bctx.Metrics.Counter(sqlSendPreparedQueries).Incr()
 
-			stmt.Close()
-			stmt = existing
-		} else {
-			c.statements[query] = stmt
-			// TODO: Statement cleanup. TTL to remove the oldest entries first if size limit reached?
-			c.mu.Unlock()
+		stmt = &databaseStmt{closed: false, stmt: s}
+		stmt.Acquire(1) // Always succeeds.
+
+		if _, exists, _ := c.statements.PeekOrAdd(query, stmt); exists {
+			// Check the cache again, it should still have a
+			// statement there unless it was just evicted.
+			stmt.Release(1, true)
+			continue
 		}
+
+		// New statement is guaranteed not to be closed yet
+		// since it was inserted into the cache as in active
+		// use.
+
+		defer stmt.Release(1, false)
+		return stmt.QueryContext(ctx, args...)
 	}
 
-	return stmt.QueryContext(ctx, args...)
+	return nil, ctx.Err()
+}
+
+func (*databaseConnection) evict(_ string, stmt *databaseStmt) {
+	stmt.Release(0, true)
+}
+
+func (s *databaseStmt) QueryContext(ctx context.Context, args ...interface{}) (*sql.Rows, error) {
+	return s.stmt.QueryContext(ctx, args...)
+}
+
+func (s *databaseStmt) Acquire(n int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.closed {
+		return false
+	}
+
+	s.active += n
+	return true
+}
+
+func (s *databaseStmt) Release(n int, close bool) {
+	var closeStmt *sql.Stmt
+
+	s.mu.Lock()
+
+	s.active -= n
+
+	if close {
+		s.closed = true
+	}
+
+	if s.closed && s.active == 0 {
+		closeStmt = s.stmt
+		s.stmt = nil
+	}
+
+	s.mu.Unlock()
+
+	if closeStmt != nil {
+		closeStmt.Close() // TODO: Anything to do with the error?
+	}
 }
 
 func handleBuiltinErr(name string, loc *ast.Location, err error) error {
@@ -473,6 +550,15 @@ func getRequestIntWithDefault(obj ast.Object, key string, def int64) (int64, err
 		if !ok {
 			return 0, fmt.Errorf("invalid number value %v, must be int64", v)
 		}
+		return i, nil
+
+	case ast.String:
+		var err error
+		i, err := strconv.ParseInt(string(n), 10, 64)
+		if err == nil {
+			return 0, fmt.Errorf("invalid string value %v, must be integer", v)
+		}
+
 		return i, nil
 
 	default:

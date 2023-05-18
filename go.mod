@@ -18,6 +18,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus v1.0.0-rc.0
+	github.com/hashicorp/golang-lru/v2 v2.0.1
 	github.com/hashicorp/vault/api v1.9.1
 	github.com/hashicorp/vault/api/auth/approle v0.4.0
 	github.com/hashicorp/vault/api/auth/kubernetes v0.4.0
@@ -170,7 +171,6 @@ require (
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.2 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
-	github.com/hashicorp/golang-lru/v2 v2.0.1 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-5 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

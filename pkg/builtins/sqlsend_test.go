@@ -33,6 +33,7 @@ func TestSQLSend(t *testing.T) {
 		doNotResetCache     bool
 		time                time.Time
 		interQueryCacheHits int
+		preparedQueries     int
 	}{
 		{
 			"missing parameter(s)",
@@ -41,6 +42,7 @@ func TestSQLSend(t *testing.T) {
 			`eval_type_error: sql.send: operand 1 missing required request parameters(s): {"data_source_name", "driver", "query"}`,
 			false,
 			now,
+			0,
 			0,
 		},
 		{
@@ -51,6 +53,7 @@ func TestSQLSend(t *testing.T) {
 			false,
 			now,
 			0,
+			1,
 		},
 		{
 			"a multi-row query",
@@ -60,6 +63,7 @@ func TestSQLSend(t *testing.T) {
 			false,
 			now,
 			0,
+			1,
 		},
 		{
 			"query with args",
@@ -69,6 +73,7 @@ func TestSQLSend(t *testing.T) {
 			false,
 			now,
 			0,
+			1,
 		},
 		{
 			"intra-query query cache",
@@ -81,6 +86,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 			false,
 			now,
 			0,
+			1, // prepared query is cached so only one prepared query required
 		},
 		{
 			"inter-query query cache warmup (default duration)",
@@ -89,6 +95,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 			"",
 			false,
 			now,
+			0,
 			0,
 		},
 		{
@@ -99,6 +106,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 			true, // keep the warmup results
 			now.Add(interQueryCacheDurationDefault - 1),
 			1,
+			0,
 		},
 		{
 			"inter-query query cache check (default duration, expired)",
@@ -107,6 +115,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 			"",
 			true, // keep the warmup results
 			now.Add(interQueryCacheDurationDefault),
+			0,
 			0,
 		},
 		{
@@ -117,6 +126,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 			false,
 			now,
 			0,
+			0,
 		},
 		{
 			"inter-query query cache check (explicit duration, valid)",
@@ -126,6 +136,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 			true, // keep the warmup results
 			now.Add(10*time.Second - 1),
 			1,
+			0,
 		},
 		{
 			"inter-query query cache check (explicit duration, expired)",
@@ -134,6 +145,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 			"",
 			true, // keep the warmup results
 			now.Add(10 * time.Second),
+			0,
 			0,
 		},
 		{
@@ -144,6 +156,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 			false,
 			now,
 			0,
+			0, // single row query already prepared the query
 		},
 		{
 			"error w/o raise",
@@ -153,6 +166,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 			false,
 			now,
 			0,
+			0,
 		},
 		{
 			"error with raise",
@@ -161,6 +175,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 			"",
 			false,
 			now,
+			0,
 			0,
 		},
 	}
@@ -182,12 +197,12 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 				})
 			}
 
-			execute(t, interQueryCache, "package t\n"+tc.source, "t", tc.result, tc.error, tc.time, tc.interQueryCacheHits)
+			execute(t, interQueryCache, "package t\n"+tc.source, "t", tc.result, tc.error, tc.time, tc.interQueryCacheHits, tc.preparedQueries)
 		})
 	}
 }
 
-func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string, query string, expectedResult string, expectedError string, time time.Time, expectedInterQueryCacheHits int) {
+func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string, query string, expectedResult string, expectedError string, time time.Time, expectedInterQueryCacheHits int, expectedPreparedQueries int) {
 	b := &bundle.Bundle{
 		Modules: []bundle.ModuleFile{
 			{
@@ -240,6 +255,10 @@ func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string
 
 	if hits := metrics.Counter(sqlSendInterQueryCacheHits).Value().(uint64); hits != uint64(expectedInterQueryCacheHits) {
 		tb.Fatalf("got %v hits, wanted %v\n", hits, expectedInterQueryCacheHits)
+	}
+
+	if prepared := metrics.Counter(sqlSendPreparedQueries).Value().(uint64); prepared != uint64(expectedPreparedQueries) {
+		tb.Fatalf("got %v prepared queries, wanted %v\n", prepared, expectedPreparedQueries)
 	}
 }
 
