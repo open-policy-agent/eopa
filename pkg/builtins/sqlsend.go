@@ -94,11 +94,6 @@ type (
 	sqlSendKey string
 )
 
-func init() {
-	ast.RegisterBuiltin(sqlSend)
-	topdown.RegisterBuiltinFunc(sqlSendName, builtinSQLSend)
-}
-
 func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func(*ast.Term) error) error {
 	pos := 1
 	obj, err := builtins.ObjectOperand(operands[0].Value, pos)
@@ -607,4 +602,8 @@ func insertIntraQueryCache(bctx topdown.BuiltinContext, req ast.Object, resp ast
 	} else {
 		getIntraQueryCache(bctx).PutError(req, queryErr)
 	}
+}
+
+func init() {
+	topdown.RegisterBuiltinFunc(sqlSendName, builtinSQLSend)
 }
