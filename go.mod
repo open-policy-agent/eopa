@@ -42,7 +42,7 @@ require (
 	github.com/stretchr/testify v1.8.2
 	github.com/testcontainers/testcontainers-go v0.20.1
 	github.com/testcontainers/testcontainers-go/modules/vault v0.20.1
-	github.com/twmb/franz-go v1.13.3
+	github.com/twmb/franz-go v1.13.4
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	go.opentelemetry.io/otel/trace v1.14.0
 	go.uber.org/goleak v1.2.1
