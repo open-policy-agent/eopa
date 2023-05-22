@@ -2,8 +2,11 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"testing"
 
+	"github.com/open-policy-agent/opa/config"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/util"
@@ -232,6 +235,47 @@ func TestStorePolicies(t *testing.T) {
 		t.Fatal(err)
 	} else if len(policies) != 0 {
 		t.Error("incorrect list")
+	}
+}
+
+func TestStoreDisk(t *testing.T) {
+	ctx := context.Background()
+	config := config.Config{
+		Storage: &struct {
+			Disk json.RawMessage `json:"disk,omitempty"`
+			SQL  json.RawMessage `json:"sql,omitempty"`
+		}{
+			Disk: json.RawMessage(fmt.Sprintf(`{"directory": "%s", "partitions": ["/a/*", "/b/c/*/*"]}`, t.TempDir())),
+		},
+	}
+
+	if _, err := New2(ctx, logging.NewNoOpLogger(), nil, util.MustMarshalJSON(config), "id"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestStoreSQL(t *testing.T) {
+	ctx := context.Background()
+	config := config.Config{
+		Storage: &struct {
+			Disk json.RawMessage `json:"disk,omitempty"`
+			SQL  json.RawMessage `json:"sql,omitempty"`
+		}{
+			SQL: json.RawMessage(`{
+"driver": "sqlite",
+"data_source_name": "file::memory:?cache=shared",
+"tables": [
+    {"path": "/a/b", "table": "t1", "primary_key": ["c1"], "values": [{"column": "v1", "path": "/c2", "type": "string"}]},
+    {"path": "/a/c", "table": "t2", "primary_key": ["c1", "c2"], "values": [{"column": "v1", "path": "/c3", "type": "string"}]}
+]
+}
+`),
+		},
+	}
+
+	_, err := New2(ctx, logging.NewNoOpLogger(), nil, util.MustMarshalJSON(config), "id")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
