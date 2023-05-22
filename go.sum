@@ -93,8 +93,8 @@ github.com/Shopify/sarama v1.30.1 h1:z47lP/5PBw2UVKf1lvfS5uWXaJws6ggk9PLnKEHtZiQ
 github.com/Shopify/sarama v1.30.1/go.mod h1:hGgx05L/DiW8XYBXeJdKIN6V2QUy2H6JqME5VT1NLRw=
 github.com/Shopify/toxiproxy/v2 v2.1.6-0.20210914104332-15ea381dcdae h1:ePgznFqEG1v3AjMklnK8H7BSc++FDSo7xfK9K7Af+0Y=
 github.com/Shopify/toxiproxy/v2 v2.1.6-0.20210914104332-15ea381dcdae/go.mod h1:/cvHQkZ1fst0EmZnA5dFtiQdWCNCFYzb+uE2vqVgvx0=
-github.com/StyraInc/opa v0.52.1-0.20230510210516-6e7b1e39cffd h1:8bcs46gDXN3aQ4j/2r6j3F4b2gR/6bERmhV8WbZpVos=
-github.com/StyraInc/opa v0.52.1-0.20230510210516-6e7b1e39cffd/go.mod h1:2n99s7WY/BXZUWUOq10JdTgK+G6XM4FYGoe7kQ5Vg0s=
+github.com/StyraInc/opa v0.52.1-0.20230522105356-0735e8b46afa h1:dD42ZvJPVf1YWFZxXbuiy893YxG1rU2PznOez//QGs0=
+github.com/StyraInc/opa v0.52.1-0.20230522105356-0735e8b46afa/go.mod h1:2n99s7WY/BXZUWUOq10JdTgK+G6XM4FYGoe7kQ5Vg0s=
 github.com/acomagu/bufpipe v1.0.4 h1:e3H4WUzM3npvo5uv95QuJM3cQspFNtFBzvJ2oNjKIDQ=
 github.com/acomagu/bufpipe v1.0.4/go.mod h1:mxdxdup/WdsKVreO5GpW4+M/1CE2sMG4jeGJ2sYmHc4=
 github.com/agnivade/levenshtein v1.1.1 h1:QY8M92nrzkmr798gCo3kmMyqXFzdQVpxLlGPRBij0P8=
