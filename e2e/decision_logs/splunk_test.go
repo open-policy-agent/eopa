@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/styrainc/load-private/e2e/wait"
 )
 
@@ -130,7 +130,7 @@ plugins:
 					ID:     1,
 					Labels: standardLabels,
 				}
-				if diff := cmp.Diff(dl, s.Event, cmpopts.IgnoreFields(payload{}, "Metrics", "DecisionID", "Labels.ID", "NDBC")); diff != "" {
+				if diff := cmp.Diff(dl, s.Event, stdIgnores); diff != "" {
 					t.Errorf("diff: (-want +got):\n%s", diff)
 				}
 			}

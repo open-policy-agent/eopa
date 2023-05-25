@@ -180,9 +180,19 @@ type batchOpts struct {
 	Period   string `json:"at_period,omitempty"`
 	Array    bool   `json:"array"`    // send batches as arrays of json blobs (default: lines of json blobs)
 	Compress bool   `json:"compress"` // TODO(sr): decide if want to expose the algorithm (gzip vs lz4, snappy, ..)
+
+	unprocessed bool // don't do any processing
 }
 
 func (b *batchOpts) Benthos() map[string]any {
+	m := map[string]any{
+		"count":     b.Count,
+		"byte_size": b.Bytes,
+		"period":    b.Period,
+	}
+	if b.unprocessed {
+		return m
+	}
 	processors := make([]map[string]any, 0, 2)
 	if b.Array {
 		processors = append(processors, map[string]any{"archive": map[string]any{"format": "json_array"}})
@@ -192,12 +202,8 @@ func (b *batchOpts) Benthos() map[string]any {
 	if b.Compress {
 		processors = append(processors, map[string]any{"compress": map[string]any{"algorithm": "gzip"}})
 	}
-	return map[string]any{
-		"count":      b.Count,
-		"byte_size":  b.Bytes,
-		"period":     b.Period,
-		"processors": processors,
-	}
+	m["processors"] = processors
+	return m
 }
 
 type tlsOpts struct {
@@ -266,6 +272,49 @@ func (s *outputSplunkOpts) Extra() []map[string]any {
 	return []map[string]any{
 		{"mapping": `{ "event": this, "time": timestamp_unix() }`},
 	}
+}
+
+type outputS3Opts struct {
+	Endpoint     string `json:"endpoint"`
+	Region       string `json:"region"`
+	ForcePath    bool   `json:"force_path"`
+	Bucket       string `json:"bucket"`
+	AccessKeyID  string `json:"access_key_id"`
+	AccessSecret string `json:"access_secret"`
+	// TODO(sr): support more automatic methods, ec2 role, kms etc
+
+	TLS      *tlsOpts   `json:"tls,omitempty"`
+	Batching *batchOpts `json:"batching,omitempty"`
+
+	tls *sinkAuthTLS
+}
+
+func (s *outputS3Opts) Benthos() map[string]any {
+	m := map[string]any{
+		"bucket":       s.Bucket,
+		"path":         `${!json("timestamp").ts_strftime("%Y/%m/%d/%H")}/${!json("decision_id")}.json`,
+		"content_type": "application/json",
+	}
+	if e := s.Endpoint; e != "" {
+		m["endpoint"] = e
+	}
+	if r := s.Region; r != "" {
+		m["region"] = r
+	}
+	if s.ForcePath {
+		m["force_path_style_urls"] = true
+	}
+	if b := s.Batching; b != nil {
+		m["batching"] = b.Benthos()
+	}
+	if s.tls != nil {
+		m["tls"] = s.tls.Benthos()
+	}
+	m["credentials"] = map[string]any{
+		"id":     s.AccessKeyID,
+		"secret": s.AccessSecret,
+	}
+	return map[string]any{"aws_s3": m}
 }
 
 // This output is for experimentation and not part of the public feature set.

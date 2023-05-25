@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/util"
@@ -239,6 +241,55 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 			outputSplunk.TLS = nil
 		}
 		return outputSplunk, nil
+	case "s3":
+		outputS3 := new(outputS3Opts)
+		if err := util.Unmarshal(outputRaw, outputS3); err != nil {
+			return nil, err
+		}
+		missing := []string{}
+		for k, v := range map[string]string{
+			"bucket": outputS3.Bucket,
+			"region": outputS3.Region,
+		} {
+			if v == "" {
+				missing = append(missing, k)
+			}
+		}
+		if len(missing) > 0 {
+			sort.Strings(missing)
+			return nil, fmt.Errorf("output S3 missing required configs: %s", strings.Join(missing, ", "))
+		}
+		if b := outputS3.Batching; b != nil {
+			b.unprocessed = true
+		}
+		if tls := outputS3.TLS; tls != nil {
+			outputS3.tls = &sinkAuthTLS{
+				Enabled:    true,
+				SkipVerify: tls.SkipVerify,
+			}
+			if tls.Cert != "" && tls.PrivateKey != "" {
+				cert, err := os.ReadFile(tls.Cert)
+				if err != nil {
+					return nil, err
+				}
+				key, err := os.ReadFile(tls.PrivateKey)
+				if err != nil {
+					return nil, err
+				}
+				outputS3.tls.Certificates = []certs{
+					{Cert: string(cert), Key: string(key)},
+				}
+			}
+			if ca := tls.CACert; ca != "" {
+				caCert, err := os.ReadFile(ca)
+				if err != nil {
+					return nil, err
+				}
+				outputS3.tls.RootCAs = string(caCert)
+			}
+			outputS3.TLS = nil
+		}
+		return outputS3, nil
 	case "experimental":
 		outputExp := new(outputExpOpts)
 		if err := util.Unmarshal(outputRaw, outputExp); err != nil {

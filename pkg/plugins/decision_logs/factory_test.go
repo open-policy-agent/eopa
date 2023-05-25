@@ -14,7 +14,7 @@ import (
 func isConfig(exp Config) func(testing.TB, any, error) {
 	opt := []cmp.Option{
 		cmpopts.IgnoreFields(Config{}, "Buffer", "Output"),
-		cmp.AllowUnexported(Config{}, outputKafkaOpts{}, outputSplunkOpts{}),
+		cmp.AllowUnexported(Config{}, outputKafkaOpts{}, outputSplunkOpts{}, outputS3Opts{}, batchOpts{}),
 	}
 	diff := func(x, y any) string {
 		return cmp.Diff(x, y, opt...)
@@ -142,7 +142,7 @@ buffer:
 output:
   type: console
  `,
-			checks: func(tb testing.TB, _ any, err error) {
+			checks: func(t testing.TB, _ any, err error) {
 				if err == nil {
 					t.Fatal("expected error")
 				}
@@ -157,7 +157,7 @@ output:
 output:
   type: flash drive
  `,
-			checks: func(tb testing.TB, _ any, err error) {
+			checks: func(t testing.TB, _ any, err error) {
 				if err == nil {
 					t.Fatal("expected error")
 				}
@@ -184,7 +184,7 @@ output:
 output:
   type: service
   service: someservice`,
-			checks: func(tb testing.TB, _ any, err error) {
+			checks: func(t testing.TB, _ any, err error) {
 				if err == nil {
 					t.Fatal("expected error")
 				}
@@ -628,6 +628,80 @@ output:
 						"verb": "POST",
 					},
 				})(t, a, err)
+			},
+		},
+		{
+			note: "s3 output with batching",
+			config: `
+output:
+  type: s3
+  endpoint: "https://local.minio:9000"
+  region: us-underwater-1
+  bucket: dl
+  access_key_id: abc123
+  access_secret: opens3same
+  batching:
+    at_count: 42
+    at_bytes: 43
+    at_period: "300ms"
+    array: true # overridden for s3
+    compress: true # overridden for s3
+`,
+			checks: func(t testing.TB, a any, err error) {
+				isConfig(Config{
+					memoryBuffer: &memBufferOpts{
+						MaxBytes: defaultMemoryMaxBytes,
+					},
+					outputs: []output{&outputS3Opts{
+						Endpoint:     "https://local.minio:9000",
+						Region:       "us-underwater-1",
+						Bucket:       "dl",
+						AccessKeyID:  "abc123",
+						AccessSecret: "opens3same",
+						Batching: &batchOpts{
+							Period:      "300ms",
+							Count:       42,
+							Bytes:       43,
+							Array:       true,
+							Compress:    true,
+							unprocessed: true,
+						},
+					}},
+				})(t, a, err)
+
+				isBenthos(map[string]any{
+					"aws_s3": map[string]any{
+						"batching": map[string]any{
+							"byte_size": 43,
+							"count":     42,
+							"period":    "300ms",
+						},
+						"bucket":       "dl",
+						"path":         `${!json("timestamp").ts_strftime("%Y/%m/%d/%H")}/${!json("decision_id")}.json`,
+						"endpoint":     "https://local.minio:9000",
+						"content_type": "application/json",
+						"region":       "us-underwater-1",
+						"credentials":  map[string]any{"id": "abc123", "secret": "opens3same"},
+					},
+				})(t, a, err)
+			},
+		},
+		{
+			note: "s3 output missing bucket",
+			config: `
+output:
+  type: s3
+  endpoint: "https://local.minio:9000"
+  access_key_id: abc123
+  access_secret: opens3same
+`,
+			checks: func(t testing.TB, _ any, err error) {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				if exp, act := "output S3 missing required configs: bucket, region", err.Error(); exp != act {
+					t.Errorf("expected error %q, got %q", exp, act)
+				}
 			},
 		},
 	}

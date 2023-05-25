@@ -38,6 +38,7 @@ type payload struct {
 	Input      any            `json:"input"`
 	Erased     []string       `json:"erased"`
 	Masked     []string       `json:"masked"`
+	Timestamp  time.Time      `json:"timestamp"`
 }
 
 type payloadLabels struct {
@@ -50,6 +51,8 @@ var standardLabels = payloadLabels{
 	Type:    "styra-load",
 	Version: version.Version,
 }
+
+var stdIgnores = cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "DecisionID", "Labels.ID", "NDBC")
 
 // This tests sends three API requests: one is logged as-is, one is dropped, and one is masked.
 // It uses each of the three different buffer options (unbuffered, memory, disk).
@@ -149,7 +152,7 @@ plugins:
 					ID:     1,
 					Labels: standardLabels,
 				}
-				if diff := cmp.Diff(dl, logs[0], cmpopts.IgnoreFields(payload{}, "Metrics", "DecisionID", "Labels.ID", "NDBC")); diff != "" {
+				if diff := cmp.Diff(dl, logs[0], stdIgnores); diff != "" {
 					t.Errorf("diff: (-want +got):\n%s", diff)
 				}
 				{
@@ -207,7 +210,7 @@ plugins:
 					ID:     3,
 					Labels: standardLabels,
 				}
-				if diff := cmp.Diff(dl, logs[1], cmpopts.IgnoreFields(payload{}, "Metrics", "DecisionID", "Labels.ID", "NDBC")); diff != "" {
+				if diff := cmp.Diff(dl, logs[1], stdIgnores); diff != "" {
 					t.Errorf("diff: (-want +got):\n%s", diff)
 				}
 			}
@@ -273,7 +276,7 @@ plugins:
 			ID:     1,
 			Labels: standardLabels,
 		}
-		if diff := cmp.Diff(dl, logs[0], cmpopts.IgnoreFields(payload{}, "Metrics", "DecisionID", "Labels.ID", "NDBC")); diff != "" {
+		if diff := cmp.Diff(dl, logs[0], stdIgnores); diff != "" {
 			t.Errorf("diff: (-want +got):\n%s", diff)
 		}
 	}
@@ -466,7 +469,7 @@ plugins:
 				ID:     1,
 				Labels: standardLabels,
 			}
-			if diff := cmp.Diff(dl, logs[0], cmpopts.IgnoreFields(payload{}, "Metrics", "DecisionID", "Labels.ID", "NDBC")); diff != "" {
+			if diff := cmp.Diff(dl, logs[0], stdIgnores); diff != "" {
 				t.Errorf("diff: (-want +got):\n%s", diff)
 			}
 		})
@@ -533,7 +536,7 @@ plugins:
 		ID:     1,
 		Labels: standardLabels,
 	}
-	if diff := cmp.Diff(dl, logsHTTP[0], cmpopts.IgnoreFields(payload{}, "Metrics", "DecisionID", "Labels.ID", "NDBC")); diff != "" {
+	if diff := cmp.Diff(dl, logsHTTP[0], stdIgnores); diff != "" {
 		t.Errorf("diff: (-want +got):\n%s", diff)
 	}
 	if diff := cmp.Diff(logsHTTP, logsConsole); diff != "" {

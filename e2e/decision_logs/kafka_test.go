@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/ory/dockertest"
 	"github.com/ory/dockertest/docker"
 	"github.com/rs/zerolog"
@@ -210,7 +209,7 @@ plugins:
 					Input:  float64(0),
 					Labels: standardLabels,
 				}
-				if diff := cmp.Diff(dl, logs[0], cmpopts.IgnoreFields(payload{}, "Metrics", "DecisionID", "Labels.ID", "NDBC")); diff != "" {
+				if diff := cmp.Diff(dl, logs[0], stdIgnores); diff != "" {
 					t.Errorf("diff: (-want +got):\n%s", diff)
 				}
 			}
@@ -221,7 +220,7 @@ plugins:
 					Input:  float64(1),
 					Labels: standardLabels,
 				}
-				if diff := cmp.Diff(dl, logs[1], cmpopts.IgnoreFields(payload{}, "Metrics", "DecisionID", "Labels.ID", "NDBC")); diff != "" {
+				if diff := cmp.Diff(dl, logs[1], stdIgnores); diff != "" {
 					t.Errorf("diff: (-want +got):\n%s", diff)
 				}
 			}
