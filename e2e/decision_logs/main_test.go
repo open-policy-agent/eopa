@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -145,6 +146,7 @@ plugins:
 
 			// assert: check that DL logs have been output as expected
 			logs := collectDL(t, loadOut, false, 2)
+			sort.Slice(logs, func(i, j int) bool { return logs[i].ID < logs[j].ID })
 
 			{ // log for act 1
 				dl := payload{
