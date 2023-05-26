@@ -90,7 +90,7 @@ func TestValidate(t *testing.T) {
 		{
 			note: "one kafka",
 			config: `
-kafka.updates:
+updates:
   type: kafka
   urls:
   - 127.0.0.1:8083
@@ -98,7 +98,7 @@ kafka.updates:
   - updates
   rego_transform: data.utils.transform_events
 `,
-			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
+			checks: isConfig(t, kafka.Name, "updates", kafka.Config{
 				Topics:            []string{"updates"},
 				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
@@ -107,7 +107,7 @@ kafka.updates:
 		{
 			note: "one kafka, tls",
 			config: `
-kafka.updates:
+updates:
   type: kafka
   urls:
   - 127.0.0.1:8083
@@ -118,7 +118,7 @@ kafka.updates:
   tls_client_private_key: kafka/testdata/tls/client-key.pem
   tls_ca_cert: kafka/testdata/tls/ca.pem
 `,
-			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
+			checks: isConfig(t, kafka.Name, "updates", kafka.Config{
 				Topics:            []string{"updates"},
 				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
@@ -130,7 +130,7 @@ kafka.updates:
 		{
 			note: "one kafka, sasl/plain",
 			config: `
-kafka.updates:
+updates:
   type: kafka
   urls:
   - 127.0.0.1:8083
@@ -141,7 +141,7 @@ kafka.updates:
   sasl_username: alice
   sasl_password: password
 `,
-			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
+			checks: isConfig(t, kafka.Name, "updates", kafka.Config{
 				Topics:            []string{"updates"},
 				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
@@ -153,7 +153,7 @@ kafka.updates:
 		{
 			note: "one kafka, sasl/scram-sha-512",
 			config: `
-kafka.updates:
+updates:
   type: kafka
   urls:
   - 127.0.0.1:8083
@@ -165,7 +165,7 @@ kafka.updates:
   sasl_password: password
   sasl_token: true
 `,
-			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
+			checks: isConfig(t, kafka.Name, "updates", kafka.Config{
 				Topics:            []string{"updates"},
 				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
@@ -178,7 +178,7 @@ kafka.updates:
 		{
 			note: "one kafka, sasl/scram-sha-256",
 			config: `
-kafka.updates:
+updates:
   type: kafka
   urls:
   - 127.0.0.1:8083
@@ -190,7 +190,7 @@ kafka.updates:
   sasl_password: password
   sasl_token: true
 `,
-			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
+			checks: isConfig(t, kafka.Name, "updates", kafka.Config{
 				Topics:            []string{"updates"},
 				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
@@ -203,7 +203,7 @@ kafka.updates:
 		{
 			note: "one kafka, tls+sasl/scram-sha-256, lowercase",
 			config: `
-kafka.updates:
+updates:
   type: kafka
   urls:
   - 127.0.0.1:8083
@@ -218,7 +218,7 @@ kafka.updates:
   sasl_password: password
   sasl_token: true
 `,
-			checks: isConfig(t, kafka.Name, "kafka.updates", kafka.Config{
+			checks: isConfig(t, kafka.Name, "updates", kafka.Config{
 				Topics:            []string{"updates"},
 				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
@@ -234,14 +234,14 @@ kafka.updates:
 		{
 			note: "two kafka",
 			config: `
-kafka.updates:
+updates:
   type: kafka
   urls:
   - 127.0.0.1:8083
   topics:
   - updates
   rego_transform: data.utils.transform_events
-kafka.downdates:
+downdates:
   type: kafka
   urls:
   - some.other:8083
@@ -250,12 +250,12 @@ kafka.downdates:
   rego_transform: data.utils.transform_events
 `,
 			checks: func(tb testing.TB, c any, err error) {
-				isConfig(tb, kafka.Name, "kafka.updates", kafka.Config{
+				isConfig(tb, kafka.Name, "updates", kafka.Config{
 					Topics:            []string{"updates"},
 					URLs:              []string{"127.0.0.1:8083"},
 					RegoTransformRule: "data.utils.transform_events",
 				})(tb, c, err)
-				isConfig(tb, kafka.Name, "kafka.downdates", kafka.Config{
+				isConfig(tb, kafka.Name, "downdates", kafka.Config{
 					Topics:            []string{"downdates.huh"},
 					URLs:              []string{"some.other:8083"},
 					RegoTransformRule: "data.utils.transform_events",

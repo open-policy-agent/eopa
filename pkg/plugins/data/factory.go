@@ -47,12 +47,12 @@ func checkOverlappingPaths(data map[string]DataPlugin, path string) error {
 	poe := &PathOverlapError{}
 
 	var err error
-	poe.a, err = ast.ParseRef(path)
+	poe.a, err = ast.ParseRef("data." + path)
 	if err != nil {
 		return err
 	}
 	for key := range data {
-		poe.b, err = ast.ParseRef(key)
+		poe.b, err = ast.ParseRef("data." + key)
 		if err != nil {
 			return err
 		}

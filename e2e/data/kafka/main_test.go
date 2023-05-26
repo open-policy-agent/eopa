@@ -89,7 +89,7 @@ func TestSimple(t *testing.T) {
 			config := `
 plugins:
   data:
-    kafka.messages:
+    messages:
       type: kafka
       urls: ["kafka-e2e:9091"]
       topics:
@@ -135,7 +135,7 @@ transform contains {"op": "add", "path": key, "value": val} if {
 
 			if err := util.WaitFunc(func() bool {
 				// check store response (TODO: check metrics/status when we have them)
-				resp, err := http.Get("http://" + load.GetHostPort("8181/tcp") + "/v1/data/kafka/messages")
+				resp, err := http.Get("http://" + load.GetHostPort("8181/tcp") + "/v1/data/messages")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -170,7 +170,7 @@ func TestLogsFromBadTransforms(t *testing.T) {
 	config := `
 plugins:
   data:
-    kafka.messages:
+    messages:
       type: kafka
       urls: [localhost:9092]
       topics: [foo]
@@ -185,7 +185,7 @@ transform contains json.unmarshal(base64.decode(input.value)) if print(input)
 	if err := load.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.e2e.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, loadOut, equals(`kafka plugin (path /messages): transform rule "data.e2e.transform" does not exist yet`), 2*time.Second)
 
 	{ // setup transform rego
 		req, err := http.NewRequest("PUT", "http://localhost:8181/v1/policies/transform", strings.NewReader(transform))
@@ -245,7 +245,7 @@ transform contains json.unmarshal(base64.decode(input.value)) if print(input)
 			},
 		},
 		{
-			log: `store: add 123 to /kafka/messages/does/not/exist failed: storage_not_found_error: /kafka/messages/does/not/exist: document does not exist`,
+			log: `store: add 123 to /messages/does/not/exist failed: storage_not_found_error: /messages/does/not/exist: document does not exist`,
 			key: 6,
 			payload: map[string]any{
 				"op":    "add",
