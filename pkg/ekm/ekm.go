@@ -255,7 +255,10 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 
 func (e *EKM) validateLicense() {
 	if e.license != nil { // do commandline license check
-		e.license.ValidateLicense(e.lparams, func(code int, _ error) { os.Exit(code) })
+		e.license.ValidateLicense(e.lparams, func(code int, err error) {
+			fmt.Fprintf(os.Stderr, "invalid license: %v\n", err)
+			os.Exit(code)
+		})
 	}
 }
 

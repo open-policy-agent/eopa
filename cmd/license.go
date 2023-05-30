@@ -42,12 +42,10 @@ func LicenseCmd(license *keygen.License, lparams *keygen.LicenseParams) *cobra.C
 			license.SetFormatter(format)
 			license.SetLevel(lvl)
 
-			fmt.Printf("Validating license...\n")
-
 			var err error
-			license.ValidateLicense(lparams, func(code int, lerr error) { license.Logger().Error("license error: %v", lerr); err = lerr })
+			license.ValidateLicense(lparams, func(code int, lerr error) { err = lerr })
 			if err != nil {
-				fmt.Printf("license validate error: %v", err)
+				fmt.Fprintf(os.Stderr, "Validation error: %v\n", err)
 				return err
 			}
 
@@ -57,7 +55,7 @@ func LicenseCmd(license *keygen.License, lparams *keygen.LicenseParams) *cobra.C
 			if online { // online - lookup license policy and count
 				p, err := license.Policy()
 				if err != nil {
-					fmt.Printf("license policy error: %v", err)
+					fmt.Printf("Policy error: %v", err)
 					return err
 				}
 				fmt.Printf("Max machines: %d, current machine count: %d\n", p.Data.Attributes.MaxMachines, p.Data.RelationShips.Machines.Meta.Count)

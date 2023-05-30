@@ -63,7 +63,10 @@ func LoadCommand(license *keygen.License) *cobra.Command {
 
 				go func() {
 					// do the license validate and activate asynchronously; so user doesn't have to wait
-					license.ValidateLicense(lparams, func(code int, err error) { os.Exit(code) })
+					license.ValidateLicense(lparams, func(code int, err error) {
+						fmt.Fprintf(os.Stderr, "invalid license: %v\n", err)
+						os.Exit(code)
+					})
 				}()
 			}
 		},

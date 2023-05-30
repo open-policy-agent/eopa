@@ -25,6 +25,18 @@ const licenseErrorExitCode = 3
 var licenseRetries = 6   // up to 30 seconds total
 var defaultRateSleep = 5 // seconds
 
+var ErrMissingLicense = fmt.Errorf(`no license provided
+
+Sign up for a free trial now by running %s
+
+If you already have a license:
+    Define either %q or %q in your environment
+        - or -
+    Provide the %s or %s flag when running a command
+
+For more information on licensing Styra Load visit https://docs.styra.com/load/installation/licensing`,
+	"`load license trial`", loadLicenseKey, loadLicenseToken, "`--license-key`", "`--license-token`")
+
 type Source int
 
 const (
@@ -272,7 +284,6 @@ func (l *License) ValidateLicense(params *LicenseParams, terminate func(code int
 	var err error
 	defer func() {
 		if err != nil {
-			l.logger.Error("licensing error: %v", err)
 			terminate(licenseErrorExitCode, err)
 		}
 	}()
@@ -316,9 +327,7 @@ func (l *License) ValidateLicense(params *LicenseParams, terminate func(code int
 			}
 			keygen.Token = dat
 		} else {
-			err = fmt.Errorf(
-				"missing license: please provide one either via the `--license-key` or `--license-token` flag, or an environment variable: %v or %v",
-				loadLicenseKey, loadLicenseToken)
+			err = ErrMissingLicense
 			return
 		}
 	}
