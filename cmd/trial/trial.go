@@ -101,6 +101,7 @@ type Input struct {
 	Email     string `json:"email,omitempty"`
 	Company   string `json:"company,omitempty"`
 	Country   string `json:"country,omitempty"`
+	Duration  int    `json:"duration,omitempty"`
 }
 
 func interactiveFill(input *Input, runForm tui.RunForm) (err error) {

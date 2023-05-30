@@ -75,7 +75,9 @@ func LicenseCmd(license *keygen.License, lparams *keygen.LicenseParams) *cobra.C
 
 func TrialCmd(client trial.Client) *cobra.Command {
 	var keyOnly bool
-	input := trial.Input{}
+	input := trial.Input{
+		Duration: 30,
+	}
 	c := &cobra.Command{
 		Use:          "trial",
 		Short:        "Create a new Styra Load trial license.",
