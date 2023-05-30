@@ -16,7 +16,7 @@
 Install using brew or directly from download page.
 
 - [golang](https://go.dev/dl/): `brew install go`
-- [golanglint-ci](https://golangci-lint.run/usage/install/): `brew install golanglint-ci`
+- [golanglint-ci](https://golangci-lint.run/usage/install/): `brew install golangci-lint`
 - [ko-build](https://github.com/ko-build/ko): `brew install ko`
 - [Docker](https://docs.docker.com/desktop/install/mac-install/)
 - Make: `xcode-select --install`
