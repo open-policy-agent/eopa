@@ -213,6 +213,7 @@ jobs:
           echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
           echo "bundles=$(pwd)/e2e" >> $GITHUB_OUTPUT
           echo "binary=$(pwd)/dist/linux-windows-build_linux_amd64_v1/load" >> $GITHUB_OUTPUT
+          echo "fetchdb=$(pwd)/_fetchdb" >> $GITHUB_OUTPUT
           chmod +x dist/linux-windows-build_linux_amd64_v1/load
       - run: make e2e
         env:
@@ -251,6 +252,19 @@ jobs:
           BUNDLE_FILE_PATH: bundles/systems/bc01d50d17d7446684c4e6c34a1ad07f
           NUM_INPUT_BUNDLES: 2
           BUNDLE_HOST: 172.17.0.1
+      - name: Check out fetchdb code
+        uses: actions/checkout@v3
+        with:
+          path: _fetchdb
+          repository: StyraInc/fetchdb
+          token: ${{ secrets.GH_API_TOKEN }}
+          persist-credentials: false
+      - name: Run load-test (fetchdb)
+        run: |
+          sed -i 's#ghcr.io/styrainc/load:latest#${{ steps.load.outputs.image }}#' ${{ steps.load.outputs.fetchdb}}/Makefile
+          go test -tags e2e_fetchdb ./e2e/fetchdb
+        env:
+          FETCHDB_DIRECTORY: ${{ steps.load.outputs.fetchdb }}
 
   proto-docs-push:
     name: Push Protobuf docs to BSR
