@@ -224,23 +224,12 @@ jobs:
           GIT_GITHUB_TOKEN: ${{ secrets.E2E_GIT_GITHUB_TOKEN }}
           GIT_AZURE_TOKEN: ${{ secrets.E2E_GIT_AZURE_TOKEN }}
           GIT_GITLAB_TOKEN: ${{ secrets.E2E_GIT_GITLAB_TOKEN }}
-      # If it's a dependabot run, we fetch the token from the environment directly.
-      - name: (Dependabot Only) checkout opa-testing-e2e
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        uses: actions/checkout@v3
-        with:
-          repository: StyraInc/opa-testing-e2e
-          path: _e2e
-          token: ${{ env.GH_API_TOKEN }}
-          persist-credentials: false
-      # Else, we use the repo secret directly.
       - name: checkout opa-testing-e2e
-        if: ${{ github.actor != 'dependabot[bot]' }}
         uses: actions/checkout@v3
         with:
           repository: StyraInc/opa-testing-e2e
           path: _e2e
-          token: ${{ secrets.GH_API_TOKEN }}
+          token: ${{ github.actor == 'dependabot[bot]' && env.GH_API_TOKEN || secrets.GH_API_TOKEN }}
           persist-credentials: false
       - name: run "opa-testing-e2e"
         run: make test
@@ -257,7 +246,7 @@ jobs:
         with:
           path: _fetchdb
           repository: StyraInc/fetchdb
-          token: ${{ secrets.GH_API_TOKEN }}
+          token: ${{ github.actor == 'dependabot[bot]' && env.GH_API_TOKEN || secrets.GH_API_TOKEN }}
           persist-credentials: false
       - name: Run load-test (fetchdb)
         run: |
