@@ -13,7 +13,6 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/ir"
 	"github.com/open-policy-agent/opa/rego"
-	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
 )
@@ -42,7 +41,7 @@ func (*vmp) IsTarget(t string) bool {
 }
 
 // TODO(sr): move store and tx into PrepareOption?
-func (*vmp) PrepareForEval(_ context.Context, policy *ir.Policy, _ storage.Store, _ storage.Transaction, _ ...rego.PrepareOption) (rego.TargetPluginEval, error) {
+func (*vmp) PrepareForEval(_ context.Context, policy *ir.Policy, _ ...rego.PrepareOption) (rego.TargetPluginEval, error) {
 	executable, err := vm.NewCompiler().WithPolicy(policy).Compile()
 	if err != nil {
 		return nil, err

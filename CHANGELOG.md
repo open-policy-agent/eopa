@@ -1,5 +1,50 @@
 # Changelog
 
+## v1.4.0
+
+This release features a long-sought-after new built-in: `sql.send`!
+
+### `sql.send`: query databases during policy evaluation
+
+The new builtin in Styra Load, `sql.send`, can be considered `http.send`'s relational cousin:
+It allows you to run any kind of custom query against a relational database management system, including
+
+1. PostgreSQL
+2. MySQL
+3. SQLite
+
+This is an example call, querying a SQLite database with a parametrized SQL query:
+```rego
+subordinate := sql.send({
+	"driver": "sqlite",
+	"data_source_name": "sqlite://data/company.db",
+	"query": "SELECT * FROM subordinates WHERE manager = $1 AND subordinate = $2",
+	"args": [input.user, username],
+})
+count(subordinate.rows) > 0 # Make sure the row exists in the subordinates table.
+```
+
+Just like `http.send`, it allows you to pull in the most recent data you have in your database
+when it's relevant for your policy decision.
+
+[Find out more in the new tutorial.](https://docs.styra.com/load/tutorials/abac-with-sql)
+
+### Export decision logs to S3
+
+You can now send decision logs to S3-compatible stores.
+
+[Find out more in the new tutorial.](https://docs.styra.com/load/tutorials/decision-logs/s3)
+
+### CLI-based trial sign up
+
+It is now possible to sign up for a free trial directly through the Styra Load CLI.
+Running `load license trial` will collect all required information and generate a
+new license key, which can be used to activate Styra Load immediately.
+
+### OPA v0.53.0
+
+This release includes OPA v0.53.0. [See the release notes for details.](https://github.com/open-policy-agent/opa/releases/tag/v0.53.0)
+
 ## v1.3.0
 
 This release unveils two new feature sets, and includes some smaller quality-of-life improvements:
