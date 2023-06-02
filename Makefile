@@ -20,7 +20,7 @@ GOOS := $(shell go env GOOS)
 KO_DEBUG_IMAGE ?= cgr.dev/chainguard/busybox:latest
 
 KO_BUILD := ko build . --image-label org.opencontainers.image.source=https://github.com/StyraInc/load
-KO_BUILD_LOCAL := $(KO_BUILD) --base-import-paths --local
+KO_BUILD_LOCAL := KO_DOCKER_REPO=ko.local $(KO_BUILD) --base-import-paths
 KO_BUILD_DEPLOY := $(KO_BUILD) --bare --platform=linux/amd64,linux/arm64
 
 BUILD_DIR := $(shell echo `pwd`)
