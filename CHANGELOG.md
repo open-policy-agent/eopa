@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.4.1
+
+This release updates the OPA version used in Styra Load to
+[v0.53.1](https://github.com/open-policy-agent/opa/releases/tag/v0.53.1).
+
 ## v1.4.0
 
 This release features a long-sought-after new built-in: `sql.send`!
