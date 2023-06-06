@@ -89,6 +89,19 @@ func NewStream(_ context.Context, mask masker, drop dropper, buf fmt.Stringer, o
 		return nil, err
 	}
 
+	if out, ok := out.(additionalResources); ok {
+		resources := out.Resources()
+		if resources != nil {
+			cfg, err := json.Marshal(resources)
+			if err != nil {
+				return nil, err
+			}
+			if err := builder.AddResourcesYAML(string(cfg)); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	s, err := builder.Build()
 	if err != nil {
 		return nil, err

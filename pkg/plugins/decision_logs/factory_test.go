@@ -50,6 +50,19 @@ func isBenthos(exp map[string]any) func(testing.TB, any, error) {
 	}
 }
 
+func withResources(exp map[string]any) func(testing.TB, any, error) {
+	return func(tb testing.TB, c any, err error) {
+		tb.Helper()
+		if err != nil {
+			tb.Fatalf("unexpected error: %v", err)
+		}
+		act := c.(Config).outputs[0].(additionalResources).Resources()
+		if d := cmp.Diff(exp, act); d != "" {
+			tb.Errorf("Resources mismatch (-want +got):\n%s", d)
+		}
+	}
+}
+
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		note   string
@@ -370,6 +383,52 @@ output:
 				},
 				outputs: []output{&outputHTTPOpts{URL: "https://logs.logs.logs:1234/post"}},
 			}),
+		},
+		{
+			note: "http rate limit",
+			config: `
+output:
+  type: http
+  url: https://logs.logs.logs:1234/post
+  rate_limit:
+    count: 200
+    interval: 1s`,
+			checks: func(t testing.TB, a any, err error) {
+				isConfig(Config{
+					memoryBuffer: &memBufferOpts{
+						MaxBytes: defaultMemoryMaxBytes,
+					},
+					outputs: []output{
+						&outputHTTPOpts{
+							URL: "https://logs.logs.logs:1234/post",
+							RateLimit: &rateLimitOpts{
+								Interval: "1s",
+								Count:    200,
+							},
+						},
+					},
+				})(t, a, err)
+
+				isBenthos(map[string]any{
+					"http_client": map[string]any{
+						"url":        "https://logs.logs.logs:1234/post",
+						"rate_limit": ResourceKey([]byte("https://logs.logs.logs:1234/post")),
+					},
+				})(t, a, err)
+
+				withResources(map[string]any{
+					"rate_limit_resources": []map[string]any{
+						{
+							"label": ResourceKey([]byte("https://logs.logs.logs:1234/post")),
+							"local": map[string]any{
+								"count":    200,
+								"interval": "1s",
+							},
+						},
+					},
+				})
+
+			},
 		},
 		{
 			note: "kafka output",

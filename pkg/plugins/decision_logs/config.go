@@ -2,6 +2,8 @@ package decisionlogs
 
 import (
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 )
@@ -28,6 +30,29 @@ type extraProcessing interface {
 	Extra() []map[string]any
 }
 
+type additionalResources interface {
+	Resources() *resources
+}
+
+type resources struct {
+	RateLimit []map[string]any `json:"rate_limit_resources,omitempty"`
+}
+
+func (rs *resources) Merge(r *resources) *resources {
+	if r == nil {
+		return rs
+	}
+
+	rs.RateLimit = append(rs.RateLimit, r.RateLimit...)
+
+	return rs
+}
+
+func ResourceKey(input []byte) string {
+	hash := md5.Sum(input)
+	return hex.EncodeToString(hash[:])
+}
+
 type outputs []output
 
 func (x outputs) Benthos() map[string]any {
@@ -43,6 +68,20 @@ func (x outputs) Benthos() map[string]any {
 			"outputs": outputs,
 		},
 	}
+}
+
+func (x outputs) Resources() *resources {
+	var resourceList *resources
+	for _, y := range x {
+		if out, ok := y.(additionalResources); ok {
+			ar := out.Resources()
+			if ar != nil {
+				resourceList = ar.Merge(resourceList)
+			}
+		}
+	}
+
+	return resourceList
 }
 
 // NOTE(sr): Maybe batching at the sink is good enough and batching here only complicates
@@ -93,9 +132,10 @@ type outputHTTPOpts struct {
 	Timeout string            `json:"timeout,omitempty"`
 	Headers map[string]string `json:"headers,omitempty"`
 
-	OAuth2   *httpAuthOAuth2 `json:"oauth2,omitempty"`
-	TLS      *sinkAuthTLS    `json:"tls,omitempty"` // TODO(sr): figure out if we want to expose this as-is, or wrap (or reference files instead of raw certs)
-	Batching *batchOpts      `json:"batching,omitempty"`
+	OAuth2    *httpAuthOAuth2 `json:"oauth2,omitempty"`
+	TLS       *sinkAuthTLS    `json:"tls,omitempty"` // TODO(sr): figure out if we want to expose this as-is, or wrap (or reference files instead of raw certs)
+	Batching  *batchOpts      `json:"batching,omitempty"`
+	RateLimit *rateLimitOpts  `json:"rate_limit,omitempty"`
 
 	// TODO(sr): add retry
 }
@@ -135,11 +175,38 @@ type certs struct {
 	Key  string `json:"key"`
 	Cert string `json:"cert"`
 }
+type rateLimitOpts struct {
+	Count    int    `json:"count"`
+	Interval string `json:"interval"`
+}
+
+func (r *rateLimitOpts) Resources(label string) *resources {
+	if label == "" {
+		return nil
+	}
+	resource := map[string]any{}
+	if r.Count != 0 {
+		resource["count"] = r.Count
+	}
+	if r.Interval != "" {
+		resource["interval"] = r.Interval
+	}
+	return &resources{
+		RateLimit: []map[string]any{
+			{
+				"label": label,
+				"local": resource,
+			},
+		},
+	}
+}
 
 func (s *outputHTTPOpts) Benthos() map[string]any {
 	m := map[string]any{
-		"url":     s.URL,
-		"timeout": s.Timeout,
+		"url": s.URL,
+	}
+	if s.Timeout != "" {
+		m["timeout"] = s.Timeout
 	}
 	if s.OAuth2 != nil {
 		m["oauth2"] = s.OAuth2
@@ -150,7 +217,17 @@ func (s *outputHTTPOpts) Benthos() map[string]any {
 	if b := s.Batching; b != nil {
 		m["batching"] = b.Benthos()
 	}
+	if s.RateLimit != nil {
+		m["rate_limit"] = ResourceKey([]byte(s.URL))
+	}
 	return map[string]any{"http_client": m}
+}
+
+func (s *outputHTTPOpts) Resources() *resources {
+	if s.RateLimit != nil {
+		return s.RateLimit.Resources(ResourceKey([]byte(s.URL)))
+	}
+	return nil
 }
 
 type outputConsoleOpts struct{}
