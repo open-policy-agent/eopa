@@ -385,6 +385,59 @@ output:
 			}),
 		},
 		{
+			note: "http retries",
+			config: `
+output:
+  type: http
+  url: https://logs.logs.logs:1234/post
+  retry:
+    period: 5s
+    max_attempts: 10
+    max_backoff: 600s
+    backoff_on:
+      - 400
+      - 429
+    drop_on:
+      - 300
+    successful_on:
+      - 202`,
+			checks: func(t testing.TB, a any, err error) {
+				isConfig(Config{
+					memoryBuffer: &memBufferOpts{
+						MaxBytes: defaultMemoryMaxBytes,
+					},
+					outputs: []output{&outputHTTPOpts{
+						URL: "https://logs.logs.logs:1234/post",
+						Retry: &retryOpts{
+							Period:       "5s",
+							MaxAttempts:  10,
+							MaxBackoff:   "600s",
+							BackoffOn:    []int{400, 429},
+							DropOn:       []int{300},
+							SuccessfulOn: []int{202},
+						},
+					}},
+				})(t, a, err)
+
+				isBenthos(map[string]any{
+					"drop_on": map[string]any{
+						"error": true,
+						"output": map[string]any{
+							"http_client": map[string]any{
+								"url":               "https://logs.logs.logs:1234/post",
+								"retries":           10,
+								"retry_period":      "5s",
+								"max_retry_backoff": "600s",
+								"backoff_on":        []int{400, 429},
+								"drop_on":           []int{300},
+								"successful_on":     []int{202},
+							},
+						},
+					},
+				})(t, a, err)
+			},
+		},
+		{
 			note: "http rate limit",
 			config: `
 output:
@@ -410,9 +463,14 @@ output:
 				})(t, a, err)
 
 				isBenthos(map[string]any{
-					"http_client": map[string]any{
-						"url":        "https://logs.logs.logs:1234/post",
-						"rate_limit": ResourceKey([]byte("https://logs.logs.logs:1234/post")),
+					"drop_on": map[string]any{
+						"error": true,
+						"output": map[string]any{
+							"http_client": map[string]any{
+								"url":        "https://logs.logs.logs:1234/post",
+								"rate_limit": ResourceKey([]byte("https://logs.logs.logs:1234/post")),
+							},
+						},
 					},
 				})(t, a, err)
 

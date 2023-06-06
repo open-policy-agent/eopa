@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -475,6 +476,91 @@ plugins:
 				t.Errorf("diff: (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestDecisionLogsHttpRetry(t *testing.T) {
+	expectedRetries := 5
+	policy := `
+package test
+import future.keywords
+
+coin if rand.intn("coin", 2)`
+
+	config := `
+# load.yml
+plugins:
+  load_decision_logger:
+    output:
+    - type: http
+      url: %s/prefix/logs
+      retry:
+        period: 1ms
+        max_backoff: 1ms
+        max_attempts: %d
+        backoff_on: [429,410,418]
+        drop_on: [500,508]`
+	retryCodes := []int{http.StatusTooManyRequests, http.StatusGone, http.StatusTeapot}
+	buf := bytes.Buffer{}
+	retries := 0
+	dropped := false
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		switch {
+		case path != "/prefix/logs":
+		case r.Method != http.MethodPost:
+		case !dropped:
+			dropped = true
+			w.WriteHeader(http.StatusLoopDetected)
+			return
+		case retries < 5:
+			retries++
+			code := retryCodes[rand.Intn(3)]
+			w.WriteHeader(code)
+			return
+		default:
+			io.Copy(&buf, r.Body)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	t.Cleanup(ts.Close)
+	load, _, loadErr := loadLoad(t, fmt.Sprintf(config, ts.URL, expectedRetries), policy, false)
+	if err := load.Start(); err != nil {
+		t.Fatal(err)
+	}
+	wait.ForLog(t, loadErr, func(s string) bool {
+		return strings.Contains(s, "Server initialized")
+	}, 5*time.Second)
+
+	// First loop will 508 which gets dropped, second loop will retry
+	// 5 times then succeed.
+	for i := 0; i < 2; i++ {
+		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
+		if err != nil {
+			t.Fatalf("http request: %v", err)
+		}
+		_, err = http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if !dropped {
+		t.Error("expected the first request to have been dropped but no drop detected")
+	}
+
+	logsHTTP := collectDL(t, &buf, false, 1)
+	dl := payload{
+		Result: true,
+		ID:     2,
+		Labels: standardLabels,
+	}
+	if diff := cmp.Diff(dl, logsHTTP[0], stdIgnores); diff != "" {
+		t.Errorf("diff: (-want +got):\n%s", diff)
+	}
+	if retries != expectedRetries {
+		t.Errorf("expected %d retries, but got %d", expectedRetries, retries)
 	}
 }
 

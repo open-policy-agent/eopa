@@ -135,9 +135,8 @@ type outputHTTPOpts struct {
 	OAuth2    *httpAuthOAuth2 `json:"oauth2,omitempty"`
 	TLS       *sinkAuthTLS    `json:"tls,omitempty"` // TODO(sr): figure out if we want to expose this as-is, or wrap (or reference files instead of raw certs)
 	Batching  *batchOpts      `json:"batching,omitempty"`
+	Retry     *retryOpts      `json:"retry,omitempty"`
 	RateLimit *rateLimitOpts  `json:"rate_limit,omitempty"`
-
-	// TODO(sr): add retry
 }
 
 type httpAuthOAuth2 struct {
@@ -220,7 +219,17 @@ func (s *outputHTTPOpts) Benthos() map[string]any {
 	if s.RateLimit != nil {
 		m["rate_limit"] = ResourceKey([]byte(s.URL))
 	}
-	return map[string]any{"http_client": m}
+	if r := s.Retry; r != nil {
+		for key, value := range r.Benthos() {
+			m[key] = value
+		}
+	}
+	return map[string]any{
+		"drop_on": map[string]any{
+			"error":  true,
+			"output": map[string]any{"http_client": m},
+		},
+	}
 }
 
 func (s *outputHTTPOpts) Resources() *resources {
@@ -280,6 +289,38 @@ func (b *batchOpts) Benthos() map[string]any {
 		processors = append(processors, map[string]any{"compress": map[string]any{"algorithm": "gzip"}})
 	}
 	m["processors"] = processors
+	return m
+}
+
+type retryOpts struct {
+	Period       string `json:"period,omitempty"`
+	MaxAttempts  int    `json:"max_attempts,omitempty"`
+	MaxBackoff   string `json:"max_backoff,omitempty"`
+	BackoffOn    []int  `json:"backoff_on,omitempty"`
+	DropOn       []int  `json:"drop_on,omitempty"`
+	SuccessfulOn []int  `json:"successful_on,omitempty"`
+}
+
+func (r *retryOpts) Benthos() map[string]any {
+	m := map[string]any{}
+	if r.Period != "" {
+		m["retry_period"] = r.Period
+	}
+	if r.MaxAttempts > 0 {
+		m["retries"] = r.MaxAttempts
+	}
+	if r.MaxBackoff != "" {
+		m["max_retry_backoff"] = r.MaxBackoff
+	}
+	if r.BackoffOn != nil {
+		m["backoff_on"] = r.BackoffOn
+	}
+	if r.DropOn != nil {
+		m["drop_on"] = r.DropOn
+	}
+	if r.SuccessfulOn != nil {
+		m["successful_on"] = r.SuccessfulOn
+	}
 	return m
 }
 
