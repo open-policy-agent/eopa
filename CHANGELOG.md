@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.5.1
+
+This release fixes a typographical error in the protobuf markdown introduced when renaming Enterprise OPA.
+
 ## v1.5.0
 
 This release changes the name of Styra Load to Styra Enterprise OPA.
