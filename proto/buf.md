@@ -1,9 +1,9 @@
 # Enterprise OPA gRPC API
 
-This folder contains the definitions of [Protocol Buffers][protobuf] used by [Enterprise OPA][gh-entperprise-opa].
+This folder contains the definitions of [Protocol Buffers][protobuf] used by [Enterprise OPA][gh-enterprise-opa].
 
 We use [Buf][buf] to manage and generate source code from the protocol buffer definitions.
-The protobuf definitions here are pushed at release-time to the [`buf.build/styra/enterprise-opa`][buf-enterprise] repository in the Buf Registry.
+The protobuf definitions here are pushed at release-time to the [`buf.build/styra/enterprise-opa`][buf-enterprise-opa] repository in the Buf Registry.
 
    [protobuf]: https://developers.google.com/protocol-buffers/
    [buf]: https://github.com/bufbuild/buf
