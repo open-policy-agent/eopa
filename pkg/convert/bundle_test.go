@@ -10,7 +10,7 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
 
-	bjson "github.com/styrainc/load-private/pkg/json"
+	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
 func TestConvert(t *testing.T) {

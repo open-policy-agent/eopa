@@ -9,7 +9,7 @@ import (
 
 	"gopkg.in/h2non/gock.v1"
 
-	"github.com/styrainc/load-private/pkg/tui"
+	"github.com/styrainc/enterprise-opa-private/pkg/tui"
 )
 
 const (
@@ -18,9 +18,9 @@ const (
 
 License Key: EB237F-F4B803-G4G270-84C1D1-85GD0C-V3
 
-To evaluate Styra Load, export this key in your shell configuration file:
+To evaluate Enterprise OPA, export this key in your shell configuration file:
 
-export STYRA_LOAD_LICENSE_KEY=EB237F-F4B803-G4G270-84C1D1-85GD0C-V3`
+export EOPA_LICENSE_KEY=EB237F-F4B803-G4G270-84C1D1-85GD0C-V3`
 )
 
 var defaultInput = Input{

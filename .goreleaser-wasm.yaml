@@ -1,4 +1,4 @@
-project_name: load_wasm
+project_name: eopa_wasm
 builds:
   - env:
       - CGO_ENABLED=1
@@ -52,7 +52,7 @@ builds:
 
 archives:
   - format: tar.gz
-    # example: load_wasm_Darwin_arm64
+    # example: eopa_wasm_Darwin_arm64
     # this name template makes the OS and Arch compatible with the results of uname.
     name_template: >-
       {{ .ProjectName }}_

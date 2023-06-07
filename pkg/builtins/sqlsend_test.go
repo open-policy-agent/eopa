@@ -16,7 +16,7 @@ import (
 	"github.com/open-policy-agent/opa/topdown/builtins"
 	"github.com/open-policy-agent/opa/topdown/cache"
 
-	"github.com/styrainc/load-private/pkg/vm"
+	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
 func TestSQLSend(t *testing.T) {

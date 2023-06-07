@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -eo pipefail
-LOAD_EXEC="$1"
+EOPA_EXEC="$1"
 TARGET="$2"
 
 PATH_SEPARATOR="/"
-if [[ $LOAD_EXEC == *".exe" ]]; then
+if [[ $EOPA_EXEC == *".exe" ]]; then
     PATH_SEPARATOR="\\"
 fi
 
@@ -15,9 +15,9 @@ github_actions_group() {
     echo "::endgroup::"
 }
 
-load() {
+eopa() {
     local args="$*"
-    github_actions_group $LOAD_EXEC $args
+    github_actions_group $EOPA_EXEC $args
 }
 
 cleanup() {
@@ -39,37 +39,37 @@ assert_contains() {
     fi
 }
 
-load version
-load license
-load eval -t $TARGET 'time.now_ns()'
-load eval --format pretty --bundle test/cli/smoke/golden-bundle.tar.gz --input test/cli/smoke/input.json data.test.result --fail
-load exec --bundle test/cli/smoke/golden-bundle.tar.gz --decision test/result test/cli/smoke/input.json
-load build --output o0.tar.gz test/cli/smoke/data.yaml test/cli/smoke/test.rego
-echo '{"yay": "bar"}' | load eval --format pretty --bundle o0.tar.gz -I data.test.result --fail
-load build --optimize 1 --output o1.tar.gz test/cli/smoke/data.yaml test/cli/smoke/test.rego
-echo '{"yay": "bar"}' | load eval --format pretty --bundle o1.tar.gz -I data.test.result --fail
-load build --optimize 2 --output o2.tar.gz  test/cli/smoke/data.yaml test/cli/smoke/test.rego
-echo '{"yay": "bar"}' | load eval --format pretty --bundle o2.tar.gz -I data.test.result --fail
+eopa version
+eopa license
+eopa eval -t $TARGET 'time.now_ns()'
+eopa eval --format pretty --bundle test/cli/smoke/golden-bundle.tar.gz --input test/cli/smoke/input.json data.test.result --fail
+eopa exec --bundle test/cli/smoke/golden-bundle.tar.gz --decision test/result test/cli/smoke/input.json
+eopa build --output o0.tar.gz test/cli/smoke/data.yaml test/cli/smoke/test.rego
+echo '{"yay": "bar"}' | eopa eval --format pretty --bundle o0.tar.gz -I data.test.result --fail
+eopa build --optimize 1 --output o1.tar.gz test/cli/smoke/data.yaml test/cli/smoke/test.rego
+echo '{"yay": "bar"}' | eopa eval --format pretty --bundle o1.tar.gz -I data.test.result --fail
+eopa build --optimize 2 --output o2.tar.gz  test/cli/smoke/data.yaml test/cli/smoke/test.rego
+echo '{"yay": "bar"}' | eopa eval --format pretty --bundle o2.tar.gz -I data.test.result --fail
 
-load parse test/cli/smoke/test.rego
+eopa parse test/cli/smoke/test.rego
 
 # Tar paths 
-load build --output o3.tar.gz test/cli/smoke
-load eval --bundle o3.tar.gz --input test/cli/smoke/input.json data.test.foo.bar -fpretty --fail
-load bundle convert o3.tar.gz o9.tar.gz
-load test --bundle o9.tar.gz -fpretty -v
+eopa build --output o3.tar.gz test/cli/smoke
+eopa eval --bundle o3.tar.gz --input test/cli/smoke/input.json data.test.foo.bar -fpretty --fail
+eopa bundle convert o3.tar.gz o9.tar.gz
+eopa test --bundle o9.tar.gz -fpretty -v
 github_actions_group assert_contains '/test/cli/smoke/test.rego' "$(tar -tf o3.tar.gz /test/cli/smoke/test.rego)"
 
-# Verify load bjson
-load bundle convert test/cli/smoke/golden-bundle.tar.gz o4.tar.gz
-load eval --bundle o4.tar.gz --input test/cli/smoke/input.json data.test.result --fail
+# Verify eopa bjson
+eopa bundle convert test/cli/smoke/golden-bundle.tar.gz o4.tar.gz
+eopa eval --bundle o4.tar.gz --input test/cli/smoke/input.json data.test.result --fail
 
-load exec --bundle o4.tar.gz --decision test/result test/cli/smoke/input.json
-load check -b o4.tar.gz
-load deps -b o4.tar.gz data
-load inspect -a o4.tar.gz
-load fmt -d o4.tar.gz
-load bench -b o4.tar.gz data --metrics
+eopa exec --bundle o4.tar.gz --decision test/result test/cli/smoke/input.json
+eopa check -b o4.tar.gz
+eopa deps -b o4.tar.gz data
+eopa inspect -a o4.tar.gz
+eopa fmt -d o4.tar.gz
+eopa bench -b o4.tar.gz data --metrics
 
 # Verify sign/validation
 echo "::group:: sign/verification"
@@ -81,14 +81,14 @@ pushd builddir
 tar xzf ../o4.tar.gz
 popd
 
-$LOAD_EXEC sign --signing-key private_key.pem --bundle builddir/
+$EOPA_EXEC sign --signing-key private_key.pem --bundle builddir/
 cp .signatures.json builddir/.
 
-$LOAD_EXEC build --bundle --signing-key private_key.pem --verification-key public_key.pem builddir/ -o o5.tar.gz
+$EOPA_EXEC build --bundle --signing-key private_key.pem --verification-key public_key.pem builddir/ -o o5.tar.gz
 
-$LOAD_EXEC eval --bundle o5.tar.gz --input test/cli/smoke/input.json data.test.result --fail
+$EOPA_EXEC eval --bundle o5.tar.gz --input test/cli/smoke/input.json data.test.result --fail
 
-$LOAD_EXEC run -s --addr ":8183" -b o5.tar.gz --verification-key=public_key.pem &
+$EOPA_EXEC run -s --addr ":8183" -b o5.tar.gz --verification-key=public_key.pem &
 last_pid=$!
 sleep 2
 curl --connect-timeout 10 --retry-connrefused --retry 3 --retry-delay 1 -X GET localhost:8183/v1/data
@@ -98,5 +98,5 @@ echo "::endgroup::"
 
 # Data files - correct namespaces
 echo "::group:: Data files - correct namespaces"
-assert_contains "data.namespace | test${PATH_SEPARATOR}cli${PATH_SEPARATOR}smoke${PATH_SEPARATOR}namespace${PATH_SEPARATOR}data.json" "$(load inspect test/cli/smoke)"
+assert_contains "data.namespace | test${PATH_SEPARATOR}cli${PATH_SEPARATOR}smoke${PATH_SEPARATOR}namespace${PATH_SEPARATOR}data.json" "$(eopa inspect test/cli/smoke)"
 echo "::endgroup::"

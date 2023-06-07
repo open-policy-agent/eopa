@@ -18,9 +18,9 @@ import (
 	"github.com/open-policy-agent/opa/util"
 	"go.uber.org/goleak"
 
-	"github.com/styrainc/load-private/pkg/plugins/data"
-	"github.com/styrainc/load-private/pkg/plugins/discovery"
-	inmem "github.com/styrainc/load-private/pkg/storage"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/discovery"
+	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 func TestGitData(t *testing.T) {

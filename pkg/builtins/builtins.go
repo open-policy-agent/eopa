@@ -4,7 +4,7 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 )
 
-// Builtins is the registry of built-in functions supported by Styra Load.
+// Builtins is the registry of built-in functions supported by Enterprise OPA.
 // Call RegisterBuiltin to add a new built-in.
 var Builtins []*ast.Builtin
 
@@ -21,8 +21,8 @@ func RegisterBuiltin(b *ast.Builtin) {
 // built-in definitions.
 var BuiltinMap map[string]*ast.Builtin
 
-// DefaultBuiltins is the registry of built-in functions supported in Styra
-// Load by default. When adding a new built-in function to Styra Load, update
+// DefaultBuiltins is the registry of built-in functions supported in Enterprise
+// OPA by default. When adding a new built-in function to Enterprise OPA, update
 // this list.
 var DefaultBuiltins = [...]*ast.Builtin{
 	// SQL/database builtins.
@@ -32,7 +32,7 @@ var DefaultBuiltins = [...]*ast.Builtin{
 func init() {
 	BuiltinMap = map[string]*ast.Builtin{}
 	for _, b := range DefaultBuiltins {
-		RegisterBuiltin(b)     // Only used for generating Load-specifc capabilities.
+		RegisterBuiltin(b)     // Only used for generating Enterprise OPA-specific capabilities.
 		ast.RegisterBuiltin(b) // Normal builtin registration with OPA.
 	}
 }

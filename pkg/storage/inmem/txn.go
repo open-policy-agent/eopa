@@ -8,9 +8,9 @@ import (
 	"container/list"
 	"strconv"
 
-	bjson "github.com/styrainc/load-private/pkg/json"
-	"github.com/styrainc/load-private/pkg/storage/errors"
-	"github.com/styrainc/load-private/pkg/storage/ptr"
+	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	"github.com/styrainc/enterprise-opa-private/pkg/storage/errors"
+	"github.com/styrainc/enterprise-opa-private/pkg/storage/ptr"
 
 	"github.com/open-policy-agent/opa/storage"
 )

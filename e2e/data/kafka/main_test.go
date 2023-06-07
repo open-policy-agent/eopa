@@ -1,6 +1,6 @@
 //go:build e2e
 
-// package kafka is for testing Load as container, running as server,
+// package kafka is for testing Enterprise OPA as container, running as server,
 // interacting with kafka-compatible services.
 package kafka
 
@@ -27,10 +27,10 @@ import (
 
 	"github.com/open-policy-agent/opa/util"
 
-	"github.com/styrainc/load-private/e2e/wait"
+	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
-const defaultImage = "ko.local/load-private:edge" // built via `make build-local`
+const defaultImage = "ko.local/enterprise-opa-private:edge" // built via `make build-local`
 
 // number of messages to produce
 const messageCount = 1_000
@@ -69,7 +69,7 @@ func TestSimple(t *testing.T) {
 				image = defaultImage
 			}
 
-			network, err := dockerPool.Client.CreateNetwork(docker.CreateNetworkOptions{Name: "load_kafka_e2e"})
+			network, err := dockerPool.Client.CreateNetwork(docker.CreateNetworkOptions{Name: "eopa_kafka_e2e"})
 			if err != nil {
 				t.Fatalf("network: %v", err)
 			}
@@ -111,7 +111,7 @@ transform contains {"op": "add", "path": key, "value": val} if {
 	}
 }
 `
-			load := loadLoad(t, config, policy, image, network)
+			eopa := loadEnterpriseOPA(t, config, policy, image, network)
 
 			// produce a bunch of messages, fire and forget asynchronously
 			for i := 0; i < messageCount; i++ {
@@ -135,7 +135,7 @@ transform contains {"op": "add", "path": key, "value": val} if {
 
 			if err := util.WaitFunc(func() bool {
 				// check store response (TODO: check metrics/status when we have them)
-				resp, err := http.Get("http://" + load.GetHostPort("8181/tcp") + "/v1/data/messages")
+				resp, err := http.Get("http://" + eopa.GetHostPort("8181/tcp") + "/v1/data/messages")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -181,11 +181,11 @@ plugins:
 import future.keywords
 transform contains json.unmarshal(base64.decode(input.value)) if print(input)
 `
-	load, loadOut := loadRun(t, config)
-	if err := load.Start(); err != nil {
+	eopa, eopaOut := eopaRun(t, config)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadOut, equals(`kafka plugin (path /messages): transform rule "data.e2e.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`kafka plugin (path /messages): transform rule "data.e2e.transform" does not exist yet`), 2*time.Second)
 
 	{ // setup transform rego
 		req, err := http.NewRequest("PUT", "http://localhost:8181/v1/policies/transform", strings.NewReader(transform))
@@ -270,11 +270,11 @@ transform contains json.unmarshal(base64.decode(input.value)) if print(input)
 	}
 
 	for i := range logs {
-		wait.ForLog(t, loadOut, matches(logs[i]), time.Second)
+		wait.ForLog(t, eopaOut, matches(logs[i]), time.Second)
 	}
 }
 
-func loadLoad(t *testing.T, config, policy, image string, network *docker.Network) *dockertest.Resource {
+func loadEnterpriseOPA(t *testing.T, config, policy, image string, network *docker.Network) *dockertest.Resource {
 	img := strings.Split(image, ":")
 
 	dir := t.TempDir()
@@ -287,15 +287,15 @@ func loadLoad(t *testing.T, config, policy, image string, network *docker.Networ
 		t.Fatalf("write config: %v", err)
 	}
 
-	load, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
-		Name:       "load-e2e",
+	eopa, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
+		Name:       "eopa-e2e",
 		Repository: img[0],
 		Tag:        img[1],
-		Hostname:   "load-e2e",
+		Hostname:   "eopa-e2e",
 		NetworkID:  network.ID,
 		Env: []string{
-			"STYRA_LOAD_LICENSE_TOKEN=" + os.Getenv("STYRA_LOAD_LICENSE_TOKEN"),
-			"STYRA_LOAD_LICENSE_KEY=" + os.Getenv("STYRA_LOAD_LICENSE_KEY"),
+			"EOPA_LICENSE_TOKEN=" + os.Getenv("EOPA_LICENSE_TOKEN"),
+			"EOPA_LICENSE_KEY=" + os.Getenv("EOPA_LICENSE_KEY"),
 		},
 		Mounts: []string{
 			confPath + ":/config.yml",
@@ -309,15 +309,15 @@ func loadLoad(t *testing.T, config, policy, image string, network *docker.Networ
 	}
 
 	t.Cleanup(func() {
-		if err := dockerPool.Purge(load); err != nil {
-			t.Fatalf("could not purge load: %s", err)
+		if err := dockerPool.Purge(eopa); err != nil {
+			t.Fatalf("could not purge eopa: %s", err)
 		}
 	})
 
 	if err := dockerPool.Retry(func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		req, err := http.NewRequest("GET", "http://localhost:"+load.GetPort("8181/tcp")+"/v1/data/system", nil)
+		req, err := http.NewRequest("GET", "http://localhost:"+eopa.GetPort("8181/tcp")+"/v1/data/system", nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -328,10 +328,10 @@ func loadLoad(t *testing.T, config, policy, image string, network *docker.Networ
 		defer resp.Body.Close()
 		return nil
 	}); err != nil {
-		t.Fatalf("could not connect to load: %s", err)
+		t.Fatalf("could not connect to enterprise OPA: %s", err)
 	}
 
-	return load
+	return eopa
 }
 
 func testKafka(t *testing.T, network *docker.Network) *dockertest.Resource {
@@ -449,7 +449,7 @@ func kafkaClient() (*kgo.Client, error) {
 
 func cleanupPrevious(t *testing.T) {
 	t.Helper()
-	for _, n := range []string{"load-e2e", "kafka-e2e"} {
+	for _, n := range []string{"eopa-e2e", "kafka-e2e"} {
 		if err := dockerPool.RemoveContainerByName(n); err != nil {
 			t.Fatalf("remove %s: %v", n, err)
 		}

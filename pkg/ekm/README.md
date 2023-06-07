@@ -28,9 +28,9 @@ vault read secret/data/license
 ## Run
 
 ```shell
-load --config-file testdata/ekm.yaml run -s -l debug
+eopa --config-file testdata/ekm.yaml run -s -l debug
 ```
 
 # Links
 
-https://github.com/StyraInc/load-private/issues/415
+https://github.com/styrainc/enterprise-opa-private/issues/415

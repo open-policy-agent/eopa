@@ -44,11 +44,11 @@ func TestEKM(t *testing.T) {
 	vault := startVaultServer(t)
 	defer vault.Terminate(ctx)
 
-	load, loadOut := loadRun(t)
-	if err := load.Start(); err != nil {
+	eopa, eopaOut := eopaRun(t)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitForLog(ctx, t, loadOut, func(s string) bool { return strings.Contains(s, "Discovery update processed successfully") }, time.Second)
+	waitForLog(ctx, t, eopaOut, func(s string) bool { return strings.Contains(s, "Discovery update processed successfully") }, time.Second)
 }
 
 func createVaultTestCluster(t *testing.T) *testcontainervault.VaultContainer {
@@ -115,7 +115,7 @@ func startVaultServer(t *testing.T) *testcontainervault.VaultContainer {
 	if err := setKey(vlogical, "kv/data/acmecorp:data/url", map[string]any{"url": testserver.URL}); err != nil {
 		t.Fatal(err)
 	}
-	if err := setKey(vlogical, "kv/data/license:data/key", map[string]any{"key": os.Getenv("STYRA_LOAD_LICENSE_KEY")}); err != nil {
+	if err := setKey(vlogical, "kv/data/license:data/key", map[string]any{"key": os.Getenv("EOPA_LICENSE_KEY")}); err != nil {
 		t.Fatal(err)
 	}
 	dat, err := os.ReadFile("testdata/public_key.pem")
@@ -131,7 +131,7 @@ func startVaultServer(t *testing.T) *testcontainervault.VaultContainer {
 	return cluster
 }
 
-func loadRun(t *testing.T, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
+func eopaRun(t *testing.T, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
 	logLevel := "debug"
 	buf := bytes.Buffer{}
 
@@ -143,32 +143,32 @@ func loadRun(t *testing.T, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
 		"--disable-telemetry",
 	}
 	args = append(args, extraArgs...)
-	load := exec.Command(binary(), args...)
-	load.Stderr = &buf
-	load.Env = append(load.Environ(),
-		"STYRA_LOAD_LICENSE_TOKEN="+os.Getenv("STYRA_LOAD_LICENSE_TOKEN"),
-		"STYRA_LOAD_LICENSE_KEY="+os.Getenv("STYRA_LOAD_LICENSE_KEY"),
+	eopa := exec.Command(binary(), args...)
+	eopa.Stderr = &buf
+	eopa.Env = append(eopa.Environ(),
+		"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
+		"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
 	)
 
 	t.Cleanup(func() {
-		if load.Process == nil {
+		if eopa.Process == nil {
 			return
 		}
-		if err := load.Process.Signal(os.Interrupt); err != nil {
+		if err := eopa.Process.Signal(os.Interrupt); err != nil {
 			panic(err)
 		}
-		load.Wait()
+		eopa.Wait()
 		if testing.Verbose() && t.Failed() {
-			t.Logf("load output:\n%s", buf.String())
+			t.Logf("eopa output:\n%s", buf.String())
 		}
 	})
-	return load, &buf
+	return eopa, &buf
 }
 
 func binary() string {
 	bin := os.Getenv("BINARY")
 	if bin == "" {
-		return "load"
+		return "eopa"
 	}
 	return bin
 }

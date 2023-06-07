@@ -18,8 +18,8 @@ import (
 	"github.com/open-policy-agent/opa/logging"
 )
 
-const loadLicenseToken = "STYRA_LOAD_LICENSE_TOKEN"
-const loadLicenseKey = "STYRA_LOAD_LICENSE_KEY"
+const eopaLicenseToken = "EOPA_LICENSE_TOKEN"
+const eopaLicenseKey = "EOPA_LICENSE_KEY"
 const licenseErrorExitCode = 3
 
 var licenseRetries = 6   // up to 30 seconds total
@@ -34,8 +34,8 @@ If you already have a license:
         - or -
     Provide the %s or %s flag when running a command
 
-For more information on licensing Styra Load visit https://docs.styra.com/load/installation/licensing`,
-	"`load license trial`", loadLicenseKey, loadLicenseToken, "`--license-key`", "`--license-token`")
+For more information on licensing Enterprise OPA visit https://docs.styra.com/enterprise-opa/installation/licensing`,
+	"`eopa license trial`", eopaLicenseKey, eopaLicenseToken, "`--license-key`", "`--license-token`")
 
 type Source int
 
@@ -99,7 +99,7 @@ type (
 
 func NewLicense() *License {
 	keygen.Account = "dd0105d1-9564-4f58-ae1c-9defdd0bfea7" // account=styra-com
-	keygen.Product = "f7da4ae5-7bf5-46f6-9634-026bec5e8599" // product=load
+	keygen.Product = "f7da4ae5-7bf5-46f6-9634-026bec5e8599" // product=enterprise-opa
 	keygen.PublicKey = "8b8ff31c1d3031add9b1b734e09e81c794731718c2cac2e601b8dfbc95daa4fc"
 	//keygen.APIURL = "https://2.2.2.99" // simulate offline network (timeout)
 	//keygen.APIURL = "https://api.keygenx.sh" // simulate offline network (DNS not found)
@@ -108,14 +108,14 @@ func NewLicense() *License {
 	keygen.Logger = &keygenLogger{logger}
 
 	// validate licensekey or licensetoken
-	keygen.LicenseKey = os.Getenv(loadLicenseKey)
+	keygen.LicenseKey = os.Getenv(eopaLicenseKey)
 	if keygen.LicenseKey == "" {
-		keygen.Token = os.Getenv(loadLicenseToken) // activation-token of a license; determines the policy
+		keygen.Token = os.Getenv(eopaLicenseToken) // activation-token of a license; determines the policy
 	}
 
 	// remove licenses from environment! (opa.runtime.env)
-	os.Unsetenv(loadLicenseKey)
-	os.Unsetenv(loadLicenseToken)
+	os.Unsetenv(eopaLicenseKey)
+	os.Unsetenv(eopaLicenseToken)
 
 	l := &License{logger: logger, shutdown: make(chan struct{}, 1), finished: make(chan struct{}, 1)}
 	l.mustStartBy = time.AfterFunc(10*time.Minute, l.timerCallback) // 10 minutes to start license check limit
@@ -372,7 +372,7 @@ func (l *License) ValidateLicense(params *LicenseParams, terminate func(code int
 
 			for s := range sigs {
 				l.ReleaseLicense()
-				time.Sleep(100 * time.Millisecond)              // give load server sometime to finish
+				time.Sleep(100 * time.Millisecond)              // give eopa server sometime to finish
 				terminate(1, fmt.Errorf("caught signal %v", s)) // exit now (default behavior)!
 			}
 		}()

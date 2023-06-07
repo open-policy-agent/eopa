@@ -20,11 +20,11 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          path: load
+          path: eopa
       - uses: actions/setup-go@v4
         with:
-          go-version-file: load/go.mod
-          cache-dependency-path: load/go.sum
+          go-version-file: enterprise-opa/go.mod
+          cache-dependency-path: enterprise-opa/go.sum
           check-latest: true
       - name: Check out "benchmarks" branch
         uses: actions/checkout@v3
@@ -37,7 +37,7 @@ jobs:
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
           INPUT_GO_TEST_FLAGS: -timeout=120m -run=-
-          INPUT_SUBDIRECTORY: load
+          INPUT_SUBDIRECTORY: enterprise-opa
           INPUT_PUBLISH: true
           INPUT_PUBLISH_BRANCH: benchmarks
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}

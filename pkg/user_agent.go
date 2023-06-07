@@ -1,7 +1,7 @@
 package pkg
 
 import (
-	iversion "github.com/styrainc/load-private/pkg/internal/version"
+	iversion "github.com/styrainc/enterprise-opa-private/pkg/internal/version"
 )
 
 // GetUserAgent returns the current UserAgent

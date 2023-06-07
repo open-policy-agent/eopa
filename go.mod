@@ -1,4 +1,4 @@
-module github.com/styrainc/load-private
+module github.com/styrainc/enterprise-opa-private
 
 go 1.20
 

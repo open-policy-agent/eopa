@@ -7,12 +7,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/styrainc/load-private/cmd/keygen"
-	"github.com/styrainc/load-private/cmd/trial"
-	"github.com/styrainc/load-private/pkg/tui"
+	"github.com/styrainc/enterprise-opa-private/cmd/keygen"
+	"github.com/styrainc/enterprise-opa-private/cmd/trial"
+	"github.com/styrainc/enterprise-opa-private/pkg/tui"
 )
 
-const defaultTrialServiceURL string = "https://load-license.corp.styra.com"
+const defaultTrialServiceURL string = "https://eopa-license.corp.styra.com"
 
 func showExp(online bool, expiry time.Time) {
 	var prefix string
@@ -64,7 +64,7 @@ func LicenseCmd(license *keygen.License, lparams *keygen.LicenseParams) *cobra.C
 		},
 	}
 
-	trialServiceURL := os.Getenv("STYRA_LOAD_TRIAL_SERVICE_URL")
+	trialServiceURL := os.Getenv("EOPA_TRIAL_SERVICE_URL")
 	if trialServiceURL == "" {
 		trialServiceURL = defaultTrialServiceURL
 	}
@@ -80,8 +80,8 @@ func TrialCmd(client trial.Client) *cobra.Command {
 	}
 	c := &cobra.Command{
 		Use:          "trial",
-		Short:        "Create a new Styra Load trial license.",
-		Long:         "Gather all of the data needed to create a new Styra Load trial license and create one. Any information not provided via flags is collected interactively. Upon success, the new trial license key is printed to stdout.",
+		Short:        "Create a new Enterprise OPA trial license.",
+		Long:         "Gather all of the data needed to create a new Enterprise OPA trial license and create one. Any information not provided via flags is collected interactively. Upon success, the new trial license key is printed to stdout.",
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
 			return trial.Run(trial.RunTrialArgs{

@@ -8,7 +8,7 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/storage"
 
-	policyv1 "github.com/styrainc/load-private/proto/gen/go/load/policy/v1"
+	policyv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

@@ -16,10 +16,10 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown/builtins"
 
-	"github.com/styrainc/load-private/pkg/vm"
+	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
-const Name = "load_decision_logger"
+const Name = "enterprise_opa_decision_logger"
 
 type Logger struct {
 	manager *plugins.Manager

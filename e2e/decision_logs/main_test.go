@@ -27,7 +27,7 @@ import (
 
 	"github.com/open-policy-agent/opa/version"
 
-	"github.com/styrainc/load-private/e2e/wait"
+	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
 type payload struct {
@@ -50,7 +50,7 @@ type payloadLabels struct {
 }
 
 var standardLabels = payloadLabels{
-	Type:    "styra-load",
+	Type:    "enterprise-opa",
 	Version: version.Version,
 }
 
@@ -81,7 +81,7 @@ mask contains "/input/erase" if input.input.erase
 	}
 	configFmt := `
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     drop_decision: /test/drop
     mask_decision: /test/mask
     buffer:
@@ -92,11 +92,11 @@ plugins:
 	for _, tc := range tests {
 		t.Run("buffer="+tc.buffer, func(t *testing.T) {
 			config := fmt.Sprintf(configFmt, tc.buffer)
-			load, loadOut, loadErr := loadLoad(t, config, policy, false)
-			if err := load.Start(); err != nil {
+			eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, false)
+			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
-			wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+			wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			{ // act 1: request is logged as-is
 				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
@@ -146,7 +146,7 @@ plugins:
 			}
 
 			// assert: check that DL logs have been output as expected
-			logs := collectDL(t, loadOut, false, 2)
+			logs := collectDL(t, eopaOut, false, 2)
 			sort.Slice(logs, func(i, j int) bool { return logs[i].ID < logs[j].ID })
 
 			{ // log for act 1
@@ -172,7 +172,7 @@ plugins:
 					if diff := cmp.Diff(exp, act, cmpopts.SortSlices(func(a, b string) bool { return a < b })); diff != "" {
 						t.Errorf("unexpected log[0] metrics: (-want +got):\n%s", diff)
 					}
-					// Was: https://github.com/StyraInc/load-private/issues/625
+					// Was: https://github.com/styrainc/enterprise-opa-private/issues/625
 					if act := logs[0].Metrics["timer_server_handler_ns"]; act == 0 {
 						t.Error("expected timer_server_handler_ns > 0")
 					}
@@ -236,7 +236,7 @@ mask contains {"op": "remove", "path": "/result/remove/this"}
 
 	config := `
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     drop_decision: /test/drop
     mask_decision: /test/mask
     buffer:
@@ -244,11 +244,11 @@ plugins:
     output:
       type: console
 `
-	load, loadOut, loadErr := loadLoad(t, config, policy, false)
-	if err := load.Start(); err != nil {
+	eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, false)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	{ // act: send request
 		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/p", strings.NewReader(`{"input": {"a": "b"}}`))
@@ -265,7 +265,7 @@ plugins:
 		}
 	}
 
-	logs := collectDL(t, loadOut, false, 1)
+	logs := collectDL(t, eopaOut, false, 1)
 	{ // log for act 1
 		dl := payload{
 			Result: map[string]any{
@@ -297,7 +297,7 @@ coin if rand.intn("coin", 2)
 	t.Run("flush_at_count", func(t *testing.T) {
 		config := `
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     drop_decision: /test/drop
     mask_decision: /test/mask
     buffer:
@@ -306,11 +306,11 @@ plugins:
     output:
       type: console
 `
-		load, loadOut, loadErr := loadLoad(t, config, policy, false)
-		if err := load.Start(); err != nil {
+		eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, false)
+		if err := eopa.Start(); err != nil {
 			t.Fatal(err)
 		}
-		wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+		wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 		{ // act 1: first request, not logged yet
 			resp, err := http.Post("http://localhost:28181/v1/data/test/coin", jsonType, nil)
@@ -325,7 +325,7 @@ plugins:
 
 		{ // assert 1: no decision logs
 			time.Sleep(20 * time.Millisecond)
-			exp, act := ``, loadOut.String()
+			exp, act := ``, eopaOut.String()
 			if diff := cmp.Diff(exp, act); diff != "" {
 				t.Fatalf("unexpected console logs: (-want, +got):\n%s", diff)
 			}
@@ -342,13 +342,13 @@ plugins:
 			}
 		}
 
-		_ = collectDL(t, loadOut, false, 2) // if we pass this, we've got two logs
+		_ = collectDL(t, eopaOut, false, 2) // if we pass this, we've got two logs
 	})
 
 	t.Run("flush_at_period", func(t *testing.T) {
 		config := `
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     drop_decision: /test/drop
     mask_decision: /test/mask
     buffer:
@@ -357,11 +357,11 @@ plugins:
     output:
       type: console
 `
-		load, loadOut, loadErr := loadLoad(t, config, policy, false)
-		if err := load.Start(); err != nil {
+		eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, false)
+		if err := eopa.Start(); err != nil {
 			t.Fatal(err)
 		}
-		wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+		wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 		{ // act 1: first request, not logged yet
 			resp, err := http.Post("http://localhost:28181/v1/data/test/coin", jsonType, nil)
@@ -376,14 +376,14 @@ plugins:
 
 		{ // assert: no decision logs (yet)
 			time.Sleep(100 * time.Millisecond)
-			exp, act := ``, loadOut.String()
+			exp, act := ``, eopaOut.String()
 			if diff := cmp.Diff(exp, act); diff != "" {
 				t.Fatalf("unexpected console logs: (-want, +got):\n%s", diff)
 			}
 		}
 
 		time.Sleep(3 * time.Second)
-		_ = collectDL(t, loadOut, false, 1) // if we pass this, we've got one log
+		_ = collectDL(t, eopaOut, false, 1) // if we pass this, we've got one log
 	})
 }
 
@@ -409,7 +409,7 @@ services:
 - name: "dl-sink"
   url: "%s/prefix"
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     output:
       type: service
       service: dl-sink
@@ -419,7 +419,7 @@ plugins:
 			note: "type=http",
 			configFmt: `
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     output:
       type: http
       url: "%s/prefix/logs"
@@ -445,11 +445,11 @@ plugins:
 				w.WriteHeader(http.StatusInternalServerError)
 			}))
 			t.Cleanup(ts.Close)
-			load, _, loadErr := loadLoad(t, fmt.Sprintf(tc.configFmt, ts.URL), policy, false)
-			if err := load.Start(); err != nil {
+			eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(tc.configFmt, ts.URL), policy, false)
+			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
-			wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+			wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			{ // act: send API request
 				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
@@ -488,9 +488,9 @@ import future.keywords
 coin if rand.intn("coin", 2)`
 
 	config := `
-# load.yml
+# enterprise-opa.yml
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     output:
     - type: http
       url: %s/prefix/logs
@@ -525,11 +525,11 @@ plugins:
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	t.Cleanup(ts.Close)
-	load, _, loadErr := loadLoad(t, fmt.Sprintf(config, ts.URL, expectedRetries), policy, false)
-	if err := load.Start(); err != nil {
+	eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(config, ts.URL, expectedRetries), policy, false)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadErr, func(s string) bool {
+	wait.ForLog(t, eopaErr, func(s string) bool {
 		return strings.Contains(s, "Server initialized")
 	}, 5*time.Second)
 
@@ -577,7 +577,7 @@ services:
 - name: "dl-sink"
   url: "%s/prefix"
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     output:
     - type: service
       service: dl-sink
@@ -596,11 +596,11 @@ plugins:
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	t.Cleanup(ts.Close)
-	load, loadOut, loadErr := loadLoad(t, fmt.Sprintf(configFmt, ts.URL), policy, false)
-	if err := load.Start(); err != nil {
+	eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(configFmt, ts.URL), policy, false)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	{ // act: send API request
 		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
@@ -618,7 +618,7 @@ plugins:
 	}
 
 	logsHTTP := collectDL(t, &buf, true, 1)
-	logsConsole := collectDL(t, loadOut, false, 1)
+	logsConsole := collectDL(t, eopaOut, false, 1)
 	dl := payload{
 		Result: true,
 		ID:     1,
@@ -649,7 +649,7 @@ services:
       client_secret: sesamememe
       token_url: "%[1]s/token"
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     output:
       type: service
       service: dl-sink
@@ -673,11 +673,11 @@ plugins:
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	t.Cleanup(ts.Close)
-	load, _, loadErr := loadLoad(t, fmt.Sprintf(configFmt, ts.URL), policy, false)
-	if err := load.Start(); err != nil {
+	eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(configFmt, ts.URL), policy, false)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	{ // act: send API request
 		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
@@ -715,7 +715,7 @@ services:
       cert: testdata/tls/client-cert.pem
       private_key: testdata/tls/client-key.pem
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     output:
       type: service
       service: dl-sink
@@ -752,11 +752,11 @@ plugins:
 	t.Cleanup(func() { _ = srv.Close() })
 
 	config := fmt.Sprintf(configFmt, "https://127.0.0.1:9999")
-	load, _, loadErr := loadLoad(t, config, policy, false)
-	if err := load.Start(); err != nil {
+	eopa, _, eopaErr := loadEnterpriseOPA(t, config, policy, false)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	{ // act: send API request
 		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
@@ -776,7 +776,7 @@ plugins:
 	_ = collectDL(t, &buf, true, 1)
 }
 
-func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
+func loadEnterpriseOPA(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	var silent bool
 	logLevel := "debug" // Needed for checking if server is ready
 	for _, o := range opts {
@@ -805,29 +805,29 @@ func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *byt
 		"--log-level", logLevel,
 		"--disable-telemetry",
 	}
-	load := exec.Command(binary(), append(args, policyPath)...)
-	load.Stderr = &stderr
-	load.Stdout = &stdout
-	load.Env = append(load.Environ(),
-		"STYRA_LOAD_LICENSE_TOKEN="+os.Getenv("STYRA_LOAD_LICENSE_TOKEN"),
-		"STYRA_LOAD_LICENSE_KEY="+os.Getenv("STYRA_LOAD_LICENSE_KEY"),
+	eopa := exec.Command(binary(), append(args, policyPath)...)
+	eopa.Stderr = &stderr
+	eopa.Stdout = &stdout
+	eopa.Env = append(eopa.Environ(),
+		"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
+		"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
 	)
 
 	t.Cleanup(func() {
-		if load.Process == nil {
+		if eopa.Process == nil {
 			return
 		}
-		if err := load.Process.Signal(os.Interrupt); err != nil {
+		if err := eopa.Process.Signal(os.Interrupt); err != nil {
 			panic(err)
 		}
-		load.Wait()
+		eopa.Wait()
 		if testing.Verbose() && t.Failed() && !silent {
-			t.Logf("load stdout:\n%s", stdout.String())
-			t.Logf("load stderr:\n%s", stderr.String())
+			t.Logf("eopa stdout:\n%s", stdout.String())
+			t.Logf("eopa stderr:\n%s", stderr.String())
 		}
 	})
 
-	return load, &stdout, &stderr
+	return eopa, &stdout, &stderr
 }
 
 func TestDecisionLogsFailsToStartWithTwoPlugins(t *testing.T) {
@@ -835,7 +835,7 @@ func TestDecisionLogsFailsToStartWithTwoPlugins(t *testing.T) {
 decision_logs:
   console: true
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     buffer:
       type: memory
     output:
@@ -856,13 +856,13 @@ plugins:
 	}
 
 	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}
-	load := exec.Command(binary(), args...)
-	load.Stderr = &stderr
-	load.Stdout = &stdout
-	if err := load.Start(); err != nil {
+	eopa := exec.Command(binary(), args...)
+	eopa.Stderr = &stderr
+	eopa.Stdout = &stdout
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	_ = load.Wait() // expected: exit 1
+	_ = eopa.Wait() // expected: exit 1
 	if exp, act := ``, stdout.String(); exp != act {
 		t.Errorf("stdout: expected %q, got %q", exp, act)
 	}
@@ -873,7 +873,7 @@ plugins:
 	if err := json.NewDecoder(&stderr).Decode(&output); err != nil {
 		t.Fatal(err)
 	}
-	if exp, act := "load_decision_logger cannot be used together with OPA's decision logging", output.Err; exp != act {
+	if exp, act := "enterprise_opa_decision_logger cannot be used together with OPA's decision logging", output.Err; exp != act {
 		t.Errorf("err: expected %q, got %q", exp, act)
 	}
 	if exp, act := "error", output.Level; exp != act {
@@ -884,7 +884,7 @@ plugins:
 func binary() string {
 	bin := os.Getenv("BINARY")
 	if bin == "" {
-		return "load"
+		return "eopa"
 	}
 	return bin
 }

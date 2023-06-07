@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/styrainc/load-private/pkg/json/internal/utils"
+	"github.com/styrainc/enterprise-opa-private/pkg/json/internal/utils"
 )
 
 type testResource struct {

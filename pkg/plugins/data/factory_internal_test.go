@@ -10,9 +10,9 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 	"go.uber.org/goleak"
 
-	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
-	inmem "github.com/styrainc/load-private/pkg/storage"
-	load_storage "github.com/styrainc/load-private/pkg/storage"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/kafka"
+	eopa_storage "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 func TestKafkaReconfigure(t *testing.T) {
@@ -221,7 +221,7 @@ func getTestManager() *plugins.Manager {
 }
 
 func getTestManagerWithOpts(config []byte, stores ...storage.Store) *plugins.Manager {
-	store := load_storage.New()
+	store := eopa_storage.New()
 	if len(stores) == 1 {
 		store = stores[0]
 	}

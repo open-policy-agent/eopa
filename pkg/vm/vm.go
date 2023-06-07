@@ -17,7 +17,7 @@ import (
 	"github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/open-policy-agent/opa/topdown/print"
 
-	fjson "github.com/styrainc/load-private/pkg/json"
+	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
 var (

@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	fjson "github.com/styrainc/load-private/pkg/json"
+	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
 func TestHashSetPutDelete(t *testing.T) {

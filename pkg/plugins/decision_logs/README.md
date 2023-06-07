@@ -1,6 +1,6 @@
 # Decision Log Replacement
 
-Load allows for replacing the built-in decision logs plugin by a custom one:
+Enterprise OPA allows for replacing the built-in decision logs plugin by a custom one:
 
 ```yaml
 services:
@@ -19,7 +19,7 @@ services:
   url: "http://knownservice/prefix"
   response_header_timeout_seconds: 12
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     output:
       type: service
       service: knownservice
@@ -36,7 +36,7 @@ plugin.
 
 ###  Buffering
 
-The new logger supportes three kinds of buffers:
+The new logger supports three kinds of buffers:
 - `unbuffered`: responses aren't returned until the DL entry of the decision has
   successfully been written to a sink.
 - `memory`: DL entries are buffered in memory
@@ -69,5 +69,5 @@ These may become TODOs if we decide that the deviation isn't acceptable.
 - Some DL payload fields aren't set: type, mapped_results, ...
   We can look into adding them if DAS requires them, or some sink needs them.
 - Console output goes to stdout, whereas with the default plugin, it goes to
-  stderr. All of Load's logs to go stderr, so it's actually rather convenient
-  to collect DLs from stdout instead.
+  stderr. All of Enterprise OPA's logs to go stderr, so it's actually rather
+  convenient to collect DLs from stdout instead.

@@ -5,7 +5,7 @@ import (
 	"math/big"
 	gostrings "strings"
 
-	fjson "github.com/styrainc/load-private/pkg/json"
+	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"

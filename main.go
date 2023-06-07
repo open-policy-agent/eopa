@@ -7,15 +7,15 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/cmd"
 
-	_ "github.com/styrainc/load-private/capabilities"
-	loadCmd "github.com/styrainc/load-private/cmd"
-	"github.com/styrainc/load-private/cmd/keygen"
-	internal "github.com/styrainc/load-private/internal/cmd"
-	_ "github.com/styrainc/load-private/pkg/rego_vm"
+	_ "github.com/styrainc/enterprise-opa-private/capabilities"
+	eopaCmd "github.com/styrainc/enterprise-opa-private/cmd"
+	"github.com/styrainc/enterprise-opa-private/cmd/keygen"
+	internal "github.com/styrainc/enterprise-opa-private/internal/cmd"
+	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
 
 func init() {
-	ast.UpdateCapabilities = internal.LoadExtensions
+	ast.UpdateCapabilities = internal.EnterpriseOPAExtensions
 }
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 	}() // orderly shutdown, run all defer routines
 
 	license := keygen.NewLicense()
-	root := loadCmd.LoadCommand(license)
+	root := eopaCmd.EnterpriseOPACommand(license)
 
 	defer func() {
 		// do release in a defer function; works with panics

@@ -9,5 +9,5 @@ docker run --rm \
   -v $(pwd)/doc:/out \
   -v $(pwd):/protos \
   pseudomuto/protoc-gen-doc \
-  -I/protos load/v1/*.proto \
+  -I/protos enterprise-opa/v1/*.proto \
   --doc_opt=html,index.html

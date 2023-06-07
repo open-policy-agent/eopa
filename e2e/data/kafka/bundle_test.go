@@ -22,7 +22,7 @@ import (
 
 	"github.com/open-policy-agent/opa/util"
 
-	"github.com/styrainc/load-private/e2e/wait"
+	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
 // Uses a httptest.Server for serving bundles from testdata/bundles.
@@ -45,12 +45,12 @@ func TestTransformFromBundle(t *testing.T) {
 		t.Fatalf("produce msg: %v", err)
 	}
 
-	load, loadOut := loadRun(t, config("transform", testserver.URL))
-	if err := load.Start(); err != nil {
+	eopa, eopaOut := eopaRun(t, config("transform", testserver.URL))
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
-	wait.ForLog(t, loadOut, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
 
 	statusOK := map[string]any{"state": "OK"}
 	assertStatus(t, map[string]any{
@@ -106,13 +106,13 @@ func TestTransformFromBundle(t *testing.T) {
 
 // The bundle used in this test declares no roots, so it owns all of 'data'.
 func TestOverlapBundleWithoutRoots(t *testing.T) {
-	load, loadOut := loadRun(t, config("no-roots", testserver.URL))
-	if err := load.Start(); err != nil {
+	eopa, eopaOut := eopaRun(t, config("no-roots", testserver.URL))
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
-	wait.ForLog(t, loadOut, equals(`data plugin: kafka path kafka/messages overlaps with bundle root []`), 2*time.Second)
-	wait.ForLog(t, loadOut, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`data plugin: kafka path kafka/messages overlaps with bundle root []`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
 
 	statusOK := map[string]any{"state": "OK"}
 	assertStatus(t, map[string]any{
@@ -125,12 +125,12 @@ func TestOverlapBundleWithoutRoots(t *testing.T) {
 
 // The bundle used here declares the root "data.kafka.messages"
 func TestOverlapBundleOverlappingRoots(t *testing.T) {
-	load, loadOut := loadRun(t, config("overlap", testserver.URL))
-	if err := load.Start(); err != nil {
+	eopa, eopaOut := eopaRun(t, config("overlap", testserver.URL))
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
-	wait.ForLog(t, loadOut, equals(`Bundle activation failed: path "/kafka/messages" is owned by plugin "kafka"`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`Bundle activation failed: path "/kafka/messages" is owned by plugin "kafka"`), 2*time.Second)
 
 	statusOK := map[string]any{"state": "OK"}
 	assertStatus(t, map[string]any{
@@ -144,13 +144,13 @@ func TestOverlapBundleOverlappingRoots(t *testing.T) {
 // The bundle used here declares the root "data.kafka", a prefix of "data.kafka.messages"
 func TestOverlapBundlePrefixRoot(t *testing.T) {
 	config := fmt.Sprintf(config("prefix", testserver.URL))
-	load, loadOut := loadRun(t, config)
-	if err := load.Start(); err != nil {
+	eopa, eopaOut := eopaRun(t, config)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
-	wait.ForLog(t, loadOut, equals(`data plugin: kafka path kafka/messages overlaps with bundle root [transform kafka]`), 2*time.Second)
-	wait.ForLog(t, loadOut, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`data plugin: kafka path kafka/messages overlaps with bundle root [transform kafka]`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
 
 	statusOK := map[string]any{"state": "OK"}
 	assertStatus(t, map[string]any{
@@ -208,7 +208,7 @@ func assertStatus(t *testing.T, exp map[string]any) {
 }
 
 func network(t *testing.T) *docker.Network {
-	network, err := dockerPool.Client.CreateNetwork(docker.CreateNetworkOptions{Name: "load_kafka_e2e"})
+	network, err := dockerPool.Client.CreateNetwork(docker.CreateNetworkOptions{Name: "eopa_kafka_e2e"})
 	if err != nil {
 		t.Fatalf("network: %v", err)
 	}
@@ -220,7 +220,7 @@ func network(t *testing.T) *docker.Network {
 	return network
 }
 
-func loadRun(t *testing.T, config string, extra ...string) (*exec.Cmd, *bytes.Buffer) {
+func eopaRun(t *testing.T, config string, extra ...string) (*exec.Cmd, *bytes.Buffer) {
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
 	args := []string{
@@ -239,33 +239,33 @@ func loadRun(t *testing.T, config string, extra ...string) (*exec.Cmd, *bytes.Bu
 	if len(extra) > 0 {
 		args = append(args, extra...)
 	}
-	load := exec.Command(binary(), args...)
-	load.Stderr = &buf
-	load.Env = append(load.Environ(),
-		"STYRA_LOAD_LICENSE_TOKEN="+os.Getenv("STYRA_LOAD_LICENSE_TOKEN"),
-		"STYRA_LOAD_LICENSE_KEY="+os.Getenv("STYRA_LOAD_LICENSE_KEY"),
+	eopa := exec.Command(binary(), args...)
+	eopa.Stderr = &buf
+	eopa.Env = append(eopa.Environ(),
+		"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
+		"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
 	)
 
 	t.Cleanup(func() {
-		if load.Process == nil {
+		if eopa.Process == nil {
 			return
 		}
-		if err := load.Process.Signal(os.Interrupt); err != nil {
+		if err := eopa.Process.Signal(os.Interrupt); err != nil {
 			panic(err)
 		}
-		load.Wait()
+		eopa.Wait()
 		if testing.Verbose() && t.Failed() {
-			t.Logf("load output:\n%s", buf.String())
+			t.Logf("enterprise OPA output:\n%s", buf.String())
 		}
 	})
 
-	return load, &buf
+	return eopa, &buf
 }
 
 func binary() string {
 	bin := os.Getenv("BINARY")
 	if bin == "" {
-		return "load"
+		return "eopa"
 	}
 	return bin
 }

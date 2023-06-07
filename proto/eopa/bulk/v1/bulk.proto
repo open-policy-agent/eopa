@@ -13,10 +13,10 @@
 // limitations under the License.
 
 syntax = "proto3";
-package load.bulk.v1;
+package eopa.bulk.v1;
 
-import "load/data/v1/data.proto";
-import "load/policy/v1/policy.proto";
+import "eopa/data/v1/data.proto";
+import "eopa/policy/v1/policy.proto";
 import "google/protobuf/any.proto";
 
 // BulkRWRequest can contain any combination of read/write operations on
@@ -26,9 +26,9 @@ message BulkRWRequest {
   // This allows creating arbitrary sequences of policy store operations.
   message WritePolicyRequest {
     oneof req {
-      load.policy.v1.CreatePolicyRequest create = 1;
-      load.policy.v1.UpdatePolicyRequest update = 2;
-      load.policy.v1.DeletePolicyRequest delete = 3;
+      eopa.policy.v1.CreatePolicyRequest create = 1;
+      eopa.policy.v1.UpdatePolicyRequest update = 2;
+      eopa.policy.v1.DeletePolicyRequest delete = 3;
     }
   }
 
@@ -36,22 +36,22 @@ message BulkRWRequest {
   // This allows creating arbitrary sequences of data store operations.
   message WriteDataRequest {
     oneof req {
-      load.data.v1.CreateDataRequest create = 1;
-      load.data.v1.UpdateDataRequest update = 2;
-      load.data.v1.DeleteDataRequest delete = 3;
+      eopa.data.v1.CreateDataRequest create = 1;
+      eopa.data.v1.UpdateDataRequest update = 2;
+      eopa.data.v1.DeleteDataRequest delete = 3;
     }
   }
 
   // ReadPolicyRequest is currently a simple wrapper over the GetPolicy
   // request type.
   message ReadPolicyRequest {
-    load.policy.v1.GetPolicyRequest req = 1;
+    eopa.policy.v1.GetPolicyRequest req = 1;
   }
 
   // ReadDataRequest is currently a simple wrapper over the GetData
   // request type.
   message ReadDataRequest {
-    load.data.v1.GetDataRequest req = 1;
+    eopa.data.v1.GetDataRequest req = 1;
   }
 
   // writes_policy provides a sequence of WritePolicy operations to apply.
@@ -72,9 +72,9 @@ message BulkRWResponse {
   // mirroring the union of possible request types.
   message WritePolicyResponse {
     oneof resp {
-      load.policy.v1.CreatePolicyResponse create = 1;
-      load.policy.v1.UpdatePolicyResponse update = 2;
-      load.policy.v1.DeletePolicyResponse delete = 3;
+      eopa.policy.v1.CreatePolicyResponse create = 1;
+      eopa.policy.v1.UpdatePolicyResponse update = 2;
+      eopa.policy.v1.DeletePolicyResponse delete = 3;
     }
   }
 
@@ -82,23 +82,23 @@ message BulkRWResponse {
   // mirroring the union of possible request types.
   message WriteDataResponse {
     oneof resp {
-      load.data.v1.CreateDataResponse create = 1;
-      load.data.v1.UpdateDataResponse update = 2;
-      load.data.v1.DeleteDataResponse delete = 3;
+      eopa.data.v1.CreateDataResponse create = 1;
+      eopa.data.v1.UpdateDataResponse update = 2;
+      eopa.data.v1.DeleteDataResponse delete = 3;
     }
   }
 
   // ReadPolicyResponse provides fields for a response or list of errors.
   // The two should be mutually exclusive.
   message ReadPolicyResponse {
-    load.policy.v1.GetPolicyResponse resp = 1;
+    eopa.policy.v1.GetPolicyResponse resp = 1;
     ErrorList errors = 2;
   }
 
   // ReadDataResponse provides fields for a response or list of errors. The
   // two should be mutually exclusive.
   message ReadDataResponse {
-    load.data.v1.GetDataResponse resp = 1;
+    eopa.data.v1.GetDataResponse resp = 1;
     ErrorList errors = 2;
   }
 

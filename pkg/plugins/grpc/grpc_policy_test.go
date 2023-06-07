@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	policyv1 "github.com/styrainc/load-private/proto/gen/go/load/policy/v1"
+	policyv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

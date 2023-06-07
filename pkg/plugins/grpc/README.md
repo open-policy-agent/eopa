@@ -5,7 +5,7 @@ The gRPC plugin implements the CRUD handlers for both Policy and Data endpoints 
 ## Running a grpc plugin
 
 ```shell
-load --config-file grpc.yaml run -s -l debug
+eopa --config-file grpc.yaml run -s -l debug
 ```
 ```yaml
 # grpc.yaml: grpc plugin configuration file

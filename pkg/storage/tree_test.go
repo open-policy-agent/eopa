@@ -8,9 +8,9 @@ import (
 
 	"github.com/open-policy-agent/opa/storage"
 
-	"github.com/styrainc/load-private/pkg/json"
-	"github.com/styrainc/load-private/pkg/storage/inmem"
-	"github.com/styrainc/load-private/pkg/vm"
+	"github.com/styrainc/enterprise-opa-private/pkg/json"
+	"github.com/styrainc/enterprise-opa-private/pkg/storage/inmem"
+	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
 func TestTree(t *testing.T) {

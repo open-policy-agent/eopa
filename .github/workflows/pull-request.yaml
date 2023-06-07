@@ -80,7 +80,7 @@ jobs:
       - name: Install protoc-gen-go dependencies
         if: steps.changes.outputs.proto == 'true'
         run: |
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.30.0
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
       - name: Fail if `buf generate` diff detected between generated/checked in files
         if: steps.changes.outputs.proto == 'true'
@@ -113,24 +113,24 @@ jobs:
         run:
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
-      - name: checkout Load
+      - name: checkout Enterprise OPA
         uses: actions/checkout@v3
         with:
-          path: load
+          path: enterprise-opa
       - uses: actions/setup-go@v4
         with:
-          go-version-file: load/go.mod
-          cache-dependency-path: load/go.sum
+          go-version-file: enterprise-opa/go.mod
+          cache-dependency-path: enterprise-opa/go.sum
           check-latest: true
       - name: pick up opa version
-        id: load
+        id: enterprise-opa
         run: echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
-        working-directory: load
+        working-directory: enterprise-opa
       - name: checkout OPA
         uses: actions/checkout@v3
         with:
           repository: open-policy-agent/opa
-          ref: ${{ steps.load.outputs.opa_version }}
+          ref: ${{ steps.enterprise-opa.outputs.opa_version }}
           path: opa
       - name: pick up opa directory
         id: opa
@@ -139,22 +139,22 @@ jobs:
       - name: setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - run: make test
-        working-directory: load
+        working-directory: enterprise-opa
         env:
           OPA_ROOT: ${{ steps.opa.outputs.dir }}
       - run: make test-race
-        working-directory: load
+        working-directory: enterprise-opa
         env:
           OPA_ROOT: ${{ steps.opa.outputs.dir }}
       - run: make benchmark
-        working-directory: load
+        working-directory: enterprise-opa
       - name: gobenchdata check
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
           INPUT_GO_TEST_FLAGS: -timeout=10m
-          INPUT_SUBDIRECTORY: load
+          INPUT_SUBDIRECTORY: enterprise-opa
           INPUT_CHECKS: true
-          INPUT_CHECKS_CONFIG: load/gobenchdata-checks.yml
+          INPUT_CHECKS_CONFIG: enterprise-opa/gobenchdata-checks.yml
           INPUT_PUBLISH_BRANCH: benchmarks
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
         timeout-minutes: 10
@@ -207,19 +207,19 @@ jobs:
         env:
           HOSTNAME: github.actions.local
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
-      - name: Load image and binary
-        id: load
+      - name: Enterprise OPA image and binary
+        id: enterprise-opa
         run: |
           echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
           echo "bundles=$(pwd)/e2e" >> $GITHUB_OUTPUT
-          echo "binary=$(pwd)/dist/linux-windows-build_linux_amd64_v1/load" >> $GITHUB_OUTPUT
+          echo "binary=$(pwd)/dist/linux-windows-build_linux_amd64_v1/eopa" >> $GITHUB_OUTPUT
           echo "fetchdb=$(pwd)/_fetchdb" >> $GITHUB_OUTPUT
-          chmod +x dist/linux-windows-build_linux_amd64_v1/load
+          chmod +x dist/linux-windows-build_linux_amd64_v1/eopa
       - run: make e2e
         env:
-          IMAGE: ${{ steps.load.outputs.image }}
-          BINARY: ${{ steps.load.outputs.binary }}
-          STYRA_LOAD_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
+          IMAGE: ${{ steps.enterprise-opa.outputs.image }}
+          BINARY: ${{ steps.enterprise-opa.outputs.binary }}
+          EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
           # credentials for data.git plugin
           GIT_GITHUB_TOKEN: ${{ secrets.E2E_GIT_GITHUB_TOKEN }}
           GIT_AZURE_TOKEN: ${{ secrets.E2E_GIT_AZURE_TOKEN }}
@@ -235,9 +235,9 @@ jobs:
         run: make test
         working-directory: _e2e
         env:
-          STYRA_LOAD_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
-          IMAGE: ${{ steps.load.outputs.image }}
-          BUNDLES: ${{ steps.load.outputs.bundles }}
+          EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
+          IMAGE: ${{ steps.enterprise-opa.outputs.image }}
+          BUNDLES: ${{ steps.enterprise-opa.outputs.bundles }}
           BUNDLE_FILE_PATH: bundles/systems/bc01d50d17d7446684c4e6c34a1ad07f
           NUM_INPUT_BUNDLES: 2
           BUNDLE_HOST: 172.17.0.1
@@ -248,12 +248,12 @@ jobs:
           repository: StyraInc/fetchdb
           token: ${{ github.actor == 'dependabot[bot]' && env.GH_API_TOKEN || secrets.GH_API_TOKEN }}
           persist-credentials: false
-      - name: Run load-test (fetchdb)
+      - name: Run enterprise-opa-test (fetchdb)
         run: |
-          sed -i 's#ghcr.io/styrainc/load:latest#${{ steps.load.outputs.image }}#' ${{ steps.load.outputs.fetchdb}}/Makefile
+          sed -i 's#ghcr.io/styrainc/enterprise:latest#${{ steps.enterprise-opa.outputs.image }}#' ${{ steps.enterprise-opa.outputs.fetchdb}}/Makefile
           go test -tags e2e_fetchdb ./e2e/fetchdb
         env:
-          FETCHDB_DIRECTORY: ${{ steps.load.outputs.fetchdb }}
+          FETCHDB_DIRECTORY: ${{ steps.enterprise-opa.outputs.fetchdb }}
 
   proto-docs-push:
     name: Push Protobuf docs to BSR
@@ -420,14 +420,14 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: image
-      - name: Load image
-        id: load
+      - name: Enterprise OPA image
+        id: enterprise-opa
         run: echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
       - run: make test
         working-directory: e2e/cli
         env:
-          STYRA_LOAD_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
-          IMAGE: ${{ steps.load.outputs.image }}
+          EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
+          IMAGE: ${{ steps.enterprise-opa.outputs.image }}
 
   smoke-test-releases:
     name: Smoke Test Releases
@@ -441,14 +441,14 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            exec: dist/linux-windows-build_linux_amd64_v1/load
+            exec: dist/linux-windows-build_linux_amd64_v1/eopa
           - os: ubuntu-22.04
-            exec: dist/linux-windows-build_linux_arm64/load
+            exec: dist/linux-windows-build_linux_arm64/eopa
             arch: arm64
           - os: macos-latest
-            exec: dist/darwin-build_darwin_amd64_v1/load
+            exec: dist/darwin-build_darwin_amd64_v1/eopa
           - os: windows-latest
-            exec: dist/linux-windows-build_windows_amd64_v1/load.exe
+            exec: dist/linux-windows-build_windows_amd64_v1/eopa.exe
 
     steps:
       - name: (Dependabot Only) Generate GitHub App Token
@@ -478,4 +478,4 @@ jobs:
       - name: Test binaries
         run: make ci-smoke-test BINARY=${{ matrix.exec }}
         env:
-          STYRA_LOAD_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
+          EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}

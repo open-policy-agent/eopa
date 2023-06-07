@@ -13,25 +13,25 @@ import (
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/util"
 
-	"github.com/styrainc/load-private/cmd/keygen"
-	"github.com/styrainc/load-private/pkg/rego_vm"
+	"github.com/styrainc/enterprise-opa-private/cmd/keygen"
+	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
 
-const brand = "Load"
+const brand = "Enterprise OPA"
 
 func addLicenseFlags(c *cobra.Command, licenseParams *keygen.LicenseParams) {
-	c.Flags().StringVar(&licenseParams.Key, "license-key", "", "Location of file containing STYRA_LOAD_LICENSE_KEY")
-	c.Flags().StringVar(&licenseParams.Token, "license-token", "", "Location of file containing STYRA_LOAD_LICENSE_TOKEN")
+	c.Flags().StringVar(&licenseParams.Key, "license-key", "", "Location of file containing EOPA_LICENSE_KEY")
+	c.Flags().StringVar(&licenseParams.Token, "license-token", "", "Location of file containing EOPA_LICENSE_TOKEN")
 }
 
 func addInstructionLimitFlag(c *cobra.Command, instrLimit *int64) {
 	c.Flags().Int64Var(instrLimit, "instruction-limit", 100_000_000, "set instruction limit for VM")
 }
 
-func LoadCommand(license *keygen.License) *cobra.Command {
+func EnterpriseOPACommand(license *keygen.License) *cobra.Command {
 	var instructionLimit int64
 
-	// These flags are added to `load eval` (OPA doesn't have them). They are
+	// These flags are added to `eopa eval` (OPA doesn't have them). They are
 	// then passed on to the logger used with keygen for license (de)activation,
 	// heartbeating, etc. There is no extra log output from the actual policy
 	// eval, and the logger is not made available to that code.
@@ -43,7 +43,7 @@ func LoadCommand(license *keygen.License) *cobra.Command {
 
 	root := &cobra.Command{
 		Use:   path.Base(os.Args[0]),
-		Short: "Styra Load",
+		Short: "Enterprise OPA",
 
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if instructionLimit > 0 {
@@ -95,7 +95,7 @@ func LoadCommand(license *keygen.License) *cobra.Command {
 		}
 	}
 
-	// New Load commands
+	// New Enterprise OPA commands
 	root.AddCommand(initBundle())
 	root.AddCommand(liaCtl())
 

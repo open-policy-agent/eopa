@@ -1,6 +1,6 @@
-// Package grpc provides the implementation of Load's gRPC server. It is
-// modeled directly off of OPA's HTTP Server implementation, and borrows as
-// much code from OPA as is reasonable.
+// Package grpc provides the implementation of Enterprise OPA's gRPC server.
+// It is modeled directly off of OPA's HTTP Server implementation, and
+// borrows as much code from OPA as is reasonable.
 //
 // Several features of the OPA HTTP Server are missing, notably:
 //   - Logging
@@ -29,10 +29,10 @@ import (
 	"github.com/open-policy-agent/opa/topdown"
 	iCache "github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/styrainc/load-private/pkg/plugins/bundle"
-	bulkv1 "github.com/styrainc/load-private/proto/gen/go/load/bulk/v1"
-	datav1 "github.com/styrainc/load-private/proto/gen/go/load/data/v1"
-	policyv1 "github.com/styrainc/load-private/proto/gen/go/load/policy/v1"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
+	bulkv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/bulk/v1"
+	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
+	policyv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
 	"go.opentelemetry.io/otel/trace"
 
 	"google.golang.org/grpc"
@@ -163,7 +163,7 @@ func New(manager *plugins.Manager, config Config) *Server {
 		grpcprom.WithServerCounterOptions(
 			grpcprom.CounterOption(func(o *prometheus.CounterOpts) {
 				o.Namespace = "styra"
-				o.Subsystem = "load"
+				o.Subsystem = "enterprise-opa"
 			}),
 		),
 	)
@@ -218,7 +218,7 @@ func (s *Server) initGRPCServer(options ...grpc.ServerOption) error {
 	var stopCertLoopChannel chan struct{}
 	var certLoopShutdownCompleteChannel chan struct{}
 
-	// Lock the server during the gRPC server swapout process.
+	// Lock the server during the gRPC server swap out process.
 	s.mtx.Lock()
 	s.grpcServer = grpc.NewServer(options...)
 	s.certLoopHaltChannel = stopCertLoopChannel
@@ -244,7 +244,7 @@ func (s *Server) loadTLSCredentials() credentials.TransportCredentials {
 	if s.certFilename != "" && s.certKeyFilename != "" {
 		var tlsConfig tls.Config
 		var err error
-		// Attempt to load the server's initial cert keypair.
+		// Attempt to load the server's initial cert key pair.
 		// Note(philip): Loading the files up manually here instead of
 		// using tls.LoadX509KeyPair() allows us to hit the disk just once,
 		// and reuse the file contents for both use cases (cert, hashes).
@@ -285,7 +285,7 @@ func (s *Server) loadTLSCredentials() credentials.TransportCredentials {
 		}
 		s.certKeyFileHash = certKeyHash
 
-		// Load custom root CA Cert for mTLS usecases.
+		// Enterprise OPA custom root CA Cert for mTLS use cases.
 		// Note(philip): This currently only loads up a custom root CA cert *on
 		// startup*. Cert refresh will not pick up changes to this certificate.
 		if s.tlsRootCACertFilename != "" {
@@ -375,7 +375,7 @@ func (s *Server) WithCertificate(cert *tls.Certificate) *Server {
 	return s
 }
 
-// WithCertificatePaths sets the server-side certificate and keyfile paths
+// WithCertificatePaths sets the server-side certificate and key-file paths
 // that the server will periodically check for changes, and reload if necessary.
 func (s *Server) WithCertificatePaths(certFilename, keyFilename string, refresh time.Duration) *Server {
 	s.certFilename = certFilename

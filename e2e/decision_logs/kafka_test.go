@@ -25,7 +25,7 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/plugin/kzerolog"
 
-	"github.com/styrainc/load-private/e2e/wait"
+	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
 var dockerPool = func() *dockertest.Pool {
@@ -54,7 +54,7 @@ coin if rand.intn("coin", 2)
 
 	plaintextConfig := `
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     buffer:
       type: memory
     output:
@@ -175,11 +175,11 @@ plugins:
 				}
 			}()
 
-			load, _, loadErr := loadLoad(t, tc.config, policy, false)
-			if err := load.Start(); err != nil {
+			eopa, _, eopaErr := loadEnterpriseOPA(t, tc.config, policy, false)
+			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
-			wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+			wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			for i := 0; i < 2; i++ { // act: send API requests
 				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin",

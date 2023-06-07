@@ -11,12 +11,12 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/types"
 
-	internal "github.com/styrainc/load-private/internal/cmd"
+	internal "github.com/styrainc/enterprise-opa-private/internal/cmd"
 )
 
 func init() {
-	// hook Load capabilities extensions callback
-	ast.UpdateCapabilities = internal.LoadExtensions
+	// hook Enterprise OPA capabilities extensions callback
+	ast.UpdateCapabilities = internal.EnterpriseOPAExtensions
 }
 
 // used by go-generate to create capabilities.json file

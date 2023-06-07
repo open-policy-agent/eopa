@@ -13,7 +13,7 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/util"
 
-	"github.com/styrainc/load-private/pkg/plugins/data/utils"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
 )
 
 type factory struct{}

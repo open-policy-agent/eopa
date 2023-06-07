@@ -9,9 +9,9 @@ set -e
 x=1
 while [ $x -le 60 ]
 do
-  ../bin/load eval -b . data.test.allow -l debug -f pretty
+  ../bin/eopa eval -b . data.test.allow -l debug -f pretty
   echo $?
-  ../bin/load license
+  ../bin/eopa license
   echo $?
   x=$(( $x + 1 ))
 done

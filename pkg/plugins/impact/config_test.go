@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/styrainc/load-private/pkg/plugins/impact"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
 )
 
 func TestValidate(t *testing.T) {

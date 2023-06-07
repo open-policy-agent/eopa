@@ -8,7 +8,7 @@ import (
 	"io"
 	"os"
 
-	bjson "github.com/styrainc/load-private/pkg/json"
+	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
 func DumpData(name string) error {

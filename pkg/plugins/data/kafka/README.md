@@ -6,7 +6,7 @@ See #3 for steps to setup AWS MSK.
 ## Running a data plugin
 
 ```shell
-load --config-file kafka.yaml run -s -l debug testdata/transform.rego
+eopa --config-file kafka.yaml run -s -l debug testdata/transform.rego
 ```
 
 ```yaml
@@ -58,6 +58,6 @@ curl -s localhost:8181/v1/data/kafka/messages
 ```
 # Links
 
-1. https://docs.styra.com/load/configuration/data/kafka-streams-api
+1. https://docs.styra.com/enterprise-opa/configuration/data/kafka-streams-api
 1. https://docs.aws.amazon.com/msk/latest/developerguide/getting-started.html
 1. https://docs.styra.com/das/policies/cloud-storage-management/kafka-platform#secure-kafka-platform-access

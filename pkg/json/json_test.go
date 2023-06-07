@@ -13,7 +13,7 @@ import (
 
 	"github.com/open-policy-agent/opa/ast"
 
-	"github.com/styrainc/load-private/pkg/json/internal/utils"
+	"github.com/styrainc/enterprise-opa-private/pkg/json/internal/utils"
 )
 
 func TestNil(t *testing.T) {

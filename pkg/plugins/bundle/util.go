@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	bjson "github.com/styrainc/load-private/pkg/json"
+	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
 // BjsonFromBinary returns a bjson.Json instance (on success) that was read from

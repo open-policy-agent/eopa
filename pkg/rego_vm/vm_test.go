@@ -13,8 +13,8 @@ import (
 	"github.com/open-policy-agent/opa/compile"
 	"github.com/open-policy-agent/opa/ir"
 
-	bjson "github.com/styrainc/load-private/pkg/json"
-	"github.com/styrainc/load-private/pkg/vm"
+	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
 func setup(tb testing.TB, b *bundle.Bundle, query string) ir.Policy {

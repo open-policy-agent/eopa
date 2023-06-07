@@ -11,7 +11,7 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
-	"github.com/styrainc/load-private/pkg/plugins/data/utils"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
 )
 
 type factory struct{}

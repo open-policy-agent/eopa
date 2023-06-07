@@ -13,7 +13,7 @@
 // limitations under the License.
 
 syntax = "proto3";
-package load.data.v1;
+package eopa.data.v1;
 
 import "google/protobuf/struct.proto";
 

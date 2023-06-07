@@ -1,6 +1,6 @@
 //go:build e2e
 
-// package impact is for testing Load as container, running as server,
+// package impact is for testing Enterprise OPA as container, running as server,
 // with LIA enabled, and sending decision logs to a decision log service
 package impact
 
@@ -25,7 +25,7 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
-	"github.com/styrainc/load-private/e2e/wait"
+	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
 type payload struct {
@@ -69,20 +69,20 @@ import future.keywords
 
 p := rand.intn("test", 2)
 `
-	load, loadOut := loadLoad(t, config, policy, false)
-	if err := load.Start(); err != nil {
+	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, false)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	// arrange: enable LIA via CLI
-	ctl, ctlOut := loadCtl(t, "http://127.0.0.1:18181", "testdata/load-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
+	ctl, ctlOut := eopaCtl(t, "http://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
 	ctl.Stderr = os.Stderr
 	if err := ctl.Start(); err != nil {
 		t.Fatal(err)
 	}
 
-	waitForLIAStart(ctx, t, loadOut)
+	waitForLIAStart(ctx, t, eopaOut)
 
 	{ // act: evaluate the policy via the v1 data API
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
@@ -102,7 +102,7 @@ p := rand.intn("test", 2)
 	}
 
 	// assert: check that DL logs have been output as expected
-	logs := collectDL(ctx, t, loadOut, 2) // if we don't bail in this method, we've got two logs
+	logs := collectDL(ctx, t, eopaOut, 2) // if we don't bail in this method, we've got two logs
 	if diff := cmp.Diff(logs[0], logs[1], cmpopts.IgnoreFields(payload{}, "Metrics")); diff != "" {
 		t.Errorf("diff: (-want +got):\n%s", diff)
 	}
@@ -141,7 +141,7 @@ p := rand.intn("test", 2)
 		t.Errorf("expected secondary eval to take longer, got a: %d, b: %d (ns)", evalA, evalB)
 	}
 
-	waitForLIAEnd(ctx, t, loadOut, 10*time.Second)
+	waitForLIAEnd(ctx, t, eopaOut, 10*time.Second)
 	ctl.Wait()
 	if testing.Verbose() && t.Failed() {
 		t.Logf("impact output:\n%s", ctlOut.String())
@@ -201,20 +201,20 @@ import future.keywords
 
 q := true
 `
-	load, loadOut := loadLoad(t, config, policy, false)
-	if err := load.Start(); err != nil {
+	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, false)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	// arrange: enable LIA via CLI
-	ctl, ctlOut := loadCtl(t, "http://127.0.0.1:18181", "testdata/load-bundle.tar.gz", "--duration 10s --sample-rate 1")
+	ctl, ctlOut := eopaCtl(t, "http://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1")
 	ctl.Stderr = os.Stderr
 	if err := ctl.Start(); err != nil {
 		t.Fatal(err)
 	}
 
-	waitForLIAStart(ctx, t, loadOut)
+	waitForLIAStart(ctx, t, eopaOut)
 
 	{ // act: evaluate the policy via the v1 data API, provide input
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
@@ -253,7 +253,7 @@ q := true
 	}
 
 	{ // assert: check that DL logs have been output as expected
-		logs := collectDL(ctx, t, loadOut, 3)
+		logs := collectDL(ctx, t, eopaOut, 3)
 		if diff := cmp.Diff(logs[1], logs[2], cmpopts.IgnoreFields(payload{}, "Metrics", "Result")); diff != "" {
 			t.Errorf("diff: (-want +got):\n%s", diff)
 		}
@@ -266,7 +266,7 @@ q := true
 		}
 	}
 
-	waitForLIAEnd(ctx, t, loadOut, 10*time.Second)
+	waitForLIAEnd(ctx, t, eopaOut, 10*time.Second)
 	ctl.Wait()
 	if testing.Verbose() && t.Failed() {
 		t.Logf("impact output:\n%s", ctlOut.String())
@@ -317,20 +317,20 @@ import future.keywords
 
 q := true
 `
-	load, loadOut := loadLoad(t, config, policy, true)
-	if err := load.Start(); err != nil {
+	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, true)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	// arrange: enable LIA via CLI
-	ctl, ctlOut := loadCtl(t, "http://127.0.0.1:18181", "testdata/load-bundle.tar.gz", "--duration 10s --sample-rate 0.1")
+	ctl, ctlOut := eopaCtl(t, "http://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 0.1")
 	ctl.Stderr = os.Stderr
 	if err := ctl.Start(); err != nil {
 		t.Fatal(err)
 	}
 
-	waitForLIAStart(ctx, t, loadOut)
+	waitForLIAStart(ctx, t, eopaOut)
 
 	for i := 0; i < count; i++ { // act: evaluate the policy via the v1 data API, provide empty input, many times
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
@@ -351,13 +351,13 @@ q := true
 	}
 
 	// assert: get all DLs emitted so far, check if their number looks OK
-	logs := retrieveDLs(ctx, t, loadOut)
+	logs := retrieveDLs(ctx, t, eopaOut)
 	act := len(logs) - count
 	if act > count*0.2 || act <= 0 {
 		t.Errorf("expected sample count to be +/- ~10%% of %d, got %d", count, act)
 	}
 
-	waitForLIAEnd(ctx, t, loadOut, 10*time.Second)
+	waitForLIAEnd(ctx, t, eopaOut, 10*time.Second)
 	ctl.Wait()
 	if testing.Verbose() && t.Failed() {
 		t.Logf("impact output:\n%s", ctlOut.String())
@@ -516,24 +516,24 @@ p := rand.intn("test", 2)
 		},
 	} {
 		t.Run(fmt.Sprintf("format=%s/group=%v", tc.format, tc.group), func(t *testing.T) {
-			load, loadOut := loadLoad(t, config, policy, false)
-			if err := load.Start(); err != nil {
+			eopa, eopaOut := loadEnterpriseOPA(t, config, policy, false)
+			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
-			wait.ForLog(t, loadOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+			wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			// arrange: enable LIA via CLI
 			extraArgs := "--duration 4s --sample-rate 1 --equals --format " + tc.format
 			if tc.group {
 				extraArgs += " --group"
 			}
-			ctl, ctlOut := loadCtl(t, "http://127.0.0.1:18181", "testdata/load-bundle.tar.gz", extraArgs)
+			ctl, ctlOut := eopaCtl(t, "http://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", extraArgs)
 			ctl.Stderr = os.Stderr
 			if err := ctl.Start(); err != nil {
 				t.Fatal(err)
 			}
 
-			waitForLIAStart(ctx, t, loadOut)
+			waitForLIAStart(ctx, t, eopaOut)
 
 			for i := 0; i < count; i++ { // act: evaluate the policy via the v1 data API, provide empty input, many times
 				in := `{"input": {}}`
@@ -551,7 +551,7 @@ p := rand.intn("test", 2)
 				}
 			}
 
-			waitForLIAEnd(ctx, t, loadOut, 4*time.Second)
+			waitForLIAEnd(ctx, t, eopaOut, 4*time.Second)
 
 			tc.assert(t, ctlOut)
 			if t.Failed() && testing.Verbose() {
@@ -563,7 +563,7 @@ p := rand.intn("test", 2)
 
 type extra string
 
-func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *bytes.Buffer) {
+func loadEnterpriseOPA(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *bytes.Buffer) {
 	var silent bool
 	var extraArgs string
 	logLevel := "debug"
@@ -600,30 +600,30 @@ func loadLoad(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *byt
 	if extraArgs != "" {
 		args = append(args, strings.Split(extraArgs, " ")...)
 	}
-	load := exec.Command(binary(), append(args, policyPath)...)
-	load.Stderr = &buf
-	load.Env = append(load.Environ(),
-		"STYRA_LOAD_LICENSE_TOKEN="+os.Getenv("STYRA_LOAD_LICENSE_TOKEN"),
-		"STYRA_LOAD_LICENSE_KEY="+os.Getenv("STYRA_LOAD_LICENSE_KEY"),
+	eopa := exec.Command(binary(), append(args, policyPath)...)
+	eopa.Stderr = &buf
+	eopa.Env = append(eopa.Environ(),
+		"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
+		"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
 	)
 
 	t.Cleanup(func() {
-		if load.Process == nil {
+		if eopa.Process == nil {
 			return
 		}
-		if err := load.Process.Signal(os.Interrupt); err != nil {
+		if err := eopa.Process.Signal(os.Interrupt); err != nil {
 			panic(err)
 		}
-		load.Wait()
+		eopa.Wait()
 		if testing.Verbose() && t.Failed() && !silent {
-			t.Logf("load output:\n%s", buf.String())
+			t.Logf("eopa output:\n%s", buf.String())
 		}
 	})
 
-	return load, &buf
+	return eopa, &buf
 }
 
-func loadCtl(t *testing.T, addr string, path, extra string) (*exec.Cmd, *bytes.Buffer) {
+func eopaCtl(t *testing.T, addr string, path, extra string) (*exec.Cmd, *bytes.Buffer) {
 	cmd := exec.Command(binary(), strings.Split("impact record --format json --addr "+addr+" --bundle "+path+" "+extra, " ")...)
 	cmd.Stdout = &bytes.Buffer{}
 	return cmd, cmd.Stdout.(*bytes.Buffer)
@@ -632,7 +632,7 @@ func loadCtl(t *testing.T, addr string, path, extra string) (*exec.Cmd, *bytes.B
 func binary() string {
 	bin := os.Getenv("BINARY")
 	if bin == "" {
-		return "load"
+		return "eopa"
 	}
 	return bin
 }
@@ -653,26 +653,26 @@ import future.keywords
 
 q := true
 `
-	load, loadOut := loadLoad(t, config, policy, false)
-	if err := load.Start(); err != nil {
+	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, false)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-	ctl, ctlOut := loadCtl(t, "http://127.0.0.1:18181", "testdata/load-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
+	ctl, ctlOut := eopaCtl(t, "http://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
 	ctl.Stderr = os.Stderr
 	if err := ctl.Start(); err != nil {
 		t.Fatal(err)
 	}
 
-	waitForLIAStart(ctx, t, loadOut)
+	waitForLIAStart(ctx, t, eopaOut)
 
 	// abort CLI call
 	if err := ctl.Process.Signal(os.Interrupt); err != nil {
 		t.Fatal(err)
 	}
 
-	waitForLIAEnd(ctx, t, loadOut, 10*time.Second)
+	waitForLIAEnd(ctx, t, eopaOut, 10*time.Second)
 	if testing.Verbose() && t.Failed() {
 		t.Logf("impact output:\n%s", ctlOut.String())
 	}
@@ -694,27 +694,27 @@ import future.keywords
 
 q := true
 `
-	load, loadOut := loadLoad(t, config, policy, false, extra(`--tls-ca-cert-file testdata/tls/ca.pem --tls-cert-file testdata/tls/server-cert.pem --tls-private-key-file testdata/tls/server-key.pem`))
-	if err := load.Start(); err != nil {
+	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, false, extra(`--tls-ca-cert-file testdata/tls/ca.pem --tls-cert-file testdata/tls/server-cert.pem --tls-private-key-file testdata/tls/server-key.pem`))
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-	ctl, ctlOut := loadCtl(t, "https://127.0.0.1:18181", "testdata/load-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals "+
+	ctl, ctlOut := eopaCtl(t, "https://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals "+
 		"--tls-ca-cert-file testdata/tls/ca.pem --tls-cert-file testdata/tls/client-cert.pem --tls-private-key-file testdata/tls/client-key.pem")
 	ctl.Stderr = os.Stderr
 	if err := ctl.Start(); err != nil {
 		t.Fatal(err)
 	}
 
-	waitForLIAStart(ctx, t, loadOut)
+	waitForLIAStart(ctx, t, eopaOut)
 
 	// abort CLI call
 	if err := ctl.Process.Signal(os.Interrupt); err != nil {
 		t.Fatal(err)
 	}
 
-	waitForLIAEnd(ctx, t, loadOut, 10*time.Second)
+	waitForLIAEnd(ctx, t, eopaOut, 10*time.Second)
 	if testing.Verbose() && t.Failed() {
 		t.Logf("impact output:\n%s", ctlOut.String())
 	}
@@ -735,15 +735,15 @@ import future.keywords
 
 q := true
 `
-	load, _ := loadLoad(t, config, policy, true, errorLogging{})
-	if err := load.Start(); err != nil {
+	eopa, _ := loadEnterpriseOPA(t, config, policy, true, errorLogging{})
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	// NOTE(sr): In this test, we have no side-channel to know if LIA is enabled, or stopped.
 	// So we'll be gracious with waiting times, and very loose in our assertions.
 	time.Sleep(time.Second)
 
-	ctl, ctlOut := loadCtl(t, "http://127.0.0.1:18181", "testdata/load-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
+	ctl, ctlOut := eopaCtl(t, "http://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
 	ctl.Stderr = os.Stderr
 	if err := ctl.Start(); err != nil {
 		t.Fatal(err)

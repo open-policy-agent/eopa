@@ -20,8 +20,8 @@ func TestEvalInstructionLimit(t *testing.T) {
 	data := largeJSON()
 
 	t.Run("limit=1", func(t *testing.T) {
-		load := loadEval(t, "1", data)
-		out, err := load.Output()
+		eopa := eopaEval(t, "1", data)
+		out, err := eopa.Output()
 		if err == nil {
 			t.Fatalf("expected error, got output: %s", string(out))
 		}
@@ -42,8 +42,8 @@ func TestEvalInstructionLimit(t *testing.T) {
 	})
 
 	t.Run("limit=10000", func(t *testing.T) {
-		load := loadEval(t, "10000", data)
-		_, err := load.Output()
+		eopa := eopaEval(t, "10000", data)
+		_, err := eopa.Output()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -58,11 +58,11 @@ p { data.xs[_] }`
 	ctx := context.Background()
 
 	t.Run("limit=1", func(t *testing.T) {
-		load, loadOut := loadRun(t, policy, data, config, "--instruction-limit", "1")
-		if err := load.Start(); err != nil {
+		eopa, eopaOut := eopaRun(t, policy, data, config, "--instruction-limit", "1")
+		if err := eopa.Start(); err != nil {
 			t.Fatal(err)
 		}
-		waitForLog(ctx, t, loadOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+		waitForLog(ctx, t, eopaOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
@@ -94,11 +94,11 @@ p { data.xs[_] }`
 	})
 
 	t.Run("limit=10000", func(t *testing.T) {
-		load, loadOut := loadRun(t, policy, data, config, "--instruction-limit", "10000")
-		if err := load.Start(); err != nil {
+		eopa, eopaOut := eopaRun(t, policy, data, config, "--instruction-limit", "10000")
+		if err := eopa.Start(); err != nil {
 			t.Fatal(err)
 		}
-		waitForLog(ctx, t, loadOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+		waitForLog(ctx, t, eopaOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
@@ -139,14 +139,14 @@ plugins:
     addr: "127.0.0.1:9191"
   data: {}
 `
-	load, loadOut := loadRun(t, policy, data, config)
-	if err := load.Start(); err != nil {
+	eopa, eopaOut := eopaRun(t, policy, data, config)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitForLog(ctx, t, loadOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	waitForLog(ctx, t, eopaOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 }
 
-func loadEval(t *testing.T, limit, data string) *exec.Cmd {
+func eopaEval(t *testing.T, limit, data string) *exec.Cmd {
 	dir := t.TempDir()
 	dataPath := filepath.Join(dir, "data.json")
 	if err := os.WriteFile(dataPath, []byte(data), 0x777); err != nil {
@@ -155,7 +155,7 @@ func loadEval(t *testing.T, limit, data string) *exec.Cmd {
 	return exec.Command(binary(), strings.Split("eval --instruction-limit "+limit+" --data "+dataPath+" data.xs[_]", " ")...)
 }
 
-func loadRun(t *testing.T, policy, data, config string, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
+func eopaRun(t *testing.T, policy, data, config string, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
 	logLevel := "debug"
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
@@ -187,33 +187,33 @@ func loadRun(t *testing.T, policy, data, config string, extraArgs ...string) (*e
 		dataPath,
 		policyPath,
 	)
-	load := exec.Command(binary(), args...)
-	load.Stderr = &buf
-	load.Env = append(load.Environ(),
-		"STYRA_LOAD_LICENSE_TOKEN="+os.Getenv("STYRA_LOAD_LICENSE_TOKEN"),
-		"STYRA_LOAD_LICENSE_KEY="+os.Getenv("STYRA_LOAD_LICENSE_KEY"),
+	eopa := exec.Command(binary(), args...)
+	eopa.Stderr = &buf
+	eopa.Env = append(eopa.Environ(),
+		"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
+		"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
 	)
 
 	t.Cleanup(func() {
-		if load.Process == nil {
+		if eopa.Process == nil {
 			return
 		}
-		if err := load.Process.Signal(os.Interrupt); err != nil {
+		if err := eopa.Process.Signal(os.Interrupt); err != nil {
 			panic(err)
 		}
-		load.Wait()
+		eopa.Wait()
 		if testing.Verbose() && t.Failed() {
-			t.Logf("load output:\n%s", buf.String())
+			t.Logf("eopa output:\n%s", buf.String())
 		}
 	})
 
-	return load, &buf
+	return eopa, &buf
 }
 
 func binary() string {
 	bin := os.Getenv("BINARY")
 	if bin == "" {
-		return "load"
+		return "eopa"
 	}
 	return bin
 }

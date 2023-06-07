@@ -12,9 +12,9 @@ import (
 	"strings"
 	"sync"
 
-	cfg "github.com/styrainc/load-private/pkg/internal/config"
-	"github.com/styrainc/load-private/pkg/plugins/bundle"
-	inmem "github.com/styrainc/load-private/pkg/storage"
+	cfg "github.com/styrainc/enterprise-opa-private/pkg/internal/config"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
+	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 
 	"github.com/open-policy-agent/opa/ast"
 	bundleApi "github.com/open-policy-agent/opa/bundle"

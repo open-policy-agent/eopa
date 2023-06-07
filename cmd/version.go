@@ -13,8 +13,8 @@ import (
 func initVersion() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: `Print the version of Load`,
-		Long:  `Show version and build information for Load.`,
+		Short: `Print the version of Enterprise OPA`,
+		Long:  `Show version and build information for Enterprise OPA.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cmd.SilenceErrors = true
 			cmd.SilenceUsage = true

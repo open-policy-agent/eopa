@@ -4,7 +4,7 @@ import (
 	"context"
 	"math/big"
 
-	fjson "github.com/styrainc/load-private/pkg/json"
+	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
 func equalOp(ctx context.Context, a, b interface{}) (bool, error) {

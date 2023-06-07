@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.5.0
+
+This release changes the name of Styra Load to Styra Enterprise OPA.
+
 ## v1.4.1
 
 This release updates the OPA version used in Styra Load to

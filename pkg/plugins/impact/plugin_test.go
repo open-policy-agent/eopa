@@ -16,10 +16,10 @@ import (
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
 
-	load_bundle "github.com/styrainc/load-private/pkg/plugins/bundle"
-	"github.com/styrainc/load-private/pkg/plugins/discovery"
-	"github.com/styrainc/load-private/pkg/plugins/impact"
-	inmem "github.com/styrainc/load-private/pkg/storage"
+	eopa_bundle "github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/discovery"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
+	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 func TestStop(t *testing.T) {
@@ -37,10 +37,10 @@ plugins:
 		t.Fatal("could not find plugin")
 	}
 
-	path := "testdata/load-bundle.tar.gz"
-	bndls, err := (&load_bundle.CustomLoader{}).Load(ctx, metrics.New(), []string{path})
+	path := "testdata/eopa-bundle.tar.gz"
+	bndls, err := (&eopa_bundle.CustomLoader{}).Load(ctx, metrics.New(), []string{path})
 	if err != nil {
-		t.Fatalf("load bundle: %v", err)
+		t.Fatalf("eopa bundle: %v", err)
 	}
 	j := impact.NewJob(ctx, 1, true, bndls[path], time.Second)
 	if err := lia.StartJob(ctx, j); err != nil {

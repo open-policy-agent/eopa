@@ -28,8 +28,8 @@ import (
 	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/plugins"
 
-	bjson "github.com/styrainc/load-private/pkg/json"
-	"github.com/styrainc/load-private/pkg/vm"
+	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
 const (

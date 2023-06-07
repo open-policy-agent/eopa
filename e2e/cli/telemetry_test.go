@@ -20,18 +20,18 @@ p := true`
 
 	for _, flag := range []string{"--disable-telemetry", "--skip-version-check"} {
 		t.Run(flag, func(t *testing.T) {
-			load, loadOut := loadRun(t, policy, data, config, flag)
-			if err := load.Start(); err != nil {
+			eopa, eopaOut := eopaRun(t, policy, data, config, flag)
+			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
-			waitForLog(ctx, t, loadOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+			waitForLog(ctx, t, eopaOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			// TODO(sr): we can't do much better than wait for a result
 			// (on linux, netns would solve this better)
 			time.Sleep(3 * time.Second)
 
 			buf := bytes.Buffer{}
-			if _, err := io.Copy(&buf, loadOut); err != nil {
+			if _, err := io.Copy(&buf, eopaOut); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := buf.ReadBytes('{'); err == nil {
@@ -49,7 +49,7 @@ p := true`
 				} else if err != nil {
 					t.Errorf("Decode: %v", err)
 				}
-				if strings.Contains(m.Msg, "Load is up to date.") {
+				if strings.Contains(m.Msg, "Enterprise OPA is up to date.") {
 					t.Fatalf("expected no message, got %v", m.Msg)
 				}
 			}

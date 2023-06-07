@@ -9,7 +9,7 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 	opa_storage "github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown/builtins"
-	"github.com/styrainc/load-private/pkg/storage"
+	"github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 func TestNDBCache(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 
 	"github.com/OneOfOne/xxhash"
 
-	fjson "github.com/styrainc/load-private/pkg/json"
+	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
 const (

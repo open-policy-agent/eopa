@@ -13,8 +13,8 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 
-	"github.com/styrainc/load-private/pkg/plugins/grpc"
-	inmem "github.com/styrainc/load-private/pkg/storage"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
+	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 func TestValidate(t *testing.T) {

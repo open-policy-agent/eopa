@@ -1,5 +1,5 @@
 version: v1
-name: buf.build/styra/load
+name: buf.build/styra/enterprise-opa
 breaking:
   use:
     - FILE

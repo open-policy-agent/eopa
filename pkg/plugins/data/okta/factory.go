@@ -14,8 +14,8 @@ import (
 	"github.com/open-policy-agent/opa/util"
 	"gopkg.in/square/go-jose.v2"
 
-	"github.com/styrainc/load-private/pkg"
-	"github.com/styrainc/load-private/pkg/plugins/data/utils"
+	"github.com/styrainc/enterprise-opa-private/pkg"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
 )
 
 type factory struct{}

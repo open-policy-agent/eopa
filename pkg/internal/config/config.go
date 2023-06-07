@@ -14,7 +14,7 @@ import (
 
 	"github.com/ghodss/yaml"
 
-	"github.com/styrainc/load-private/pkg/internal/strvals"
+	"github.com/styrainc/enterprise-opa-private/pkg/internal/strvals"
 
 	"github.com/open-policy-agent/opa/keys"
 	"github.com/open-policy-agent/opa/logging"
@@ -65,7 +65,7 @@ func ParseServicesConfig(opts ServiceOptions) (map[string]rest.Client, error) {
 	return services, nil
 }
 
-// Load implements configuration file loading. The supplied config file will be
+// Enterprise OPA implements configuration file loading. The supplied config file will be
 // read from disk (if specified) and overrides will be applied. If no config file is
 // specified, the overrides can still be applied to an empty config.
 func Load(configFile string, overrides []string, overrideFiles []string) ([]byte, error) {

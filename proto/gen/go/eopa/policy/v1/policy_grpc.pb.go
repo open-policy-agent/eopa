@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             (unknown)
-// source: load/policy/v1/policy.proto
+// source: eopa/policy/v1/policy.proto
 
 package policyv1
 
@@ -27,9 +27,9 @@ type PolicyServiceClient interface {
 	// This is equivalent in functionality to OPA's
 	// [Policy REST API List method](https://www.openpolicyagent.org/docs/latest/rest-api/#list-policies).
 	//
-	// Warning: This request will enumerate *all* policies stored by the Load
-	// instance. This can have substantial overheads if the policies are large
-	// in size.
+	// Warning: This request will enumerate *all* policies stored by the
+	// Enterprise OPA instance. This can have substantial overheads if the
+	// policies are large in size.
 	ListPolicies(ctx context.Context, in *ListPoliciesRequest, opts ...grpc.CallOption) (*ListPoliciesResponse, error)
 	// CreatePolicy inserts a new policy module into the policy store.
 	//
@@ -86,7 +86,7 @@ func NewPolicyServiceClient(cc grpc.ClientConnInterface) PolicyServiceClient {
 
 func (c *policyServiceClient) ListPolicies(ctx context.Context, in *ListPoliciesRequest, opts ...grpc.CallOption) (*ListPoliciesResponse, error) {
 	out := new(ListPoliciesResponse)
-	err := c.cc.Invoke(ctx, "/load.policy.v1.PolicyService/ListPolicies", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/eopa.policy.v1.PolicyService/ListPolicies", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (c *policyServiceClient) ListPolicies(ctx context.Context, in *ListPolicies
 
 func (c *policyServiceClient) CreatePolicy(ctx context.Context, in *CreatePolicyRequest, opts ...grpc.CallOption) (*CreatePolicyResponse, error) {
 	out := new(CreatePolicyResponse)
-	err := c.cc.Invoke(ctx, "/load.policy.v1.PolicyService/CreatePolicy", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/eopa.policy.v1.PolicyService/CreatePolicy", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (c *policyServiceClient) CreatePolicy(ctx context.Context, in *CreatePolicy
 
 func (c *policyServiceClient) GetPolicy(ctx context.Context, in *GetPolicyRequest, opts ...grpc.CallOption) (*GetPolicyResponse, error) {
 	out := new(GetPolicyResponse)
-	err := c.cc.Invoke(ctx, "/load.policy.v1.PolicyService/GetPolicy", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/eopa.policy.v1.PolicyService/GetPolicy", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (c *policyServiceClient) GetPolicy(ctx context.Context, in *GetPolicyReques
 
 func (c *policyServiceClient) UpdatePolicy(ctx context.Context, in *UpdatePolicyRequest, opts ...grpc.CallOption) (*UpdatePolicyResponse, error) {
 	out := new(UpdatePolicyResponse)
-	err := c.cc.Invoke(ctx, "/load.policy.v1.PolicyService/UpdatePolicy", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/eopa.policy.v1.PolicyService/UpdatePolicy", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (c *policyServiceClient) UpdatePolicy(ctx context.Context, in *UpdatePolicy
 
 func (c *policyServiceClient) DeletePolicy(ctx context.Context, in *DeletePolicyRequest, opts ...grpc.CallOption) (*DeletePolicyResponse, error) {
 	out := new(DeletePolicyResponse)
-	err := c.cc.Invoke(ctx, "/load.policy.v1.PolicyService/DeletePolicy", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/eopa.policy.v1.PolicyService/DeletePolicy", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -138,9 +138,9 @@ type PolicyServiceServer interface {
 	// This is equivalent in functionality to OPA's
 	// [Policy REST API List method](https://www.openpolicyagent.org/docs/latest/rest-api/#list-policies).
 	//
-	// Warning: This request will enumerate *all* policies stored by the Load
-	// instance. This can have substantial overheads if the policies are large
-	// in size.
+	// Warning: This request will enumerate *all* policies stored by the
+	// Enterprise OPA instance. This can have substantial overheads if the
+	// policies are large in size.
 	ListPolicies(context.Context, *ListPoliciesRequest) (*ListPoliciesResponse, error)
 	// CreatePolicy inserts a new policy module into the policy store.
 	//
@@ -230,7 +230,7 @@ func _PolicyService_ListPolicies_Handler(srv interface{}, ctx context.Context, d
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/load.policy.v1.PolicyService/ListPolicies",
+		FullMethod: "/eopa.policy.v1.PolicyService/ListPolicies",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PolicyServiceServer).ListPolicies(ctx, req.(*ListPoliciesRequest))
@@ -248,7 +248,7 @@ func _PolicyService_CreatePolicy_Handler(srv interface{}, ctx context.Context, d
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/load.policy.v1.PolicyService/CreatePolicy",
+		FullMethod: "/eopa.policy.v1.PolicyService/CreatePolicy",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PolicyServiceServer).CreatePolicy(ctx, req.(*CreatePolicyRequest))
@@ -266,7 +266,7 @@ func _PolicyService_GetPolicy_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/load.policy.v1.PolicyService/GetPolicy",
+		FullMethod: "/eopa.policy.v1.PolicyService/GetPolicy",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PolicyServiceServer).GetPolicy(ctx, req.(*GetPolicyRequest))
@@ -284,7 +284,7 @@ func _PolicyService_UpdatePolicy_Handler(srv interface{}, ctx context.Context, d
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/load.policy.v1.PolicyService/UpdatePolicy",
+		FullMethod: "/eopa.policy.v1.PolicyService/UpdatePolicy",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PolicyServiceServer).UpdatePolicy(ctx, req.(*UpdatePolicyRequest))
@@ -302,7 +302,7 @@ func _PolicyService_DeletePolicy_Handler(srv interface{}, ctx context.Context, d
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/load.policy.v1.PolicyService/DeletePolicy",
+		FullMethod: "/eopa.policy.v1.PolicyService/DeletePolicy",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PolicyServiceServer).DeletePolicy(ctx, req.(*DeletePolicyRequest))
@@ -314,7 +314,7 @@ func _PolicyService_DeletePolicy_Handler(srv interface{}, ctx context.Context, d
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var PolicyService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "load.policy.v1.PolicyService",
+	ServiceName: "eopa.policy.v1.PolicyService",
 	HandlerType: (*PolicyServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -339,5 +339,5 @@ var PolicyService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "load/policy/v1/policy.proto",
+	Metadata: "eopa/policy/v1/policy.proto",
 }

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/open-policy-agent/opa/plugins"
-	inmem "github.com/styrainc/load-private/pkg/storage"
+	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 func TestS3ConfigEndpoint(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/open-policy-agent/opa/storage"
 
-	"github.com/styrainc/load-private/pkg/vm"
+	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
 // errConflict indicates a conflicting path existed in the tree and insert failed. Currently it is not

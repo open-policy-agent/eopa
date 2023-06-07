@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	bundleUtils "github.com/styrainc/load-private/pkg/internal/bundle"
+	bundleUtils "github.com/styrainc/enterprise-opa-private/pkg/internal/bundle"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
@@ -35,7 +35,7 @@ import (
 // other persisted bundle. As there are no ordering guarantees for which
 // bundle loads first, retries could help in the bundle activation process.
 // Typically, multiple bundles are not encouraged. The value chosen for
-// maxActivationRetry allows upto 10 bundles to successfully activate
+// maxActivationRetry allows up to 10 bundles to successfully activate
 // in the worst case that they depend on each other. At the same time, it also
 // ensures that too much time is not spent to activate bundles that will never
 // successfully activate.
@@ -586,7 +586,7 @@ func (p *Plugin) activate(ctx context.Context, name string, b *bundle.Bundle) er
 			Compiler: compiler,
 			Metrics:  p.status[name].Metrics,
 			Bundles:  map[string]*bundle.Bundle{name: b},
-			Plugin:   "_load",
+			Plugin:   "_enterprise_opa",
 		}
 
 		if p.config.IsMultiBundle() {

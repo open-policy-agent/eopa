@@ -23,7 +23,7 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown/builtins"
 
-	inmem "github.com/styrainc/load-private/pkg/storage"
+	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 // Impact holds the state of a plugin instantiation

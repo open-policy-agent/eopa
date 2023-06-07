@@ -19,8 +19,8 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
 
-	"github.com/styrainc/load-private/pkg/plugins/data/types"
-	inmem "github.com/styrainc/load-private/pkg/storage"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/types"
+	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 const Name = "kafka"

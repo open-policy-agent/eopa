@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/styrainc/load-private/pkg/lia"
+	"github.com/styrainc/enterprise-opa-private/pkg/lia"
 )
 
 func TestReportOutputs(t *testing.T) {

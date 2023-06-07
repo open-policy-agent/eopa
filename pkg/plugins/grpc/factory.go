@@ -44,19 +44,19 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 	switch c.Authentication {
 	case "", "token", "tls", "off":
 	default:
-		return nil, fmt.Errorf("Unknown authentication scheme: %s", c.Authentication)
+		return nil, fmt.Errorf("unknown authentication scheme: %s", c.Authentication)
 	}
 	// Check client authorization scheme.
 	switch c.Authorization {
 	case "", "basic", "off":
 	default:
-		return nil, fmt.Errorf("Unknown authorization scheme: %s", c.Authorization)
+		return nil, fmt.Errorf("unknown authorization scheme: %s", c.Authorization)
 	}
 	// Check minimum allowed TLS version.
 	switch c.TLS.MinVersion {
 	case "", "1.0", "1.1", "1.2", "1.3":
 	default:
-		return nil, fmt.Errorf("Unknown TLS version: %s", c.TLS.MinVersion)
+		return nil, fmt.Errorf("unknown TLS version: %s", c.TLS.MinVersion)
 	}
 
 	// Make sure *both* parameters are provided for server-side TLS.

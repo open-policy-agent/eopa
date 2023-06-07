@@ -4,7 +4,7 @@ version: v1
 managed:
   enabled: true
   go_package_prefix:
-    default: github.com/styrainc/load-private/proto/gen/go
+    default: github.com/styrainc/enterprise-opa-private/proto/gen/go
 plugins:
   - plugin: go
     out: gen/go

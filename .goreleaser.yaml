@@ -1,4 +1,4 @@
-project_name: load
+project_name: eopa
 
 env:
   - CGO_ENABLED=0
@@ -15,10 +15,11 @@ builds:
       - goos: windows
         goarch: arm64
     ldflags:
+      # TODO: fix the load-telemetry URL once we have that changed...
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser
-      - -X github.com/open-policy-agent/opa/version.Program=Load
+      - -X "github.com/open-policy-agent/opa/version.Program=Enterprise OPA"
       - -X "github.com/open-policy-agent/opa/version.AltProgram=Open Policy Agent"
-      - -X github.com/open-policy-agent/opa/version.Version={{.Env.LOAD_VERSION}}
+      - -X github.com/open-policy-agent/opa/version.Version={{.Env.EOPA_VERSION}}
       - -X github.com/open-policy-agent/opa/version.AltVersion={{.Env.OPA_VERSION}}
       - -X github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=https://load-telemetry.corp.styra.com
       - -X github.com/open-policy-agent/opa/version.Hostname=github.actions.local
@@ -29,10 +30,11 @@ builds:
       - amd64
       - arm64
     ldflags:
+      # TODO: fix the load-telemetry URL once we have that changed...
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser
-      - -X github.com/open-policy-agent/opa/version.Program=Load
+      - -X "github.com/open-policy-agent/opa/version.Program=Enterprise OPA"
       - -X "github.com/open-policy-agent/opa/version.AltProgram=Open Policy Agent"
-      - -X github.com/open-policy-agent/opa/version.Version={{.Env.LOAD_VERSION}}
+      - -X github.com/open-policy-agent/opa/version.Version={{.Env.EOPA_VERSION}}
       - -X github.com/open-policy-agent/opa/version.AltVersion={{.Env.OPA_VERSION}}
       - -X github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=https://load-telemetry.corp.styra.com
       - -X github.com/open-policy-agent/opa/version.Hostname=github.actions.local
@@ -56,7 +58,7 @@ archives:
     format: binary
     files:
       - none*
-    # example: load_Darwin_arm64
+    # example: eopa_Darwin_arm64
     # this name template makes the OS and Arch compatible with the results of uname.
     name_template: >-
       {{ .ProjectName }}_
@@ -77,7 +79,7 @@ changelog:
 release:
   github:
     owner: StyraInc
-    name: load
+    name: enterprise-opa
 
 brews:
   - tap:
@@ -85,7 +87,7 @@ brews:
       name: homebrew-packages
       token: "{{ .Env.TAP_GITHUB_TOKEN }}"
     url_template: >-
-      https://github.com/StyraInc/load/releases/download/{{ .Tag }}/{{ .ProjectName }}_{{- title .Os }}_
+      https://github.com/StyraInc/enterprise-opa/releases/download/{{ .Tag }}/{{ .ProjectName }}_{{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
@@ -94,5 +96,5 @@ brews:
       name: Styra DevRel
       email: devrel@styra.com
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
-    homepage: "https://www.styra.com/styra-load"
-    description: "Styra Load is an enterprise-grade authorization engine built to provide resource-efficient performance for data-heavy workloads"
+    homepage: "https://www.styra.com/enterprise-opa"
+    description: "Styra Enterprise OPA is an enterprise-grade authorization engine built to provide resource-efficient performance for data-heavy workloads"

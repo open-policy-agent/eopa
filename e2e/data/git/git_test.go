@@ -1,6 +1,6 @@
 //go:build e2e
 
-// package git is for testing Load as container, running as server,
+// package git is for testing Enterprise OPA as container, running as server,
 // interacting with remote git repositories.
 package git
 
@@ -27,11 +27,11 @@ import (
 	"github.com/open-policy-agent/opa/util"
 	"github.com/ory/dockertest"
 
-	_ "github.com/styrainc/load-private/pkg/plugins/data/git"
+	_ "github.com/styrainc/enterprise-opa-private/pkg/plugins/data/git"
 )
 
 const (
-	defaultImage   = "ko.local/load-private:edge" // built via `make build-local`
+	defaultImage   = "ko.local/enterprise-opa-private:edge" // built via `make build-local`
 	configTemplate = `
 plugins:
   data:
@@ -95,7 +95,7 @@ func TestGitPlugin(t *testing.T) {
 				image = defaultImage
 			}
 
-			branch := "e2e-load-" + randString(10)
+			branch := "e2e-eopa-" + randString(10)
 			refName := plumbing.ReferenceName("refs/heads/" + branch)
 			refSpec := gitconfig.RefSpec(refName + ":" + refName)
 			auth := &githttp.BasicAuth{
@@ -145,11 +145,11 @@ func TestGitPlugin(t *testing.T) {
 				}
 			})
 
-			// run load on the new branch
+			// run enterprise OPA on the new branch
 			config := fmt.Sprintf(configTemplate, tt.url, tt.username, tt.token, branch)
-			load := loadLoad(t, config, image)
-			host := load.GetHostPort("8181/tcp")
-			checkLoad(t, host, map[string]any{"foo1": "bar1"})
+			eopa := loadEnterpriseOPA(t, config, image)
+			host := eopa.GetHostPort("8181/tcp")
+			checkEnterpriseOPA(t, host, map[string]any{"foo1": "bar1"})
 
 			// update remote branch and check for the updates
 			w, err := repo.Worktree()
@@ -187,12 +187,12 @@ func TestGitPlugin(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			checkLoad(t, host, map[string]any{"foo2": "bar2"})
+			checkEnterpriseOPA(t, host, map[string]any{"foo2": "bar2"})
 		})
 	}
 }
 
-func loadLoad(t *testing.T, config, image string) *dockertest.Resource {
+func loadEnterpriseOPA(t *testing.T, config, image string) *dockertest.Resource {
 	img := strings.Split(image, ":")
 
 	dir := t.TempDir()
@@ -201,14 +201,14 @@ func loadLoad(t *testing.T, config, image string) *dockertest.Resource {
 		t.Fatalf("write config: %v", err)
 	}
 
-	load, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
-		Name:       "load-e2e",
+	eopa, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
+		Name:       "eopa-e2e",
 		Repository: img[0],
 		Tag:        img[1],
-		Hostname:   "load-e2e",
+		Hostname:   "eopa-e2e",
 		Env: []string{
-			"STYRA_LOAD_LICENSE_TOKEN=" + os.Getenv("STYRA_LOAD_LICENSE_TOKEN"),
-			"STYRA_LOAD_LICENSE_KEY=" + os.Getenv("STYRA_LOAD_LICENSE_KEY"),
+			"EOPA_LICENSE_TOKEN=" + os.Getenv("EOPA_LICENSE_TOKEN"),
+			"EOPA_LICENSE_KEY=" + os.Getenv("EOPA_LICENSE_KEY"),
 		},
 		Mounts: []string{
 			confPath + ":/config.yml",
@@ -221,15 +221,15 @@ func loadLoad(t *testing.T, config, image string) *dockertest.Resource {
 	}
 
 	t.Cleanup(func() {
-		if err := dockerPool.Purge(load); err != nil {
-			t.Fatalf("could not purge load: %s", err)
+		if err := dockerPool.Purge(eopa); err != nil {
+			t.Fatalf("could not purge eopa: %s", err)
 		}
 	})
 
 	if err := dockerPool.Retry(func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		req, err := http.NewRequest("GET", "http://localhost:"+load.GetPort("8181/tcp")+"/v1/data/system", nil)
+		req, err := http.NewRequest("GET", "http://localhost:"+eopa.GetPort("8181/tcp")+"/v1/data/system", nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -240,13 +240,13 @@ func loadLoad(t *testing.T, config, image string) *dockertest.Resource {
 		defer resp.Body.Close()
 		return nil
 	}); err != nil {
-		t.Fatalf("could not connect to load: %s", err)
+		t.Fatalf("could not connect to enterprise OPA: %s", err)
 	}
 
-	return load
+	return eopa
 }
 
-func checkLoad(t *testing.T, host string, exp any) {
+func checkEnterpriseOPA(t *testing.T, host string, exp any) {
 	if err := util.WaitFunc(func() bool {
 		// check store response (TODO: check metrics/status when we have them)
 		resp, err := http.Get("http://" + host + "/v1/data/git/e2e")
@@ -271,7 +271,7 @@ func checkLoad(t *testing.T, host string, exp any) {
 
 func cleanupPrevious(t *testing.T) {
 	t.Helper()
-	for _, n := range []string{"load-e2e"} {
+	for _, n := range []string{"eopa-e2e"} {
 		if err := dockerPool.RemoveContainerByName(n); err != nil {
 			t.Fatalf("remove %s: %v", n, err)
 		}

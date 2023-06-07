@@ -23,10 +23,10 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
 
-	"github.com/styrainc/load-private/pkg/plugins/data"
-	"github.com/styrainc/load-private/pkg/plugins/discovery"
-	_ "github.com/styrainc/load-private/pkg/rego_vm" // important! use VM for rego.Eval below
-	inmem "github.com/styrainc/load-private/pkg/storage"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/discovery"
+	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm" // important! use VM for rego.Eval below
+	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 const caCertPath = "testdata/tls/ca.pem"

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/styrainc/load-private/pkg/plugins/impact"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
 )
 
 func TestHTTPEndpointErrors(t *testing.T) {
@@ -112,7 +112,7 @@ plugins:
 		t.Fatal("impact plugin not found")
 	}
 
-	path := "testdata/load-bundle.tar.gz"
+	path := "testdata/eopa-bundle.tar.gz"
 	body, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read bundle file: %v", err)

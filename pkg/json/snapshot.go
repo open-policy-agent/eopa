@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/styrainc/load-private/pkg/json/internal/utils"
+	"github.com/styrainc/enterprise-opa-private/pkg/json/internal/utils"
 )
 
 // testTime is for unit tests to control the time.

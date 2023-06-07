@@ -10,7 +10,7 @@ import (
 	"net/mail"
 	"net/url"
 
-	"github.com/styrainc/load-private/pkg/tui"
+	"github.com/styrainc/enterprise-opa-private/pkg/tui"
 )
 
 type RunTrialArgs struct {

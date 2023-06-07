@@ -16,7 +16,7 @@ import (
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
 
-	"github.com/styrainc/load-private/cmd/keygen"
+	"github.com/styrainc/enterprise-opa-private/cmd/keygen"
 )
 
 const Name = "ekm"

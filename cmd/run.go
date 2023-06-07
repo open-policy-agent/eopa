@@ -18,16 +18,16 @@ import (
 	"github.com/open-policy-agent/opa/runtime"
 	"github.com/open-policy-agent/opa/server"
 
-	"github.com/styrainc/load-private/cmd/keygen"
-	_ "github.com/styrainc/load-private/pkg/builtins" // Activate custom builtins.
-	"github.com/styrainc/load-private/pkg/ekm"
-	"github.com/styrainc/load-private/pkg/plugins/bundle"
-	"github.com/styrainc/load-private/pkg/plugins/data"
-	dl "github.com/styrainc/load-private/pkg/plugins/decision_logs"
-	"github.com/styrainc/load-private/pkg/plugins/discovery"
-	"github.com/styrainc/load-private/pkg/plugins/grpc"
-	"github.com/styrainc/load-private/pkg/plugins/impact"
-	"github.com/styrainc/load-private/pkg/storage"
+	"github.com/styrainc/enterprise-opa-private/cmd/keygen"
+	_ "github.com/styrainc/enterprise-opa-private/pkg/builtins" // Activate custom builtins.
+	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
+	dl "github.com/styrainc/enterprise-opa-private/pkg/plugins/decision_logs"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/discovery"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
+	"github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 // default bind address if --addr (-a) was not provided in CLI args
@@ -206,7 +206,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 	// NOTE(sr): We can't wrap these into the stringslice loop above because p.rt.Addrs and
 	// p.rt.DiagnosticAddrs are pointers to slices
 
-	// NOTE: Load has a different default: if the --addr parameter was NOT provided,
+	// NOTE: Enterprise OPA has a different default: if the --addr parameter was NOT provided,
 	// we'll default to localhost:8181 instead of 0.0.0.0:8181 (OPA).
 	if c.Flags().Lookup("addr").Changed {
 		s, err := c.Flags().GetStringSlice("addr")
@@ -223,7 +223,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 		return nil, err
 	}
 	p.rt.DiagnosticAddrs = &d
-	p.rt.ConfigOverrides = append(p.rt.ConfigOverrides, "labels.type=styra-load")
+	p.rt.ConfigOverrides = append(p.rt.ConfigOverrides, "labels.type=enterprise-opa")
 
 	return &p, nil
 }
@@ -300,11 +300,11 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, licen
 
 	params.rt.NDBCacheEnabled = true // We need this for LIA.
 
-	params.rt.AddrSetByUser = true // silence the warning: Load's default isn't unsafe
+	params.rt.AddrSetByUser = true // silence the warning: Enterprise OPA's default isn't unsafe
 
 	a := &bundle.CustomActivator{}
-	bundleApi.RegisterActivator("_load", a)
-	params.rt.BundleActivatorPlugin = "_load"
+	bundleApi.RegisterActivator("_enterprise_opa", a)
+	params.rt.BundleActivatorPlugin = "_enterprise_opa"
 
 	params.rt.EKM = ekm.NewEKM(license, lparams)
 

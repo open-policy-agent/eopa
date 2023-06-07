@@ -25,11 +25,11 @@ p if rand.intn("coin", 2) == 0
 `
 	ctx := context.Background()
 
-	load, loadOut := loadRun(t, policy, data, "--set", "plugins.grpc.addr=localhost:9090")
-	if err := load.Start(); err != nil {
+	eopa, eopaOut := eopaRun(t, policy, data, "--set", "plugins.grpc.addr=localhost:9090")
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitForLog(ctx, t, loadOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	waitForLog(ctx, t, eopaOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	for i := 0; i < 3; i++ {
 		if err := grpcurlSimple("-plaintext", "localhost:9090", "list"); err != nil {
@@ -42,7 +42,7 @@ p if rand.intn("coin", 2) == 0
 	}
 
 	{
-		out := grpcurl(t, "-d", `{"policy": {"path": "/test", "text": "package foo allow := x {x = true}"}}`, "-plaintext", "localhost:9090", "load.policy.v1.PolicyService/CreatePolicy")
+		out := grpcurl(t, "-d", `{"policy": {"path": "/test", "text": "package foo allow := x {x = true}"}}`, "-plaintext", "localhost:9090", "eopa.policy.v1.PolicyService/CreatePolicy")
 		var m map[string]any
 		if err := json.NewDecoder(out).Decode(&m); err != nil {
 			t.Fatal(err)
@@ -52,7 +52,7 @@ p if rand.intn("coin", 2) == 0
 		}
 	}
 	{
-		out := grpcurl(t, "-d", `{"path": "/foo"}`, "-plaintext", "localhost:9090", "load.data.v1.DataService/GetData")
+		out := grpcurl(t, "-d", `{"path": "/foo"}`, "-plaintext", "localhost:9090", "eopa.data.v1.DataService/GetData")
 		var act map[string]any
 		if err := json.NewDecoder(out).Decode(&act); err != nil {
 			t.Fatal(err)
@@ -69,7 +69,7 @@ p if rand.intn("coin", 2) == 0
 	}
 }
 
-func loadRun(t *testing.T, policy, data string, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
+func eopaRun(t *testing.T, policy, data string, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
 	logLevel := "debug"
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
@@ -94,27 +94,27 @@ func loadRun(t *testing.T, policy, data string, extraArgs ...string) (*exec.Cmd,
 		dataPath,
 		policyPath,
 	)
-	load := exec.Command(binary(), args...)
-	load.Stderr = &buf
-	load.Env = append(load.Environ(),
-		"STYRA_LOAD_LICENSE_TOKEN="+os.Getenv("STYRA_LOAD_LICENSE_TOKEN"),
-		"STYRA_LOAD_LICENSE_KEY="+os.Getenv("STYRA_LOAD_LICENSE_KEY"),
+	eopa := exec.Command(binary(), args...)
+	eopa.Stderr = &buf
+	eopa.Env = append(eopa.Environ(),
+		"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
+		"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
 	)
 
 	t.Cleanup(func() {
-		if load.Process == nil {
+		if eopa.Process == nil {
 			return
 		}
-		if err := load.Process.Signal(os.Interrupt); err != nil {
+		if err := eopa.Process.Signal(os.Interrupt); err != nil {
 			panic(err)
 		}
-		load.Wait()
+		eopa.Wait()
 		if testing.Verbose() && t.Failed() {
-			t.Logf("load output:\n%s", buf.String())
+			t.Logf("eopa output:\n%s", buf.String())
 		}
 	})
 
-	return load, &buf
+	return eopa, &buf
 }
 
 func grpcurl(t *testing.T, args ...string) *bytes.Buffer {
@@ -140,7 +140,7 @@ func grpcurlSimple(args ...string) error {
 func binary() string {
 	bin := os.Getenv("BINARY")
 	if bin == "" {
-		return "load"
+		return "eopa"
 	}
 	return bin
 }

@@ -6,7 +6,7 @@ This data can be imported and used to make policy decisions.
 ## Running a data plugin
 
 ```shell
-load --config-file http.yaml run -s -l debug
+eopa --config-file http.yaml run -s -l debug
 ```
 ```yaml
 # http.yaml: http plugin configuration file

@@ -17,7 +17,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/styrainc/load-private/e2e/wait"
+	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
 func TestDecisionLogSplunk(t *testing.T) {
@@ -31,7 +31,7 @@ func TestDecisionLogSplunk(t *testing.T) {
 			note: "no compression",
 			configFmt: `
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     output:
       type: splunk
       url: %[1]s/services/collector/event
@@ -43,7 +43,7 @@ plugins:
 			compressed: true,
 			configFmt: `
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     output:
       type: splunk
       url: %[1]s/services/collector/event
@@ -80,11 +80,11 @@ plugins:
 				w.WriteHeader(http.StatusInternalServerError)
 			}))
 			t.Cleanup(ts.Close)
-			load, _, loadErr := loadLoad(t, fmt.Sprintf(tc.configFmt, ts.URL), policy, false)
-			if err := load.Start(); err != nil {
+			eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(tc.configFmt, ts.URL), policy, false)
+			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
-			wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+			wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			{ // act: send request
 				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/p", strings.NewReader(`{"input": {"a": "b"}}`))

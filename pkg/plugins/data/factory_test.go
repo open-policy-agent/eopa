@@ -16,14 +16,14 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 
-	"github.com/styrainc/load-private/pkg/plugins/data"
-	"github.com/styrainc/load-private/pkg/plugins/data/git"
-	"github.com/styrainc/load-private/pkg/plugins/data/http"
-	"github.com/styrainc/load-private/pkg/plugins/data/kafka"
-	"github.com/styrainc/load-private/pkg/plugins/data/ldap"
-	"github.com/styrainc/load-private/pkg/plugins/data/okta"
-	"github.com/styrainc/load-private/pkg/plugins/data/s3"
-	inmem "github.com/styrainc/load-private/pkg/storage"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/git"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/http"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/kafka"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/ldap"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/okta"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/s3"
+	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 func isConfig[T any](tb testing.TB, pluginType string, path string, exp T) func(testing.TB, any, error) {

@@ -1,13 +1,13 @@
-# Styra Load-Private
+# Styra Enterprise OPA Private
 
 ![OPA v0.53.0](https://openpolicyagent.org/badge/v0.53.0)
 
 ## Github Source and Project
 
-- [Load Dev Board](https://github.com/orgs/StyraInc/projects/4/views/1)
-- [load-private](https://github.com/StyraInc/load-private)
+- [Enterprise OPA Dev Board](https://github.com/orgs/StyraInc/projects/4/views/1)
+- [enterprise-opa-private](https://github.com/StyraInc/enterprise-opa-private)
 - [opa](https://github.com/StyraInc/opa)
-- [load](https://github.com/StyraInc/load)
+- [enterprise-opa](https://github.com/StyraInc/enterprise-opa)
 
 ## Build
 
@@ -41,7 +41,7 @@ Build with `make build`, run with `make run`, publish with `make push`.
 - `build`: additional build scripts
 - `cmd`: cobra command CLI
 - `e2e`: end-to-end tests
-- `pkg`: load source
+- `pkg`: enterprise OPA source
 - `proto`: protobuf sources
 - `test`: smoke tests data
 
@@ -57,7 +57,7 @@ Build with `make build`, run with `make run`, publish with `make push`.
 
 ## Common make targets
 
-- `make`: build load
+- `make`: build eopa
 - `make fmt`: go fmt
 - `make update`: update module configuration
 - `make test`: run unittests
@@ -65,35 +65,35 @@ Build with `make build`, run with `make run`, publish with `make push`.
 
 ## Supporting services
 
-While this repository tracks the code required to build Styra Load, some additional services have been built to help with the free trial, telemetry, and other "supporting" tasks.
+While this repository tracks the code required to build Styra Enterprise OPA, some additional services have been built to help with the free trial, telemetry, and other "supporting" tasks.
 
 ### Free Trial services
 
- - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/load-trial-generator)] :: `load-trial-generator`: Generates licenses for each free trial signup.
-   - `kubectl` context: `kubectl config use-context load-trial-generator-prod`
- - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/load-trial-activation-tracker)] :: `load-trial-activation-tracker`: Pushes first-time license activation events to Marketo.
-   - `kubectl` context: `kubectl config use-context load-trial-generator-prod` (Same group as the `-generator` service.)
- - Concourse job [[source](https://github.com/StyraInc/concourse-defs/tree/main/load/licenses-reaper)] :: `load/licenses-reaper`: Weekly job to remove expired trial licenses from Keygen.sh.
+ - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/eopa-trial-generator)] :: `eopa-trial-generator`: Generates licenses for each free trial signup.
+   - `kubectl` context: `kubectl config use-context eopa-trial-generator-prod`
+ - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/eopa-trial-activation-tracker)] :: `eopa-trial-activation-tracker`: Pushes first-time license activation events to Marketo.
+   - `kubectl` context: `kubectl config use-context eopa-trial-generator-prod` (Same group as the `-generator` service.)
+ - Concourse job [[source](https://github.com/StyraInc/concourse-defs/tree/main/eopa/licenses-reaper)] :: `eopa/licenses-reaper`: Weekly job to remove expired trial licenses from Keygen.sh.
 
 ### Telemetry services
 
- - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/load-telemetry)] :: `load-telemetry`: Load version of the "OPA Telemetry" service.
-   - `kubectl` context: `kubectl config use-context load-telemetry-prod`
- - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/load-telemetry-dashboard)] :: `load-telemetry-dashboard`: Load version of the "OPA Telemetry Dashboard" service.
-   - `kubectl` context: `kubectl config use-context load-telemetry-prod`
-   - Dashboard URL: https://ops-prod.k8s.styra.com/v1/service/load-telemetry-dashboard.load-telemetry:8080/
+ - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/eopa-telemetry)] :: `eopa-telemetry`: Enterpriser OPA version of the "OPA Telemetry" service.
+   - `kubectl` context: `kubectl config use-context eopa-telemetry-prod`
+ - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/eopa-telemetry-dashboard)] :: `eopa-telemetry-dashboard`: Enterprise OPA version of the "OPA Telemetry Dashboard" service.
+   - `kubectl` context: `kubectl config use-context eopa-telemetry-prod`
+   - Dashboard URL: https://ops-prod.k8s.styra.com/v1/service/eopa-telemetry-dashboard.eopa-telemetry:8080/
 
 ### Monitoring
 
- - NewRelic Dashboard [[Link](https://one.newrelic.com/dashboards/detail/MzU5NDA4OHxWSVp8REFTSEJPQVJEfGRhOjMxNTUwNjQ?account=3594088&state=0e224a3f-d3cc-492f-a8c6-fb2fd1caa0e0)]: `Load Health`: Tracks the key metrics / status of all `load-trial-*` and `load-telemetry*` services.
+ - NewRelic Dashboard [[Link](https://one.newrelic.com/dashboards/detail/MzU5NDA4OHxWSVp8REFTSEJPQVJEfGRhOjMxNTUwNjQ?account=3594088&state=0e224a3f-d3cc-492f-a8c6-fb2fd1caa0e0)]: `Enterprise OPA Health`: Tracks the key metrics / status of all `eopa-trial-*` and `eopa-telemetry*` services.
 
 ## FAQ
 
-### How can I update the `load` branch of the github.com/StyraInc/opa fork?
+### How can I update the `eopa` branch of the github.com/StyraInc/opa fork?
 
 - `make update`
 
-### How do I update OPA in Load?
+### How do I update OPA in Enterprise OPA?
 
 Let's assume an update from OPA 0.49.0 to 0.50.0:
 
@@ -101,23 +101,23 @@ First, we update the fork:
 
 1. push `main` from `github.com/open-policy-agent/opa` to the fork `github.com/StyraInc/opa`
 2. push the latest version tag (v0.50.0) from `github.com/open-policy-agent/opa` to the fork (NB: the post-tag action on the fork always fails)
-3. checkout the previous fork branch, e.g. `load-0.49`
+3. checkout the previous fork branch, e.g. `eopa-0.49`
 4. `git rebase v0.50.0` -- rebase on top of the latest release tag
-5. name the branch `load-0.50` and push it to the fork `github.com/StyraInc/opa`
+5. name the branch `eopa-0.50` and push it to the fork `github.com/StyraInc/opa`
 
-Then we update the reference in Load:
+Then we update the reference in Enterprise OPA:
 
 1. Update it in `go.mod`: `GOPRIVATE=github.com/StyraInc go get github.com/open-policy-agent/opa@v0.50.0` (NB: this has no consequences except for version-tag bookkeeping)
-2. Update `load-xx` in the `update` target of the Makefile
+2. Update `eopa-xx` in the `update` target of the Makefile
 3. Run `make update`.
 4. Bump the OPA version number in the `README.md` badge at the top
-5. Commit the changes and push a PR to `github.com/StyraInc/load-private`.
+5. Commit the changes and push a PR to `github.com/StyraInc/enterprise-opa-private`.
 
 ### Can't build locally: private github repo
 
 ````
 go: errors parsing go.mod:
-/Users/stephan/Sources/StyraInc/load/go.mod:89: replace github.com/StyraInc/opa: version "load" invalid: git ls-remote -q origin in /Users/stephan/go/pkg/mod/cache/vcs/39c7f8258aa43a0e71284d9afa9390ab62dcf0466b0baf3bc3feef290c1fe63d: exit status 128:
+/Users/stephan/Sources/StyraInc/enterprise-opa/go.mod:89: replace github.com/StyraInc/opa: version "eopa" invalid: git ls-remote -q origin in /Users/stephan/go/pkg/mod/cache/vcs/39c7f8258aa43a0e71284d9afa9390ab62dcf0466b0baf3bc3feef290c1fe63d: exit status 128:
 	fatal: could not read Username for 'https://github.com': terminal prompts disabled
 Confirm the import path was entered correctly.
 If this is a private repository, see https://golang.org/doc/faq#git_https for additional information.
@@ -129,7 +129,7 @@ Adding this snippet to your .gitconfig should help:
 	insteadOf = https://github.com/
 ```
 
-### Run 'load' documentation locally
+### Run 'eopa' documentation locally
 
 From fetchdb repo; see \<fetchdb\>/docs/public/docs-website/README.md
 
@@ -139,7 +139,7 @@ cd <fetchdb>/docs/public/docs-website
 npm install
 npm run start
 ```
-from browser: http://localhost:3000/load
+from browser: http://localhost:3000/enterprise-opa
 
 ### Generate/Update CLI documentation
 
@@ -148,21 +148,21 @@ Apply diff manually to fetchdb
 
 ```
 make generate-cli-docs
-diff tmp-docs/cli.md ../fetchdb/docs/public/docs/load/cli-reference.md
+diff tmp-docs/cli.md ../fetchdb/docs/public/docs/enterprise-opa/cli-reference.md
 ```
 
-### Permission denied when running 'load'
+### Permission denied when running 'eopa'
 
-If you get "permission denied: ./load"
-
-```
-% chmod +x load
-```
-
-### MacOS 'cannot verify the developer of "load"' after downloading
+If you get "permission denied: ./eopa"
 
 ```
-% xattr -d com.apple.quarantine load
+% chmod +x eopa
+```
+
+### MacOS 'cannot verify the developer of "eopa"' after downloading
+
+```
+% xattr -d com.apple.quarantine eopa
 ```
 
 ### MacOS signing locally (`make release`)
@@ -184,13 +184,13 @@ Set up the following environment variables, and perform a `make release`:
 You can safely ignore the error, or set up Quill as described above.
 
 ```
-  ⨯ release failed after 5s error=post hook failed: failed to run 'quill sign-and-notarize /Users/kevin/src/github.com/styrainc/load-private/dist/darwin-build_darwin_amd64_v1/load -vv': exit status 1
+  ⨯ release failed after 5s error=post hook failed: failed to run 'quill sign-and-notarize /Users/kevin/src/github.com/styrainc/enterprise-opa-private/dist/darwin-build_darwin_amd64_v1/eopa -vv': exit status 1
 make: *** [release] Error 1
 ```
 
-## Release Load
+## Release Enterprise OPA
 
-Setting the tag version will trigger the .github/workflows/push-tags.yaml action; which will publish 'load' release and 'load' containers to https://github.com/StyraInc/load
+Setting the tag version will trigger the .github/workflows/push-tags.yaml action; which will publish 'eopa' release and 'enterprise-opa' containers to https://github.com/StyraInc/enterprise-opa
 
 ### Current version
 

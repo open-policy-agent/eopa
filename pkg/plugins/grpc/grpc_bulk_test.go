@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	bulkv1 "github.com/styrainc/load-private/proto/gen/go/load/bulk/v1"
-	datav1 "github.com/styrainc/load-private/proto/gen/go/load/data/v1"
-	policyv1 "github.com/styrainc/load-private/proto/gen/go/load/policy/v1"
+	bulkv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/bulk/v1"
+	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
+	policyv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -337,7 +337,7 @@ func TestBulkRW(t *testing.T) {
 // Sequential request / response tests.
 // Note(philip): These tests have been introduced because of a bug found in
 // the v0.100.8 release by Miro, where a write transaction was opened, but
-// potentially never closed, causing Load to hang indefinitely.
+// potentially never closed, causing Enterprise OPA to hang indefinitely.
 func TestBulkRWSeq(t *testing.T) {
 	type BulkRWSeqStep struct {
 		request     *bulkv1.BulkRWRequest

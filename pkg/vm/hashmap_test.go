@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	fjson "github.com/styrainc/load-private/pkg/json"
+	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
 func TestHashMapPutDelete(t *testing.T) {

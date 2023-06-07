@@ -19,7 +19,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	tc_wait "github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/styrainc/load-private/e2e/wait"
+	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
 func TestDecisionLogsS3Output(t *testing.T) {
@@ -35,7 +35,7 @@ coin if rand.intn("coin", 2)
 
 	plaintextConfig := `
 plugins:
-  load_decision_logger:
+  enterprise_opa_decision_logger:
     buffer:
       type: memory
     output:
@@ -48,11 +48,11 @@ plugins:
       access_secret: %[4]s
 `
 	m, port := minioClient(t, ctx, minioRootUser, minioRootPassword, bucket)
-	load, _, loadErr := loadLoad(t, fmt.Sprintf(plaintextConfig, port, bucket, minioRootUser, minioRootPassword), policy, false)
-	if err := load.Start(); err != nil {
+	eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(plaintextConfig, port, bucket, minioRootUser, minioRootPassword), policy, false)
+	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, loadErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	for i := 0; i < 2; i++ { // act: send API requests
 		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin",

@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"strings"
 
-	bjson "github.com/styrainc/load-private/pkg/json"
-	inmem "github.com/styrainc/load-private/pkg/storage"
+	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 
 	"github.com/open-policy-agent/opa/storage"
 )

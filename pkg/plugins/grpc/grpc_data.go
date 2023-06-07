@@ -3,8 +3,8 @@ package grpc
 import (
 	"context"
 
-	bjson "github.com/styrainc/load-private/pkg/json"
-	datav1 "github.com/styrainc/load-private/proto/gen/go/load/data/v1"
+	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

@@ -6,9 +6,9 @@ import (
 	"crypto/rand"
 	"sync"
 
-	dl "github.com/styrainc/load-private/pkg/plugins/decision_logs"
-	"github.com/styrainc/load-private/pkg/plugins/impact"
-	"github.com/styrainc/load-private/pkg/vm"
+	dl "github.com/styrainc/enterprise-opa-private/pkg/plugins/decision_logs"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
+	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/ir"

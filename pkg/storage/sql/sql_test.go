@@ -9,7 +9,7 @@ import (
 	"github.com/open-policy-agent/opa/util"
 	"github.com/open-policy-agent/opa/util/test"
 
-	fjson "github.com/styrainc/load-private/pkg/json"
+	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
 var options = Options{Driver: "sqlite", DataSourceName: "file::memory:?cache=shared"}
