@@ -23,8 +23,8 @@ jobs:
           path: eopa
       - uses: actions/setup-go@v4
         with:
-          go-version-file: enterprise-opa/go.mod
-          cache-dependency-path: enterprise-opa/go.sum
+          go-version-file: eopa/go.mod
+          cache-dependency-path: eopa/go.sum
           check-latest: true
       - name: Check out "benchmarks" branch
         uses: actions/checkout@v3
@@ -37,7 +37,7 @@ jobs:
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
           INPUT_GO_TEST_FLAGS: -timeout=120m -run=-
-          INPUT_SUBDIRECTORY: enterprise-opa
+          INPUT_SUBDIRECTORY: eopa
           INPUT_PUBLISH: true
           INPUT_PUBLISH_BRANCH: benchmarks
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
