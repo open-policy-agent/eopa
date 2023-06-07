@@ -245,13 +245,28 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 			return nil, err
 		}
 
+		columnTypes, err := rows.ColumnTypes()
+		if err != nil {
+			return nil, err
+		}
+
 		result := make([]interface{}, 0)
 
 		for rows.Next() {
 			row := make([]interface{}, 0, len(columns))
-			for range columns {
-				var value interface{}
-				row = append(row, &value)
+			for _, column := range columnTypes {
+				// MySQL driver returns all textual columns as []byte and needs a little help to convert them to a string.
+				// Fortunately, these types should be universally strings across all drivers so no need to check driver type.
+				//
+				// TODO: There may be other (non-textual) types that require similar treatment.
+				switch column.DatabaseTypeName() {
+				case "VARCHAR", "TEXT", "LONGTEXT", "TINYTEXT", "MEDIUMTEXT": //  See fields.go of github.com/go-sql-driver/mysql for the supported textual types.
+					var value string
+					row = append(row, &value)
+				default:
+					var value interface{}
+					row = append(row, &value)
+				}
 			}
 
 			if err := rows.Scan(row...); err != nil {
