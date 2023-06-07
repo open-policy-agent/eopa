@@ -250,7 +250,7 @@ jobs:
           persist-credentials: false
       - name: Run enterprise-opa-test (fetchdb)
         run: |
-          sed -i 's#ghcr.io/styrainc/enterprise:latest#${{ steps.enterprise-opa.outputs.image }}#' ${{ steps.enterprise-opa.outputs.fetchdb}}/Makefile
+          sed -i 's#ghcr.io/styrainc/.*:latest#${{ steps.enterprise-opa.outputs.image }}#' ${{ steps.enterprise-opa.outputs.fetchdb}}/Makefile
           go test -tags e2e_fetchdb ./e2e/fetchdb
         env:
           FETCHDB_DIRECTORY: ${{ steps.enterprise-opa.outputs.fetchdb }}

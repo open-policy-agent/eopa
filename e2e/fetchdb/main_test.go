@@ -21,7 +21,7 @@ var exceptions = []string{
 
 func TestAllRegoTestsInFetchdb(t *testing.T) {
 	fails := []string{}
-	cmd := exec.Command("make", "eopa-test")
+	cmd := exec.Command("make", "load-test")
 	cmd.Dir = os.Getenv("FETCHDB_DIRECTORY")
 	output, err := cmd.Output()
 	if err != nil {
