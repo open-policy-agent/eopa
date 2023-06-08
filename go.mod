@@ -44,6 +44,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
 	github.com/testcontainers/testcontainers-go v0.20.1
+	github.com/testcontainers/testcontainers-go/modules/mysql v0.20.1
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.20.1
 	github.com/testcontainers/testcontainers-go/modules/vault v0.20.1
 	github.com/twmb/franz-go v1.13.5
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0

@@ -5,8 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/mysql"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
@@ -22,6 +28,12 @@ import (
 func TestSQLSend(t *testing.T) {
 	file := t.TempDir() + "/sqlite3.db"
 	populate(t, file)
+
+	mysql, mysqlConnStr := startMySQL(t)
+	defer mysql.Terminate(context.Background())
+
+	postgres, postgresConnStr := startPostgreSQL(t)
+	defer postgres.Terminate(context.Background())
 
 	now := time.Now()
 
@@ -67,7 +79,7 @@ func TestSQLSend(t *testing.T) {
 		},
 		{
 			"query with args",
-			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1 WHERE KEY = $1", "args": ["A"]}, resp)}`, file),
+			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1 WHERE ID = $1", "args": ["A"]}, resp)}`, file),
 			`{{"result": {"p": {"rows": [["B"]]}}}}`,
 			"",
 			false,
@@ -151,7 +163,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 		{
 			"rows as objects",
 			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T1", "row_object": true}, resp)}`, file),
-			`{{"result": {"p": {"rows": [{"KEY": "A", "VALUE": "B"}]}}}}`,
+			`{{"result": {"p": {"rows": [{"ID": "A", "VALUE": "B"}]}}}}`,
 			"",
 			false,
 			now,
@@ -177,6 +189,26 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 			now,
 			0,
 			0,
+		},
+		{
+			"mysql: a single row query",
+			fmt.Sprintf(`p = resp { sql.send({"driver": "mysql", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`, mysqlConnStr),
+			`{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
+			"",
+			false,
+			now,
+			0,
+			1,
+		},
+		{
+			"postgresql: a single row query",
+			fmt.Sprintf(`p = resp { sql.send({"driver": "postgres", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`, postgresConnStr),
+			`{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
+			"",
+			false,
+			now,
+			0,
+			1,
 		},
 	}
 
@@ -262,6 +294,15 @@ func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string
 	}
 }
 
+var initSQL = `
+        CREATE TABLE T1 (ID TEXT, VALUE TEXT);
+        CREATE TABLE T2 (ID TEXT, VALUE TEXT);
+
+        INSERT INTO T1(ID, VALUE) VALUES('A', 'B');
+        INSERT INTO T2(ID, VALUE) VALUES('A1', 'B1');
+        INSERT INTO T2(ID, VALUE) VALUES('A2', 'B2');
+	`
+
 func populate(tb testing.TB, file string) {
 	db, err := sql.Open("sqlite", file)
 	if err != nil {
@@ -269,15 +310,67 @@ func populate(tb testing.TB, file string) {
 	}
 	defer db.Close()
 
-	sql := `
-        CREATE TABLE T1 (KEY TEXT, VALUE TEXT);
-        CREATE TABLE T2 (KEY TEXT, VALUE TEXT);
-
-        INSERT INTO T1(KEY, VALUE) VALUES("A", "B");
-        INSERT INTO T2(KEY, VALUE) VALUES("A1", "B1");
-        INSERT INTO T2(KEY, VALUE) VALUES("A2", "B2");
-	`
-	if _, err = db.Exec(sql); err != nil {
+	if _, err = db.Exec(initSQL); err != nil {
 		tb.Fatal(err)
 	}
+}
+
+func startMySQL(t *testing.T) (*mysql.MySQLContainer, string) {
+	t.Helper()
+
+	srv, err := mysql.RunContainer(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connStr, err := srv.ConnectionString(context.Background(), "tls=skip-verify")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := sql.Open("mysql", connStr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, s := range strings.Split(initSQL, ";") {
+		if s := strings.TrimSpace(s); s != "" {
+			if _, err := db.Exec(s); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	return srv, connStr
+}
+
+func startPostgreSQL(t *testing.T) (*postgres.PostgresContainer, string) {
+	t.Helper()
+
+	srv, err := postgres.RunContainer(context.Background(),
+		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(5*time.Second)),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connStr, err := srv.ConnectionString(context.Background(), "sslmode=disable")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, s := range strings.Split(initSQL, ";") {
+		if s := strings.TrimSpace(s); s != "" {
+			if _, err := db.Exec(s); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	return srv, connStr
 }
