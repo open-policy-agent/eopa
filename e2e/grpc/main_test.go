@@ -4,9 +4,7 @@ package cli
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +13,8 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
 func TestGRPCSmokeTest(t *testing.T) {
@@ -23,13 +23,11 @@ func TestGRPCSmokeTest(t *testing.T) {
 import future.keywords
 p if rand.intn("coin", 2) == 0
 `
-	ctx := context.Background()
-
 	eopa, eopaOut := eopaRun(t, policy, data, "--set", "plugins.grpc.addr=localhost:9090")
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitForLog(ctx, t, eopaOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	for i := 0; i < 3; i++ {
 		if err := grpcurlSimple("-plaintext", "localhost:9090", "list"); err != nil {
@@ -143,51 +141,4 @@ func binary() string {
 		return "eopa"
 	}
 	return bin
-}
-
-func waitForLog(ctx context.Context, t *testing.T, rdr io.Reader, exp int, assert func(string) bool, dur time.Duration) {
-	t.Helper()
-	for i := 0; i <= 3; i++ {
-		if i != 0 {
-			time.Sleep(dur)
-		}
-		if act := retrieveMsg(ctx, t, rdr, assert); act == exp {
-			return
-		} else if i == 3 {
-			t.Fatalf("expected %d requests, got %d", exp, act)
-		}
-	}
-	return
-}
-
-func retrieveMsg(ctx context.Context, t *testing.T, rdr io.Reader, assert func(string) bool) int {
-	t.Helper()
-	c := 0
-	// Skip any non-JSON logs coming from CLI arg validation
-	buf := bytes.Buffer{}
-	if _, err := io.Copy(&buf, rdr); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := buf.ReadBytes('{'); err == nil {
-		if err := buf.UnreadByte(); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	dec := json.NewDecoder(&buf)
-	for {
-		m := struct {
-			Msg string `json:"msg"`
-		}{}
-		if err := dec.Decode(&m); err != nil {
-			if err == io.EOF {
-				break
-			}
-			t.Fatalf("decode console logs: %v", err)
-		}
-		if assert(m.Msg) {
-			c++
-		}
-	}
-	return c
 }

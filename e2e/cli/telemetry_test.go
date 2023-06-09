@@ -4,19 +4,19 @@ package cli
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
 func TestRunWithoutTelemetry(t *testing.T) {
 	data, config := `{}`, ``
 	policy := `package test
 p := true`
-	ctx := context.Background()
 
 	for _, flag := range []string{"--disable-telemetry", "--skip-version-check"} {
 		t.Run(flag, func(t *testing.T) {
@@ -24,7 +24,7 @@ p := true`
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
-			waitForLog(ctx, t, eopaOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+			wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			// TODO(sr): we can't do much better than wait for a result
 			// (on linux, netns would solve this better)

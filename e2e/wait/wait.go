@@ -22,6 +22,11 @@ func ForLog(t *testing.T, buf *bytes.Buffer, assert func(string) bool, dur time.
 
 func retrieveMsg(t *testing.T, buf *bytes.Buffer, assert func(string) bool) bool {
 	t.Helper()
+	if _, err := buf.ReadBytes('{'); err == nil {
+		if err := buf.UnreadByte(); err != nil {
+			t.Fatal(err)
+		}
+	}
 	b := bytes.NewReader(buf.Bytes())
 	scanner := bufio.NewScanner(b)
 	for scanner.Scan() {

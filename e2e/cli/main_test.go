@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
 func TestEvalInstructionLimit(t *testing.T) {
@@ -62,7 +63,7 @@ p { data.xs[_] }`
 		if err := eopa.Start(); err != nil {
 			t.Fatal(err)
 		}
-		waitForLog(ctx, t, eopaOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+		wait.ForLog(t, eopaOut,  func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
@@ -98,7 +99,7 @@ p { data.xs[_] }`
 		if err := eopa.Start(); err != nil {
 			t.Fatal(err)
 		}
-		waitForLog(ctx, t, eopaOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+		wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
@@ -129,7 +130,6 @@ p { data.xs[_] }`
 // NOTE(sr): This isn't *all* plugins -- the data plugin isn't loading its sub-plugins.
 // But it's most of them.
 func TestRunWithAllPlugins(t *testing.T) {
-	ctx := context.Background()
 	policy := `package test`
 	data := `{}`
 	config := `
@@ -143,7 +143,7 @@ plugins:
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitForLog(ctx, t, eopaOut, 1, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 }
 
 func eopaEval(t *testing.T, limit, data string) *exec.Cmd {
@@ -229,51 +229,4 @@ func largeJSON() string {
 	}
 	data.WriteString(`]}`)
 	return data.String()
-}
-
-func waitForLog(ctx context.Context, t *testing.T, rdr io.Reader, exp int, assert func(string) bool, dur time.Duration) {
-	t.Helper()
-	for i := 0; i <= 3; i++ {
-		if i != 0 {
-			time.Sleep(dur)
-		}
-		if act := retrieveMsg(ctx, t, rdr, assert); act == exp {
-			return
-		} else if i == 3 {
-			t.Fatalf("expected %d matching, got %d", exp, act)
-		}
-	}
-	return
-}
-
-func retrieveMsg(ctx context.Context, t *testing.T, rdr io.Reader, assert func(string) bool) int {
-	t.Helper()
-	c := 0
-	// Skip any non-JSON logs coming from CLI arg validation
-	buf := bytes.Buffer{}
-	if _, err := io.Copy(&buf, rdr); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := buf.ReadBytes('{'); err == nil {
-		if err := buf.UnreadByte(); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	dec := json.NewDecoder(&buf)
-	for {
-		m := struct {
-			Msg string `json:"msg"`
-		}{}
-		if err := dec.Decode(&m); err != nil {
-			if err == io.EOF {
-				break
-			}
-			t.Fatalf("decode console logs: %v", err)
-		}
-		if assert(m.Msg) {
-			c++
-		}
-	}
-	return c
 }

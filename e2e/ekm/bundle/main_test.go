@@ -3,12 +3,9 @@
 package cli
 
 import (
-	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"mime"
 	"net/http"
 	"net/http/httptest"
@@ -21,6 +18,8 @@ import (
 	hcvault "github.com/hashicorp/vault/api"
 	"github.com/testcontainers/testcontainers-go"
 	testcontainervault "github.com/testcontainers/testcontainers-go/modules/vault"
+
+	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
 const (
@@ -48,7 +47,7 @@ func TestEKM(t *testing.T) {
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	waitForLog(ctx, t, eopaOut, func(s string) bool { return strings.Contains(s, "Bundle loaded and activated successfully") }, time.Second)
+	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Bundle loaded and activated successfully") }, time.Second)
 }
 
 func createVaultTestCluster(t *testing.T) *testcontainervault.VaultContainer {
@@ -171,43 +170,6 @@ func binary() string {
 		return "eopa"
 	}
 	return bin
-}
-
-func waitForLog(ctx context.Context, t *testing.T, buf *bytes.Buffer, assert func(string) bool, dur time.Duration) {
-	t.Helper()
-	for i := 0; i <= 5; i++ {
-		if retrieveMsg(ctx, t, buf, assert) {
-			return
-		}
-		time.Sleep(dur)
-	}
-	t.Fatalf("timeout waiting for log")
-}
-
-func retrieveMsg(ctx context.Context, t *testing.T, buf *bytes.Buffer, assert func(string) bool) bool {
-	t.Helper()
-	b := bytes.NewReader(buf.Bytes())
-	scanner := bufio.NewScanner(b)
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		var m struct {
-			Msg string
-		}
-		if err := json.NewDecoder(bytes.NewReader(line)).Decode(&m); err != nil {
-			if err == io.EOF {
-				break
-			}
-			t.Fatalf("decode console logs: %v", err)
-		}
-		t.Log(m.Msg)
-		if assert(m.Msg) {
-			return true
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("scanner: %v", err)
-	}
-	return false
 }
 
 func equals[T comparable](s T) func(T) bool {
