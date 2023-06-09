@@ -2,24 +2,18 @@ package impact_test
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/gorilla/mux"
 	"go.uber.org/goleak"
 
 	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/loader"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
 
-	eopa_bundle "github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/discovery"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 func TestStop(t *testing.T) {
@@ -38,11 +32,13 @@ plugins:
 	}
 
 	path := "testdata/eopa-bundle.tar.gz"
-	bndls, err := (&eopa_bundle.CustomLoader{}).Load(ctx, metrics.New(), []string{path})
+	bndl, err := loader.NewFileLoader().
+		WithSkipBundleVerification(true).
+		AsBundle(path)
 	if err != nil {
 		t.Fatalf("eopa bundle: %v", err)
 	}
-	j := impact.NewJob(ctx, 1, true, bndls[path], time.Second)
+	j := impact.NewJob(ctx, 1, true, bndl, time.Second)
 	if err := lia.StartJob(ctx, j); err != nil {
 		t.Fatalf("error starting job: %v", err)
 	}
@@ -87,35 +83,4 @@ func (f *fakeEval) NDBCache() builtins.NDBCache {
 
 func (*fakeEval) Metrics() metrics.Metrics {
 	return metrics.New()
-}
-
-func pluginMgr(t *testing.T, config string) *plugins.Manager {
-	t.Helper()
-	h := topdown.NewPrintHook(os.Stderr)
-	mux := mux.NewRouter()
-	opts := []func(*plugins.Manager){
-		plugins.WithRouter(mux),
-		plugins.PrintHook(h),
-		plugins.EnablePrintStatements(true),
-	}
-	if !testing.Verbose() {
-		opts = append(opts, plugins.Logger(logging.NewNoOpLogger()))
-		opts = append(opts, plugins.ConsoleLogger(logging.NewNoOpLogger()))
-	}
-
-	store := inmem.New()
-	mgr, err := plugins.New([]byte(config), "test-instance-id", store, opts...)
-	if err != nil {
-		t.Fatal(err)
-	}
-	disco, err := discovery.New(mgr,
-		discovery.Factories(map[string]plugins.Factory{
-			impact.Name: impact.Factory(),
-		}),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mgr.Register(discovery.Name, disco)
-	return mgr
 }

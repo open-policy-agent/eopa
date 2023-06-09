@@ -1,0 +1,20 @@
+{
+  "users": {
+    "alice": {
+      "role": "admin"
+    },
+    "bob": {
+      "role": "viewer"
+    }
+  },
+  "roles": {
+    "admin": [
+      "create",
+      "delete",
+      "list"
+    ],
+    "viewer": [
+      "list"
+    ]
+  }
+}

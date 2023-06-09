@@ -125,7 +125,6 @@ func bundleFromReader(_ context.Context, rd io.ReadCloser) (*bundle.Bundle, erro
 	return loader.NewFileLoader().
 		WithReader(rd).
 		WithSkipBundleVerification(true).
-		WithBundleLazyLoadingMode(true).
 		AsBundle(path)
 }
 

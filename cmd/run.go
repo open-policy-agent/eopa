@@ -327,7 +327,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, licen
 			impact.Name:     impact.Factory(),
 			grpc.PluginName: grpc.Factory(),
 			dl.Name:         dl.Factory(),
-			dl.DLPluginName: dl.DLPluginiFactory(),
+			dl.DLPluginName: dl.DLPluginFactory(),
 		}),
 	)
 	if err != nil {

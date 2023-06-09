@@ -13,7 +13,7 @@ import (
 
 type dlPluginFactory struct{}
 
-func DLPluginiFactory() plugins.Factory {
+func DLPluginFactory() plugins.Factory {
 	return &dlPluginFactory{}
 }
 

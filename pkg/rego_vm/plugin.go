@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"sync"
 
+	_ "github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle" // register bjson extension
 	dl "github.com/styrainc/enterprise-opa-private/pkg/plugins/decision_logs"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
@@ -18,6 +19,9 @@ import (
 )
 
 const Name = "rego_target_vm"
+const Target = "vm"
+
+var defaultTgt = false
 
 func init() {
 	rego.RegisterPlugin(Name, &vmp{})
@@ -33,11 +37,17 @@ func SetLimits(instr int64) {
 	limitsMtx.Unlock()
 }
 
+// SetDefault controls if "vm" assumes the role of the default rego target
+// TODO(sr): call from cmd or something
+func SetDefault(y bool) {
+	defaultTgt = y
+}
+
 type vmp struct{}
 
 // We want this target to be the default.
 func (*vmp) IsTarget(t string) bool {
-	return t == "" || t == "vm"
+	return t == Target || defaultTgt
 }
 
 // TODO(sr): move store and tx into PrepareOption?

@@ -31,6 +31,10 @@ func addInstructionLimitFlag(c *cobra.Command, instrLimit *int64) {
 func EnterpriseOPACommand(license *keygen.License) *cobra.Command {
 	var instructionLimit int64
 
+	// For all Enterprise OPA commands, the VM is the default target. It can be
+	// overridden for `eopa eval` by providing `-t rego`.
+	rego_vm.SetDefault(true)
+
 	// These flags are added to `eopa eval` (OPA doesn't have them). They are
 	// then passed on to the logger used with keygen for license (de)activation,
 	// heartbeating, etc. There is no extra log output from the actual policy

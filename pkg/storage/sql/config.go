@@ -1,3 +1,6 @@
+// see marker below
+//go:build use_opa_fork
+
 package sql
 
 import (
@@ -60,6 +63,7 @@ func OptionsFromConfig(ctx context.Context, raw []byte, id string) (*Options, er
 		return nil, err
 	}
 
+	// TODO(sr): the "SQL" config key doesn't exist in upstream OPA yet
 	if parsedConfig.Storage == nil || len(parsedConfig.Storage.SQL) == 0 {
 		return nil, nil
 	}

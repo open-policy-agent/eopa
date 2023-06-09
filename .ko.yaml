@@ -4,6 +4,7 @@ builds:
   - GOPRIVATE=github.com/StyraInc/opa
   flags:
   - -buildmode=exe
+  - -tags=use_opa_fork
   ldflags:
   # TODO: fix the load-telemetry URL once we have that changed...
   - -X github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=https://load-telemetry.corp.styra.com

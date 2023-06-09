@@ -2,7 +2,8 @@ run:
   timeout: 5m
   skip-dirs:
     - pkg/json/internal # copied from stdlib
-
+  build-tags:
+    - use_opa_fork
 linters-settings:
   lll:
     line-length: 200

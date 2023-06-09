@@ -968,7 +968,3 @@ func LegacyEraseManifestFromStore(ctx context.Context, store storage.Store, txn 
 func LegacyReadRevisionFromStore(ctx context.Context, store storage.Store, txn storage.Transaction) (string, error) {
 	return readRevisionFromStore(ctx, store, txn, legacyRevisionStoragePath)
 }
-
-func init() {
-	bundleApi.RegisterBundleActivator(&CustomActivator{})
-}

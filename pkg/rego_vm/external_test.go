@@ -56,6 +56,7 @@ func readCases(t testing.TB) ([]cases.TestCase, map[string]string) {
 }
 
 func TestRegoE2E(t *testing.T) {
+	SetDefault(true)
 	cases, exceptions := readCases(t)
 	ctx := context.Background()
 

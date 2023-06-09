@@ -1,5 +1,5 @@
 export GOPRIVATE=github.com/StyraInc/opa
-
+BUILD_ARGS := --tags=use_opa_fork
 ifdef AUTH_RELEASE
 NEWEST := $(shell git tag -l --sort -version:refname | head -n 1)
 ifeq ($(AUTH_RELEASE), $(NEWEST))
@@ -44,7 +44,7 @@ LDFLAGS := $(VERSION_LDFLAGS) $(EOPA_LDFLAGS) $(ALT_EOPA_LDFLAGS) $(ALT_VERSION_
 
 .PHONY: eopa
 eopa:
-	go build -o $(BUILD_DIR)/bin/eopa '-ldflags=$(LDFLAGS)'
+	go build $(BUILD_ARGS) -o $(BUILD_DIR)/bin/eopa '-ldflags=$(LDFLAGS)'
 
 # ko build is used by the GHA workflow to build an container image that can be tested on GHA,
 # i.e. linux/amd64 only.
@@ -99,16 +99,21 @@ release-wasm:
 # utilities
 .PHONY: test test-race e2e benchmark fmt check fuzz update
 test:
-	go test ./...
+	go test $(BUILD_ARGS) ./...
+
+test-examples-%:
+	cd examples/$* && \
+	  GOPRIVATE=github.com/styrainc go mod tidy && \
+	  go test .
 
 test-race:
-	go test ./... -race
+	go test $(BUILD_ARGS) ./... -race
 
 e2e:
-	go test -p 1 -tags e2e ./e2e/... -v -count=1 # always run, no parallelism
+	go test -p 1 $(BUILD_ARGS) -tags e2e ./e2e/... -v -count=1 # always run, no parallelism
 
 benchmark:
-	go test -run=- -bench=. -benchmem ./...
+	go test $(BUILD_ARGS) -run=- -bench=. -benchmem ./...
 
 fmt:
 	golangci-lint run -v --fix
@@ -117,10 +122,10 @@ check:
 	golangci-lint run -v
 
 fuzz:
-	go test ./pkg/json -fuzz FuzzDecode -fuzztime ${FUZZ_TIME} -v -run '^$$'
+	go test $(BUILD_ARGS)  ./pkg/json -fuzz FuzzDecode -fuzztime ${FUZZ_TIME} -v -run '^$$'
 
 update:
-	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.53.1
+	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@load-0.53.1
 	go mod tidy
 
 # ci-smoke-test

@@ -586,8 +586,8 @@ func (p *Plugin) activate(ctx context.Context, name string, b *bundle.Bundle) er
 			Compiler: compiler,
 			Metrics:  p.status[name].Metrics,
 			Bundles:  map[string]*bundle.Bundle{name: b},
-			Plugin:   "_enterprise_opa",
 		}
+		maybeAddPlugin(opts)
 
 		if p.config.IsMultiBundle() {
 			activateErr = bundle.Activate(opts)

@@ -36,11 +36,6 @@ jobs:
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      # NOTE(sr): we need to install this before checking out the code, as it will otherwise
-      # interfere with the project's go.mod/go.sum
-      - name: install gcassert
-        run: go install github.com/jordanlewis/gcassert/cmd/gcassert@latest
-        working-directory: /tmp
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
@@ -53,8 +48,6 @@ jobs:
           skip-pkg-cache: true
           skip-build-cache: true
           args: --timeout=10m
-      - name: gcassert
-        run: gcassert ./...
       # Do a pre-flight check to ensure we don't bother with `buf` unless
       # we have protobuf changes present.
       - name: Check for proto/ file changes in git diffs.
@@ -142,6 +135,8 @@ jobs:
         working-directory: enterprise-opa
         env:
           OPA_ROOT: ${{ steps.opa.outputs.dir }}
+      - run: make test-examples-sdk test-examples-rego
+        working-directory: enterprise-opa
       - run: make test-race
         working-directory: enterprise-opa
         env:
