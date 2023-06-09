@@ -4,23 +4,33 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"testing"
 	"time"
 )
 
-func ForLog(t *testing.T, buf *bytes.Buffer, assert func(string) bool, dur time.Duration) {
+func ForResult(t *testing.T, act func(), assert func() error, tries int, dur time.Duration) {
 	t.Helper()
-	for i := 0; i <= 3; i++ {
-		if retrieveMsg(t, buf, assert) {
+	if act != nil {
+		act()
+	}
+	var err error
+	for i := 0; i <= tries; i++ {
+		if err = assert(); err == nil {
 			return
 		}
 		time.Sleep(dur)
 	}
-	t.Fatalf("timeout waiting for log")
+	t.Fatalf("timeout waiting for result: %v", err)
 }
 
-func retrieveMsg(t *testing.T, buf *bytes.Buffer, assert func(string) bool) bool {
+func ForLog(t *testing.T, buf *bytes.Buffer, assert func(string) bool, dur time.Duration) {
+	t.Helper()
+	ForResult(t, nil, func() error { return retrieveMsg(t, buf, assert) }, 3, dur)
+}
+
+func retrieveMsg(t *testing.T, buf *bytes.Buffer, assert func(string) bool) error {
 	t.Helper()
 	if _, err := buf.ReadBytes('{'); err == nil {
 		if err := buf.UnreadByte(); err != nil {
@@ -41,11 +51,11 @@ func retrieveMsg(t *testing.T, buf *bytes.Buffer, assert func(string) bool) bool
 			t.Fatalf("decode console logs: %v", err)
 		}
 		if assert(m.Msg) {
-			return true
+			return nil
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		t.Fatalf("scanner: %v", err)
 	}
-	return false
+	return errors.New("log not found")
 }

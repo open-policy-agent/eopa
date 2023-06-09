@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -574,9 +575,7 @@ plugins:
 		return strings.Contains(s, "Server initialized")
 	}, 5*time.Second)
 
-	// First loop will 508 which gets dropped, second loop will retry
-	// 5 times then succeed.
-	for i := 0; i < 2; i++ {
+	act := func() {
 		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
@@ -587,10 +586,23 @@ plugins:
 		}
 	}
 
-	if !dropped {
-		t.Error("expected the first request to have been dropped but no drop detected")
-	}
+	// dropped result
+	wait.ForResult(t, act, func() error {
+		if dropped {
+			return nil
+		}
+		return errors.New("expected the first request to have been dropped but no drop detected")
+	}, 5, time.Second)
 
+	// retried result
+	wait.ForResult(t, act, func() error {
+		if retries == expectedRetries {
+			return nil
+		}
+		return fmt.Errorf("expected %d retries, but got %d", expectedRetries, retries)
+	}, 5, time.Second)
+
+	// validate the log did go through after the 5 retries
 	logsHTTP := collectDL(t, &buf, false, 1)
 	dl := payload{
 		Result: true,
@@ -599,9 +611,6 @@ plugins:
 	}
 	if diff := cmp.Diff(dl, logsHTTP[0], stdIgnores); diff != "" {
 		t.Errorf("diff: (-want +got):\n%s", diff)
-	}
-	if retries != expectedRetries {
-		t.Errorf("expected %d retries, but got %d", expectedRetries, retries)
 	}
 }
 
