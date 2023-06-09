@@ -69,12 +69,18 @@ func NewStream(_ context.Context, mask masker, drop dropper, buf fmt.Stringer, o
 			return nil, err
 		}
 	}
-	if err := builder.AddProcessorYAML(`dl_drop: {}`); err != nil {
-		return nil, err
+
+	if drop != nil {
+		if err := builder.AddProcessorYAML(`dl_drop: {}`); err != nil {
+			return nil, err
+		}
 	}
-	if err := builder.AddProcessorYAML(`dl_mask: {}`); err != nil {
-		return nil, err
+	if mask != nil {
+		if err := builder.AddProcessorYAML(`dl_mask: {}`); err != nil {
+			return nil, err
+		}
 	}
+
 	if err := builder.AddProcessorYAML(`mapping: |
   root = @.assign(this)
   # Remove all existing metadata from messages

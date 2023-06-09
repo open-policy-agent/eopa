@@ -11,6 +11,27 @@ import (
 	"github.com/open-policy-agent/opa/util"
 )
 
+type dlPluginFactory struct{}
+
+func DLPluginiFactory() plugins.Factory {
+	return &dlPluginFactory{}
+}
+
+func (dlPluginFactory) New(m *plugins.Manager, config any) plugins.Plugin {
+	m.UpdatePluginStatus(DLPluginName, &plugins.Status{State: plugins.StateNotReady})
+
+	return &shell{Logger{
+		manager: m,
+		config:  config.(Config),
+	}}
+}
+
+func (dlPluginFactory) Validate(m *plugins.Manager, config []byte) (any, error) {
+	// TODO(sr): warn about drop_decision and mask_decision being configured in
+	// the wrong place if it's configured with the eopa_dl DL plugin.
+	return Factory().Validate(m, config)
+}
+
 type factory struct{}
 
 func Factory() plugins.Factory {

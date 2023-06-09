@@ -19,7 +19,89 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
-const Name = "enterprise_opa_decision_logger"
+const Name = "enterprise_opa_decision_logger" // Standalone
+
+const DLPluginName = "eopa_dl" // OPA DL plugin
+
+type shell struct{ Logger }
+
+var _ logs.Logger = (*shell)(nil)
+
+func (s *shell) Start(ctx context.Context) error {
+	if logs.Lookup(s.manager) == nil {
+		return fmt.Errorf("%s cannot be used without OPA's decision logging", DLPluginName)
+	}
+
+	var err error
+	var buffer fmt.Stringer
+	switch {
+	case s.config.diskBuffer != nil:
+		buffer = s.config.diskBuffer
+	case s.config.memoryBuffer != nil:
+		buffer = s.config.memoryBuffer
+	}
+
+	s.stream, err = NewStream(ctx, nil, nil, buffer, s.config.outputs, s.manager.Logger())
+	if err != nil {
+		return err
+	}
+	go s.stream.Run(ctx)
+
+	s.manager.UpdatePluginStatus(DLPluginName, &plugins.Status{State: plugins.StateOK})
+	return nil
+}
+
+func (s *shell) Log(ctx context.Context, e logs.EventV1) error {
+	ev := map[string]any{
+		"labels":      e.Labels,
+		"decision_id": e.DecisionID,
+	}
+	for k, v := range map[string]string{
+		"trace_id":     e.TraceID,
+		"span_id":      e.SpanID,
+		"revision":     e.Revision,
+		"path":         e.Path,
+		"query":        e.Query,
+		"requested_by": e.RequestedBy,
+	} {
+		if v != "" {
+			ev[k] = v
+		}
+	}
+	for k, v := range map[string]*any{
+		"input":            e.Input,
+		"result":           e.Result,
+		"mapped_result":    e.MappedResult,
+		"nd_builtin_cache": e.NDBuiltinCache,
+	} {
+		if v != nil {
+			ev[k] = v
+		}
+	}
+	if e.RequestID != 0 {
+		ev["req_id"] = e.RequestID
+	}
+	if !e.Timestamp.IsZero() {
+		ev["timestamp"] = e.Timestamp // TODO(sr): encoding
+	}
+	if len(e.Erased) > 0 {
+		ev["erased"] = e.Erased
+	}
+	if len(e.Masked) > 0 {
+		ev["masked"] = e.Masked
+	}
+	if len(e.Bundles) > 0 {
+		ev["bundles"] = e.Bundles
+	}
+	if len(e.Metrics) > 0 {
+		ev["metrics"] = e.Metrics
+	}
+	if e.Error != nil {
+		ev["error"] = e.Error
+	}
+
+	return s.stream.Consume(ctx, ev, nil)
+}
 
 type Logger struct {
 	manager *plugins.Manager
