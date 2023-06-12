@@ -1,5 +1,4 @@
-//go:generate go install github.com/vektra/mockery/v2@latest
-//go:generate mockery --srcpkg github.com/go-ldap/ldap/v3 --name Client --output mocks --disable-version-string --case underscore
+//go:generate go run github.com/vektra/mockery/v2@latest --srcpkg github.com/go-ldap/ldap/v3 --name Client --output mocks --disable-version-string --case underscore
 
 package ldap_test
 
@@ -113,7 +112,7 @@ plugins:
 			}
 			client.On("Start")
 			client.On("Search", tmock.AnythingOfType("*ldap.SearchRequest")).Return(searchResult, nil)
-			client.On("Close")
+			client.On("Close").Return(nil)
 
 			store := inmem.New()
 			mgr := pluginMgr(t, store, tt.config)
@@ -155,7 +154,7 @@ plugins:
 	ctx := ldap.WithClient(context.Background(), client)
 
 	client.On("Start").Maybe()
-	client.On("Close").Maybe()
+	client.On("Close").Return(nil).Maybe()
 	client.On("SimpleBind", goldap.NewSimpleBindRequest("test", "testpswd", nil)).Return(&goldap.SimpleBindResult{}, nil).Maybe()
 	client.On("Search", tmock.AnythingOfType("*ldap.SearchRequest")).Return(nil, nil).Maybe()
 
