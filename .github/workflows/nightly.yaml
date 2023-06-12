@@ -89,7 +89,7 @@ jobs:
           check-latest: true
 
       - run: go install golang.org/x/vuln/cmd/govulncheck@latest
-      - run: govulncheck ./...
+      - run: govulncheck -tags use_opa_fork ./...
 
   fuzzer:
     name: Go Fuzzer
