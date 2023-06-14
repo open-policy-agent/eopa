@@ -65,19 +65,24 @@ func setupTest(t *testing.T, storeDataInput string, storePolicyInputs map[string
 	}
 	ctx := context.Background()
 	mgr := pluginMgr(ctx, t, store, storeDataInput)
-	config, err := grpc_plugin.Factory().Validate(mgr, []byte("addr: :9090")) // Note(philip): This is a no-op right now.
+	configInterface, err := grpc_plugin.Factory().Validate(mgr, []byte("addr: :9090")) // Note(philip): This is a no-op right now.
 	if err != nil {
 		log.Fatal(err)
 	}
-	server := grpc_plugin.New(mgr, config.(grpc_plugin.Config))
+	config := configInterface.(grpc_plugin.Config)
+	config.SetListener(lis)
+	// Note(philip): In the past, we actually created an instance of
+	// grpc_plugin.Server, and worked off of that. However, to get proper
+	// compiler/store triggers when policies update, we need to work at the
+	// plugin level now, because the trigger lifetimes are managed via the
+	// plugin's Start/Stop methods.
+	p := grpc_plugin.Factory().New(mgr, config)
+
 	go func() {
-		// Plug in the custom listener, and run the server.
-		if err := server.Serve(lis); err != nil {
-			log.Fatalf("Server exited with error: %v", err)
-		}
+		p.Start(context.TODO())
 	}()
 	t.Cleanup(func() {
-		server.GracefulStop()
+		p.Stop(context.TODO())
 	})
 	return lis
 }

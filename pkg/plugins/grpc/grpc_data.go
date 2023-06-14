@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"strings"
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
@@ -35,7 +36,7 @@ import (
 func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transaction, req *datav1.CreateDataRequest, preParsedValue interface{}) (*datav1.CreateDataResponse, error) {
 	dataDoc := req.GetData()
 	path := dataDoc.GetPath()
-	p, ok := storage.ParsePath(path)
+	p, ok := storage.ParsePathEscaped("/" + strings.Trim(path, "/"))
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "invalid path")
 	}
@@ -193,7 +194,7 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transaction, req *datav1.UpdateDataRequest, preParsedValue interface{}) (*datav1.UpdateDataResponse, error) {
 	dataDoc := req.GetData()
 	path := dataDoc.GetPath()
-	p, ok := storage.ParsePath(path)
+	p, ok := storage.ParsePathEscaped("/" + strings.Trim(path, "/"))
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "invalid path")
 	}
@@ -238,7 +239,7 @@ func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transact
 
 func (s *Server) deleteDataFromRequest(ctx context.Context, txn storage.Transaction, req *datav1.DeleteDataRequest) (*datav1.DeleteDataResponse, error) {
 	path := req.GetPath()
-	p, ok := storage.ParsePath(path)
+	p, ok := storage.ParsePathEscaped("/" + strings.Trim(path, "/"))
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "invalid path")
 	}

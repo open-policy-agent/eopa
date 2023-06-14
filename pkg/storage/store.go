@@ -160,7 +160,28 @@ func (s *store) Register(ctx context.Context, txn storage.Transaction, config st
 		return nil, err
 	}
 
-	return s.root.Register(ctx, t, config)
+	h, err := s.root.Register(ctx, t, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &handle{s.root, h}, nil
+
+}
+
+type handle struct {
+	root   storage.Store
+	handle storage.TriggerHandle
+}
+
+func (h *handle) Unregister(ctx context.Context, txn storage.Transaction) {
+	t, err := txn.(*transaction).dispatch(ctx, h.root, true)
+	if err != nil {
+		// write dispatch for a root should never panic.
+		panic(err)
+	}
+
+	h.handle.Unregister(ctx, t)
 }
 
 func (s *store) ListPolicies(ctx context.Context, txn storage.Transaction) ([]string, error) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
 	policyv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
 
 	"google.golang.org/grpc"
@@ -106,6 +107,74 @@ y { false }
 		result := policy.GetText()
 		if expectedPolicy != string(result) {
 			t.Fatalf("Expected %v\n\ngot:\n%v", expectedPolicy, string(result))
+		}
+	}
+}
+
+// Note(philip): This serves as a regression test against the bug in Github issue #552.
+// Reference: https://github.com/StyraInc/load-private/issues/552
+func TestCreateAndOverwritePolicy(t *testing.T) {
+	// gRPC server setup/teardown boilerplate.
+	listener := setupTest(t, `{}`, nil)
+	ctx := context.Background()
+	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatalf("Failed to dial bufnet: %v", err)
+	}
+	defer conn.Close()
+	clientPolicy := policyv1.NewPolicyServiceClient(conn)
+	clientData := datav1.NewDataServiceClient(conn)
+
+	// Create new policy in the store.
+	{
+		_, err := clientPolicy.CreatePolicy(ctx, &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/aaa", Text: `package a
+
+x { true }
+y { false }
+`}})
+		if err != nil {
+			t.Fatalf("CreatePolicy failed: %v", err)
+		}
+	}
+	{
+		resp, err := clientData.GetData(ctx, &datav1.GetDataRequest{Path: "/a/x"})
+		if err != nil {
+			t.Fatalf("GetData failed: %v", err)
+		}
+		resultDoc := resp.GetResult()
+		path := resultDoc.GetPath()
+		if path != "/a/x" {
+			t.Fatalf("Expected /a/x, got: %v", path)
+		}
+		data := resultDoc.GetDocument()
+		if data.GetBoolValue() != true {
+			t.Fatalf("Expected true, got: %v", data)
+		}
+	}
+	// Update the policy in the store.
+	{
+		_, err := clientPolicy.CreatePolicy(ctx, &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/aaa", Text: `package a
+
+x := 2
+y := 3
+`}})
+		if err != nil {
+			t.Fatalf("CreatePolicy failed: %v", err)
+		}
+	}
+	{
+		resp, err := clientData.GetData(ctx, &datav1.GetDataRequest{Path: "/a/x"})
+		if err != nil {
+			t.Fatalf("GetData failed: %v", err)
+		}
+		resultDoc := resp.GetResult()
+		// path := resultDoc.GetPath()
+		// if path != "/a/x" {
+		// 	t.Fatalf("Expected /a/x, got: %v", path)
+		// }
+		data := resultDoc.GetDocument()
+		if data.GetNumberValue() != 2 {
+			t.Fatalf("Expected 2, got: %v", data)
 		}
 	}
 }

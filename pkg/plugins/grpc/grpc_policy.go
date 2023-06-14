@@ -51,14 +51,14 @@ func (s *Server) listPoliciesFromRequest(ctx context.Context, txn storage.Transa
 // preParsedModule is an optional parameter, allowing module parsing to be done elsewhere.
 func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transaction, req *policyv1.CreatePolicyRequest, preParsedModule *ast.Module) (*policyv1.CreatePolicyResponse, error) {
 	policy := req.GetPolicy()
-	path := policy.GetPath()
 	rawPolicy := policy.GetText()
+	id := policy.GetPath()
 
-	if err := s.checkPolicyIDScope(ctx, txn, path); err != nil && !storage.IsNotFound(err) {
+	if err := s.checkPolicyIDScope(ctx, txn, id); err != nil && !storage.IsNotFound(err) {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 	// Early-exit if incoming policy matches a pre-existing one.
-	if bs, err := s.store.GetPolicy(ctx, txn, path); err != nil {
+	if bs, err := s.store.GetPolicy(ctx, txn, id); err != nil {
 		if !storage.IsNotFound(err) {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -71,7 +71,7 @@ func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transa
 	parsedMod := preParsedModule
 	if preParsedModule == nil {
 		var err error
-		parsedMod, err = ast.ParseModule(path, string(rawPolicy))
+		parsedMod, err = ast.ParseModule(id, rawPolicy)
 		// m.Timer(metrics.RegoModuleParse).Stop()
 		if err != nil {
 			switch err := err.(type) {
@@ -97,7 +97,7 @@ func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transa
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	modules[path] = parsedMod
+	modules[id] = parsedMod
 
 	// Make new compiler
 	c := ast.NewCompiler().
@@ -114,12 +114,10 @@ func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transa
 	// m.Timer(metrics.RegoModuleCompile).Stop()
 
 	// Upsert policy into the store.
-	if err := s.store.UpsertPolicy(ctx, txn, path, []byte(rawPolicy)); err != nil {
-		if storage.IsNotFound(err) {
-			return nil, status.Error(codes.NotFound, err.Error())
-		}
+	if err := s.store.UpsertPolicy(ctx, txn, id, []byte(rawPolicy)); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
 	return &policyv1.CreatePolicyResponse{}, nil
 }
 
@@ -128,9 +126,8 @@ func (s *Server) createPolicyFromRequest(ctx context.Context, txn storage.Transa
 // definition later when we've decided how to solve the compiler state
 // problem for the plugin.
 func (s *Server) getPolicyFromRequest(ctx context.Context, txn storage.Transaction, req *policyv1.GetPolicyRequest) (*policyv1.GetPolicyResponse, error) {
-	path := req.GetPath()
-
-	policyBytes, err := s.store.GetPolicy(ctx, txn, path)
+	id := req.GetPath()
+	policyBytes, err := s.store.GetPolicy(ctx, txn, id)
 	if err != nil {
 		// If it's a NotFound error, provide a more helpful error code.
 		if storage.IsNotFound(err) {
@@ -156,19 +153,19 @@ func (s *Server) getPolicyFromRequest(ctx context.Context, txn storage.Transacti
 	// 	return nil, status.Error(codes.Internal, err.Error())
 	// }
 	// bs := bjsonItem.String()
-	return &policyv1.GetPolicyResponse{Result: &policyv1.Policy{Path: path, Text: string(policyBytes)}}, nil
+	return &policyv1.GetPolicyResponse{Result: &policyv1.Policy{Path: id, Text: string(policyBytes)}}, nil
 }
 
 // preParsedModule is an optional parameter, allowing module parsing to be done elsewhere.
 func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transaction, req *policyv1.UpdatePolicyRequest, preParsedModule *ast.Module) (*policyv1.UpdatePolicyResponse, error) {
 	policy := req.GetPolicy()
-	path := policy.GetPath()
+	id := policy.GetPath()
 	rawPolicy := policy.GetText()
-	if err := s.checkPolicyIDScope(ctx, txn, path); err != nil && !storage.IsNotFound(err) {
+	if err := s.checkPolicyIDScope(ctx, txn, id); err != nil && !storage.IsNotFound(err) {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 	// Early-exit if incoming policy matches a pre-existing one.
-	if bs, err := s.store.GetPolicy(ctx, txn, path); err != nil {
+	if bs, err := s.store.GetPolicy(ctx, txn, id); err != nil {
 		if !storage.IsNotFound(err) {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -181,7 +178,7 @@ func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transa
 	parsedMod := preParsedModule
 	if preParsedModule == nil {
 		var err error
-		parsedMod, err = ast.ParseModule(path, string(rawPolicy))
+		parsedMod, err = ast.ParseModule(id, string(rawPolicy))
 		// m.Timer(metrics.RegoModuleParse).Stop()
 		if err != nil {
 			switch err := err.(type) {
@@ -207,7 +204,7 @@ func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transa
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	modules[path] = parsedMod
+	modules[id] = parsedMod
 
 	// Make new compiler.
 	c := ast.NewCompiler().
@@ -224,7 +221,7 @@ func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transa
 	// m.Timer(metrics.RegoModuleCompile).Stop()
 
 	// Upsert policy into the store.
-	if err := s.store.UpsertPolicy(ctx, txn, path, []byte(rawPolicy)); err != nil {
+	if err := s.store.UpsertPolicy(ctx, txn, id, []byte(rawPolicy)); err != nil {
 		if storage.IsNotFound(err) {
 			return nil, status.Error(codes.NotFound, err.Error())
 		}
@@ -235,8 +232,8 @@ func (s *Server) updatePolicyFromRequest(ctx context.Context, txn storage.Transa
 }
 
 func (s *Server) deletePolicyFromRequest(ctx context.Context, txn storage.Transaction, req *policyv1.DeletePolicyRequest) (*policyv1.DeletePolicyResponse, error) {
-	path := req.GetPath()
-	if err := s.checkPolicyIDScope(ctx, txn, path); err != nil {
+	id := req.GetPath()
+	if err := s.checkPolicyIDScope(ctx, txn, id); err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
@@ -245,7 +242,7 @@ func (s *Server) deletePolicyFromRequest(ctx context.Context, txn storage.Transa
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	delete(modules, path)
+	delete(modules, id)
 
 	c := ast.NewCompiler() //.SetErrorLimit(s.errLimit)
 
@@ -257,7 +254,7 @@ func (s *Server) deletePolicyFromRequest(ctx context.Context, txn storage.Transa
 
 	// m.Timer(metrics.RegoModuleCompile).Stop()
 
-	if err := s.store.DeletePolicy(ctx, txn, path); err != nil {
+	if err := s.store.DeletePolicy(ctx, txn, id); err != nil {
 		if storage.IsNotFound(err) {
 			return nil, status.Error(codes.NotFound, err.Error())
 		}

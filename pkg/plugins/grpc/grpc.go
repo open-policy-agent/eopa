@@ -137,6 +137,7 @@ func New(manager *plugins.Manager, config Config) *Server {
 		certKeyFilename:        config.TLS.CertKeyFile,
 		tlsRootCACertFilename:  config.TLS.RootCACertFile,
 	}
+
 	if config.Authentication != "" {
 		server.authentication = getAuthenticationScheme(config.Authentication)
 	}
@@ -163,7 +164,7 @@ func New(manager *plugins.Manager, config Config) *Server {
 		grpcprom.WithServerCounterOptions(
 			grpcprom.CounterOption(func(o *prometheus.CounterOpts) {
 				o.Namespace = "styra"
-				o.Subsystem = "enterprise-opa"
+				o.Subsystem = "enterprise_opa"
 			}),
 		),
 	)
@@ -171,17 +172,26 @@ func New(manager *plugins.Manager, config Config) *Server {
 	var metricsOption grpc.ServerOption
 	metricsOK := false
 	if reg := manager.PrometheusRegister(); reg != nil {
-		if err := reg.Register(srvMetrics); err == nil {
-			exemplarFromContext := func(ctx context.Context) prometheus.Labels {
-				if span := trace.SpanContextFromContext(ctx); span.IsSampled() {
-					return prometheus.Labels{"traceID": span.TraceID().String()}
-				}
-				return nil
-			}
-			metricsOption = grpc.ChainUnaryInterceptor(srvMetrics.UnaryServerInterceptor(grpcprom.WithExemplarFromContext(exemplarFromContext)))
-			metricsOK = true
-			options = append(options, metricsOption)
+		// Note(philip): To avoid AlreadyRegisteredError incidents during
+		// plugin.Reconfigure events, we unregister the server metrics, and
+		// then re-register them immediately afterwards.
+		reg.Unregister(srvMetrics)
+		err := reg.Register(srvMetrics)
+		if err != nil {
+			server.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to register Prometheus metrics: " + err.Error()})
+			server.logger.Error("Failed to register Prometheus metrics: %s", err.Error())
+			return nil
 		}
+		exemplarFromContext := func(ctx context.Context) prometheus.Labels {
+			if span := trace.SpanContextFromContext(ctx); span.IsSampled() {
+				return prometheus.Labels{"traceID": span.TraceID().String()}
+			}
+			return nil
+		}
+		metricsOption = grpc.ChainUnaryInterceptor(srvMetrics.UnaryServerInterceptor(grpcprom.WithExemplarFromContext(exemplarFromContext)))
+		metricsOK = true
+		options = append(options, metricsOption)
+		server.metrics = srvMetrics // Hang on to this object for later unregistering.
 	}
 
 	// Fills in all grpc.Server-related parts of the Server struct.
@@ -535,6 +545,8 @@ func (s *Server) getCompiler() *ast.Compiler {
 
 // func (s *Server) getCachedPreparedEvalQuery(key string, m metrics.Metrics) (*rego.PreparedEvalQuery, bool) {
 func (s *Server) getCachedPreparedEvalQuery(key string) (*rego.PreparedEvalQuery, bool) {
+	s.mtx.RLock() // Note(philip): cache could be replaced out from under us unless we read-lock access first.
+	defer s.mtx.RUnlock()
 	pq, ok := s.preparedEvalQueries.Get(key)
 	// m.Counter(metrics.ServerQueryCacheHit) // Creates the counter on the metrics if it doesn't exist, starts at 0
 	if ok {

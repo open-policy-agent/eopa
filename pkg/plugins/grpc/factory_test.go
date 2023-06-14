@@ -27,9 +27,9 @@ func TestValidate(t *testing.T) {
 			if !ok {
 				t.Fatalf("could not convert to grpc.Confg: %v", c)
 			}
-			// We have to index down to the specific struct that needs the
+			// We have to index down to the specific struct(s) that need the
 			// ignore, otherwise cmp.Diff breaks horribly:
-			if diff := cmp.Diff(exp, act, cmpopts.IgnoreUnexported(grpc.Config{}.TLS)); diff != "" {
+			if diff := cmp.Diff(exp, act, cmpopts.IgnoreUnexported(grpc.Config{}.TLS, grpc.Config{})); diff != "" {
 				t.Errorf("grpc.Config mismatch (-want +got):\n%s", diff)
 			}
 		}
