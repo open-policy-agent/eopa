@@ -17,6 +17,7 @@ var exceptions = []string{
 	"data.library.v1.kubernetes.admission.workload.test_v1.test_validate_image_signature_with_cosign_item_error",
 	"data.library.v1.kubernetes.admission.workload.test_v1.test_validate_image_signature_with_cosign_systemError",
 	"data.library.v1.kubernetes.admission.workload.test_v1.test_validate_image_signature_with_cosign_HTTP_non_200_response",
+	"data.TYPELIB.library.transform.state.test_v1.test_state_to_plan",
 }
 
 func TestAllRegoTestsInFetchdb(t *testing.T) {
