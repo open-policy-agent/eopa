@@ -52,7 +52,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.14.0
 	go.uber.org/goleak v1.2.1
 	golang.org/x/exp v0.0.0-20230315142452-642cacee5cc0
-	golang.org/x/sync v0.2.0
+	golang.org/x/sync v0.3.0
 	golang.org/x/term v0.9.0
 	google.golang.org/grpc v1.55.0
 	google.golang.org/protobuf v1.30.0
