@@ -138,6 +138,10 @@ func New(manager *plugins.Manager, config Config) *Server {
 		tlsRootCACertFilename:  config.TLS.RootCACertFile,
 	}
 
+	if config.MaxRecvMessageSize > 0 {
+		options = append(options, grpc.MaxRecvMsgSize(config.MaxRecvMessageSize))
+	}
+
 	if config.Authentication != "" {
 		server.authentication = getAuthenticationScheme(config.Authentication)
 	}

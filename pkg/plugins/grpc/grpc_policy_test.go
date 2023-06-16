@@ -28,7 +28,7 @@ z := 2
 d := 27
 `,
 	}
-	listener := setupTest(t, `{}`, policies)
+	listener := setupTest(t, defaultGRPCConfig, `{}`, policies)
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -71,7 +71,7 @@ d := 27
 // method, so that we can check that the value was stored correctly.
 func TestCreatePolicy(t *testing.T) {
 	// gRPC server setup/teardown boilerplate.
-	listener := setupTest(t, `{}`, nil)
+	listener := setupTest(t, defaultGRPCConfig, `{}`, nil)
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -115,7 +115,7 @@ y { false }
 // Reference: https://github.com/StyraInc/load-private/issues/552
 func TestCreateAndOverwritePolicy(t *testing.T) {
 	// gRPC server setup/teardown boilerplate.
-	listener := setupTest(t, `{}`, nil)
+	listener := setupTest(t, defaultGRPCConfig, `{}`, nil)
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -189,7 +189,7 @@ x { true }
 y { false }
 `,
 	}
-	listener := setupTest(t, `{}`, policies)
+	listener := setupTest(t, defaultGRPCConfig, `{}`, policies)
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -222,7 +222,7 @@ x { true }
 y { false }
 `,
 	}
-	listener := setupTest(t, `{}`, policies)
+	listener := setupTest(t, defaultGRPCConfig, `{}`, policies)
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -275,7 +275,7 @@ x { true }
 y { false }
 `,
 	}
-	listener := setupTest(t, `{}`, policies)
+	listener := setupTest(t, defaultGRPCConfig, `{}`, policies)
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {

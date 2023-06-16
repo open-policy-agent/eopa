@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"log"
 	"net"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
+	"github.com/open-policy-agent/opa/util"
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/discovery"
@@ -26,11 +27,34 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-const bufSize = 1024 * 1024
+const (
+	defaultBufSize    = 1024 * 1024
+	defaultGRPCConfig = `---
+plugins:
+  grpc:
+    addr: ":9090"
+`
+)
 
-func setupTest(t *testing.T, storeDataInput string, storePolicyInputs map[string]string) *bufconn.Listener {
+func setupTest(t *testing.T, config, storeDataInput string, storePolicyInputs map[string]string) *bufconn.Listener {
 	t.Helper()
-	lis := bufconn.Listen(bufSize)
+	// Note(philip): This wrapper allows us to instantiate the plugin
+	// almost entirely without a plugin manager in the mix, allowing direct
+	// control, and some low-level hacks for nicer testing, like shimming
+	// in the bufconn listener instead of a normal socket listener.
+	type Wrapper struct {
+		Plugins struct {
+			GRPC grpc_plugin.Config `json:"grpc"`
+		} `json:"plugins"`
+	}
+	wrappedConfig := Wrapper{}
+	if err := util.Unmarshal([]byte(config), &wrappedConfig); err != nil {
+		t.Fatal(err)
+	}
+	pluginConfig := wrappedConfig.Plugins.GRPC
+	lis := bufconn.Listen(defaultBufSize)
+	pluginConfig.SetListener(lis)
+
 	store := inmem.New()
 	// Create the new store with the dummy data.
 	if storeDataInput != "" {
@@ -64,19 +88,13 @@ func setupTest(t *testing.T, storeDataInput string, storePolicyInputs map[string
 		}
 	}
 	ctx := context.Background()
-	mgr := pluginMgr(ctx, t, store, storeDataInput)
-	configInterface, err := grpc_plugin.Factory().Validate(mgr, []byte("addr: :9090")) // Note(philip): This is a no-op right now.
-	if err != nil {
-		log.Fatal(err)
-	}
-	config := configInterface.(grpc_plugin.Config)
-	config.SetListener(lis)
+	mgr := pluginMgr(ctx, t, store, config)
 	// Note(philip): In the past, we actually created an instance of
 	// grpc_plugin.Server, and worked off of that. However, to get proper
 	// compiler/store triggers when policies update, we need to work at the
 	// plugin level now, because the trigger lifetimes are managed via the
 	// plugin's Start/Stop methods.
-	p := grpc_plugin.Factory().New(mgr, config)
+	p := grpc_plugin.Factory().New(mgr, pluginConfig)
 
 	go func() {
 		p.Start(context.TODO())
@@ -128,7 +146,7 @@ func pluginMgr(_ context.Context, t *testing.T, store storage.Store, config stri
 // method, so that we can check that the value was stored correctly.
 func TestCreateData(t *testing.T) {
 	// gRPC server setup/teardown boilerplate
-	listener := setupTest(t, `{}`, nil)
+	listener := setupTest(t, defaultGRPCConfig, `{}`, nil)
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -165,7 +183,7 @@ func TestCreateData(t *testing.T) {
 // We pre-populate the store with a base document (non-Rego rule) value, and query it.
 func TestGetDataBaseDocument(t *testing.T) {
 	// gRPC server setup/teardown boilerplate
-	listener := setupTest(t, `{"a": 27}`, nil)
+	listener := setupTest(t, defaultGRPCConfig, `{"a": 27}`, nil)
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -194,7 +212,7 @@ func TestGetDataBaseDocument(t *testing.T) {
 
 func TestUpdateData(t *testing.T) {
 	// gRPC server setup/teardown boilerplate
-	listener := setupTest(t, `{"a": 27}`, nil)
+	listener := setupTest(t, defaultGRPCConfig, `{"a": 27}`, nil)
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -230,7 +248,7 @@ func TestUpdateData(t *testing.T) {
 
 func TestDeleteData(t *testing.T) {
 	// gRPC server setup/teardown boilerplate
-	listener := setupTest(t, `{"a": 27}`, nil)
+	listener := setupTest(t, defaultGRPCConfig, `{"a": 27}`, nil)
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -260,6 +278,72 @@ func TestDeleteData(t *testing.T) {
 		data := resultDoc.GetDocument()
 		if data.GetStringValue() != "" {
 			t.Fatalf("Expected \"\", got: %v", data)
+		}
+	}
+}
+
+// >4 MB messages are often a problem for gRPC servers.
+// This test requires that both client and server be able to receive larger
+// messages than normal (in this case, an 8 MB max size).
+func TestCreateDataSendLargerThan4MB(t *testing.T) {
+	megabyteString := strings.Repeat("A", 1024*1024)
+	alternateGRPCConfig := `---
+plugins:
+  grpc:
+    max_recv_message_size: 8589934592
+    addr: ":9090"
+`
+	// gRPC server setup/teardown boilerplate
+	listener := setupTest(t, alternateGRPCConfig, `{}`, nil)
+	ctx := context.Background()
+	// We up our receive size here so that we can check that the large
+	// message was stored correctly.
+	conn, err := grpc.DialContext(ctx,
+		"bufnet",
+		grpc.WithContextDialer(GetBufDialer(listener)),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(8589934592)))
+	if err != nil {
+		t.Fatalf("Failed to dial bufnet: %v", err)
+	}
+	defer conn.Close()
+	client := datav1.NewDataServiceClient(conn)
+
+	// Build an 8+ MB protobuf struct:
+	bigStruct, err := structpb.NewStruct(map[string]interface{}{
+		"0": megabyteString,
+		"1": megabyteString,
+		"2": megabyteString,
+		"3": megabyteString,
+		"4": megabyteString,
+		"5": megabyteString,
+	})
+	if err != nil {
+		t.Fatalf("struct creation failed: %v", err)
+	}
+
+	// Create new data store large data item.
+	{
+		_, err := client.CreateData(ctx, &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewStructValue(bigStruct)}})
+		if err != nil {
+			t.Fatalf("CreateData failed: %v", err)
+		}
+	}
+	// Fetch down the new large data item.
+	{
+		resp, err := client.GetData(ctx, &datav1.GetDataRequest{Path: "/a"})
+		if err != nil {
+			t.Fatalf("GetData failed: %v", err)
+		}
+		resultDoc := resp.GetResult()
+		path := resultDoc.GetPath()
+		if path != "/a" {
+			t.Fatalf("Expected /a, got: %v", path)
+		}
+		data := resultDoc.GetDocument()
+		s := data.GetStructValue()
+		if s.Fields["0"].GetStringValue() != megabyteString {
+			t.Fatalf("Expected %s, got: %v", megabyteString, s.Fields["0"])
 		}
 	}
 }

@@ -16,8 +16,9 @@ import (
 const PluginName = "grpc"
 
 type Config struct {
-	Addr     string       `json:"addr"` // bind address for the gRPC server.
-	listener net.Listener // intentionally unexported.
+	MaxRecvMessageSize int          `json:"max_recv_message_size"` // Max size can be up to ~2.1 GB. Default is 4 MB.
+	Addr               string       `json:"addr"`                  // bind address for the gRPC server.
+	listener           net.Listener // intentionally unexported.
 
 	// Authentication is the type of authentication scheme to use.
 	Authentication string `json:"authentication,omitempty"`

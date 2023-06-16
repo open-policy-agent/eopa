@@ -306,7 +306,7 @@ func TestBulkRW(t *testing.T) {
 			if tc.storePolicy != nil {
 				storePolicyMap = tc.storePolicy
 			}
-			listener := setupTest(t, storeData, storePolicyMap)
+			listener := setupTest(t, defaultGRPCConfig, storeData, storePolicyMap)
 			ctx := context.Background()
 			conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
@@ -423,7 +423,7 @@ func TestBulkRWSeq(t *testing.T) {
 			if tc.storePolicy != nil {
 				storePolicyMap = tc.storePolicy
 			}
-			listener := setupTest(t, storeData, storePolicyMap)
+			listener := setupTest(t, defaultGRPCConfig, storeData, storePolicyMap)
 			ctx := context.Background()
 			conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
