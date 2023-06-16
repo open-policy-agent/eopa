@@ -24,7 +24,8 @@ func TestLoaderErrors(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := loadJSON(tc.input)
+			var x any
+			err := loadJSON(tc.input, &x)
 			if err == nil {
 				t.Fatalf("expected %v", tc.msg)
 			}
@@ -56,7 +57,8 @@ func TestLoader(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			intf, err := loadJSON(tc.input)
+			var intf any
+			err := loadJSON(tc.input, &intf)
 			if err != nil {
 				t.Fatal(err)
 			}

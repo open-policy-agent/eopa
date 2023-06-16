@@ -18,6 +18,7 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
+	"github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/open-policy-agent/opa/types"
 	"github.com/open-policy-agent/opa/util"
 )
@@ -683,6 +684,10 @@ func (e interQueryCacheEntry) Unmarshal() (*interQueryCacheData, error) {
 	var data interQueryCacheData
 	err := util.UnmarshalJSON(e.Data, &data)
 	return &data, err
+}
+
+func (e interQueryCacheEntry) Clone() (cache.InterQueryCacheValue, error) {
+	return e, nil
 }
 
 func newInterQueryCacheData(bctx topdown.BuiltinContext, resp ast.Object, ttl time.Duration) (*interQueryCacheData, error) {

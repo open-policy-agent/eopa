@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/sdk"
 	"github.com/open-policy-agent/opa/storage"
@@ -168,6 +169,77 @@ coin if rand.intn("flip", 1) == 0
 	// decision IDs match.
 }
 
+func ExampleBundles() {
+	ctx := context.Background()
+	opts := load_sdk.DefaultOptions()
+	opts.Config = strings.NewReader(fmt.Sprintf(`
+services:
+- name: bndl
+  url: %[1]s
+bundles:
+  bundle.tar.gz:
+    service: bndl
+`, bundleServer.URL))
+
+	o, err := sdk.New(ctx, opts)
+	if err != nil {
+		panic(err)
+	}
+	defer o.Stop(ctx)
+
+	waitForData(o, "/roles")
+
+	do := sdk.DecisionOptions{
+		Path:  "/test/allow",
+		Input: map[string]any{"action": "create", "user": "alice"},
+	}
+
+	dec, err := o.Decision(ctx, do)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("result: %v\n", dec.Result)
+	// Output:
+	// result: true
+}
+
+func ExampleBJSONBundles() {
+	ctx := context.Background()
+	opts := load_sdk.DefaultOptions()
+	opts.Logger = logging.New()
+	opts.Config = strings.NewReader(fmt.Sprintf(`
+services:
+- name: bndl
+  url: %[1]s
+bundles:
+  bundle.bjson.tar.gz:
+    service: bndl
+`, bundleServer.URL))
+
+	o, err := sdk.New(ctx, opts)
+	if err != nil {
+		panic(err)
+	}
+	defer o.Stop(ctx)
+
+	waitForData(o, "/roles")
+
+	do := sdk.DecisionOptions{
+		Path:  "/test/allow",
+		Input: map[string]any{"action": "create", "user": "alice"},
+	}
+
+	dec, err := o.Decision(ctx, do)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("result: %v\n", dec.Result)
+	// Output:
+	// result: true
+}
+
 func waitForData(o *sdk.OPA, path string) {
 	dec, err := o.Decision(context.Background(), sdk.DecisionOptions{Path: path})
 	if err != nil {
@@ -193,6 +265,8 @@ var dlSink = srv(func(_ http.ResponseWriter, r *http.Request) error {
 	_, err := io.Copy(&dlBuffer, r.Body)
 	return err
 })
+
+var bundleServer = httptest.NewServer(http.FileServer(http.Dir("testdata")))
 
 func srv(f func(http.ResponseWriter, *http.Request) error) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

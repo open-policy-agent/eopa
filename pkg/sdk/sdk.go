@@ -5,6 +5,7 @@ import (
 
 	_ "github.com/styrainc/enterprise-opa-private/pkg/builtins" // Activate custom builtins.
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins"
+	_ "github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle" // Register .json extension
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
