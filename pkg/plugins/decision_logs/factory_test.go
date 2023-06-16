@@ -566,6 +566,77 @@ output:
 			}),
 		},
 		{
+			note: "kafka output with SASL",
+			config: `
+output:
+  type: kafka
+  topic: logs
+  urls:
+  - 127.0.0.1:9091
+  sasl:
+    - mechanism: scram-sha-512
+      username: open
+      password: sesame
+    - mechanism: SCRAM-SHA-256
+      username: open
+      password: sesame
+    - mechanism: PLAIN
+      username: open
+      password: sesame`,
+			checks: func(t testing.TB, a any, err error) {
+				isConfig(Config{
+					memoryBuffer: &memBufferOpts{
+						MaxBytes: defaultMemoryMaxBytes,
+					},
+					outputs: []output{&outputKafkaOpts{
+						URLs:  []string{"127.0.0.1:9091"},
+						Topic: "logs",
+						SASL: []saslOpts{
+							{
+								Mechanism: "scram-sha-512",
+								Username:  "open",
+								Password:  "sesame",
+							},
+							{
+								Mechanism: "SCRAM-SHA-256",
+								Username:  "open",
+								Password:  "sesame",
+							},
+							{
+								Mechanism: "PLAIN",
+								Username:  "open",
+								Password:  "sesame",
+							},
+						},
+					}},
+				})(t, a, err)
+
+				isBenthos(map[string]any{
+					"kafka_franz": map[string]any{
+						"seed_brokers": []string{"127.0.0.1:9091"},
+						"topic":        "logs",
+						"sasl": []map[string]any{
+							{
+								"mechanism": "SCRAM-SHA-512",
+								"username":  "open",
+								"password":  "sesame",
+							},
+							{
+								"mechanism": "SCRAM-SHA-256",
+								"username":  "open",
+								"password":  "sesame",
+							},
+							{
+								"mechanism": "PLAIN",
+								"username":  "open",
+								"password":  "sesame",
+							},
+						},
+					},
+				})(t, a, err)
+			},
+		},
+		{
 			note: "kafka output with batching",
 			config: `
 output:

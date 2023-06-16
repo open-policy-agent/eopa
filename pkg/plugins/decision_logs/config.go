@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 type Config struct {
@@ -246,10 +247,11 @@ func (*outputConsoleOpts) Benthos() map[string]any {
 }
 
 type outputKafkaOpts struct {
-	URLs    []string `json:"urls"`
-	Topic   string   `json:"topic"`
-	Timeout string   `json:"timeout,omitempty"`
-	TLS     *tlsOpts `json:"tls,omitempty"`
+	URLs    []string   `json:"urls"`
+	Topic   string     `json:"topic"`
+	Timeout string     `json:"timeout,omitempty"`
+	TLS     *tlsOpts   `json:"tls,omitempty"`
+	SASL    []saslOpts `json:"sasl,omitempty"`
 
 	Batching *batchOpts `json:"batching,omitempty"`
 
@@ -257,7 +259,22 @@ type outputKafkaOpts struct {
 	// at once. Let's introduce batching when someone needs it.
 
 	tls *sinkAuthTLS
-	// TODO(sr): SASL
+}
+
+type saslOpts struct {
+	Mechanism string `json:"mechanism"`
+	Username  string `json:"username,omitempty"`
+	Password  string `json:"password,omitempty"`
+}
+
+func (s *saslOpts) Benthos() map[string]any {
+	c := map[string]any{
+		"mechanism": strings.ToUpper(s.Mechanism),
+		"username":  s.Username,
+		"password":  s.Password,
+	}
+
+	return c
 }
 
 type batchOpts struct {
@@ -341,6 +358,13 @@ func (s *outputKafkaOpts) Benthos() map[string]any {
 	}
 	if s.tls != nil {
 		m["tls"] = s.tls.Benthos()
+	}
+	if s.SASL != nil {
+		saslConf := make([]map[string]any, 0, len(s.SASL))
+		for _, sasl := range s.SASL {
+			saslConf = append(saslConf, sasl.Benthos())
+		}
+		m["sasl"] = saslConf
 	}
 	if b := s.Batching; b != nil {
 		m["batching"] = b.Benthos()

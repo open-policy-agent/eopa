@@ -19,10 +19,11 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/ory/dockertest"
-	"github.com/ory/dockertest/docker"
+	"github.com/ory/dockertest/v3"
+	"github.com/ory/dockertest/v3/docker"
 	"github.com/rs/zerolog"
 	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/sasl/scram"
 	"github.com/twmb/franz-go/plugin/kzerolog"
 
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
@@ -78,6 +79,19 @@ plugins:
         ca_cert: testdata/tls/ca.pem
 `
 
+	sasl256Config := plaintextConfig + `
+      sasl:
+        - username: admin256
+          password: testPassword
+          mechanism: SCRAM-SHA-256
+`
+	sasl512Config := plaintextConfig + `
+      sasl:
+        - username: admin512
+          password: testPassword
+          mechanism: scram-sha-512
+`
+
 	keyPEMBlock, err := os.ReadFile(clientKeyPath)
 	if err != nil {
 		t.Fatal(err)
@@ -102,11 +116,13 @@ plugins:
 	}
 
 	for _, tc := range []struct {
-		note   string
-		config string
-		opts   []kgo.Opt
-		kafka  func(*testing.T) *dockertest.Resource
-		array  bool
+		note      string
+		config    string
+		opts      []kgo.Opt
+		kafka     func(*testing.T, []string, []kgo.Opt, func(*dockertest.Resource) error) *dockertest.Resource
+		kafkaArgs []string
+		setup     func(*dockertest.Resource) error
+		array     bool
 	}{
 		{
 			note:   "kafka/plaintext",
@@ -116,30 +132,51 @@ plugins:
 		{
 			note:   "redpanda/plaintext",
 			config: plaintextConfig,
-			kafka: func() func(t *testing.T) *dockertest.Resource {
-				return func(t *testing.T) *dockertest.Resource {
-					return testRedPanda(t, nil)
-				}
-			}(),
+			kafka:  testRedPanda,
 		},
 		{
 			note:   "redpanda/tls",
 			config: tlsConfig,
 			opts:   []kgo.Opt{kgo.DialTLSConfig(&tcfg)},
-			kafka: func() func(t *testing.T) *dockertest.Resource {
-				return func(t *testing.T) *dockertest.Resource {
-					return testRedPanda(t, []string{
-						`--set`, `redpanda.kafka_api_tls={'name':'internal','enabled':true,'require_client_auth':true,'cert_file':'/w/tls/server-cert.pem','key_file':'/w/tls/server-key.pem','truststore_file':'/w/tls/ca.pem'}`,
-						`--set`, `redpanda.admin_api_tls={'name':'internal','enabled':true,'require_client_auth':true,'cert_file':'/w/tls/server-cert.pem','key_file':'/w/tls/server-key.pem','truststore_file':'/w/tls/ca.pem'}`,
-					}, kgo.DialTLSConfig(&tcfg))
-				}
-			}(),
+			kafka:  testRedPanda,
+			kafkaArgs: []string{
+				`--set`, `redpanda.kafka_api_tls={'name':'internal','enabled':true,'require_client_auth':true,'cert_file':'/w/tls/server-cert.pem','key_file':'/w/tls/server-key.pem','truststore_file':'/w/tls/ca.pem'}`,
+				`--set`, `redpanda.admin_api_tls={'name':'internal','enabled':true,'require_client_auth':true,'cert_file':'/w/tls/server-cert.pem','key_file':'/w/tls/server-key.pem','truststore_file':'/w/tls/ca.pem'}`,
+			},
 		},
 		{
 			note:   "kafka/plaintext/batching",
 			config: batchConfig,
 			array:  true,
 			kafka:  testKafka,
+		},
+		{
+			note:   "kafka/scram-sha-256",
+			config: sasl256Config,
+			opts: []kgo.Opt{kgo.SASL(scram.Auth{
+				User: "admin256",
+				Pass: "testPassword",
+			}.AsSha256Mechanism())},
+			kafka: testRedPanda,
+			kafkaArgs: []string{
+				"--set", "redpanda.enable_sasl=true",
+				"--set", `redpanda.superusers=["admin256"]`,
+			},
+			setup: redPandaUser("admin256", "testPassword", "scram-sha-256"),
+		},
+		{
+			note:   "kafka/scram-sha-512",
+			config: sasl512Config,
+			opts: []kgo.Opt{kgo.SASL(scram.Auth{
+				User: "admin512",
+				Pass: "testPassword",
+			}.AsSha512Mechanism())},
+			kafka: testRedPanda,
+			kafkaArgs: []string{
+				"--set", "redpanda.enable_sasl=true",
+				"--set", `redpanda.superusers=["admin512"]`,
+			},
+			setup: redPandaUser("admin512", "testPassword", "scram-sha-512"),
 		},
 	} {
 		t.Run(tc.note, func(t *testing.T) {
@@ -149,7 +186,7 @@ plugins:
 			defer cancel()
 			buf := bytes.Buffer{}
 
-			_ = tc.kafka(t)
+			_ = tc.kafka(t, tc.kafkaArgs, tc.opts, tc.setup)
 			go func() {
 				cl, err := kafkaClient("logs", tc.opts...)
 				if err != nil {
@@ -228,14 +265,14 @@ plugins:
 	}
 }
 
-func testRedPanda(t *testing.T, flags []string, opts ...kgo.Opt) *dockertest.Resource {
+func testRedPanda(t *testing.T, flags []string, opts []kgo.Opt, setup func(*dockertest.Resource) error) *dockertest.Resource {
 	pwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
 	}
 	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "kafka-dl-e2e",
-		Repository: "docker.redpanda.com/vectorized/redpanda",
+		Repository: "docker.redpanda.com/redpandadata/redpanda",
 		Tag:        "latest",
 		Hostname:   "kafka-dl-e2e",
 		Env:        []string{},
@@ -259,7 +296,11 @@ func testRedPanda(t *testing.T, flags []string, opts ...kgo.Opt) *dockertest.Res
 	if err != nil {
 		t.Fatalf("could not start kafka: %s", err)
 	}
-
+	if setup != nil {
+		if err := dockerPool.Retry(func() error { return setup(kafkaResource) }); err != nil {
+			t.Fatalf("could not set up kafka: %s", err)
+		}
+	}
 	if err := dockerPool.Retry(func() error { return pingKafka(opts...) }); err != nil {
 		t.Fatalf("could not connect to kafka: %s", err)
 	}
@@ -270,6 +311,24 @@ func testRedPanda(t *testing.T, flags []string, opts ...kgo.Opt) *dockertest.Res
 	})
 
 	return kafkaResource
+}
+
+func redPandaUser(username string, password string, mechanism string) func(*dockertest.Resource) error {
+	return func(r *dockertest.Resource) error {
+		stderr := new(bytes.Buffer)
+		exitCode, err := r.Exec(
+			[]string{"rpk", "acl", "user", "create", username, "-p", password, "--api-urls", "localhost:9644", "--mechanism", mechanism},
+			dockertest.ExecOptions{StdErr: stderr},
+		)
+		if err != nil {
+			return fmt.Errorf("error running create admin comment: %w", err)
+		}
+		if exitCode != 0 {
+			errorMessage, _ := io.ReadAll(stderr)
+			return fmt.Errorf("could not create admin user: %s", string(errorMessage))
+		}
+		return nil
+	}
 }
 
 func pingKafka(opts ...kgo.Opt) error {
@@ -288,13 +347,13 @@ func pingKafka(opts ...kgo.Opt) error {
 	return client.ProduceSync(ctx, record).FirstErr()
 }
 
-func testKafka(t *testing.T) *dockertest.Resource {
+func testKafka(t *testing.T, extraEnv []string, opts []kgo.Opt, setup func(*dockertest.Resource) error) *dockertest.Resource {
 	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "kafka-dl-e2e",
 		Repository: "bitnami/kafka",
 		Tag:        "latest",
 		Hostname:   "kafka-dl-e2e",
-		Env: []string{
+		Env: append([]string{
 			"BITNAMI_DEBUG=yes", // show an error if this config is wrong
 			"KAFKA_BROKER_ID=1",
 			"KAFKA_CFG_NODE_ID=1",
@@ -308,7 +367,7 @@ func testKafka(t *testing.T) *dockertest.Resource {
 			"KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL",
 			"KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@127.0.0.1:9093",
 			"ALLOW_PLAINTEXT_LISTENER=yes",
-		},
+		}, extraEnv...),
 		PortBindings: map[docker.Port][]docker.PortBinding{
 			"29092/tcp": {{HostIP: "localhost", HostPort: "29092/tcp"}}, // needed to have localhost:29092 work for kafkaClient
 		},
@@ -317,7 +376,12 @@ func testKafka(t *testing.T) *dockertest.Resource {
 	if err != nil {
 		t.Fatalf("could not start kafka: %s", err)
 	}
-	if err := dockerPool.Retry(func() error { return pingKafka() }); err != nil {
+	if setup != nil {
+		if err := dockerPool.Retry(func() error { return setup(kafkaResource) }); err != nil {
+			t.Fatalf("could not set up kafka: %s", err)
+		}
+	}
+	if err := dockerPool.Retry(func() error { return pingKafka(opts...) }); err != nil {
 		t.Fatalf("could not connect to kafka: %s", err)
 	}
 

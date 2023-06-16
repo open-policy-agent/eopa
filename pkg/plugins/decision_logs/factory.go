@@ -225,6 +225,18 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 			}
 			outputKafka.TLS = nil
 		}
+		for _, sasl := range outputKafka.SASL {
+			switch strings.ToUpper(sasl.Mechanism) {
+			case
+				"PLAIN",
+				"SCRAM-SHA-256",
+				"SCRAM-SHA-512",
+				"none":
+				// ensures a supported mechanism
+			default:
+				return nil, fmt.Errorf("unsupported SASL mechanism: %q", sasl.Mechanism)
+			}
+		}
 		return outputKafka, nil
 	case "splunk":
 		outputSplunk := new(outputSplunkOpts)
