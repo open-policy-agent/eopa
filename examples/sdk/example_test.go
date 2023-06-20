@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"time"
 
@@ -215,6 +216,46 @@ services:
 bundles:
   bundle.bjson.tar.gz:
     service: bndl
+`, bundleServer.URL))
+
+	o, err := sdk.New(ctx, opts)
+	if err != nil {
+		panic(err)
+	}
+	defer o.Stop(ctx)
+
+	waitForData(o, "/roles")
+
+	do := sdk.DecisionOptions{
+		Path:  "/test/allow",
+		Input: map[string]any{"action": "create", "user": "alice"},
+	}
+
+	dec, err := o.Decision(ctx, do)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("result: %v\n", dec.Result)
+	// Output:
+	// result: true
+}
+
+func ExampleBJSONBundleViaDiscovery() {
+	ctx := context.Background()
+
+	// Note: for demonstration purposes only. Not required for SDK usage.
+	os.Setenv("BUNDLE_HOST", bundleServer.URL)
+
+	opts := load_sdk.DefaultOptions()
+	opts.Logger = logging.New()
+	opts.Config = strings.NewReader(fmt.Sprintf(`
+services:
+- name: disco
+  url: %[1]s
+discovery:
+  resource: disco.tgz
+  decision: disco/config
 `, bundleServer.URL))
 
 	o, err := sdk.New(ctx, opts)

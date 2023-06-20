@@ -15,6 +15,7 @@ import (
 	bundleApi "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/keys"
 	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/plugins/discovery"
 	"github.com/open-policy-agent/opa/runtime"
 	"github.com/open-policy-agent/opa/server"
 
@@ -24,7 +25,6 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
 	dl "github.com/styrainc/enterprise-opa-private/pkg/plugins/decision_logs"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/discovery"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage"

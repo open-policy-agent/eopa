@@ -11,15 +11,16 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/go-cmp/cmp"
+	"go.uber.org/goleak"
+
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/plugins/discovery"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/util"
-	"go.uber.org/goleak"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/discovery"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 

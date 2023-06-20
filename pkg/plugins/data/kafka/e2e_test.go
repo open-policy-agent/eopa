@@ -18,11 +18,11 @@ import (
 
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/plugins/discovery"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/util"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/discovery"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm" // important! use VM for rego.Eval below
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )

@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"sync"
 
+	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle" // register bjson extension
 	dl "github.com/styrainc/enterprise-opa-private/pkg/plugins/decision_logs"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
@@ -14,6 +15,7 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/ir"
 	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
 )
@@ -50,7 +52,6 @@ func (*vmp) IsTarget(t string) bool {
 	return t == Target || defaultTgt
 }
 
-// TODO(sr): move store and tx into PrepareOption?
 func (*vmp) PrepareForEval(_ context.Context, policy *ir.Policy, _ ...rego.PrepareOption) (rego.TargetPluginEval, error) {
 	executable, err := vm.NewCompiler().WithPolicy(policy).Compile()
 	if err != nil {
@@ -82,7 +83,29 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		seed = rand.Reader
 	}
 
-	v := t.vm.WithDataNamespace(ectx.Transaction())
+	// NOTE(sr): We're peeking into the transaction to cover cases where we've been fed a
+	// default OPA inmem store, not an EOPA one. If that's the case, we'll read it in full,
+	// and feed its data to the VM. That will have sublte differences in behavior; but it
+	// is good enough for the remaining cases where this is allowed to happen: discovery
+	// document evaluation.
+	var v *vm.VM
+	txn := ectx.Transaction()
+	if txn0, ok := txn.(interface {
+		Write(storage.PatchOp, storage.Path, any) error // only OPA's inmem txn has that
+		Read(storage.Path) (any, error)                 // both EOPA's and OPA's inmem txn have that, using it below
+	}); ok {
+		x, err := txn0.Read(storage.Path{})
+		if err != nil {
+			return nil, err
+		}
+		y, err := bjson.New(x)
+		if err != nil {
+			return nil, err
+		}
+		v = t.vm.WithDataJSON(y)
+	} else {
+		v = t.vm.WithDataNamespace(txn)
+	}
 
 	result, err := v.Eval(ctx, "eval", vm.EvalOpts{
 		Metrics:                ectx.Metrics(),
