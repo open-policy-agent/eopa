@@ -16,6 +16,7 @@ syntax = "proto3";
 package eopa.data.v1;
 
 import "google/protobuf/struct.proto";
+import "google/protobuf/any.proto";
 
 // DataDocument is a thin wrapper type around a JSON value located at a
 // particular path in the virtual document store.
@@ -95,6 +96,62 @@ message DeleteDataRequest {
 message DeleteDataResponse {
 }
 
+// StreamingDataRequest provides a way to send DataService requests over
+// gRPC streams. Limited batching support is provided via the
+// `writes`/`reads` fields. As in the BulkRW API, if a write operation
+// fails, the entire request will be aborted. Writes are done as a single
+// transaction, reads are done in parallel.
+message StreamingDataRWRequest {
+  // WriteDataRequest provides a union of possible Data request types.
+  // This allows creating arbitrary sequences of data store operations.
+  message WriteRequest {
+    oneof req {
+      CreateDataRequest create = 1;
+      UpdateDataRequest update = 2;
+      DeleteDataRequest delete = 3;
+    }
+  }
+  // ReadRequest is currently a simple wrapper over the GetData
+  // request type.
+  message ReadRequest {
+    GetDataRequest get = 1;
+  }
+  // writes provides a sequence of WriteData requests.
+  repeated WriteRequest writes = 1;
+  // reads provides a sequence of ReadData requests.
+  repeated ReadRequest reads = 2;
+}
+
+// StreamingDataRWResponse contains lists of the appropriate response types
+// for each operation in the StreamingDataRWRequest.
+message StreamingDataRWResponse {
+  // WriteResponse provides a union of possible Data request types.
+  // This allows creating arbitrary sequences of data store operations.
+  message WriteResponse {
+    oneof resp {
+      CreateDataResponse create = 1;
+      UpdateDataResponse update = 2;
+      DeleteDataResponse delete = 3;
+    }
+  }
+  // ReadResponse is currently a simple wrapper over the GetData
+  // request type.
+  message ReadResponse {
+    GetDataResponse get = 1;
+    ErrorList errors = 2;
+  }
+  // writes provides a sequence of WriteData results.
+  repeated WriteResponse writes = 1;
+  // reads provides a sequence of ReadData results or errors.
+  repeated ReadResponse reads = 2;
+}
+
+// Context-dependent error messages.
+message ErrorList {
+  // The errors in the list.
+  repeated google.protobuf.Any errors = 1;
+}
+
 service DataService {
   // CreateData looks up the document by path, and inserts a new JSON value
   // at the end of the path.
@@ -129,4 +186,15 @@ service DataService {
   // This is equivalent in functionality to OPA's
   // [Data REST API Delete method](https://www.openpolicyagent.org/docs/latest/rest-api/#delete-a-document).
   rpc DeleteData(DeleteDataRequest) returns (DeleteDataResponse);
+
+  // StreamingDataRW specifies a stream of fixed-structure, batched
+  // read/write operations.
+  //
+  // WriteData operations are executed sequentially, aborting the entire
+  // gRPC call if any operations fail.
+  //
+  // The ReadData operations are then executed in parallel, but will report
+  // errors inline in their responses, instead of aborting the entire gRPC
+  // call.
+  rpc StreamingDataRW(stream StreamingDataRWRequest) returns (stream StreamingDataRWResponse);
 }

@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/plugins/discovery"
@@ -25,6 +27,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
+	protocmp "google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -345,6 +348,135 @@ plugins:
 		s := data.GetStructValue()
 		if s.Fields["0"].GetStringValue() != megabyteString {
 			t.Fatalf("Expected %s, got: %v", megabyteString, s.Fields["0"])
+		}
+	}
+}
+
+// Sequential request / response tests.
+// Ported over from `TestBulkRWSeq“ in `grpc_bulk_test.go` .
+func TestStreamingDataRWSeq(t *testing.T) {
+	type StreamingDataRWSeqStep struct {
+		request     *datav1.StreamingDataRWRequest
+		expResponse *datav1.StreamingDataRWResponse
+		expErr      error
+	}
+
+	tests := []struct {
+		note      string
+		storeData string
+		steps     []StreamingDataRWSeqStep
+	}{
+		{
+			// Inspired by a bug Miro found in the v0.100.8 release.
+			note: "Multiple empty requests",
+			steps: []StreamingDataRWSeqStep{
+				{
+					request:     &datav1.StreamingDataRWRequest{},
+					expResponse: &datav1.StreamingDataRWResponse{},
+				},
+				{
+					request:     &datav1.StreamingDataRWRequest{},
+					expResponse: &datav1.StreamingDataRWResponse{},
+				},
+				{
+					request:     &datav1.StreamingDataRWRequest{},
+					expResponse: &datav1.StreamingDataRWResponse{},
+				},
+			},
+		},
+		{
+			note: "Multiple data writes",
+			steps: []StreamingDataRWSeqStep{
+				{
+					request: &datav1.StreamingDataRWRequest{
+						Writes: []*datav1.StreamingDataRWRequest_WriteRequest{
+							{Req: &datav1.StreamingDataRWRequest_WriteRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(27)}}}},
+						},
+					},
+					expResponse: &datav1.StreamingDataRWResponse{
+						Writes: []*datav1.StreamingDataRWResponse_WriteResponse{
+							{Resp: &datav1.StreamingDataRWResponse_WriteResponse_Create{Create: &datav1.CreateDataResponse{}}},
+						},
+					},
+				},
+				{
+					request: &datav1.StreamingDataRWRequest{
+						Writes: []*datav1.StreamingDataRWRequest_WriteRequest{
+							{Req: &datav1.StreamingDataRWRequest_WriteRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(28)}}}},
+						},
+					},
+					expResponse: &datav1.StreamingDataRWResponse{
+						Writes: []*datav1.StreamingDataRWResponse_WriteResponse{
+							{Resp: &datav1.StreamingDataRWResponse_WriteResponse_Create{Create: &datav1.CreateDataResponse{}}},
+						},
+					},
+				},
+				{
+					request: &datav1.StreamingDataRWRequest{
+						Writes: []*datav1.StreamingDataRWRequest_WriteRequest{
+							{Req: &datav1.StreamingDataRWRequest_WriteRequest_Create{Create: &datav1.CreateDataRequest{Data: &datav1.DataDocument{Path: "/a", Document: structpb.NewNumberValue(29)}}}},
+						},
+					},
+					expResponse: &datav1.StreamingDataRWResponse{
+						Writes: []*datav1.StreamingDataRWResponse_WriteResponse{
+							{Resp: &datav1.StreamingDataRWResponse_WriteResponse_Create{Create: &datav1.CreateDataResponse{}}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		// We do the full setup/teardown for every test, or else we'd get
+		// collisions between testcases due to statefulness.
+		{
+			storeData := "{}"
+			if tc.storeData != "" {
+				storeData = tc.storeData
+			}
+			listener := setupTest(t, defaultGRPCConfig, storeData, nil)
+			ctx := context.Background()
+			conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				t.Fatalf("Failed to dial bufnet: %v", err)
+			}
+			defer conn.Close()
+			client := datav1.NewDataServiceClient(conn)
+			sclient, err := client.StreamingDataRW(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Run each test's steps in sequence on the live service instance.
+			for _, step := range tc.steps {
+				// Send message...
+				if err := sclient.Send(step.request); err != nil {
+					// No error expected? Fail test.
+					if step.expErr == nil {
+						t.Fatalf("[%s] Unexpected error: %v", tc.note, err)
+					}
+					// Error expected? Was it the right one?
+					if !strings.Contains(err.Error(), step.expErr.Error()) {
+						t.Fatalf("[%s] Expected error: %v, got: %v", tc.note, step.expErr, err)
+					}
+				}
+				// ...See what we got in response.
+				resp, err := sclient.Recv()
+				if err != nil {
+					t.Fatal(err)
+				}
+				// Check value equality of expected vs actual response.
+				if !cmp.Equal(step.expResponse, resp, protocmp.Transform()) {
+					fmt.Println("Diff:\n", cmp.Diff(step.expResponse, resp, protocmp.Transform()))
+					t.Fatalf("[%s] Expected:\n%v\n\nGot:\n%v", tc.note, step.expResponse, resp)
+				}
+			}
+
+			// Send the close message, and make sure there were no errors.
+			if err := sclient.CloseSend(); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 }

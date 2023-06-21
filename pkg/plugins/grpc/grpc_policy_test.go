@@ -2,8 +2,11 @@ package grpc_test
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
 	policyv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
 
@@ -11,6 +14,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+	protocmp "google.golang.org/protobuf/testing/protocmp"
 )
 
 func TestListPolicies(t *testing.T) {
@@ -299,6 +303,140 @@ y { false }
 		}
 		if status.Code(err) != codes.NotFound {
 			t.Fatalf("Expected NotFound error, got: %v", err)
+		}
+	}
+}
+
+// Sequential request / response tests.
+// Ported over from `TestBulkRWSeq“ in `grpc_bulk_test.go` .
+func TestStreamingPolicyRWSeq(t *testing.T) {
+	type StreamingPolicyRWSeqStep struct {
+		request     *policyv1.StreamingPolicyRWRequest
+		expResponse *policyv1.StreamingPolicyRWResponse
+		expErr      error
+	}
+
+	tests := []struct {
+		note        string
+		storeData   string
+		storePolicy map[string]string
+		steps       []StreamingPolicyRWSeqStep
+	}{
+		{
+			// Inspired by a bug Miro found in the v0.100.8 release.
+			note: "Multiple empty requests",
+			steps: []StreamingPolicyRWSeqStep{
+				{
+					request:     &policyv1.StreamingPolicyRWRequest{},
+					expResponse: &policyv1.StreamingPolicyRWResponse{},
+				},
+				{
+					request:     &policyv1.StreamingPolicyRWRequest{},
+					expResponse: &policyv1.StreamingPolicyRWResponse{},
+				},
+				{
+					request:     &policyv1.StreamingPolicyRWRequest{},
+					expResponse: &policyv1.StreamingPolicyRWResponse{},
+				},
+			},
+		},
+		{
+			note: "Multiple Policy writes",
+			steps: []StreamingPolicyRWSeqStep{
+				{
+					request: &policyv1.StreamingPolicyRWRequest{
+						Writes: []*policyv1.StreamingPolicyRWRequest_WriteRequest{
+							{Req: &policyv1.StreamingPolicyRWRequest_WriteRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/march1", Text: "package march1\ny := data.k * input.x + data.b\n"}}}},
+						},
+					},
+					expResponse: &policyv1.StreamingPolicyRWResponse{
+						Writes: []*policyv1.StreamingPolicyRWResponse_WriteResponse{
+							{Resp: &policyv1.StreamingPolicyRWResponse_WriteResponse_Create{Create: &policyv1.CreatePolicyResponse{}}},
+						},
+					},
+				},
+				{
+					request: &policyv1.StreamingPolicyRWRequest{
+						Writes: []*policyv1.StreamingPolicyRWRequest_WriteRequest{
+							{Req: &policyv1.StreamingPolicyRWRequest_WriteRequest_Update{Update: &policyv1.UpdatePolicyRequest{Policy: &policyv1.Policy{Path: "/march1", Text: "package march1\ny := 4 * input.x + 4\n"}}}},
+						},
+					},
+					expResponse: &policyv1.StreamingPolicyRWResponse{
+						Writes: []*policyv1.StreamingPolicyRWResponse_WriteResponse{
+							{Resp: &policyv1.StreamingPolicyRWResponse_WriteResponse_Update{Update: &policyv1.UpdatePolicyResponse{}}},
+						},
+					},
+				},
+				{
+					request: &policyv1.StreamingPolicyRWRequest{
+						Writes: []*policyv1.StreamingPolicyRWRequest_WriteRequest{
+							{Req: &policyv1.StreamingPolicyRWRequest_WriteRequest_Delete{Delete: &policyv1.DeletePolicyRequest{Path: "/march1"}}},
+						},
+					},
+					expResponse: &policyv1.StreamingPolicyRWResponse{
+						Writes: []*policyv1.StreamingPolicyRWResponse_WriteResponse{
+							{Resp: &policyv1.StreamingPolicyRWResponse_WriteResponse_Delete{Delete: &policyv1.DeletePolicyResponse{}}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		// We do the full setup/teardown for every test, or else we'd get
+		// collisions between testcases due to statefulness.
+		{
+			storeData := "{}"
+			if tc.storeData != "" {
+				storeData = tc.storeData
+			}
+			var storePolicyMap map[string]string
+			if tc.storePolicy != nil {
+				storePolicyMap = tc.storePolicy
+			}
+			listener := setupTest(t, defaultGRPCConfig, storeData, storePolicyMap)
+			ctx := context.Background()
+			conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				t.Fatalf("Failed to dial bufnet: %v", err)
+			}
+			defer conn.Close()
+			client := policyv1.NewPolicyServiceClient(conn)
+			sclient, err := client.StreamingPolicyRW(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Run each test's steps in sequence on the live service instance.
+			for _, step := range tc.steps {
+				// Send message...
+				if err := sclient.Send(step.request); err != nil {
+					// No error expected? Fail test.
+					if step.expErr == nil {
+						t.Fatalf("[%s] Unexpected error: %v", tc.note, err)
+					}
+					// Error expected? Was it the right one?
+					if !strings.Contains(err.Error(), step.expErr.Error()) {
+						t.Fatalf("[%s] Expected error: %v, got: %v", tc.note, step.expErr, err)
+					}
+				}
+				// ...See what we got in response.
+				resp, err := sclient.Recv()
+				if err != nil {
+					t.Fatal(err)
+				}
+				// Check value equality of expected vs actual response.
+				if !cmp.Equal(step.expResponse, resp, protocmp.Transform()) {
+					fmt.Println("Diff:\n", cmp.Diff(step.expResponse, resp, protocmp.Transform()))
+					t.Fatalf("[%s] Expected:\n%v\n\nGot:\n%v", tc.note, step.expResponse, resp)
+				}
+			}
+
+			// Send the close message, and make sure there were no errors.
+			if err := sclient.CloseSend(); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 }

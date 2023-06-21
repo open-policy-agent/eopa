@@ -52,6 +52,16 @@ type DataServiceClient interface {
 	// This is equivalent in functionality to OPA's
 	// [Data REST API Delete method](https://www.openpolicyagent.org/docs/latest/rest-api/#delete-a-document).
 	DeleteData(ctx context.Context, in *DeleteDataRequest, opts ...grpc.CallOption) (*DeleteDataResponse, error)
+	// StreamingDataRW specifies a stream of fixed-structure, batched
+	// read/write operations.
+	//
+	// WriteData operations are executed sequentially, aborting the entire
+	// gRPC call if any operations fail.
+	//
+	// The ReadData operations are then executed in parallel, but will report
+	// errors inline in their responses, instead of aborting the entire gRPC
+	// call.
+	StreamingDataRW(ctx context.Context, opts ...grpc.CallOption) (DataService_StreamingDataRWClient, error)
 }
 
 type dataServiceClient struct {
@@ -98,6 +108,37 @@ func (c *dataServiceClient) DeleteData(ctx context.Context, in *DeleteDataReques
 	return out, nil
 }
 
+func (c *dataServiceClient) StreamingDataRW(ctx context.Context, opts ...grpc.CallOption) (DataService_StreamingDataRWClient, error) {
+	stream, err := c.cc.NewStream(ctx, &DataService_ServiceDesc.Streams[0], "/eopa.data.v1.DataService/StreamingDataRW", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &dataServiceStreamingDataRWClient{stream}
+	return x, nil
+}
+
+type DataService_StreamingDataRWClient interface {
+	Send(*StreamingDataRWRequest) error
+	Recv() (*StreamingDataRWResponse, error)
+	grpc.ClientStream
+}
+
+type dataServiceStreamingDataRWClient struct {
+	grpc.ClientStream
+}
+
+func (x *dataServiceStreamingDataRWClient) Send(m *StreamingDataRWRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *dataServiceStreamingDataRWClient) Recv() (*StreamingDataRWResponse, error) {
+	m := new(StreamingDataRWResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // DataServiceServer is the server API for DataService service.
 // All implementations must embed UnimplementedDataServiceServer
 // for forward compatibility
@@ -132,6 +173,16 @@ type DataServiceServer interface {
 	// This is equivalent in functionality to OPA's
 	// [Data REST API Delete method](https://www.openpolicyagent.org/docs/latest/rest-api/#delete-a-document).
 	DeleteData(context.Context, *DeleteDataRequest) (*DeleteDataResponse, error)
+	// StreamingDataRW specifies a stream of fixed-structure, batched
+	// read/write operations.
+	//
+	// WriteData operations are executed sequentially, aborting the entire
+	// gRPC call if any operations fail.
+	//
+	// The ReadData operations are then executed in parallel, but will report
+	// errors inline in their responses, instead of aborting the entire gRPC
+	// call.
+	StreamingDataRW(DataService_StreamingDataRWServer) error
 	mustEmbedUnimplementedDataServiceServer()
 }
 
@@ -150,6 +201,9 @@ func (UnimplementedDataServiceServer) UpdateData(context.Context, *UpdateDataReq
 }
 func (UnimplementedDataServiceServer) DeleteData(context.Context, *DeleteDataRequest) (*DeleteDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteData not implemented")
+}
+func (UnimplementedDataServiceServer) StreamingDataRW(DataService_StreamingDataRWServer) error {
+	return status.Errorf(codes.Unimplemented, "method StreamingDataRW not implemented")
 }
 func (UnimplementedDataServiceServer) mustEmbedUnimplementedDataServiceServer() {}
 
@@ -236,6 +290,32 @@ func _DataService_DeleteData_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DataService_StreamingDataRW_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DataServiceServer).StreamingDataRW(&dataServiceStreamingDataRWServer{stream})
+}
+
+type DataService_StreamingDataRWServer interface {
+	Send(*StreamingDataRWResponse) error
+	Recv() (*StreamingDataRWRequest, error)
+	grpc.ServerStream
+}
+
+type dataServiceStreamingDataRWServer struct {
+	grpc.ServerStream
+}
+
+func (x *dataServiceStreamingDataRWServer) Send(m *StreamingDataRWResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *dataServiceStreamingDataRWServer) Recv() (*StreamingDataRWRequest, error) {
+	m := new(StreamingDataRWRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // DataService_ServiceDesc is the grpc.ServiceDesc for DataService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -260,6 +340,13 @@ var DataService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DataService_DeleteData_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "StreamingDataRW",
+			Handler:       _DataService_StreamingDataRW_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "eopa/data/v1/data.proto",
 }

@@ -74,6 +74,16 @@ type PolicyServiceClient interface {
 	// Keeping the unique number of policies down, or using Bundles are the
 	// recommended workarounds for most OPA users.
 	DeletePolicy(ctx context.Context, in *DeletePolicyRequest, opts ...grpc.CallOption) (*DeletePolicyResponse, error)
+	// StreamingPolicyRW specifies a stream of fixed-structure, batched
+	// read/write operations.
+	//
+	// WritePolicy operations are executed sequentially, aborting the entire
+	// gRPC call if any operations fail.
+	//
+	// The ReadPolicy operations are then executed in parallel, but will report
+	// errors inline in their responses, instead of aborting the entire gRPC
+	// call.
+	StreamingPolicyRW(ctx context.Context, opts ...grpc.CallOption) (PolicyService_StreamingPolicyRWClient, error)
 }
 
 type policyServiceClient struct {
@@ -127,6 +137,37 @@ func (c *policyServiceClient) DeletePolicy(ctx context.Context, in *DeletePolicy
 		return nil, err
 	}
 	return out, nil
+}
+
+func (c *policyServiceClient) StreamingPolicyRW(ctx context.Context, opts ...grpc.CallOption) (PolicyService_StreamingPolicyRWClient, error) {
+	stream, err := c.cc.NewStream(ctx, &PolicyService_ServiceDesc.Streams[0], "/eopa.policy.v1.PolicyService/StreamingPolicyRW", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &policyServiceStreamingPolicyRWClient{stream}
+	return x, nil
+}
+
+type PolicyService_StreamingPolicyRWClient interface {
+	Send(*StreamingPolicyRWRequest) error
+	Recv() (*StreamingPolicyRWResponse, error)
+	grpc.ClientStream
+}
+
+type policyServiceStreamingPolicyRWClient struct {
+	grpc.ClientStream
+}
+
+func (x *policyServiceStreamingPolicyRWClient) Send(m *StreamingPolicyRWRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *policyServiceStreamingPolicyRWClient) Recv() (*StreamingPolicyRWResponse, error) {
+	m := new(StreamingPolicyRWResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // PolicyServiceServer is the server API for PolicyService service.
@@ -185,6 +226,16 @@ type PolicyServiceServer interface {
 	// Keeping the unique number of policies down, or using Bundles are the
 	// recommended workarounds for most OPA users.
 	DeletePolicy(context.Context, *DeletePolicyRequest) (*DeletePolicyResponse, error)
+	// StreamingPolicyRW specifies a stream of fixed-structure, batched
+	// read/write operations.
+	//
+	// WritePolicy operations are executed sequentially, aborting the entire
+	// gRPC call if any operations fail.
+	//
+	// The ReadPolicy operations are then executed in parallel, but will report
+	// errors inline in their responses, instead of aborting the entire gRPC
+	// call.
+	StreamingPolicyRW(PolicyService_StreamingPolicyRWServer) error
 	mustEmbedUnimplementedPolicyServiceServer()
 }
 
@@ -206,6 +257,9 @@ func (UnimplementedPolicyServiceServer) UpdatePolicy(context.Context, *UpdatePol
 }
 func (UnimplementedPolicyServiceServer) DeletePolicy(context.Context, *DeletePolicyRequest) (*DeletePolicyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeletePolicy not implemented")
+}
+func (UnimplementedPolicyServiceServer) StreamingPolicyRW(PolicyService_StreamingPolicyRWServer) error {
+	return status.Errorf(codes.Unimplemented, "method StreamingPolicyRW not implemented")
 }
 func (UnimplementedPolicyServiceServer) mustEmbedUnimplementedPolicyServiceServer() {}
 
@@ -310,6 +364,32 @@ func _PolicyService_DeletePolicy_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PolicyService_StreamingPolicyRW_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(PolicyServiceServer).StreamingPolicyRW(&policyServiceStreamingPolicyRWServer{stream})
+}
+
+type PolicyService_StreamingPolicyRWServer interface {
+	Send(*StreamingPolicyRWResponse) error
+	Recv() (*StreamingPolicyRWRequest, error)
+	grpc.ServerStream
+}
+
+type policyServiceStreamingPolicyRWServer struct {
+	grpc.ServerStream
+}
+
+func (x *policyServiceStreamingPolicyRWServer) Send(m *StreamingPolicyRWResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *policyServiceStreamingPolicyRWServer) Recv() (*StreamingPolicyRWRequest, error) {
+	m := new(StreamingPolicyRWRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // PolicyService_ServiceDesc is the grpc.ServiceDesc for PolicyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -338,6 +418,13 @@ var PolicyService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _PolicyService_DeletePolicy_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "StreamingPolicyRW",
+			Handler:       _PolicyService_StreamingPolicyRW_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "eopa/policy/v1/policy.proto",
 }

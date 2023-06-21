@@ -15,6 +15,8 @@
 syntax = "proto3";
 package eopa.policy.v1;
 
+import "google/protobuf/any.proto";
+
 // Policy is a thin wrapper type around a Rego policy.
 message Policy {
   string path = 1;
@@ -66,6 +68,63 @@ message DeletePolicyRequest {
 
 // DeletePolicyResponse is an empty confirmation message type.
 message DeletePolicyResponse {}
+
+// StreamingPolicyRequest provides a way to send PolicyService requests over
+// gRPC streams. Limited batching support is provided via the
+// `writes`/`reads` fields. As in the BulkRW API, if a write operation
+// fails, the entire request will be aborted. Writes are done as a single
+// transaction, reads are done in parallel.
+message StreamingPolicyRWRequest {
+  // WritePolicyRequest provides a union of possible Policy request types.
+  // This allows creating arbitrary sequences of Policy store operations.
+  message WriteRequest {
+    oneof req {
+      CreatePolicyRequest create = 1;
+      UpdatePolicyRequest update = 2;
+      DeletePolicyRequest delete = 3;
+    }
+  }
+  // ReadRequest is currently a simple wrapper over the GetPolicy
+  // request type.
+  message ReadRequest {
+    GetPolicyRequest get = 1;
+  }
+  // writes provides a sequence of WritePolicy requests.
+  repeated WriteRequest writes = 1;
+  // reads provides a sequence of ReadPolicy requests.
+  repeated ReadRequest reads = 2;
+}
+
+// StreamingPolicyRWResponse contains lists of the appropriate response types
+// for each operation in the StreamingPolicyRWRequest.
+message StreamingPolicyRWResponse {
+  // WriteResponse provides a union of possible Policy request types.
+  // This allows creating arbitrary sequences of Policy store operations.
+  message WriteResponse {
+    oneof resp {
+      CreatePolicyResponse create = 1;
+      UpdatePolicyResponse update = 2;
+      DeletePolicyResponse delete = 3;
+    }
+  }
+  // ReadResponse is currently a simple wrapper over the GetPolicy
+  // request type.
+  message ReadResponse {
+    GetPolicyResponse get = 1;
+    ErrorList errors = 2;
+  }
+  // writes provides a sequence of WritePolicy results.
+  repeated WriteResponse writes = 1;
+  // reads provides a sequence of ReadPolicy results or errors.
+  repeated ReadResponse reads = 2;
+}
+
+// Context-dependent error messages.
+message ErrorList {
+  // The errors in the list.
+  repeated google.protobuf.Any errors = 1;
+}
+
 
 service PolicyService {
   // ListPolicies returns the set of stored policies in the policy store.
@@ -124,4 +183,15 @@ service PolicyService {
   // Keeping the unique number of policies down, or using Bundles are the
   // recommended workarounds for most OPA users.
   rpc DeletePolicy(DeletePolicyRequest) returns (DeletePolicyResponse);
+
+  // StreamingPolicyRW specifies a stream of fixed-structure, batched
+  // read/write operations.
+  //
+  // WritePolicy operations are executed sequentially, aborting the entire
+  // gRPC call if any operations fail.
+  //
+  // The ReadPolicy operations are then executed in parallel, but will report
+  // errors inline in their responses, instead of aborting the entire gRPC
+  // call.
+  rpc StreamingPolicyRW(stream StreamingPolicyRWRequest) returns (stream StreamingPolicyRWResponse);
 }

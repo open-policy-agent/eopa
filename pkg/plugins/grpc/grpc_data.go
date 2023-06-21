@@ -2,13 +2,17 @@ package grpc
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"strings"
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
 
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -33,7 +37,7 @@ import (
 
 // Handles all validation and store reads/writes. Transaction commit/abort is handled by the caller.
 // preParsedValue is an optional parameter, allowing JSON parsing to be done elsewhere.
-func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transaction, req *datav1.CreateDataRequest, preParsedValue interface{}) (*datav1.CreateDataResponse, error) {
+func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transaction, req *datav1.CreateDataRequest, preParsedValue any) (*datav1.CreateDataResponse, error) {
 	dataDoc := req.GetData()
 	path := dataDoc.GetPath()
 	p, ok := storage.ParsePathEscaped("/" + strings.Trim(path, "/"))
@@ -191,7 +195,7 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 	return &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: path, Document: bv}}, nil
 }
 
-func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transaction, req *datav1.UpdateDataRequest, preParsedValue interface{}) (*datav1.UpdateDataResponse, error) {
+func (s *Server) updateDataFromRequest(ctx context.Context, txn storage.Transaction, req *datav1.UpdateDataRequest, preParsedValue any) (*datav1.UpdateDataResponse, error) {
 	dataDoc := req.GetData()
 	path := dataDoc.GetPath()
 	p, ok := storage.ParsePathEscaped("/" + strings.Trim(path, "/"))
@@ -256,6 +260,158 @@ func (s *Server) deleteDataFromRequest(ctx context.Context, txn storage.Transact
 	}
 
 	return &datav1.DeleteDataResponse{}, nil
+}
+
+// --------------------------------------------------------
+// Low-level streaming gRPC API request handlers and utils
+
+// Parsing function for individual Data write payloads.
+// Returns a bjson.BJSON under-the-hood.
+func StreamingDataRWParseDataFromRequest(req *datav1.StreamingDataRWRequest_WriteRequest) (any, error) {
+	var data *structpb.Value
+
+	switch x := req.GetReq().(type) {
+	case *datav1.StreamingDataRWRequest_WriteRequest_Create:
+		wr := x.Create
+		data = wr.GetData().GetDocument()
+	case *datav1.StreamingDataRWRequest_WriteRequest_Update:
+		wr := x.Update
+		data = wr.GetData().GetDocument()
+	default:
+		// All other types.
+		return nil, nil
+	}
+
+	// val, err := bjson.NewDecoder(strings.NewReader(data)).Decode()
+	val, err := bjson.New(data.AsInterface())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid data: %v", err)
+	}
+
+	return val, nil
+}
+
+func (s *Server) streamingDataRWHandleWritesParallel(ctx context.Context, txn storage.Transaction, writes []*datav1.StreamingDataRWRequest_WriteRequest) ([]*datav1.StreamingDataRWResponse_WriteResponse, error) {
+	// Process data writes sequentially.
+	// Errors coming from the xFromRequest functions should all be
+	// pre-wrapped with status.Error, so we can simply forward them
+	// up the call chain.
+	out := make([]*datav1.StreamingDataRWResponse_WriteResponse, len(writes))
+
+	// Unpack writes in parallel.
+	parsedData := make([]any, len(writes))
+	wg, errCtx := errgroup.WithContext(ctx)
+	for i := range writes {
+		// Note(philip): This local copy of i is necessary,
+		// otherwise the goroutine will refer to the loop's
+		// iterator variable directly, which will mutate over time
+		// unpredictably.
+		// Reference: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
+		i := i
+		wg.Go(func() error {
+			select {
+			case <-errCtx.Done():
+				return errCtx.Err()
+			default:
+				parsedDataItem, err := StreamingDataRWParseDataFromRequest(writes[i])
+				if err != nil {
+					return err
+				}
+				parsedData[i] = parsedDataItem
+				//<-ctx.Done()
+				return nil
+			}
+		})
+	}
+	if err := wg.Wait(); err != nil {
+		return nil, err // txn will be aborted further up the call chain.
+	}
+
+	// Execute writes sequentially, aborting on error.
+	for i := range writes {
+		switch x := writes[i].GetReq().(type) {
+		case *datav1.StreamingDataRWRequest_WriteRequest_Create:
+			wr := x.Create
+			resp, err := s.createDataFromRequest(ctx, txn, wr, parsedData[i])
+			if err != nil {
+				return nil, err // txn will be aborted further up the call chain.
+			}
+			out[i] = &datav1.StreamingDataRWResponse_WriteResponse{Resp: &datav1.StreamingDataRWResponse_WriteResponse_Create{Create: resp}}
+		case *datav1.StreamingDataRWRequest_WriteRequest_Update:
+			wr := x.Update
+			resp, err := s.updateDataFromRequest(ctx, txn, wr, parsedData[i])
+			if err != nil {
+				return nil, err // txn will be aborted further up the call chain.
+			}
+			out[i] = &datav1.StreamingDataRWResponse_WriteResponse{Resp: &datav1.StreamingDataRWResponse_WriteResponse_Update{Update: resp}}
+		case *datav1.StreamingDataRWRequest_WriteRequest_Delete:
+			wr := x.Delete
+			resp, err := s.deleteDataFromRequest(ctx, txn, wr)
+			if err != nil {
+				return nil, err // txn will be aborted further up the call chain.
+			}
+			out[i] = &datav1.StreamingDataRWResponse_WriteResponse{Resp: &datav1.StreamingDataRWResponse_WriteResponse_Delete{Delete: resp}}
+		case nil:
+			// Field was not set.
+
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("empty data write request at index: %d", i)) // txn will be aborted further up the call chain.
+		default:
+			// Unknown type?
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("unknown type for data write request at index: %d", i)) // txn will be aborted further up the call chain.
+		}
+	}
+
+	// All writes successful? Return results.
+	return out, nil
+}
+
+// This function handles transaction lifetimes internally. It creates an individual read transaction for each read request in the list.
+func (s *Server) streamingDataRWHandleReadsParallel(ctx context.Context, reads []*datav1.StreamingDataRWRequest_ReadRequest) ([]*datav1.StreamingDataRWResponse_ReadResponse, error) {
+	out := make([]*datav1.StreamingDataRWResponse_ReadResponse, len(reads))
+	wg, errCtx := errgroup.WithContext(ctx)
+	for i := range reads {
+		// Note(philip): This local copy of i is necessary,
+		// otherwise the goroutine will refer to the loop's
+		// iterator variable directly, which will mutate over time
+		// unpredictably.
+		// Reference: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
+		i := i
+		wg.Go(func() error {
+			select {
+			case <-errCtx.Done():
+				return errCtx.Err()
+			default:
+				txn, err := s.store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext()})
+				if err != nil {
+					return status.Error(codes.Internal, "read transaction failed")
+				}
+				dataReadReq := reads[i].GetGet() // TODO: Nil-checks here?
+				resp, err := s.getDataFromRequest(ctx, txn, dataReadReq)
+				if err != nil {
+					s.store.Abort(ctx, txn)
+					listErr, err := structpb.NewList([]any{structpb.NewStringValue(err.Error())})
+					if err != nil {
+						return status.Error(codes.Internal, "error serialization failed")
+					}
+					serializedErr, err := anypb.New(listErr)
+					if err != nil {
+						return status.Error(codes.Internal, "error serialization failed")
+					}
+					out[i] = &datav1.StreamingDataRWResponse_ReadResponse{Errors: &datav1.ErrorList{Errors: []*anypb.Any{serializedErr}}}
+					return nil
+				}
+				out[i] = &datav1.StreamingDataRWResponse_ReadResponse{Get: resp}
+				s.store.Abort(ctx, txn)
+				return nil
+			}
+		})
+	}
+	if err := wg.Wait(); err != nil {
+		return nil, err
+	}
+
+	// No fatal errors from the reads? Return results.
+	return out, nil
 }
 
 // --------------------------------------------------------
@@ -342,4 +498,51 @@ func (s *Server) DeleteData(ctx context.Context, req *datav1.DeleteDataRequest) 
 	}
 
 	return resp, nil
+}
+
+// Handles streaming Data read/write operations.
+// Only truly fatal errors should cause it to return a non-nil error to the gRPC client.
+func (s *Server) StreamingDataRW(stream datav1.DataService_StreamingDataRWServer) error {
+	ctx := stream.Context()
+	for {
+		// Check context to allow cancellation.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		resp := datav1.StreamingDataRWResponse{}
+		switch req, err := stream.Recv(); err {
+		case nil:
+			// Process writes first, if present.
+			writes := req.GetWrites()
+			if len(writes) > 0 {
+				params := storage.TransactionParams{Write: len(writes) > 0}
+
+				txn, err := s.store.NewTransaction(ctx, params)
+				if err != nil {
+					return err
+				}
+				resp.Writes, err = s.streamingDataRWHandleWritesParallel(ctx, txn, writes)
+				if err != nil {
+					s.store.Abort(ctx, txn)
+					return err
+				}
+
+				s.store.Commit(ctx, txn)
+			}
+			// Process reads in parallel, if present.
+			reads := req.GetReads()
+			if len(reads) > 0 {
+				resp.Reads, err = s.streamingDataRWHandleReadsParallel(ctx, reads)
+				if err != nil {
+					return err
+				}
+			}
+			stream.Send(&resp)
+		case io.EOF:
+			return nil
+		default:
+			return err
+		}
+	}
 }
