@@ -9,8 +9,8 @@ import (
 
 	_ "github.com/styrainc/enterprise-opa-private/capabilities"
 	eopaCmd "github.com/styrainc/enterprise-opa-private/cmd"
-	"github.com/styrainc/enterprise-opa-private/cmd/keygen"
 	internal "github.com/styrainc/enterprise-opa-private/internal/cmd"
+	"github.com/styrainc/enterprise-opa-private/internal/license"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
 
@@ -27,13 +27,11 @@ func main() {
 		}
 	}() // orderly shutdown, run all defer routines
 
-	license := keygen.NewLicense()
-	root := eopaCmd.EnterpriseOPACommand(license)
+	lic := license.NewChecker()
+	root := eopaCmd.EnterpriseOPACommand(lic)
 
-	defer func() {
-		// do release in a defer function; works with panics
-		license.ReleaseLicense()
-	}()
+	// do release in a defer function; works with panics
+	defer lic.ReleaseLicense()
 
 	if err := root.Execute(); err != nil {
 		var e *cmd.ExitError

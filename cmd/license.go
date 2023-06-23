@@ -7,8 +7,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/styrainc/enterprise-opa-private/cmd/keygen"
 	"github.com/styrainc/enterprise-opa-private/cmd/trial"
+	"github.com/styrainc/enterprise-opa-private/internal/license"
+	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
 	"github.com/styrainc/enterprise-opa-private/pkg/tui"
 )
 
@@ -29,7 +30,7 @@ func showExp(online bool, expiry time.Time) {
 	}
 }
 
-func LicenseCmd(license *keygen.License, lparams *keygen.LicenseParams) *cobra.Command {
+func LicenseCmd(lic license.Checker, lparams *keygen.LicenseParams) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "license",
 		Short: "License status",
@@ -39,21 +40,19 @@ func LicenseCmd(license *keygen.License, lparams *keygen.LicenseParams) *cobra.C
 
 			lvl, _ := getLevel("info")
 			format := getFormatter("json")
-			license.SetFormatter(format)
-			license.SetLevel(lvl)
+			lic.SetFormatter(format)
+			lic.SetLevel(lvl)
 
-			var err error
-			license.ValidateLicense(lparams, func(code int, lerr error) { err = lerr })
-			if err != nil {
+			if err := lic.ValidateLicense(lparams); err != nil {
 				fmt.Fprintf(os.Stderr, "Validation error: %v\n", err)
 				return err
 			}
 
-			online := license.IsOnline()
-			showExp(online, license.Expiry())
+			online := lic.IsOnline()
+			showExp(online, lic.Expiry())
 
 			if online { // online - lookup license policy and count
-				p, err := license.Policy()
+				p, err := lic.Policy()
 				if err != nil {
 					fmt.Printf("Policy error: %v", err)
 					return err

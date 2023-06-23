@@ -1,4 +1,4 @@
-package keygen
+package license
 
 import (
 	"encoding/json"
@@ -45,7 +45,7 @@ const (
 )
 
 type (
-	License struct {
+	checker struct {
 		mutex       sync.Mutex
 		license     *keygen.License
 		logger      logging.Logger
@@ -56,6 +56,7 @@ type (
 		started     bool
 		mustStartBy *time.Timer
 		fingerprint string
+		exit        func(exitcode int, err error)
 	}
 
 	LicenseParams struct {
@@ -81,7 +82,7 @@ type (
 	}
 
 	// retrieve license: https://keygen.sh/docs/api/licenses/#licenses-retrieve
-	keygenLicense struct {
+	KeygenLicense struct {
 		Data struct {
 			Attributes struct {
 				MaxMachines int
@@ -97,7 +98,23 @@ type (
 	}
 )
 
-func NewLicense() *License {
+type Checker interface {
+	ValidateLicense(*LicenseParams) error
+	ValidateLicenseOrDie(*LicenseParams)
+	SetLicense(*keygen.License) bool
+	IsOnline() bool
+	Expiry() time.Time
+	Policy() (*KeygenLicense, error)
+
+	ReleaseLicense()
+	Wait(time.Duration) bool
+
+	SetLogger(logger logging.Logger)
+	SetFormatter(logrus.Formatter)
+	SetLevel(logging.Level)
+}
+
+func NewChecker() Checker {
 	keygen.Account = "dd0105d1-9564-4f58-ae1c-9defdd0bfea7" // account=styra-com
 	keygen.Product = "f7da4ae5-7bf5-46f6-9634-026bec5e8599" // product=enterprise-opa
 	keygen.PublicKey = "8b8ff31c1d3031add9b1b734e09e81c794731718c2cac2e601b8dfbc95daa4fc"
@@ -117,7 +134,15 @@ func NewLicense() *License {
 	os.Unsetenv(eopaLicenseKey)
 	os.Unsetenv(eopaLicenseToken)
 
-	l := &License{logger: logger, shutdown: make(chan struct{}, 1), finished: make(chan struct{}, 1)}
+	l := &checker{
+		logger:   logger,
+		shutdown: make(chan struct{}, 1),
+		finished: make(chan struct{}, 1),
+		exit: func(code int, err error) {
+			fmt.Fprintf(os.Stderr, "invalid license: %v\n", err)
+			os.Exit(code)
+		},
+	}
 	l.mustStartBy = time.AfterFunc(10*time.Minute, l.timerCallback) // 10 minutes to start license check limit
 	return l
 }
@@ -148,35 +173,35 @@ func (l *keygenLogger) Debugf(string, ...interface{}) {
 	// l.logger.Debug(format, v...) // very noisy
 }
 
-func (l *License) IsOnline() bool {
+func (l *checker) IsOnline() bool {
 	return l.license != nil
 }
 
-func (l *License) Expiry() time.Time {
+func (l *checker) Expiry() time.Time {
 	return l.expiry
 }
 
-func (l *License) Logger() logging.Logger {
+func (l *checker) Logger() logging.Logger {
 	return l.logger
 }
 
-func (l *License) SetLogger(logger logging.Logger) {
+func (l *checker) SetLogger(logger logging.Logger) {
 	l.logger = logger
 }
 
-func (l *License) SetLevel(level logging.Level) {
+func (l *checker) SetLevel(level logging.Level) {
 	if std, ok := l.logger.(*logging.StandardLogger); ok {
 		std.SetLevel(level)
 	}
 }
 
-func (l *License) SetFormatter(formatter logrus.Formatter) {
+func (l *checker) SetFormatter(formatter logrus.Formatter) {
 	if std, ok := l.logger.(*logging.StandardLogger); ok {
 		std.SetFormatter(formatter)
 	}
 }
 
-func (l *License) timerCallback() {
+func (l *checker) timerCallback() {
 	l.logger.Error("licensing error: timeout")
 	os.Exit(licenseErrorExitCode)
 }
@@ -193,7 +218,7 @@ func readLicense(file string) (string, error) {
 	return s, nil
 }
 
-func (l *License) showExpiry(expiry time.Time, prefix string) {
+func (l *checker) showExpiry(expiry time.Time, prefix string) {
 	l.expiry = expiry
 
 	d := time.Until(expiry).Truncate(time.Second)
@@ -232,7 +257,7 @@ func rateLimitRetrySeconds(lerr error) time.Duration {
 	return 0
 }
 
-func (l *License) validateOffline() error {
+func (l *checker) validateOffline() error {
 	// Verify the license key's signature and decode embedded dataset
 	license := &keygen.License{Scheme: keygen.SchemeCodeEd25519, Key: keygen.LicenseKey}
 	dataset, lerr := license.Verify()
@@ -280,21 +305,24 @@ func (l *License) validateOffline() error {
 //     - i. keygen.Activate
 //     - ii. setup signal handler SIGINT, SIGTERM
 //     - iii. start keygen machine monitor
-func (l *License) ValidateLicense(params *LicenseParams, terminate func(code int, err error)) {
-	var err error
-	defer func() {
-		if err != nil {
-			terminate(licenseErrorExitCode, err)
-		}
-	}()
+func (l *checker) ValidateLicense(params *LicenseParams) error {
+	return l.validate(params)
+}
 
+func (l *checker) ValidateLicenseOrDie(params *LicenseParams) {
+	if err := l.validate(params); err != nil {
+		l.exit(licenseErrorExitCode, err)
+	}
+}
+
+func (l *checker) validate(params *LicenseParams) error {
 	// stop background timer
 	l.mustStartBy.Stop()
 
 	l.mutex.Lock()
 	if l.started { // only run once
 		l.mutex.Unlock()
-		return
+		return nil
 	}
 	l.started = true
 	l.mutex.Unlock()
@@ -310,9 +338,10 @@ func (l *License) ValidateLicense(params *LicenseParams, terminate func(code int
 			if params.Source == SourceOverride {
 				dat = params.Key
 			} else {
+				var err error
 				dat, err = readLicense(params.Key)
 				if err != nil {
-					return
+					return err
 				}
 			}
 			keygen.LicenseKey = dat
@@ -320,26 +349,25 @@ func (l *License) ValidateLicense(params *LicenseParams, terminate func(code int
 			if params.Source == SourceOverride {
 				dat = params.Token
 			} else {
+				var err error
 				dat, err = readLicense(params.Token)
 				if err != nil {
-					return
+					return err
 				}
 			}
 			keygen.Token = dat
 		} else {
-			err = ErrMissingLicense
-			return
+			return ErrMissingLicense
 		}
 	}
 
 	if l.stopped() { // if ReleaseLicense was called, exit now
-		return
+		return nil
 	}
 
 	// try offline license
 	if isOfflineKey(keygen.LicenseKey) {
-		err = l.validateOffline()
-		return
+		return l.validateOffline()
 	}
 
 	// use random fingerprint: floating concurrent license
@@ -351,13 +379,12 @@ func (l *License) ValidateLicense(params *LicenseParams, terminate func(code int
 		// Validate the license for the current fingerprint
 		license, lerr = keygen.Validate(l.fingerprint)
 		if lerr == nil {
-			err = fmt.Errorf("invalid license: expected LicenseNotActivated")
-			return
+			return fmt.Errorf("invalid license: expected LicenseNotActivated")
 		}
 		if r := rateLimitRetrySeconds(lerr); r != 0 {
 			l.logger.Info("ValidateLicense rate limit error: Retry-After=%v", r)
 			if !l.sleep(r) {
-				return
+				return nil
 			}
 			continue
 		}
@@ -372,58 +399,56 @@ func (l *License) ValidateLicense(params *LicenseParams, terminate func(code int
 
 			for s := range sigs {
 				l.ReleaseLicense()
-				time.Sleep(100 * time.Millisecond)              // give eopa server sometime to finish
-				terminate(1, fmt.Errorf("caught signal %v", s)) // exit now (default behavior)!
+				time.Sleep(100 * time.Millisecond)           // give eopa server sometime to finish // TODO(sr): this isn't how we should do this
+				l.exit(1, fmt.Errorf("caught signal %v", s)) // exit now (default behavior)!
 			}
 		}()
 
 		// Activate the current fingerprint
 		if license.Expiry == nil {
-			err = fmt.Errorf("license activation failed: missing expiry")
-			return
+			return fmt.Errorf("license activation failed: missing expiry")
 		}
 
 		l.showExpiry(*license.Expiry, "Licensing activation")
 
-		if l.setLicense(license) { // if ReleaseLicense was called, exit now
-			return
+		if l.SetLicense(license) { // if ReleaseLicense was called, exit now
+			return nil
 		}
 
-		var lerr error
 		var machine *keygen.Machine
+		var err error
 		for i := 0; i < licenseRetries; i++ {
-			machine, lerr = license.Activate(l.fingerprint)
-			if lerr != nil {
+			machine, err = license.Activate(l.fingerprint)
+			if err != nil {
 				if r := rateLimitRetrySeconds(lerr); r != 0 {
 					l.logger.Info("ActivateLicense rate limit error: Retry-After=%v", r)
 					if !l.sleep(r) {
-						return
+						return nil
 					}
 					continue
 				}
 			}
 			break
 		}
-		if lerr != nil {
-			err = fmt.Errorf("license activation failed: %w", lerr)
+		if err != nil {
+			return fmt.Errorf("license activation failed: %w", lerr)
 		}
 
 		if l.stopped() { // if ReleaseLicense was called, exit now
-			return
+			return nil
 		}
 
 		// Start heartbeat monitor for machine (also set policy "Heartbeat Basis": FROM_CREATION)
 		go l.monitor(machine)
-		return
+		return nil
 	}
 
 	if isTimeout(lerr) { // fix output message
-		err = fmt.Errorf("invalid license: timed out")
-		return
+		return fmt.Errorf("invalid license: timed out")
 	}
 
 	// something's wrong
-	err = fmt.Errorf("invalid license: %w", lerr)
+	return fmt.Errorf("invalid license: %w", lerr)
 }
 
 func isTimeout(netError error) bool {
@@ -437,7 +462,7 @@ func isTimeout(netError error) bool {
 	return false
 }
 
-func (l *License) setLicense(license *keygen.License) bool {
+func (l *checker) SetLicense(license *keygen.License) bool {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
@@ -449,7 +474,7 @@ func (l *License) setLicense(license *keygen.License) bool {
 }
 
 // stopped: see if ReleaseLicense was called
-func (l *License) stopped() bool {
+func (l *checker) stopped() bool {
 	select {
 	case <-l.shutdown:
 		return true
@@ -459,7 +484,7 @@ func (l *License) stopped() bool {
 }
 
 // wait: wait for monitor to stop
-func (l *License) wait(dur time.Duration) bool {
+func (l *checker) Wait(dur time.Duration) bool {
 	delay := time.NewTimer(dur)
 	select {
 	case <-l.finished:
@@ -472,7 +497,7 @@ func (l *License) wait(dur time.Duration) bool {
 	}
 }
 
-func (l *License) sleep(dur time.Duration) bool {
+func (l *checker) sleep(dur time.Duration) bool {
 	delay := time.NewTimer(dur)
 	select {
 	case <-l.shutdown:
@@ -485,7 +510,7 @@ func (l *License) sleep(dur time.Duration) bool {
 	}
 }
 
-func (l *License) ReleaseLicense() {
+func (l *checker) ReleaseLicense() {
 	if l == nil {
 		return
 	}
@@ -518,7 +543,7 @@ func (l *License) ReleaseLicense() {
 }
 
 // monitorRetry: try connecting to keygen SaaS for upto 16 minutes
-func (l *License) monitorRetry(m *keygen.Machine) error {
+func (l *checker) monitorRetry(m *keygen.Machine) error {
 	t := 30 * time.Second
 	c := 32
 
@@ -535,7 +560,7 @@ func (l *License) monitorRetry(m *keygen.Machine) error {
 }
 
 // monitor: send keygen SaaS heartbeat
-func (l *License) monitor(m *keygen.Machine) {
+func (l *checker) monitor(m *keygen.Machine) {
 	defer close(l.finished) // signal monitor has completed
 
 	if l.stopped() {
@@ -561,7 +586,7 @@ func (l *License) monitor(m *keygen.Machine) {
 	}
 }
 
-func (l *License) heartbeat(m *keygen.Machine) error {
+func (l *checker) heartbeat(m *keygen.Machine) error {
 	var err error
 	for i := 0; i < licenseRetries; i++ {
 		client := keygen.NewClient()
@@ -581,12 +606,12 @@ func (l *License) heartbeat(m *keygen.Machine) error {
 	return fmt.Errorf("heartbeat failure: %w", err)
 }
 
-func (l *License) Machines() (int, error) {
+func (l *checker) Machines() (int, error) {
 	m, err := l.license.Machines()
 	return len(m), err
 }
 
-func (l *License) Policy() (*keygenLicense, error) {
+func (l *checker) Policy() (*KeygenLicense, error) {
 	var license *keygen.Response
 	var err error
 	for i := 0; i < licenseRetries; i++ {
@@ -607,7 +632,7 @@ func (l *License) Policy() (*keygenLicense, error) {
 	if err != nil {
 		return nil, fmt.Errorf("policy failure: %w", err)
 	}
-	var data keygenLicense
+	var data KeygenLicense
 	if err := json.Unmarshal(license.Body, &data); err != nil {
 		return nil, fmt.Errorf("license unmarshal failed: %w", err)
 	}

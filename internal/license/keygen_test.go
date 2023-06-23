@@ -1,4 +1,4 @@
-package keygen
+package license
 
 import (
 	"testing"
@@ -60,7 +60,7 @@ func setupKeygen(expiry string, code string) {
 
 func TestKeygen(t *testing.T) {
 	t.Setenv("EOPA_LICENSE_KEY", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewLicense()
+	license := NewChecker()
 
 	keygen.PublicKey = "" // don't validate the signature
 
@@ -70,14 +70,14 @@ func TestKeygen(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"NO_MACHINE\"")
 
 	var result int
-
-	license.ValidateLicense(NewLicenseParams(), func(code int, err error) { result = code })
+	license.(*checker).exit = func(code int, _ error) { result = code }
+	license.ValidateLicenseOrDie(NewLicenseParams())
 	if exp, act := 0, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
 	time.Sleep(100 * time.Millisecond) // let monitor start
 	license.ReleaseLicense()
-	res := license.wait(5 * time.Second) // wait upto 5s for monitor to end
+	res := license.Wait(5 * time.Second) // wait upto 5s for monitor to end
 	if res {
 		t.Fatal("license monitor did not shutdown correctly")
 	}
@@ -85,7 +85,7 @@ func TestKeygen(t *testing.T) {
 
 func TestKeygenExpiry(t *testing.T) {
 	t.Setenv("EOPA_LICENSE_KEY", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewLicense()
+	license := NewChecker()
 
 	keygen.PublicKey = "" // don't validate the signature
 
@@ -95,8 +95,8 @@ func TestKeygenExpiry(t *testing.T) {
 	setupKeygen("null", "\"NO_MACHINE\"")
 
 	var result int
-
-	license.ValidateLicense(NewLicenseParams(), func(code int, err error) { result = code })
+	license.(*checker).exit = func(code int, _ error) { result = code }
+	license.ValidateLicenseOrDie(NewLicenseParams())
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -104,7 +104,7 @@ func TestKeygenExpiry(t *testing.T) {
 
 func TestKeygenExpired(t *testing.T) {
 	t.Setenv("EOPA_LICENSE_KEY", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewLicense()
+	license := NewChecker()
 
 	keygen.PublicKey = "" // don't validate the signature
 
@@ -114,8 +114,8 @@ func TestKeygenExpired(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"EXPIRED\"")
 
 	var result int
-
-	license.ValidateLicense(NewLicenseParams(), func(code int, err error) { result = code })
+	license.(*checker).exit = func(code int, _ error) { result = code }
+	license.ValidateLicenseOrDie(NewLicenseParams())
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -124,7 +124,7 @@ func TestKeygenExpired(t *testing.T) {
 func TestKeygenToken(t *testing.T) {
 	t.Setenv("EOPA_LICENSE_KEY", "")
 	t.Setenv("EOPA_LICENSE_TOKEN", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewLicense()
+	license := NewChecker()
 
 	keygen.PublicKey = "" // don't validate the signature
 
@@ -134,8 +134,8 @@ func TestKeygenToken(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"NOT_FOUND\"")
 
 	var result int
-
-	license.ValidateLicense(NewLicenseParams(), func(code int, err error) { result = code })
+	license.(*checker).exit = func(code int, _ error) { result = code }
+	license.ValidateLicenseOrDie(NewLicenseParams())
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -144,7 +144,7 @@ func TestKeygenToken(t *testing.T) {
 func TestKeygenSignature(t *testing.T) {
 	t.Setenv("EOPA_LICENSE_KEY", "")
 	t.Setenv("EOPA_LICENSE_TOKEN", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewLicense()
+	license := NewChecker()
 
 	defer gock.Off()
 	defer gock.RestoreClient(keygen.HTTPClient)
@@ -152,8 +152,8 @@ func TestKeygenSignature(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"NOT_FOUND\"")
 
 	var result int
-
-	license.ValidateLicense(NewLicenseParams(), func(code int, err error) { result = code })
+	license.(*checker).exit = func(code int, _ error) { result = code }
+	license.ValidateLicenseOrDie(NewLicenseParams())
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -162,7 +162,7 @@ func TestKeygenSignature(t *testing.T) {
 func TestKeygenValid(t *testing.T) {
 	t.Setenv("EOPA_LICENSE_KEY", "")
 	t.Setenv("EOPA_LICENSE_TOKEN", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewLicense()
+	license := NewChecker()
 
 	keygen.PublicKey = "" // don't validate the signature
 
@@ -172,8 +172,8 @@ func TestKeygenValid(t *testing.T) {
 	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"VALID\"")
 
 	var result int
-
-	license.ValidateLicense(NewLicenseParams(), func(code int, err error) { result = code })
+	license.(*checker).exit = func(code int, _ error) { result = code }
+	license.ValidateLicenseOrDie(NewLicenseParams())
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -181,7 +181,7 @@ func TestKeygenValid(t *testing.T) {
 
 func TestKeygenRateLimit(t *testing.T) {
 	t.Setenv("EOPA_LICENSE_KEY", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewLicense()
+	license := NewChecker()
 
 	keygen.APIURL = "https://api.keygenx.sh" // simulate RateLimitExceeded
 
@@ -192,8 +192,8 @@ func TestKeygenRateLimit(t *testing.T) {
 
 	var result int
 	var err error
-
-	license.ValidateLicense(NewLicenseParams(), func(code int, lerr error) { result, err = code, lerr })
+	license.(*checker).exit = func(code int, err0 error) { result = code; err = err0 }
+	license.ValidateLicenseOrDie(NewLicenseParams())
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -206,7 +206,7 @@ func TestKeygenRateLimit(t *testing.T) {
 
 func TestKeygenOffline(t *testing.T) {
 	t.Setenv("EOPA_LICENSE_KEY", "key/7F08EC970E9D.B0214E4CF0C7354C97")
-	license := NewLicense()
+	license := NewChecker()
 
 	keygen.APIURL = "https://api.keygenx.sh" // simulate RateLimitExceeded
 
@@ -218,8 +218,8 @@ func TestKeygenOffline(t *testing.T) {
 	var result int
 	var err error
 	expected := "off-line license verification failed: license key is not genuine"
-
-	license.ValidateLicense(NewLicenseParams(), func(code int, lerr error) { result, err = code, lerr })
+	license.(*checker).exit = func(code int, err0 error) { result = code; err = err0 }
+	license.ValidateLicenseOrDie(NewLicenseParams())
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}
@@ -230,7 +230,7 @@ func TestKeygenOffline(t *testing.T) {
 
 func TestKeygenOfflineExpired(t *testing.T) {
 	t.Setenv("EOPA_LICENSE_KEY", "key/eyJhY2NvdW50Ijp7ImlkIjoiZGQwMTA1ZDEtOTU2NC00ZjU4LWFlMWMtOWRlZmRkMGJmZWE3In0sInByb2R1Y3QiOnsiaWQiOiJmN2RhNGFlNS03YmY1LTQ2ZjYtOTYzNC0wMjZiZWM1ZTg1OTkifSwicG9saWN5Ijp7ImlkIjoiZTVjYjZmMTgtZTVjOS00OTJjLTgyMmYtMDFiYzUxNjYxNmI2IiwiZHVyYXRpb24iOjI1OTIwMDB9LCJ1c2VyIjpudWxsLCJsaWNlbnNlIjp7ImlkIjoiYWJmNWMxYWItODYwYy00NzUxLTlhODItNTc5Mjk0OWIxNjFlIiwiY3JlYXRlZCI6IjIwMjMtMDItMTJUMTc6MzM6MjIuNzcxWiIsImV4cGlyeSI6IjIwMjMtMDItMDFUMDA6MDA6MDAuMDAwWiJ9fQ==.2NLHJjiAiXkO7HsBoQFrmXG32gC0ZH9SDxUEcacqqHPgvZq0RcczFV603XuJ7mzAtN5OEPa6XoETksjsBteqCQ==")
-	license := NewLicense()
+	license := NewChecker()
 
 	keygen.APIURL = "https://api.keygenx.sh" // simulate RateLimitExceeded
 
@@ -242,8 +242,8 @@ func TestKeygenOfflineExpired(t *testing.T) {
 	var result int
 	var err error
 	expected := "off-line license verification failed: license expired 2023-02-01 00:00:00 +0000 UTC"
-
-	license.ValidateLicense(NewLicenseParams(), func(code int, lerr error) { result, err = code, lerr })
+	license.(*checker).exit = func(code int, err0 error) { result = code; err = err0 }
+	license.ValidateLicenseOrDie(NewLicenseParams())
 	if exp, act := 3, result; exp != act {
 		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
 	}

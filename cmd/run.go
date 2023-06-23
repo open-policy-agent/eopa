@@ -19,7 +19,8 @@ import (
 	"github.com/open-policy-agent/opa/runtime"
 	"github.com/open-policy-agent/opa/server"
 
-	"github.com/styrainc/enterprise-opa-private/cmd/keygen"
+	"github.com/styrainc/enterprise-opa-private/internal/license"
+	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/builtins" // Activate custom builtins.
 	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
@@ -34,7 +35,7 @@ import (
 const defaultBindAddress = "localhost:8181"
 
 // Run provides the CLI entrypoint for the `run` subcommand
-func initRun(opa *cobra.Command, brand string, license *keygen.License, lparams *keygen.LicenseParams) *cobra.Command {
+func initRun(opa *cobra.Command, brand string, license license.Checker, lparams *keygen.LicenseParams) *cobra.Command {
 	// Only override Run, so we keep the args and usage texts
 	opa.RunE = func(c *cobra.Command, args []string) error {
 		c.SilenceErrors = true
@@ -229,7 +230,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 }
 
 // initRuntime is taken from OPA's cmd/run.go
-func initRuntime(ctx context.Context, params *runCmdParams, args []string, license *keygen.License, lparams *keygen.LicenseParams) (*runtime.Runtime, error) {
+func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic license.Checker, lparams *keygen.LicenseParams) (*runtime.Runtime, error) {
 	authenticationSchemes := map[string]server.AuthenticationScheme{
 		"token": server.AuthenticationToken,
 		"tls":   server.AuthenticationTLS,
@@ -306,7 +307,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, licen
 	bundleApi.RegisterActivator("_enterprise_opa", a)
 	params.rt.BundleActivatorPlugin = "_enterprise_opa"
 
-	params.rt.EKM = ekm.NewEKM(license, lparams)
+	params.rt.EKM = ekm.NewEKM(lic, lparams)
 
 	params.rt.Router = loadRouter()
 

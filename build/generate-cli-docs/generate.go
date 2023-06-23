@@ -12,7 +12,7 @@ import (
 
 	"github.com/spf13/cobra/doc"
 	eopaCmd "github.com/styrainc/enterprise-opa-private/cmd"
-	"github.com/styrainc/enterprise-opa-private/cmd/keygen"
+	"github.com/styrainc/enterprise-opa-private/internal/license"
 )
 
 const fileHeader = `---
@@ -32,7 +32,7 @@ func main() {
 	}
 	out := os.Args[1]
 
-	command := eopaCmd.EnterpriseOPACommand(keygen.NewLicense())
+	command := eopaCmd.EnterpriseOPACommand(license.NewChecker())
 	command.Use = "eopa [command]"
 	command.DisableAutoGenTag = true
 

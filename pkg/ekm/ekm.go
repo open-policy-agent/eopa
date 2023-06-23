@@ -16,7 +16,7 @@ import (
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
 
-	"github.com/styrainc/enterprise-opa-private/cmd/keygen"
+	"github.com/styrainc/enterprise-opa-private/internal/license"
 )
 
 const Name = "ekm"
@@ -54,26 +54,30 @@ type (
 	}
 
 	EKM struct {
-		license *keygen.License
-		lparams *keygen.LicenseParams
+		checker license.Checker
+		lparams *license.LicenseParams
 		logger  logging.Logger
 	}
 )
 
-func NewEKM(license *keygen.License, lparams *keygen.LicenseParams) *EKM {
-	return &EKM{license: license, lparams: lparams}
+func NewEKM(c license.Checker, lparams *license.LicenseParams) *EKM {
+	return &EKM{checker: c, lparams: lparams}
 }
 
 func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Config) (*config.Config, error) {
 	if !(location == plugins.EkmPlugins && conf.Discovery != nil) {
-		defer e.validateLicense()
+		defer func() {
+			if e.checker != nil {
+				e.checker.ValidateLicenseOrDie(e.lparams) // calls os.Exit if invalid
+			}
+		}()
 	}
 
 	e.logger = logger
 	logger.Debug("Process EKM")
 
-	if e.license != nil {
-		e.license.SetLogger(logger)
+	if e.checker != nil { // TODO(sr): this feels wrong, the checker should be set up with a license already
+		e.checker.SetLogger(logger)
 	}
 
 	if conf.EKM == nil {
@@ -192,11 +196,11 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 
 	vlogical := vaultClient.Logical()
 
-	if e.license != nil && e.lparams != nil && vc.Vault.License != nil {
+	if e.checker != nil && e.lparams != nil && vc.Vault.License != nil {
 		if tokenKey, ok := vc.Vault.License["token"]; ok {
 			value, err := lookupKey(vlogical, tokenKey)
 			if err == nil {
-				e.lparams.Source = keygen.SourceOverride
+				e.lparams.Source = license.SourceOverride
 				e.lparams.Token = value // override token
 				e.lparams.Key = ""
 			} else {
@@ -206,7 +210,7 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 			if keyKey, ok := vc.Vault.License["key"]; ok {
 				value, err := lookupKey(vlogical, keyKey)
 				if err == nil {
-					e.lparams.Source = keygen.SourceOverride
+					e.lparams.Source = license.SourceOverride
 					e.lparams.Key = value // override key
 					e.lparams.Token = ""
 				} else {
@@ -251,15 +255,6 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 		registerHTTPSend(e.logger, nil, nil)
 	}
 	return conf, nil
-}
-
-func (e *EKM) validateLicense() {
-	if e.license != nil { // do commandline license check
-		e.license.ValidateLicense(e.lparams, func(code int, err error) {
-			fmt.Fprintf(os.Stderr, "invalid license: %v\n", err)
-			os.Exit(code)
-		})
-	}
 }
 
 func readFile(file string) (string, error) {

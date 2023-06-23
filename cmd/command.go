@@ -13,7 +13,8 @@ import (
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/util"
 
-	"github.com/styrainc/enterprise-opa-private/cmd/keygen"
+	"github.com/styrainc/enterprise-opa-private/internal/license"
+	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
 
@@ -28,7 +29,7 @@ func addInstructionLimitFlag(c *cobra.Command, instrLimit *int64) {
 	c.Flags().Int64Var(instrLimit, "instruction-limit", 100_000_000, "set instruction limit for VM")
 }
 
-func EnterpriseOPACommand(license *keygen.License) *cobra.Command {
+func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	var instructionLimit int64
 
 	// For all Enterprise OPA commands, the VM is the default target. It can be
@@ -56,22 +57,17 @@ func EnterpriseOPACommand(license *keygen.License) *cobra.Command {
 
 			switch cmd.CalledAs() {
 			case "eval":
-				if license == nil {
+				if lic == nil {
 					return
 				}
 
 				lvl, _ := getLevel(logLevel.String())
 				format := getFormatter(logFormat.String())
-				license.SetFormatter(format)
-				license.SetLevel(lvl)
+				lic.SetFormatter(format)
+				lic.SetLevel(lvl)
 
-				go func() {
-					// do the license validate and activate asynchronously; so user doesn't have to wait
-					license.ValidateLicense(lparams, func(code int, err error) {
-						fmt.Fprintf(os.Stderr, "invalid license: %v\n", err)
-						os.Exit(code)
-					})
-				}()
+				// do the license validate and activate asynchronously; so user doesn't have to wait
+				go lic.ValidateLicenseOrDie(lparams) // calls os.Exit if license isn't valid
 			}
 		},
 	}
@@ -83,7 +79,7 @@ func EnterpriseOPACommand(license *keygen.License) *cobra.Command {
 		case "run":
 			addLicenseFlags(c, lparams)
 			addInstructionLimitFlag(c, &instructionLimit)
-			root.AddCommand(initRun(c, brand, license, lparams)) // wrap OPA run
+			root.AddCommand(initRun(c, brand, lic, lparams)) // wrap OPA run
 		case "eval":
 			addLicenseFlags(c, lparams)
 			addInstructionLimitFlag(c, &instructionLimit)
@@ -103,7 +99,7 @@ func EnterpriseOPACommand(license *keygen.License) *cobra.Command {
 	root.AddCommand(initBundle())
 	root.AddCommand(liaCtl())
 
-	licenseCmd := LicenseCmd(license, lparams)
+	licenseCmd := LicenseCmd(lic, lparams)
 	addLicenseFlags(licenseCmd, lparams)
 	root.AddCommand(licenseCmd)
 	return root
