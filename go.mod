@@ -42,8 +42,8 @@ require (
 	github.com/sourcegraph/conc v0.3.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.2
-	github.com/testcontainers/testcontainers-go v0.20.1
+	github.com/stretchr/testify v1.8.4
+	github.com/testcontainers/testcontainers-go v0.21.0
 	github.com/testcontainers/testcontainers-go/modules/mysql v0.20.1
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.20.1
 	github.com/testcontainers/testcontainers-go/modules/vault v0.20.1
@@ -51,7 +51,7 @@ require (
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	go.opentelemetry.io/otel/trace v1.14.0
 	go.uber.org/goleak v1.2.1
-	golang.org/x/exp v0.0.0-20230315142452-642cacee5cc0
+	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea
 	golang.org/x/sync v0.3.0
 	golang.org/x/term v0.9.0
 	google.golang.org/grpc v1.56.1
@@ -226,7 +226,7 @@ require (
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/patternmatcher v0.5.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
-	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
+	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
