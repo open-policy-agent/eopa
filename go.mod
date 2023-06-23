@@ -45,7 +45,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/testcontainers/testcontainers-go v0.21.0
 	github.com/testcontainers/testcontainers-go/modules/mysql v0.20.1
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.20.1
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.21.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.20.1
 	github.com/twmb/franz-go v1.13.5
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
