@@ -31,7 +31,7 @@ require (
 	github.com/mithrandie/csvq v1.18.1
 	github.com/mithrandie/csvq-driver v1.7.0
 	github.com/mithrandie/go-text v1.6.0
-	github.com/okta/okta-sdk-golang/v3 v3.0.5
+	github.com/okta/okta-sdk-golang/v3 v3.0.7
 	github.com/open-policy-agent/opa v0.53.1
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.10.0
