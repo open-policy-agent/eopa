@@ -86,6 +86,7 @@ While this repository tracks the code required to build Styra Enterprise OPA, so
 ### Monitoring
 
  - NewRelic Dashboard [[Link](https://one.newrelic.com/dashboards/detail/MzU5NDA4OHxWSVp8REFTSEJPQVJEfGRhOjMxNTUwNjQ?account=3594088&state=0e224a3f-d3cc-492f-a8c6-fb2fd1caa0e0)]: `Enterprise OPA Health`: Tracks the key metrics / status of all `eopa-trial-*` and `eopa-telemetry*` services.
+ - Terraform Rules for Alerts [[Link](https://github.com/StyraInc/platform-terraform/blob/main/newrelic/alerts/load_alerts.tf)]: Any monitoring config changes made through the NewRelic UI will be automatically overwritten with whatever Terraform is told to provision. To make lasting changes to alerting, change them in the Terraform configs.
 
 ## FAQ
 
