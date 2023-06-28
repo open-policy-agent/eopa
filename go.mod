@@ -47,7 +47,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/mysql v0.21.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.21.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.21.0
-	github.com/twmb/franz-go v1.13.5
+	github.com/twmb/franz-go v1.13.6
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	go.opentelemetry.io/otel/trace v1.14.0
 	go.uber.org/goleak v1.2.1
