@@ -25,7 +25,7 @@ require (
 	github.com/hashicorp/vault/api/auth/kubernetes v0.4.0
 	github.com/jarcoal/httpmock v1.2.0
 	github.com/json-iterator/go v1.1.12
-	github.com/keygen-sh/keygen-go/v2 v2.4.1
+	github.com/keygen-sh/keygen-go/v2 v2.5.0
 	github.com/lib/pq v1.10.9
 	github.com/minio/minio-go/v7 v7.0.58
 	github.com/mithrandie/csvq v1.18.1

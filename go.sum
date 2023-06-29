@@ -596,8 +596,8 @@ github.com/keygen-sh/go-update v1.0.0 h1:M65sTVUHUO07tEK4l1Hq7u5D4kdEqkcgfdzUt3q
 github.com/keygen-sh/go-update v1.0.0/go.mod h1:wn0UWRHLnBP5hwXtj1IdHZqWlHvIadh2Nn+becFf8Ro=
 github.com/keygen-sh/jsonapi-go v1.2.0 h1:BXVX9YAZt4itgTs9sV0ame0/+6WQMZHhbF8f62paNwo=
 github.com/keygen-sh/jsonapi-go v1.2.0/go.mod h1:8j9vsLiKyJyDqmt8r3tYaYNmXszq2+cFhoO6QdMdAes=
-github.com/keygen-sh/keygen-go/v2 v2.4.1 h1:oXzmkZXbssyKAsAs556HBfOClLg2gWbGgXAADS1kvoQ=
-github.com/keygen-sh/keygen-go/v2 v2.4.1/go.mod h1:npC1vHkQzB/PmsHWQmzHQvcPMTUnRQD3F9W4iDdif38=
+github.com/keygen-sh/keygen-go/v2 v2.5.0 h1:eC5ODzr8OU0LfEk9xQW0hQixZuiBVLVhtS/DNgdAps4=
+github.com/keygen-sh/keygen-go/v2 v2.5.0/go.mod h1:npC1vHkQzB/PmsHWQmzHQvcPMTUnRQD3F9W4iDdif38=
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
