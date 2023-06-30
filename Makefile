@@ -103,7 +103,7 @@ test:
 
 test-examples-%:
 	cd examples/$* && \
-	  GOPRIVATE=github.com/styrainc go mod tidy && \
+	  GOPRIVATE=github.com/StyraInc go mod tidy && \
 	  go test .
 
 test-race:
@@ -128,12 +128,6 @@ update:
 	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.54.0
 	go mod tidy
 
-# ci-smoke-test
-#    called by github action
-#    run locally:
-#      make release
-#      make ci-smoke-test BINARY=dist/darwin-build_darwin_amd64_v1/eopa
-#
 .PHONY: ci-smoke-test
 ci-smoke-test:
 	test -f "$(BINARY)"

@@ -98,8 +98,16 @@ func insertHeadersSchemeToken(constraints ast.Object, state *httpsendState, key 
 	insertHeaders(constraints, state, key, scheme+" "+bearer)
 }
 
+// NOTE(sr): In topdown, RegisterBuiltinFunc will overwrite the entry in the map that's
+// consulted via GetBuiltin. So, the original we store here is the one that has been set
+// through the OPA code, and it will not be altered by pathHTTPSend.
+var original = topdown.GetBuiltin(ast.HTTPSend.Name)
+
+func resetHTTPSend() {
+	topdown.RegisterBuiltinFunc(ast.HTTPSend.Name, original)
+}
+
 func patchHTTPSend() {
-	original := topdown.GetBuiltin(ast.HTTPSend.Name)
 	topdown.RegisterBuiltinFunc(
 		ast.HTTPSend.Name,
 		func(bctx topdown.BuiltinContext, operands []*ast.Term, iter func(*ast.Term) error) error {

@@ -5,8 +5,10 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"mime"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -40,7 +42,7 @@ func TestEKM(t *testing.T) {
 
 	mime.AddExtensionType(".gz", "application/gzip")
 
-	vault := startVaultServer(t)
+	vault := startVaultServer(t, ctx)
 	defer vault.Terminate(ctx)
 
 	eopa, eopaOut := eopaRun(t)
@@ -48,9 +50,50 @@ func TestEKM(t *testing.T) {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Discovery update processed successfully") }, time.Second)
+
+	// Now we assert that the config kv replacement has happend on the discovery config,
+	// by calling a test server that expects the proper token
+	lis, err := net.Listen("tcp", "127.0.0.1:9999")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tokenServer.Listener = lis
+	tokenServer.Start()
+
+	{ // store policy
+		const policy = `package test
+result := http.send({"method": "GET", "url": "http://127.0.0.1:9999/test"}).body
+`
+		req, err := http.NewRequest("PUT", "http://127.0.0.1:8181/v1/policies/test", strings.NewReader(policy))
+		if err != nil {
+			t.Fatalf("send policy: %v", err)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("unexpected status %d", resp.StatusCode)
+		}
+	}
+	{ // query policy
+		resp, err := http.Post("http://127.0.0.1:8181/v1/data/test/result", "application/json", nil)
+		if err != nil {
+			t.Fatalf("send policy: %v", err)
+		}
+		payload := struct {
+			Result struct {
+				Hey string
+			}
+		}{}
+
+		if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		if payload.Result.Hey != "there" {
+			t.Error("unexpected response")
+		}
+	}
 }
 
-func createVaultTestCluster(t *testing.T) *testcontainervault.VaultContainer {
+func createVaultTestCluster(t *testing.T, ctx context.Context) *testcontainervault.VaultContainer {
 	t.Helper()
 
 	opts := []testcontainers.ContainerCustomizer{
@@ -59,7 +102,7 @@ func createVaultTestCluster(t *testing.T) *testcontainervault.VaultContainer {
 		testcontainervault.WithInitCommand("secrets enable -version=2 -path=kv kv"),
 	}
 
-	vault, err := testcontainervault.RunContainer(context.Background(), opts...)
+	vault, err := testcontainervault.RunContainer(ctx, opts...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,15 +129,15 @@ func setKey(logical *hcvault.Logical, p string, value map[string]any) error {
 	return err
 }
 
-func startVaultServer(t *testing.T) *testcontainervault.VaultContainer {
+func startVaultServer(t *testing.T, ctx context.Context) *testcontainervault.VaultContainer {
 	t.Helper()
-	cluster := createVaultTestCluster(t)
+	cluster := createVaultTestCluster(t, ctx)
 	if cluster == nil {
 		t.Fatal("vault setup failed")
 	}
 
 	vaultCfg := hcvault.DefaultConfig()
-	address, err := cluster.HttpHostAddress(context.Background())
+	address, err := cluster.HttpHostAddress(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,6 +152,9 @@ func startVaultServer(t *testing.T) *testcontainervault.VaultContainer {
 
 	// initialize database
 	if err := setKey(vlogical, "kv/data/acmecorp/bearer:data/token", map[string]any{"token": "token1", "scheme": "Bearer"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := setKey(vlogical, "kv/data/httpsend/bearer:data/token", map[string]any{"token": "sesame", "scheme": "Bearer"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := setKey(vlogical, "kv/data/acmecorp:data/url", map[string]any{"url": testserver.URL}); err != nil {
@@ -133,6 +179,7 @@ func startVaultServer(t *testing.T) *testcontainervault.VaultContainer {
 func eopaRun(t *testing.T, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
 	logLevel := "debug"
 	buf := bytes.Buffer{}
+	std := bytes.Buffer{}
 
 	args := []string{
 		"run",
@@ -144,6 +191,7 @@ func eopaRun(t *testing.T, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
 	args = append(args, extraArgs...)
 	eopa := exec.Command(binary(), args...)
 	eopa.Stderr = &buf
+	eopa.Stdout = &std
 	eopa.Env = append(eopa.Environ(),
 		"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
 		"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
@@ -158,7 +206,8 @@ func eopaRun(t *testing.T, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
 		}
 		eopa.Wait()
 		if testing.Verbose() && t.Failed() {
-			t.Logf("eopa output:\n%s", buf.String())
+			t.Logf("eopa stderr output:\n%s", buf.String())
+			t.Logf("eopa stdout output:\n%s", std.String())
 		}
 	})
 	return eopa, &buf
@@ -176,4 +225,24 @@ func equals[T comparable](s T) func(T) bool {
 	return func(t T) bool {
 		return s == t
 	}
+}
+
+var tokenServer = httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	switch {
+	case r.Method != "GET":
+	case r.URL.Path != "/test":
+	case authzHeader(r.Header) != "sesame":
+	default:
+		w.Header().Add("content-type", "application/json")
+		fmt.Fprintln(w, `{"hey":"there"}`)
+		return
+	}
+	w.WriteHeader(http.StatusInternalServerError)
+}))
+
+func authzHeader(hdrs map[string][]string) string {
+	if ah, ok := hdrs["Authorization"]; ok {
+		return strings.TrimPrefix(ah[0], "Bearer ")
+	}
+	return ""
 }

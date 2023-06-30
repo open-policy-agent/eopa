@@ -18,15 +18,12 @@ import (
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/topdown/builtins"
-
-	//"github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/open-policy-agent/opa/compile"
 	"github.com/open-policy-agent/opa/config"
 	"github.com/open-policy-agent/opa/ir"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/topdown/builtins"
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
@@ -190,13 +187,14 @@ func TestEKM(t *testing.T) {
 
 	t.Run("EKM", func(t *testing.T) {
 		conf := config.Config{
-			EKM:      []byte(`{"vault": {"license": {"key": "kv/data/license:data/key"}, "url": "` + address + `", "access_type": "token", "token_file": "token_file", "keys": {"jwt_signing.key": "kv/data/sign:data/private_key"}, "services": {"acmecorp.url": "kv/data/acmecorp:data/url", "acmecorp.credentials.bearer.token": "kv/data/acmecorp/bearer:data/token"}, "httpsend": {"https://www.acmecorp.com": {"url": "kv/data/tls/bearer:data/url", "headers": {"Authorization": {"scheme": "kv/data/tls/bearer:data/scheme", "bearer": "kv/data/tls/bearer:data/token"}, "Content-Type": "kv/data/tls/bearer:data/content-type"} } } } }`),
+			Extra:    map[string]json.RawMessage{"ekm": []byte(`{"vault": {"license": {"key": "kv/data/license:data/key"}, "url": "` + address + `", "access_type": "token", "token_file": "token_file", "keys": {"jwt_signing.key": "kv/data/sign:data/private_key"}, "services": {"acmecorp.url": "kv/data/acmecorp:data/url", "acmecorp.credentials.bearer.token": "kv/data/acmecorp/bearer:data/token"}, "httpsend": {"https://www.acmecorp.com": {"url": "kv/data/tls/bearer:data/url", "headers": {"Authorization": {"scheme": "kv/data/tls/bearer:data/scheme", "bearer": "kv/data/tls/bearer:data/token"}, "Content-Type": "kv/data/tls/bearer:data/content-type"} } } } }`)},
 			Services: []byte(`{"acmecorp": {"credentials": {"bearer": {"token": "bear"} } } }`),
 			Keys:     []byte(`{"jwt_signing": {"key": "test"} }`),
 		}
 
 		e := NewEKM(nil, nil)
-		cnf, err := e.ProcessEKM(plugins.EkmPlugins, logging.Get(), &conf)
+		e.SetLogger(logging.New())
+		cnf, err := e.OnConfig(context.Background(), &conf)
 		if err != nil {
 			t.Error(err)
 		}

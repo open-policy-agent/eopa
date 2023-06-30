@@ -13,7 +13,9 @@ import (
 	"github.com/spf13/pflag"
 
 	bundleApi "github.com/open-policy-agent/opa/bundle"
+	"github.com/open-policy-agent/opa/hooks"
 	"github.com/open-policy-agent/opa/keys"
+	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/plugins/discovery"
 	"github.com/open-policy-agent/opa/runtime"
@@ -21,6 +23,7 @@ import (
 
 	"github.com/styrainc/enterprise-opa-private/internal/license"
 	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
+	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/builtins" // Activate custom builtins.
 	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
@@ -307,9 +310,22 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 	bundleApi.RegisterActivator("_enterprise_opa", a)
 	params.rt.BundleActivatorPlugin = "_enterprise_opa"
 
-	params.rt.EKM = ekm.NewEKM(lic, lparams)
+	ekmHook := ekm.NewEKM(lic, lparams)
+	hs := hooks.New(ekmHook)
+	params.rt.Hooks = hs
 
 	params.rt.Router = loadRouter()
+
+	logger := logging.New()
+	level, err := internal_logging.GetLevel(params.rt.Logging.Level)
+	if err != nil {
+		return nil, err
+	}
+	logger.SetLevel(level)
+	logger.SetFormatter(internal_logging.GetFormatter(params.rt.Logging.Format, params.rt.Logging.TimestampFormat))
+	params.rt.Logger = logger
+	lic.SetLogger(logger)
+	ekmHook.SetLogger(logger)
 
 	rt, err := runtime.NewRuntime(ctx, params.rt)
 	if err != nil {
@@ -330,6 +346,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 			dl.Name:         dl.Factory(),
 			dl.DLPluginName: dl.DLPluginFactory(),
 		}),
+		discovery.Hooks(hs),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("config error: %w", err)

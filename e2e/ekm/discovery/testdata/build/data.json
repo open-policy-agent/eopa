@@ -13,7 +13,16 @@
   "ekm": {
     "vault": {
       "access_type": "token",
-
+      "httpsend": {
+        "http://127.0.0.1:9999": {
+          "headers": {
+            "Authorization": {
+              "bearer": "kv/data/httpsend/bearer:data/token",
+              "scheme": "kv/data/httpsend/bearer:data/scheme"
+            }
+          }
+        }
+      },
       "license": {
         "key": "kv/data/license:data/key"
       },

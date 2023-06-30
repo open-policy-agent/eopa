@@ -10,6 +10,7 @@ import (
 	"github.com/styrainc/enterprise-opa-private/cmd/trial"
 	"github.com/styrainc/enterprise-opa-private/internal/license"
 	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
+	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
 	"github.com/styrainc/enterprise-opa-private/pkg/tui"
 )
 
@@ -38,9 +39,8 @@ func LicenseCmd(lic license.Checker, lparams *keygen.LicenseParams) *cobra.Comma
 			c.SilenceErrors = true
 			c.SilenceUsage = true
 
-			lvl, _ := getLevel("info")
-			format := getFormatter("json")
-			lic.SetFormatter(format)
+			lvl, _ := internal_logging.GetLevel("info")
+			lic.SetFormatter(internal_logging.GetFormatter("json", ""))
 			lic.SetLevel(lvl)
 
 			if err := lic.ValidateLicense(lparams); err != nil {

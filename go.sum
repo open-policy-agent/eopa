@@ -85,8 +85,8 @@ github.com/Shopify/sarama v1.30.1 h1:z47lP/5PBw2UVKf1lvfS5uWXaJws6ggk9PLnKEHtZiQ
 github.com/Shopify/sarama v1.30.1/go.mod h1:hGgx05L/DiW8XYBXeJdKIN6V2QUy2H6JqME5VT1NLRw=
 github.com/Shopify/toxiproxy/v2 v2.1.6-0.20210914104332-15ea381dcdae h1:ePgznFqEG1v3AjMklnK8H7BSc++FDSo7xfK9K7Af+0Y=
 github.com/Shopify/toxiproxy/v2 v2.1.6-0.20210914104332-15ea381dcdae/go.mod h1:/cvHQkZ1fst0EmZnA5dFtiQdWCNCFYzb+uE2vqVgvx0=
-github.com/StyraInc/opa v0.54.1-0.20230629200914-5dabfe86f32a h1:ztoaJmRUlapR1UAC5zyeU+MCr+nHcIpFuxIjJFpVITE=
-github.com/StyraInc/opa v0.54.1-0.20230629200914-5dabfe86f32a/go.mod h1:d8I8jWygKGi4+T4H07qrbeCdH1ITLsEfT0M+bsvxWw0=
+github.com/StyraInc/opa v0.54.1-0.20230630092549-d818a5bed266 h1:MGlpeXpoeYXFK5CcJer/xWdDQDzcVyTq23ITzBoo/uE=
+github.com/StyraInc/opa v0.54.1-0.20230630092549-d818a5bed266/go.mod h1:d8I8jWygKGi4+T4H07qrbeCdH1ITLsEfT0M+bsvxWw0=
 github.com/acomagu/bufpipe v1.0.4 h1:e3H4WUzM3npvo5uv95QuJM3cQspFNtFBzvJ2oNjKIDQ=
 github.com/acomagu/bufpipe v1.0.4/go.mod h1:mxdxdup/WdsKVreO5GpW4+M/1CE2sMG4jeGJ2sYmHc4=
 github.com/agnivade/levenshtein v1.1.1 h1:QY8M92nrzkmr798gCo3kmMyqXFzdQVpxLlGPRBij0P8=
@@ -421,8 +421,8 @@ github.com/golang/snappy v0.0.4/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEW
 github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
 github.com/google/btree v1.0.0/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
 github.com/google/flatbuffers v1.12.1/go.mod h1:1AeVuKshWv4vARoZatz6mlQ0JxURH0Kv5+zNeJKJCa8=
-github.com/google/flatbuffers/go v0.0.0-20230110200425-62e4d2e5b215 h1:HA3/6NDG1q6qLD2sCqDFT/ua/1/wctoLo7leuFcFdSE=
-github.com/google/flatbuffers/go v0.0.0-20230110200425-62e4d2e5b215/go.mod h1:qmRCJW6OqZkfBt584Cmq1im0f4367CLrdABrq5lMOWo=
+github.com/google/flatbuffers v23.5.26+incompatible h1:M9dgRyhJemaM4Sw8+66GHBu8ioaQmyPLg1b8VwK5WJg=
+github.com/google/flatbuffers v23.5.26+incompatible/go.mod h1:1AeVuKshWv4vARoZatz6mlQ0JxURH0Kv5+zNeJKJCa8=
 github.com/google/go-cmp v0.2.0/go.mod h1:oXzfMopK8JAjlY9xF4vHSVASa0yLyX7SntLO5aqRK0M=
 github.com/google/go-cmp v0.3.0/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
 github.com/google/go-cmp v0.3.1/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=

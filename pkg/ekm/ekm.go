@@ -14,7 +14,6 @@ import (
 
 	"github.com/open-policy-agent/opa/config"
 	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/plugins"
 
 	"github.com/styrainc/enterprise-opa-private/internal/license"
 )
@@ -64,28 +63,36 @@ func NewEKM(c license.Checker, lparams *license.LicenseParams) *EKM {
 	return &EKM{checker: c, lparams: lparams}
 }
 
-func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Config) (*config.Config, error) {
-	if !(location == plugins.EkmPlugins && conf.Discovery != nil) {
+func (e *EKM) SetLogger(l logging.Logger) {
+	e.logger = l
+}
+
+func (e *EKM) OnConfigDiscovery(ctx context.Context, conf *config.Config) (*config.Config, error) {
+	return e.onConfig(ctx, conf, true)
+}
+
+func (e *EKM) OnConfig(ctx context.Context, conf *config.Config) (*config.Config, error) {
+	return e.onConfig(ctx, conf, conf.Discovery == nil)
+}
+
+func (e *EKM) onConfig(ctx context.Context, conf *config.Config, validateLicense bool) (*config.Config, error) {
+	if validateLicense {
 		defer func() {
+			// TODO(sr): e2e test EKM license interactions
 			if e.checker != nil {
 				e.checker.ValidateLicenseOrDie(e.lparams) // calls os.Exit if invalid
 			}
 		}()
 	}
 
-	e.logger = logger
-	logger.Debug("Process EKM")
+	e.logger.Debug("Process EKM")
 
-	if e.checker != nil { // TODO(sr): this feels wrong, the checker should be set up with a license already
-		e.checker.SetLogger(logger)
-	}
-
-	if conf.EKM == nil {
+	if conf.Extra["ekm"] == nil {
 		return conf, nil
 	}
 
 	var vc Config
-	err := unmarshalAndValidate(conf.EKM, &vc)
+	err := unmarshalAndValidate(conf.Extra["ekm"], &vc)
 	if err != nil {
 		return conf, err
 	}
@@ -116,16 +123,16 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 
 	vaultClient, err := vault.NewClient(vaultCfg)
 	if err != nil {
-		e := fmt.Errorf("ProcessEKM vault failure: %w", err)
-		logger.Error("%v", e)
-		return conf, e
+		err := fmt.Errorf("ProcessEKM vault failure: %w", err)
+		e.logger.Error("%v", err)
+		return nil, err
 	}
 
 	// use kubernetes
 	switch vc.Vault.AccessType {
 	case "kubernetes":
 		if vc.Vault.K8sService == nil {
-			return conf, fmt.Errorf("unable to initialize kubernetes auth method")
+			return nil, fmt.Errorf("unable to initialize kubernetes auth method")
 		}
 
 		k8sAuth, err := kubernetes.NewKubernetesAuth(
@@ -133,20 +140,20 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 			kubernetes.WithServiceAccountTokenPath(vc.Vault.K8sService.ServiceToken),
 		)
 		if err != nil {
-			return conf, fmt.Errorf("unable to initialize Kubernetes auth method: %w", err)
+			return nil, fmt.Errorf("unable to initialize Kubernetes auth method: %w", err)
 		}
 
-		authInfo, err := vaultClient.Auth().Login(context.Background(), k8sAuth)
+		authInfo, err := vaultClient.Auth().Login(ctx, k8sAuth)
 		if err != nil {
-			return conf, fmt.Errorf("unable to log in with Kubernetes auth: %w", err)
+			return nil, fmt.Errorf("unable to log in with Kubernetes auth: %w", err)
 		}
 		if authInfo == nil {
-			return conf, fmt.Errorf("no auth info was returned after login")
+			return nil, fmt.Errorf("no auth info was returned after login")
 		}
 
 	case "approle":
 		if vc.Vault.AppRole == nil {
-			return conf, fmt.Errorf("unable to initialize AppRole auth method")
+			return nil, fmt.Errorf("unable to initialize AppRole auth method")
 		}
 
 		s := &approle.SecretID{FromString: vc.Vault.AppRole.SecretID}
@@ -163,15 +170,15 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 			opts...,
 		)
 		if err != nil {
-			return conf, fmt.Errorf("unable to initialize AppRole auth method: %w", err)
+			return nil, fmt.Errorf("unable to initialize AppRole auth method: %w", err)
 		}
 
-		authInfo, err := vaultClient.Auth().Login(context.Background(), appRoleAuth)
+		authInfo, err := vaultClient.Auth().Login(ctx, appRoleAuth)
 		if err != nil {
-			return conf, fmt.Errorf("unable to login to AppRole auth method: %w", err)
+			return nil, fmt.Errorf("unable to login to AppRole auth method: %w", err)
 		}
 		if authInfo == nil {
-			return conf, fmt.Errorf("no auth info was returned after login")
+			return nil, fmt.Errorf("no auth info was returned after login")
 		}
 
 	case "token":
@@ -181,17 +188,17 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 		} else if vc.Vault.TokenFile != "" {
 			ltoken, err := readFile(vc.Vault.TokenFile)
 			if err != nil {
-				return conf, fmt.Errorf("invalid token file: %w", err)
+				return nil, fmt.Errorf("invalid token file: %w", err)
 			}
 			vaultClient.SetToken(ltoken)
 		} else {
 			if os.Getenv("VAULT_TOKEN") == "" {
-				return conf, fmt.Errorf("no token specified")
+				return nil, fmt.Errorf("no token specified")
 			}
 		}
 
 	default:
-		return conf, fmt.Errorf("invalid accesstype: %s", vc.Vault.AccessType)
+		return nil, fmt.Errorf("invalid accesstype: %s", vc.Vault.AccessType)
 	}
 
 	vlogical := vaultClient.Logical()
@@ -204,7 +211,7 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 				e.lparams.Token = value // override token
 				e.lparams.Key = ""
 			} else {
-				logger.Debug("lookupKey failure %v", err)
+				e.logger.Debug("lookupKey failure %v", err)
 			}
 		} else {
 			if keyKey, ok := vc.Vault.License["key"]; ok {
@@ -214,23 +221,23 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 					e.lparams.Key = value // override key
 					e.lparams.Token = ""
 				} else {
-					logger.Debug("lookupKey failure %v", err)
+					e.logger.Debug("lookupKey failure %v", err)
 				}
 			}
 		}
 	}
 
 	if len(vc.Vault.Services) > 0 {
-		conf.Services, err = filter(logger, vlogical, conf.Services, &vc.Vault.Services)
+		conf.Services, err = e.filter(vlogical, conf.Services, &vc.Vault.Services)
 		if err != nil {
-			return conf, err
+			return nil, err
 		}
 	}
 
 	if len(vc.Vault.Keys) > 0 {
-		conf.Keys, err = filter(logger, vlogical, conf.Keys, &vc.Vault.Keys)
+		conf.Keys, err = e.filter(vlogical, conf.Keys, &vc.Vault.Keys)
 		if err != nil {
-			return conf, err
+			return nil, err
 		}
 	}
 	if len(vc.Vault.HTTPSend) > 0 {
@@ -238,11 +245,11 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 		for k1, v1 := range vc.Vault.HTTPSend {
 			u, err := url.Parse(k1)
 			if err != nil {
-				logger.Error("url.Parse %v: failed %v", k1, err)
+				e.logger.Error("url.Parse %v: failed %v", k1, err)
 				continue
 			}
 			if u.Path != "" && u.Path != "/" {
-				logger.Warn("unexpected url path ignored: %v", u.String())
+				e.logger.Warn("unexpected url path ignored: %v", u.String())
 			}
 			url := url.URL{Scheme: u.Scheme, Host: u.Host}
 			send[url] = make(map[string]any)
@@ -252,7 +259,7 @@ func (e *EKM) ProcessEKM(location int, logger logging.Logger, conf *config.Confi
 		}
 		registerHTTPSend(e.logger, send, vlogical)
 	} else {
-		registerHTTPSend(e.logger, nil, nil)
+		resetHTTPSend()
 	}
 	return conf, nil
 }
@@ -273,7 +280,6 @@ func lookupString(v any, field string) (string, error) {
 	switch v := v.(type) {
 	case string:
 		return v, nil
-
 	case fmt.Stringer:
 		return v.String(), nil
 	}
@@ -327,7 +333,7 @@ func unmarshalAndValidate(config []byte, c *Config) error {
 	if c.Vault.URL == "" {
 		s := os.Getenv("VAULT_ADDR")
 		if s == "" {
-			return fmt.Errorf("need at least one address to serve from")
+			return fmt.Errorf("need at least one address to connect to vault")
 		}
 		c.Vault.URL = s
 	}
@@ -337,7 +343,7 @@ func unmarshalAndValidate(config []byte, c *Config) error {
 	return nil
 }
 
-func filter(logger logging.Logger, vlogical *vault.Logical, input json.RawMessage, overrides *map[string]string) (json.RawMessage, error) {
+func (e *EKM) filter(vlogical *vault.Logical, input json.RawMessage, overrides *map[string]string) (json.RawMessage, error) {
 	if len(*overrides) > 0 {
 		data := make(map[string]any)
 		if len(input) > 0 {
@@ -347,7 +353,7 @@ func filter(logger logging.Logger, vlogical *vault.Logical, input json.RawMessag
 			}
 		}
 
-		srvs := convertOverrideToMap(logger, vlogical, overrides)
+		srvs := e.convertOverrideToMap(vlogical, overrides)
 		c := mergeValues(data, srvs)
 
 		s, err := json.Marshal(c)
@@ -359,13 +365,13 @@ func filter(logger logging.Logger, vlogical *vault.Logical, input json.RawMessag
 	return input, nil
 }
 
-func convertOverrideToMap(logger logging.Logger, vlogical *vault.Logical, input *map[string]string) map[string]any {
+func (e *EKM) convertOverrideToMap(vlogical *vault.Logical, input *map[string]string) map[string]any {
 	res := make(map[string]any)
 	for k, v1 := range *input {
 		arr := strings.Split(k, ".")
 		secret, err := lookupKey(vlogical, v1)
 		if err != nil {
-			logger.Error("%v", err)
+			e.logger.Error("%v", err)
 			continue
 		}
 		if secret == "" {
@@ -378,7 +384,7 @@ func convertOverrideToMap(logger logging.Logger, vlogical *vault.Logical, input 
 					if t, ok := tmp.(map[string]any); ok {
 						r = &t
 					} else {
-						logger.Error("invalid type %T, skipping", tmp, k)
+						e.logger.Error("invalid type %T, skipping", tmp, k)
 						break
 					}
 				} else {

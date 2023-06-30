@@ -157,7 +157,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/flatbuffers/go v0.0.0-20230110200425-62e4d2e5b215 // indirect
+	github.com/google/flatbuffers v23.5.26+incompatible // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
@@ -349,4 +349,4 @@ replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.54.1-0.20230629200914-5dabfe86f32a
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.54.1-0.20230630092549-d818a5bed266

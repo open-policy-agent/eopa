@@ -3,6 +3,7 @@ package ekm
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"testing"
 
 	hcvault "github.com/hashicorp/vault/api"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/open-policy-agent/opa/config"
 	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/plugins"
 )
 
 func createVaultTestRoleCluster(t *testing.T) (*testcontainervault.VaultContainer, *hcvault.Client, string, string) {
@@ -138,13 +138,14 @@ func TestRoleEKM(t *testing.T) {
 
 	t.Run("EKM", func(t *testing.T) {
 		conf := config.Config{
-			EKM:      []byte(`{"vault": {"license": {"key": "kv/data/license:data/key"}, "url": "` + address + `", "access_type": "approle", "approle": {"role_id": "` + roleID + `", "secret_id": "` + secretID + `"}, "keys": {"jwt_signing.key": "kv/data/sign:data/private_key"}, "services": {"acmecorp.url": "kv/data/acmecorp:data/url", "acmecorp.credentials.bearer.token": "kv/data/acmecorp/bearer:data/token"} } }`),
+			Extra:    map[string]json.RawMessage{"ekm": []byte(`{"vault": {"license": {"key": "kv/data/license:data/key"}, "url": "` + address + `", "access_type": "approle", "approle": {"role_id": "` + roleID + `", "secret_id": "` + secretID + `"}, "keys": {"jwt_signing.key": "kv/data/sign:data/private_key"}, "services": {"acmecorp.url": "kv/data/acmecorp:data/url", "acmecorp.credentials.bearer.token": "kv/data/acmecorp/bearer:data/token"} } }`)},
 			Services: []byte(`{"acmecorp": {"credentials": {"bearer": {"token": "bear"} } } }`),
 			Keys:     []byte(`{"jwt_signing": {"key": "test"} }`),
 		}
 
 		e := NewEKM(nil, nil)
-		cnf, err := e.ProcessEKM(plugins.EkmPlugins, logging.Get(), &conf)
+		e.SetLogger(logging.New())
+		cnf, err := e.OnConfig(context.Background(), &conf)
 		if err != nil {
 			t.Error(err)
 		}

@@ -1,20 +1,17 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path"
-	"strings"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/open-policy-agent/opa/cmd"
-	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/util"
 
 	"github.com/styrainc/enterprise-opa-private/internal/license"
 	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
+	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
 
@@ -61,8 +58,8 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 					return
 				}
 
-				lvl, _ := getLevel(logLevel.String())
-				format := getFormatter(logFormat.String())
+				lvl, _ := internal_logging.GetLevel(logLevel.String())
+				format := internal_logging.GetFormatter(logFormat.String(), "")
 				lic.SetFormatter(format)
 				lic.SetLevel(lvl)
 
@@ -103,24 +100,4 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	addLicenseFlags(licenseCmd, lparams)
 	root.AddCommand(licenseCmd)
 	return root
-}
-
-// From opa/internal/logging.go
-func getLevel(level string) (logging.Level, error) {
-	switch strings.ToLower(level) {
-	case "debug":
-		return logging.Debug, nil
-	case "", "info":
-		return logging.Info, nil
-	case "warn":
-		return logging.Warn, nil
-	case "error":
-		return logging.Error, nil
-	default:
-		return logging.Debug, fmt.Errorf("invalid log level: %v", level)
-	}
-}
-
-func getFormatter(format string) logrus.Formatter {
-	return &logrus.JSONFormatter{PrettyPrint: format == "json-pretty"}
 }
