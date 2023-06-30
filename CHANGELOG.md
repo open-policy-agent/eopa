@@ -1,5 +1,56 @@
 # Changelog
 
+## v1.6.0
+
+This release updates the OPA version used in Styra Enterprise OPA to
+[v0.54.0](https://github.com/open-policy-agent/opa/releases/tag/v0.54.0),
+along with gRPC plugin improvements and new gRPC streaming endpoints.
+
+### Support for large gRPC message sizes
+
+Most gRPC implementations default to having a max receivable message size of 4 MB for both servers and clients.
+This helps avoid memory exhaustion from large messages sent by misconfigured or malicious actors on the other side of the connection.
+
+This size limit presents a problem for Enterprise OPA though: a relatively simple rule query that returns a large amount of data can easily break past that 4 MB message size limit.
+Additionally, clients who need to provide more than 4 MB of data for a data update or rule query input can also run into the receivable message size limit.
+To work around this problem, we have to attack it from both the client and server sides.
+
+On the client side, most gRPC implementations allow providing the "Max Receive Message Size" as a parameter for the gRPC call. (See the [`CallOption.MaxRecvMsgSize`](https://pkg.go.dev/google.golang.org/grpc#MaxCallRecvMsgSize) option in Go, for example.)
+This means that clients who want to receive potentially massive responses from the Enterprise OPA server will need to do a little more setup at call time, but don't necessarily need to change their Enterprise OPA configs.
+
+For the server side of the problem, we changed Enterprise OPA to support a new configuration option for the gRPC plugin: `grpc.max_recv_message_size`
+
+In the example configuration below, we start up the Enterprise OPA gRPC server on `localhost:9090`, and set it to receive messages up to 8 MB in size:
+```yaml
+plugins:
+  grpc:
+    # 8 MB, in bytes:
+    max_recv_message_size: 8589934592
+    addr: "localhost:9090"
+```
+
+This allows the server to receive larger gRPC messages from clients than before.
+
+Fixing both sides of the large gRPC message size problem allow for high-throughput and data-heavy use cases over the gRPC API that were not possible before.
+
+### New streaming gRPC endpoints for the Data and Policy APIs
+
+The Data and Policy gRPC services now provide bidirectional streaming endpoints!
+These endpoints work similarly to the experimental `BulkRW` endpoint that was explored in earlier versions of Enterprise OPA, and provide several speed and efficiency benefits over the REST API or existing unary gRPC endpoints.
+
+They provide fixed-structure transactions that describe batches of CRUD operations, where all "write" operations (that would cause changes to the Data and Policy stores) are run as a single, sequential write transaction first, and then all "read" operations, such as rule queries, are evaluated in parallel.
+If any write operations fail, the entire request fails.
+Read operations have their failures reported as normal response messages with error-wrapping message types.
+
+These batched operations can provide substantial throughput improvements over using the existing unary gRPC endpoints:
+ - The connection cost is paid once at the start of the stream, instead of once per call.
+ - Read and write operations enjoy greatly reduced contention for access to the Data and Policy stores.
+ - Some operations are able to be parallelized.
+
+For styles of API access where the successes and failures of write operations should be independent of one another, callers can send several smaller messages over the stream, and will receive back individual successful responses, or error messages for each failure that occurs.
+
+See the [Enterprise OPA gRPC docs](https://buf.build/styra/enterprise-opa) on the Buf Schema Registry for more details.
+
 ## v1.5.1
 
 This release fixes a typographical error in the protobuf markdown introduced when renaming Enterprise OPA.

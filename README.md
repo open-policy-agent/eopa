@@ -1,6 +1,6 @@
 # Styra Enterprise OPA Private
 
-![OPA v0.53.0](https://openpolicyagent.org/badge/v0.53.0)
+![OPA v0.54.0](https://openpolicyagent.org/badge/v0.54.0)
 
 ## Github Source and Project
 
