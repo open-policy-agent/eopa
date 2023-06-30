@@ -54,8 +54,10 @@ coin if rand.intn("coin", 2)
 `
 
 	plaintextConfig := `
+decision_logs:
+  plugin: eopa_dl
 plugins:
-  enterprise_opa_decision_logger:
+  eopa_dl:
     buffer:
       type: memory
     output:

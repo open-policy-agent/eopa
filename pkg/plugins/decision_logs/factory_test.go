@@ -180,6 +180,20 @@ output:
 			},
 		},
 		{
+			note: "no output",
+			config: `
+output: []
+ `,
+			checks: func(t testing.TB, _ any, err error) {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				if exp, act := "at least one output required", err.Error(); exp != act {
+					t.Errorf("expected error %q, got %q", exp, act)
+				}
+			},
+		},
+		{
 			note: "console output",
 			config: `
 output:

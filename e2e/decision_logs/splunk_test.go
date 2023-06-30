@@ -30,8 +30,10 @@ func TestDecisionLogSplunk(t *testing.T) {
 		{
 			note: "no compression",
 			configFmt: `
+decision_logs:
+  plugin: eopa_dl
 plugins:
-  enterprise_opa_decision_logger:
+  eopa_dl:
     output:
       type: splunk
       url: %[1]s/services/collector/event
@@ -42,8 +44,10 @@ plugins:
 			note:       "with compression",
 			compressed: true,
 			configFmt: `
+decision_logs:
+  plugin: eopa_dl
 plugins:
-  enterprise_opa_decision_logger:
+  eopa_dl:
     output:
       type: splunk
       url: %[1]s/services/collector/event

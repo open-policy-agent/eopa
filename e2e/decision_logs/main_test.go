@@ -82,20 +82,10 @@ mask contains "/input/erase" if input.input.erase
 	}
 
 	configFmt := `
-plugins:
-  enterprise_opa_decision_logger:
-    drop_decision: /test/drop
-    mask_decision: /test/mask
-    buffer:
-      type: %s
-    output:
-      type: console
-`
-	configDLPluginFmt := `
 decision_logs:
   plugin: eopa_dl
-  mask_decision: /test/mask
   drop_decision: /test/drop
+  mask_decision: /test/mask
 plugins:
   eopa_dl:
     buffer:
@@ -105,139 +95,131 @@ plugins:
 `
 	for _, tc := range tests {
 		t.Run("buffer="+tc.buffer, func(t *testing.T) {
+			config := fmt.Sprintf(configFmt, tc.buffer)
+			eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, false)
+			if err := eopa.Start(); err != nil {
+				t.Fatal(err)
+			}
+			wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-			for typ, cfgFmt := range map[string]string{
-				"direct": configFmt,
-				"plugin": configDLPluginFmt,
-			} {
-				t.Run(typ, func(t *testing.T) {
-					config := fmt.Sprintf(cfgFmt, tc.buffer)
-					eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, false)
-					if err := eopa.Start(); err != nil {
-						t.Fatal(err)
+			{ // act 1: request is logged as-is
+				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
+				if err != nil {
+					t.Fatalf("http request: %v", err)
+				}
+				resp, err := http.DefaultClient.Do(req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer resp.Body.Close()
+				if exp, act := 200, resp.StatusCode; exp != act {
+					t.Fatalf("expected status %d, got %d", exp, act)
+				}
+			}
+
+			{ // act 2: request is dropped
+				payload := strings.NewReader(`{"input": {"drop": "nooo"}}`)
+				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", payload)
+				if err != nil {
+					t.Fatalf("http request: %v", err)
+				}
+				resp, err := http.DefaultClient.Do(req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer resp.Body.Close()
+				if exp, act := 200, resp.StatusCode; exp != act {
+					t.Fatalf("expected status %d, got %d", exp, act)
+				}
+			}
+
+			{ // act 3: request is masked
+				payload := strings.NewReader(`{"input": {"replace": ":)", "remove": ":)", "erase": ":)"}}`)
+				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", payload)
+				if err != nil {
+					t.Fatalf("http request: %v", err)
+				}
+				resp, err := http.DefaultClient.Do(req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer resp.Body.Close()
+				if exp, act := 200, resp.StatusCode; exp != act {
+					t.Fatalf("expected status %d, got %d", exp, act)
+				}
+			}
+
+			// assert: check that DL logs have been output as expected
+			logs := collectDL(t, eopaOut, false, 2)
+			sort.Slice(logs, func(i, j int) bool { return logs[i].ID < logs[j].ID })
+
+			{ // log for act 1
+				dl := payload{
+					Result: true,
+					ID:     1,
+					Labels: standardLabels,
+				}
+				if diff := cmp.Diff(dl, logs[0], stdIgnores); diff != "" {
+					t.Errorf("diff: (-want +got):\n%s", diff)
+				}
+				{
+					exp := []string{"counter_regovm_eval_instructions",
+						"counter_server_query_cache_hit",
+						"timer_rego_input_parse_ns",
+						"timer_rego_module_parse_ns",
+						"timer_rego_query_compile_ns",
+						"timer_rego_query_parse_ns",
+						"timer_regovm_eval_ns",
+						"timer_server_handler_ns",
 					}
-					wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
-
-					{ // act 1: request is logged as-is
-						req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
-						if err != nil {
-							t.Fatalf("http request: %v", err)
-						}
-						resp, err := http.DefaultClient.Do(req)
-						if err != nil {
-							t.Fatal(err)
-						}
-						defer resp.Body.Close()
-						if exp, act := 200, resp.StatusCode; exp != act {
-							t.Fatalf("expected status %d, got %d", exp, act)
-						}
+					act := maps.Keys(logs[0].Metrics)
+					if diff := cmp.Diff(exp, act, cmpopts.SortSlices(func(a, b string) bool { return a < b })); diff != "" {
+						t.Errorf("unexpected log[0] metrics: (-want +got):\n%s", diff)
 					}
-
-					{ // act 2: request is dropped
-						payload := strings.NewReader(`{"input": {"drop": "nooo"}}`)
-						req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", payload)
-						if err != nil {
-							t.Fatalf("http request: %v", err)
-						}
-						resp, err := http.DefaultClient.Do(req)
-						if err != nil {
-							t.Fatal(err)
-						}
-						defer resp.Body.Close()
-						if exp, act := 200, resp.StatusCode; exp != act {
-							t.Fatalf("expected status %d, got %d", exp, act)
-						}
+					// Was: https://github.com/styrainc/enterprise-opa-private/issues/625
+					if act := logs[0].Metrics["timer_server_handler_ns"]; act == 0 {
+						t.Error("expected timer_server_handler_ns > 0")
 					}
-
-					{ // act 3: request is masked
-						payload := strings.NewReader(`{"input": {"replace": ":)", "remove": ":)", "erase": ":)"}}`)
-						req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", payload)
-						if err != nil {
-							t.Fatalf("http request: %v", err)
-						}
-						resp, err := http.DefaultClient.Do(req)
-						if err != nil {
-							t.Fatal(err)
-						}
-						defer resp.Body.Close()
-						if exp, act := 200, resp.StatusCode; exp != act {
-							t.Fatalf("expected status %d, got %d", exp, act)
-						}
+				}
+				{
+					exp, act := []string{"rand.intn"}, maps.Keys(logs[0].NDBC)
+					if diff := cmp.Diff(exp, act); diff != "" {
+						t.Fatalf("unexpected NDBC: (-want, +got):\n%s", diff)
 					}
-
-					// assert: check that DL logs have been output as expected
-					logs := collectDL(t, eopaOut, false, 2)
-					sort.Slice(logs, func(i, j int) bool { return logs[i].ID < logs[j].ID })
-
-					{ // log for act 1
-						dl := payload{
-							Result: true,
-							ID:     1,
-							Labels: standardLabels,
-						}
-						if diff := cmp.Diff(dl, logs[0], stdIgnores); diff != "" {
-							t.Errorf("diff: (-want +got):\n%s", diff)
-						}
-						{
-							exp := []string{"counter_regovm_eval_instructions",
-								"counter_server_query_cache_hit",
-								"timer_rego_input_parse_ns",
-								"timer_rego_module_parse_ns",
-								"timer_rego_query_compile_ns",
-								"timer_rego_query_parse_ns",
-								"timer_regovm_eval_ns",
-								"timer_server_handler_ns",
-							}
-							act := maps.Keys(logs[0].Metrics)
-							if diff := cmp.Diff(exp, act, cmpopts.SortSlices(func(a, b string) bool { return a < b })); diff != "" {
-								t.Errorf("unexpected log[0] metrics: (-want +got):\n%s", diff)
-							}
-							// Was: https://github.com/styrainc/enterprise-opa-private/issues/625
-							if act := logs[0].Metrics["timer_server_handler_ns"]; act == 0 {
-								t.Error("expected timer_server_handler_ns > 0")
-							}
-						}
-						{
-							exp, act := []string{"rand.intn"}, maps.Keys(logs[0].NDBC)
-							if diff := cmp.Diff(exp, act); diff != "" {
-								t.Fatalf("unexpected NDBC: (-want, +got):\n%s", diff)
-							}
-						}
-						{
-							rand := logs[0].NDBC["rand.intn"]
-							calls, ok := rand.(map[string]any)
-							if !ok {
-								t.Fatalf("rand.intn: expected %T, got %T: %[2]v", calls, rand)
-							}
-							exp, act := []string{`["coin",2]`}, maps.Keys(calls)
-							if diff := cmp.Diff(exp, act); diff != "" {
-								t.Fatalf("unexpected NDBC: (-want, +got):\n%s", diff)
-							}
-							value := calls[`["coin",2]`]
-							num, ok := value.(float64)
-							if !ok {
-								t.Fatalf("rand.intn(\"coin\", 2): expected %T, got %T: %[2]v", num, value)
-							}
-							if num != 0 && num != 1 {
-								t.Errorf("expected 0 or 1, got %v", num)
-							}
-						}
+				}
+				{
+					rand := logs[0].NDBC["rand.intn"]
+					calls, ok := rand.(map[string]any)
+					if !ok {
+						t.Fatalf("rand.intn: expected %T, got %T: %[2]v", calls, rand)
 					}
-
-					{ // log for act 3 (ignoring metrics)
-						dl := payload{
-							Result: true,
-							Input:  map[string]any{"replace": "XXX"},
-							Masked: []string{"/input/replace"},
-							Erased: []string{"/input/erase", "/input/remove"},
-							ID:     3,
-							Labels: standardLabels,
-						}
-						if diff := cmp.Diff(dl, logs[1], stdIgnores); diff != "" {
-							t.Errorf("diff: (-want +got):\n%s", diff)
-						}
+					exp, act := []string{`["coin",2]`}, maps.Keys(calls)
+					if diff := cmp.Diff(exp, act); diff != "" {
+						t.Fatalf("unexpected NDBC: (-want, +got):\n%s", diff)
 					}
-				})
+					value := calls[`["coin",2]`]
+					num, ok := value.(float64)
+					if !ok {
+						t.Fatalf("rand.intn(\"coin\", 2): expected %T, got %T: %[2]v", num, value)
+					}
+					if num != 0 && num != 1 {
+						t.Errorf("expected 0 or 1, got %v", num)
+					}
+				}
+			}
+
+			{ // log for act 3 (ignoring metrics)
+				dl := payload{
+					Result: true,
+					Input:  map[string]any{"replace": "XXX"},
+					Masked: []string{"/input/replace"},
+					Erased: []string{"/input/erase", "/input/remove"},
+					ID:     3,
+					Labels: standardLabels,
+				}
+				if diff := cmp.Diff(dl, logs[1], stdIgnores); diff != "" {
+					t.Errorf("diff: (-want +got):\n%s", diff)
+				}
 			}
 		})
 	}
@@ -257,17 +239,6 @@ mask contains {"op": "remove", "path": "/result/remove/this"}
 `
 
 	config := `
-plugins:
-  enterprise_opa_decision_logger:
-    drop_decision: /test/drop
-    mask_decision: /test/mask
-    buffer:
-      type: memory
-    output:
-      type: console
-`
-
-	configDLPlugin := `
 decision_logs:
   plugin: eopa_dl
   drop_decision: /test/drop
@@ -279,51 +250,45 @@ plugins:
     output:
       type: console
 `
-	for typ, cfg := range map[string]string{
-		"direct": config,
-		"plugin": configDLPlugin,
-	} {
-		t.Run(typ, func(t *testing.T) {
-			eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, cfg, policy, false)
-			if err := eopa.Start(); err != nil {
-				t.Fatal(err)
-			}
-			wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-			{ // act: send request
-				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/p", strings.NewReader(`{"input": {"a": "b"}}`))
-				if err != nil {
-					t.Fatalf("http request: %v", err)
-				}
-				resp, err := http.DefaultClient.Do(req)
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer resp.Body.Close()
-				if exp, act := 200, resp.StatusCode; exp != act {
-					t.Fatalf("expected status %d, got %d", exp, act)
-				}
-			}
+	eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, false)
+	if err := eopa.Start(); err != nil {
+		t.Fatal(err)
+	}
+	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-			logs := collectDL(t, eopaOut, false, 1)
-			{ // log for act 1
-				dl := payload{
-					Result: map[string]any{
-						"foo":     "bar",
-						"remove":  map[string]any{},
-						"replace": "fox",
-					},
-					Input:  map[string]any{"a": "b"},
-					Erased: []string{"/result/remove/this"},
-					Masked: []string{"/result/replace"},
-					ID:     1,
-					Labels: standardLabels,
-				}
-				if diff := cmp.Diff(dl, logs[0], stdIgnores); diff != "" {
-					t.Errorf("diff: (-want +got):\n%s", diff)
-				}
-			}
-		})
+	{ // act: send request
+		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/p", strings.NewReader(`{"input": {"a": "b"}}`))
+		if err != nil {
+			t.Fatalf("http request: %v", err)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if exp, act := 200, resp.StatusCode; exp != act {
+			t.Fatalf("expected status %d, got %d", exp, act)
+		}
+	}
+
+	logs := collectDL(t, eopaOut, false, 1)
+	{ // log for act 1
+		dl := payload{
+			Result: map[string]any{
+				"foo":     "bar",
+				"remove":  map[string]any{},
+				"replace": "fox",
+			},
+			Input:  map[string]any{"a": "b"},
+			Erased: []string{"/result/remove/this"},
+			Masked: []string{"/result/replace"},
+			ID:     1,
+			Labels: standardLabels,
+		}
+		if diff := cmp.Diff(dl, logs[0], stdIgnores); diff != "" {
+			t.Errorf("diff: (-want +got):\n%s", diff)
+		}
 	}
 }
 
@@ -338,10 +303,12 @@ coin if rand.intn("coin", 2)
 
 	t.Run("flush_at_count", func(t *testing.T) {
 		config := `
+decision_logs:
+  plugin: eopa_dl
+  drop_decision: /test/drop
+  mask_decision: /test/mask
 plugins:
-  enterprise_opa_decision_logger:
-    drop_decision: /test/drop
-    mask_decision: /test/mask
+  eopa_dl:
     buffer:
       type: memory
       flush_at_count: 2
@@ -389,10 +356,12 @@ plugins:
 
 	t.Run("flush_at_period", func(t *testing.T) {
 		config := `
+decision_logs:
+  plugin: eopa_dl
+  drop_decision: /test/drop
+  mask_decision: /test/mask
 plugins:
-  enterprise_opa_decision_logger:
-    drop_decision: /test/drop
-    mask_decision: /test/mask
+  eopa_dl:
     buffer:
       type: memory
       flush_at_period: 3s
@@ -450,8 +419,10 @@ coin if rand.intn("coin", 2)
 services:
 - name: "dl-sink"
   url: "%s/prefix"
+decision_logs:
+  plugin: eopa_dl
 plugins:
-  enterprise_opa_decision_logger:
+  eopa_dl:
     output:
       type: service
       service: dl-sink
@@ -460,8 +431,10 @@ plugins:
 		{
 			note: "type=http",
 			configFmt: `
+decision_logs:
+  plugin: eopa_dl
 plugins:
-  enterprise_opa_decision_logger:
+  eopa_dl:
     output:
       type: http
       url: "%s/prefix/logs"
@@ -531,8 +504,10 @@ coin if rand.intn("coin", 2)`
 
 	config := `
 # enterprise-opa.yml
+decision_logs:
+  plugin: eopa_dl
 plugins:
-  enterprise_opa_decision_logger:
+  eopa_dl:
     output:
     - type: http
       url: %s/prefix/logs
@@ -626,8 +601,10 @@ coin if rand.intn("coin", 2)
 services:
 - name: "dl-sink"
   url: "%s/prefix"
+decision_logs:
+  plugin: eopa_dl
 plugins:
-  enterprise_opa_decision_logger:
+  eopa_dl:
     output:
     - type: service
       service: dl-sink
@@ -698,8 +675,10 @@ services:
       client_id: mememe
       client_secret: sesamememe
       token_url: "%[1]s/token"
+decision_logs:
+  plugin: eopa_dl
 plugins:
-  enterprise_opa_decision_logger:
+  eopa_dl:
     output:
       type: service
       service: dl-sink
@@ -764,8 +743,10 @@ services:
     client_tls:
       cert: testdata/tls/client-cert.pem
       private_key: testdata/tls/client-key.pem
+decision_logs:
+  plugin: eopa_dl
 plugins:
-  enterprise_opa_decision_logger:
+  eopa_dl:
     output:
       type: service
       service: dl-sink
@@ -878,57 +859,6 @@ func loadEnterpriseOPA(t *testing.T, config, policy string, opts ...any) (*exec.
 	})
 
 	return eopa, &stdout, &stderr
-}
-
-func TestDecisionLogsFailsToStartWithTwoPlugins(t *testing.T) {
-	config := `
-decision_logs:
-  console: true
-plugins:
-  enterprise_opa_decision_logger:
-    buffer:
-      type: memory
-    output:
-      type: console
-`
-	dir := t.TempDir()
-	confPath := filepath.Join(dir, "config.yml")
-	if err := os.WriteFile(confPath, []byte(config), 0x777); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
-	args := []string{
-		"run",
-		"--server",
-		"--addr", "localhost:28181",
-		"--config-file", confPath,
-		"--log-level", "error",
-		"--disable-telemetry",
-	}
-
-	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}
-	eopa := exec.Command(binary(), args...)
-	eopa.Stderr = &stderr
-	eopa.Stdout = &stdout
-	if err := eopa.Start(); err != nil {
-		t.Fatal(err)
-	}
-	_ = eopa.Wait() // expected: exit 1
-	if exp, act := ``, stdout.String(); exp != act {
-		t.Errorf("stdout: expected %q, got %q", exp, act)
-	}
-	output := struct {
-		Err   string
-		Level string
-	}{}
-	if err := json.NewDecoder(&stderr).Decode(&output); err != nil {
-		t.Fatal(err)
-	}
-	if exp, act := "enterprise_opa_decision_logger cannot be used together with OPA's decision logging", output.Err; exp != act {
-		t.Errorf("err: expected %q, got %q", exp, act)
-	}
-	if exp, act := "error", output.Level; exp != act {
-		t.Errorf("level: expected %q, got %q", exp, act)
-	}
 }
 
 func binary() string {

@@ -113,6 +113,9 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 		}
 		c.outputs = append(c.outputs, output)
 	}
+	if len(c.outputs) == 0 {
+		return nil, fmt.Errorf("at least one output required")
+	}
 	return c, nil
 }
 
