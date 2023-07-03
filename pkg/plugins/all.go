@@ -14,6 +14,6 @@ func All() map[string]plugins.Factory {
 		data.Name: data.Factory(),
 		// impact.Name:     impact.Factory(),
 		// grpc.PluginName: grpc.Factory(),
-		dl.DLPluginName: dl.DLPluginFactory(),
+		dl.DLPluginName: dl.Factory(),
 	}
 }

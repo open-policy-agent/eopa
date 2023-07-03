@@ -18,7 +18,7 @@ import (
 )
 
 type Stream interface {
-	Consume(context.Context, map[string]any, map[string]any) error
+	Consume(context.Context, map[string]any) error
 	Run(context.Context) error
 	Stop(context.Context) error
 }
@@ -28,34 +28,13 @@ type stream struct {
 	prod service.MessageHandlerFunc
 }
 
-func (s *stream) Consume(ctx context.Context, msg, meta map[string]any) error {
+func (s *stream) Consume(ctx context.Context, msg map[string]any) error {
 	m := service.NewMessage(nil)
 	m.SetStructuredMut(msg)
-	for k := range meta {
-		m.MetaSetMut(k, meta[k])
-	}
 	return s.prod(ctx, m)
 }
 
-var dp = &DropProcessor{}
-var mp = &MaskProcessor{}
-
-func init() {
-	if err := service.RegisterProcessor("dl_drop", service.NewConfigSpec(), func(*service.ParsedConfig, *service.Resources) (service.Processor, error) {
-		return dp, nil
-	}); err != nil {
-		panic(err)
-	}
-	if err := service.RegisterProcessor("dl_mask", service.NewConfigSpec(), func(*service.ParsedConfig, *service.Resources) (service.Processor, error) {
-		return mp, nil
-	}); err != nil {
-		panic(err)
-	}
-}
-
-func NewStream(_ context.Context, mask masker, drop dropper, buf fmt.Stringer, out output, logger logging.Logger) (Stream, error) {
-	dp.dropper = drop
-	mp.masker = mask
+func NewStream(_ context.Context, buf fmt.Stringer, out output, logger logging.Logger) (Stream, error) {
 	builder := service.NewStreamBuilder()
 	builder.SetPrintLogger(&wrap{logger})
 
@@ -66,17 +45,6 @@ func NewStream(_ context.Context, mask masker, drop dropper, buf fmt.Stringer, o
 
 	if buf != nil {
 		if err := builder.SetBufferYAML(buf.String()); err != nil {
-			return nil, err
-		}
-	}
-
-	if drop != nil {
-		if err := builder.AddProcessorYAML(`dl_drop: {}`); err != nil {
-			return nil, err
-		}
-	}
-	if mask != nil {
-		if err := builder.AddProcessorYAML(`dl_mask: {}`); err != nil {
 			return nil, err
 		}
 	}

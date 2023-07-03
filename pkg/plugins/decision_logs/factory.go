@@ -11,27 +11,6 @@ import (
 	"github.com/open-policy-agent/opa/util"
 )
 
-type dlPluginFactory struct{}
-
-func DLPluginFactory() plugins.Factory {
-	return &dlPluginFactory{}
-}
-
-func (dlPluginFactory) New(m *plugins.Manager, config any) plugins.Plugin {
-	m.UpdatePluginStatus(DLPluginName, &plugins.Status{State: plugins.StateNotReady})
-
-	return &shell{Logger{
-		manager: m,
-		config:  config.(Config),
-	}}
-}
-
-func (dlPluginFactory) Validate(m *plugins.Manager, config []byte) (any, error) {
-	// TODO(sr): warn about drop_decision and mask_decision being configured in
-	// the wrong place if it's configured with the eopa_dl DL plugin.
-	return Factory().Validate(m, config)
-}
-
 type factory struct{}
 
 func Factory() plugins.Factory {
@@ -39,7 +18,7 @@ func Factory() plugins.Factory {
 }
 
 func (factory) New(m *plugins.Manager, config any) plugins.Plugin {
-	m.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateNotReady})
+	m.UpdatePluginStatus(DLPluginName, &plugins.Status{State: plugins.StateNotReady})
 
 	return &Logger{
 		manager: m,
@@ -56,14 +35,6 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 	err := util.Unmarshal(config, &c)
 	if err != nil {
 		return nil, err
-	}
-
-	// Defaults
-	if c.DropDecision == "" {
-		c.DropDecision = "/system/log/drop"
-	}
-	if c.MaskDecision == "" {
-		c.MaskDecision = "/system/log/mask"
 	}
 
 	// Buffers
@@ -87,7 +58,7 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("unknown buffer type: %q", buffer.Type)
+		return nil, NewUnknownBufferTypeError(buffer.Type)
 	}
 
 	// Outputs, one:
@@ -114,7 +85,7 @@ func (factory) Validate(m *plugins.Manager, config []byte) (any, error) {
 		c.outputs = append(c.outputs, output)
 	}
 	if len(c.outputs) == 0 {
-		return nil, fmt.Errorf("at least one output required")
+		return nil, ErrNoOutputs
 	}
 	return c, nil
 }
@@ -143,7 +114,7 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 		// to check the Name field...
 		cfg := m.Client(service.Service).Config()
 		if cfg.Name == "" {
-			return nil, fmt.Errorf("unknown service %q", service.Service)
+			return nil, NewUnknownServiceError(service.Service)
 		}
 		outputHTTP := new(outputHTTPOpts)
 		outputHTTP.URL = fmt.Sprintf("%s/%s", cfg.URL, service.Resource)
@@ -333,6 +304,6 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 		}
 		return outputExp, nil
 	default:
-		return nil, fmt.Errorf("unknown output type: %q", out.Type)
+		return nil, NewUnknownOutputTypeError(out.Type)
 	}
 }

@@ -343,8 +343,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 			data.Name:       data.Factory(),
 			impact.Name:     impact.Factory(),
 			grpc.PluginName: grpc.Factory(),
-			dl.Name:         dl.Factory(),
-			dl.DLPluginName: dl.DLPluginFactory(),
+			dl.DLPluginName: dl.Factory(),
 		}),
 		discovery.Hooks(hs),
 	)
@@ -393,7 +392,6 @@ func loadCertPool(tlsCACertFile string) (*x509.CertPool, error) {
 func loadRouter() *mux.Router {
 	m := mux.NewRouter()
 	m.Use(impact.HTTPMiddleware)
-	m.Use(dl.HTTPMiddleware)
 	return m
 }
 

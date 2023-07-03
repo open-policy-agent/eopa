@@ -10,10 +10,6 @@ import (
 )
 
 type Config struct {
-	// Compatibility options
-	DropDecision string `json:"drop_decision"`
-	MaskDecision string `json:"mask_decision"`
-
 	Output json.RawMessage `json:"output"`
 	Buffer json.RawMessage `json:"buffer"`
 

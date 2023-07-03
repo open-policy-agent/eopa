@@ -8,7 +8,6 @@ import (
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle" // register bjson extension
-	dl "github.com/styrainc/enterprise-opa-private/pkg/plugins/decision_logs"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 
@@ -135,9 +134,6 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 	statsToMetrics(ectx.Metrics(), s)
 
 	go impact.Enqueue(ctx, ectx, result)
-	if err := dl.Log(ctx, ectx, result, err); err != nil {
-		return nil, err
-	}
 	return result, nil
 }
 

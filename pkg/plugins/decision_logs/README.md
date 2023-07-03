@@ -18,8 +18,10 @@ services:
 - name: knownservice
   url: "http://knownservice/prefix"
   response_header_timeout_seconds: 12
+decision_logs:
+  plugin: eopa_dl
 plugins:
-  enterprise_opa_decision_logger:
+  eopa_dl:
     output:
       type: service
       service: knownservice
@@ -64,10 +66,6 @@ buffer:
 
 These may become TODOs if we decide that the deviation isn't acceptable.
 
-- Response bodies don't contain `{"decision_id": "some-uuid-4"}`.
-  We could add it back, or add a response header.
-- Some DL payload fields aren't set: type, mapped_results, ...
-  We can look into adding them if DAS requires them, or some sink needs them.
 - Console output goes to stdout, whereas with the default plugin, it goes to
   stderr. All of Enterprise OPA's logs to go stderr, so it's actually rather
   convenient to collect DLs from stdout instead.

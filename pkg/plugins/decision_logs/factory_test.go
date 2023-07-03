@@ -2,12 +2,14 @@ package decisionlogs
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/plugins/logs"
 	"github.com/open-policy-agent/opa/storage/inmem"
 )
 
@@ -18,12 +20,6 @@ func isConfig(exp Config) func(testing.TB, any, error) {
 	}
 	diff := func(x, y any) string {
 		return cmp.Diff(x, y, opt...)
-	}
-	if exp.DropDecision == "" {
-		exp.DropDecision = "/system/log/drop"
-	}
-	if exp.MaskDecision == "" {
-		exp.MaskDecision = "/system/log/mask"
 	}
 	return func(tb testing.TB, c any, err error) {
 		tb.Helper()
@@ -75,22 +71,6 @@ func TestValidate(t *testing.T) {
 			config: `output:
   type: console`,
 			checks: isConfig(Config{
-				memoryBuffer: &memBufferOpts{
-					MaxBytes: defaultMemoryMaxBytes,
-				},
-				outputs: []output{&outputConsoleOpts{}},
-			}),
-		},
-		{
-			note: "overridden decisions",
-			config: `
-drop_decision: /foo/bar/drop
-mask_decision: /foo/bar/mask
-output:
-  type: console`,
-			checks: isConfig(Config{
-				MaskDecision: "/foo/bar/mask",
-				DropDecision: "/foo/bar/drop",
 				memoryBuffer: &memBufferOpts{
 					MaxBytes: defaultMemoryMaxBytes,
 				},
@@ -159,8 +139,12 @@ output:
 				if err == nil {
 					t.Fatal("expected error")
 				}
-				if exp, act := "unknown buffer type: \"flash drive\"", err.Error(); exp != act {
-					t.Errorf("expected error %q, got %q", exp, act)
+				var exp *UnknownBufferTypeError
+				if !errors.As(err, &exp) {
+					t.Errorf("expected error %T, got %q %[2]T", exp, err)
+				}
+				if exp, act := "flash drive", exp.buf; act != exp {
+					t.Errorf("expected %q, got %v", exp, act)
 				}
 			},
 		},
@@ -174,8 +158,12 @@ output:
 				if err == nil {
 					t.Fatal("expected error")
 				}
-				if exp, act := "unknown output type: \"flash drive\"", err.Error(); exp != act {
-					t.Errorf("expected error %q, got %q", exp, act)
+				var exp *UnknownOutputTypeError
+				if !errors.As(err, &exp) {
+					t.Errorf("expected error %T, got %q %[2]T", exp, err)
+				}
+				if exp, act := "flash drive", exp.out; act != exp {
+					t.Errorf("expected %q, got %v", exp, act)
 				}
 			},
 		},
@@ -188,8 +176,8 @@ output: []
 				if err == nil {
 					t.Fatal("expected error")
 				}
-				if exp, act := "at least one output required", err.Error(); exp != act {
-					t.Errorf("expected error %q, got %q", exp, act)
+				if act, exp := err, ErrNoOutputs; !errors.Is(act, exp) {
+					t.Errorf("expected error %v %[1]T, got %v %[2]T", exp, act)
 				}
 			},
 		},
@@ -215,8 +203,12 @@ output:
 				if err == nil {
 					t.Fatal("expected error")
 				}
-				if exp, act := "unknown service \"someservice\"", err.Error(); exp != act {
-					t.Errorf("expected error %q, got %q", exp, act)
+				var exp *UnknownServiceError
+				if !errors.As(err, &exp) {
+					t.Errorf("expected error %T, got %q %[2]T", exp, err)
+				}
+				if exp, act := "someservice", exp.svc; act != exp {
+					t.Errorf("expected %q, got %v", exp, act)
 				}
 			},
 		},
@@ -937,5 +929,14 @@ func getTestManager(mgr string) *plugins.Manager {
 	if err != nil {
 		panic(err)
 	}
+	dc, err := logs.NewConfigBuilder().
+		WithBytes([]byte(`plugin: eopa_dl`)).
+		WithPlugins([]string{"eopa_dl"}).
+		Parse()
+	if err != nil {
+		panic(err)
+	}
+	dl := logs.New(dc, manager)
+	manager.Register(logs.Name, dl)
 	return manager
 }
