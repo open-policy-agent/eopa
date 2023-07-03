@@ -399,8 +399,9 @@ func (l *checker) validate(params *LicenseParams) error {
 
 			for s := range sigs {
 				l.ReleaseLicense()
-				time.Sleep(100 * time.Millisecond)           // give eopa server sometime to finish // TODO(sr): this isn't how we should do this
-				l.exit(1, fmt.Errorf("caught signal %v", s)) // exit now (default behavior)!
+				time.Sleep(100 * time.Millisecond) // give eopa server sometime to finish // TODO(sr): this isn't how we should do this
+				fmt.Fprintf(os.Stderr, "caught signal '%v', exiting", s)
+				os.Exit(1) // exit now (default behavior)!
 			}
 		}()
 
