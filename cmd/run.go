@@ -21,6 +21,8 @@ import (
 	"github.com/open-policy-agent/opa/runtime"
 	"github.com/open-policy-agent/opa/server"
 
+	opa_envoy "github.com/open-policy-agent/opa-envoy-plugin/plugin"
+
 	"github.com/styrainc/enterprise-opa-private/internal/license"
 	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
 	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
@@ -340,10 +342,11 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 	disco, err := discovery.New(rt.Manager,
 		discovery.Metrics(rt.Metrics()),
 		discovery.Factories(map[string]plugins.Factory{
-			data.Name:       data.Factory(),
-			impact.Name:     impact.Factory(),
-			grpc.PluginName: grpc.Factory(),
-			dl.DLPluginName: dl.Factory(),
+			data.Name:            data.Factory(),
+			impact.Name:          impact.Factory(),
+			grpc.PluginName:      grpc.Factory(),
+			dl.DLPluginName:      dl.Factory(),
+			opa_envoy.PluginName: &opa_envoy.Factory{}, // Hack(philip): This is ugly, but necessary because upstream lacks the Factory() function.
 		}),
 		discovery.Hooks(hs),
 	)
