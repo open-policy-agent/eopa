@@ -38,8 +38,18 @@ func (p *Logger) Start(ctx context.Context) error {
 }
 
 func (p *Logger) Log(ctx context.Context, e logs.EventV1) error {
+	// Labels comes out as map[string]string, but benthos is expecting map[string]any. It seems to
+	// generally work with map[string]string, but any benthos processing (specifically pulling out
+	// values into meta with bloblang) is unstable and will give null values even when values
+	// exist within the labels object. This converts it to map[string]any which stabilizes the
+	// benthos behavior.
+	labels := make(map[string]any, len(e.Labels))
+	for k, v := range e.Labels {
+		labels[k] = v
+	}
+
 	ev := map[string]any{
-		"labels":      e.Labels,
+		"labels":      labels,
 		"decision_id": e.DecisionID,
 	}
 	for k, v := range map[string]string{

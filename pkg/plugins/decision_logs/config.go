@@ -292,6 +292,11 @@ func (b *batchOpts) Benthos() map[string]any {
 	if b.unprocessed {
 		return m
 	}
+	m["processors"] = b.Processors()
+	return m
+}
+
+func (b *batchOpts) Processors() []map[string]any {
 	processors := make([]map[string]any, 0, 2)
 	if b.Array {
 		processors = append(processors, map[string]any{"archive": map[string]any{"format": "json_array"}})
@@ -301,8 +306,8 @@ func (b *batchOpts) Benthos() map[string]any {
 	if b.Compress {
 		processors = append(processors, map[string]any{"compress": map[string]any{"algorithm": "gzip"}})
 	}
-	m["processors"] = processors
-	return m
+
+	return processors
 }
 
 type retryOpts struct {
@@ -427,10 +432,15 @@ type outputS3Opts struct {
 	tls *sinkAuthTLS
 }
 
+var s3MetaMapping = `meta eopa_id = json("labels.id").from(0)
+meta first_ts = json("timestamp").from(0).ts_parse("2006-01-02T15:04:05Z07:00").ts_unix()
+meta last_ts = json("timestamp").from(-1).ts_parse("2006-01-02T15:04:05Z07:00").ts_unix()
+`
+
 func (s *outputS3Opts) Benthos() map[string]any {
 	m := map[string]any{
 		"bucket":       s.Bucket,
-		"path":         `${!json("timestamp").ts_strftime("%Y/%m/%d/%H")}/${!json("decision_id")}.json`,
+		"path":         `eopa=${!json("labels.id")}/ts=${!json("timestamp").ts_parse("2006-01-02T15:04:05Z07:00").ts_unix()}/decision_id=${!json("decision_id")}.json`,
 		"content_type": "application/json",
 	}
 	if e := s.Endpoint; e != "" {
@@ -443,7 +453,27 @@ func (s *outputS3Opts) Benthos() map[string]any {
 		m["force_path_style_urls"] = true
 	}
 	if b := s.Batching; b != nil {
-		m["batching"] = b.Benthos()
+		bMap := b.Benthos()
+		bProc := b.Processors()
+
+		// Add mapping processor to pull out data from the first batch item for use in the naming scheme
+		processors := make([]map[string]any, 1, len(bProc)+1)
+		processors[0] = map[string]any{
+			"mutation": s3MetaMapping,
+		}
+		processors = append(processors, bProc...)
+
+		bMap["processors"] = processors
+		m["batching"] = bMap
+		objectPath := `eopa=${!@eopa_id}/first_ts=${!@first_ts}/last_ts=${!@last_ts}/batch_id=${!uuid_v4()}.json`
+		if !b.Array {
+			// Make the extension `.jsonl` in non-array mode indicating json lines format
+			objectPath += "l"
+		}
+		if b.Compress {
+			objectPath += ".gz"
+		}
+		m["path"] = objectPath
 	}
 	if s.tls != nil {
 		m["tls"] = s.tls.Benthos()
