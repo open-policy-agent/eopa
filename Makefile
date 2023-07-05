@@ -110,7 +110,7 @@ test-race:
 	go test $(BUILD_ARGS) ./... -race
 
 e2e:
-	go test -p 1 $(BUILD_ARGS) -tags e2e ./e2e/... -v -count=1 # always run, no parallelism
+	cd e2e && go test -p 1 $(BUILD_ARGS) -tags e2e ./... -v -count=1 # always run, no parallelism
 
 benchmark:
 	go test $(BUILD_ARGS) -run=- -bench=. -benchmem ./...
