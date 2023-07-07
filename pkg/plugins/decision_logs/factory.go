@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/util"
 )
@@ -101,6 +102,9 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 		if err := util.Unmarshal(outputRaw, outputHTTP); err != nil {
 			return nil, err
 		}
+		if outputHTTP.Batching != nil {
+			batchingBackCompat(outputHTTP.Batching, m.Logger())
+		}
 		return outputHTTP, nil
 	case "service":
 		service := new(outputServiceOpts)
@@ -125,7 +129,7 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 		}
 		outputHTTP.Headers = cfg.Headers
 		outputHTTP.Batching = &batchOpts{
-			Array:    true,
+			Format:   "array",
 			Compress: true,
 			Period:   "10ms", // TODO(sr): make this configurable for services
 		}
@@ -211,6 +215,9 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 				return nil, fmt.Errorf("unsupported SASL mechanism: %q", sasl.Mechanism)
 			}
 		}
+		if outputKafka.Batching != nil {
+			batchingBackCompat(outputKafka.Batching, m.Logger())
+		}
 		return outputKafka, nil
 	case "splunk":
 		outputSplunk := new(outputSplunkOpts)
@@ -218,7 +225,8 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 			return nil, err
 		}
 		if b := outputSplunk.Batching; b != nil {
-			b.Array = false
+			batchingBackCompat(outputSplunk.Batching, m.Logger())
+			b.Format = "lines"
 		}
 		if tls := outputSplunk.TLS; tls != nil {
 			outputSplunk.tls = &sinkAuthTLS{
@@ -266,9 +274,6 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 			sort.Strings(missing)
 			return nil, fmt.Errorf("output S3 missing required configs: %s", strings.Join(missing, ", "))
 		}
-		if b := outputS3.Batching; b != nil {
-			b.unprocessed = true
-		}
 		if tls := outputS3.TLS; tls != nil {
 			outputS3.tls = &sinkAuthTLS{
 				Enabled:    true,
@@ -296,6 +301,9 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 			}
 			outputS3.TLS = nil
 		}
+		if outputS3.Batching != nil {
+			batchingBackCompat(outputS3.Batching, m.Logger())
+		}
 		return outputS3, nil
 	case "experimental":
 		outputExp := new(outputExpOpts)
@@ -305,5 +313,17 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 		return outputExp, nil
 	default:
 		return nil, NewUnknownOutputTypeError(out.Type)
+	}
+}
+
+// Deal with the batching Array option in a backwards compatible way
+//
+// This allows us to update docs, and more once a new version of EOPA is
+// published before fully removing this option. That way the docs are still
+// valid while updates are rolled out.
+func batchingBackCompat(opts *batchOpts, logger logging.Logger) {
+	if opts.Format == "" && opts.Array {
+		logger.Warn("array is DEPRECATED and will be removed in a future version of Enterprise OPA. Use the 'format' option instead.")
+		opts.Format = "array"
 	}
 }

@@ -277,10 +277,9 @@ type batchOpts struct {
 	Count    int    `json:"at_count,omitempty"`
 	Bytes    int    `json:"at_bytes,omitempty"`
 	Period   string `json:"at_period,omitempty"`
-	Array    bool   `json:"array"`    // send batches as arrays of json blobs (default: lines of json blobs)
-	Compress bool   `json:"compress"` // TODO(sr): decide if want to expose the algorithm (gzip vs lz4, snappy, ..)
-
-	unprocessed bool // don't do any processing
+	Format   string `json:"format,omitempty"` // ENUM: (none|lines|array) Default: lines. Will default if an unknown values is sent.
+	Array    bool   `json:"array"`            // DEPRECATED: Use Format instead. This will be removed in a future version of EOPA
+	Compress bool   `json:"compress"`         // TODO(sr): decide if want to expose the algorithm (gzip vs lz4, snappy, ..)
 }
 
 func (b *batchOpts) Benthos() map[string]any {
@@ -289,25 +288,28 @@ func (b *batchOpts) Benthos() map[string]any {
 		"byte_size": b.Bytes,
 		"period":    b.Period,
 	}
-	if b.unprocessed {
+
+	// None format gets special processing to stop any processors from getting defined
+	if b.Format == "none" {
 		return m
 	}
-	m["processors"] = b.Processors()
-	return m
-}
 
-func (b *batchOpts) Processors() []map[string]any {
 	processors := make([]map[string]any, 0, 2)
-	if b.Array {
+	switch b.Format {
+	case "array":
 		processors = append(processors, map[string]any{"archive": map[string]any{"format": "json_array"}})
-	} else {
+	case "lines":
+		fallthrough
+	default:
 		processors = append(processors, map[string]any{"archive": map[string]any{"format": "lines"}})
 	}
 	if b.Compress {
 		processors = append(processors, map[string]any{"compress": map[string]any{"algorithm": "gzip"}})
 	}
 
-	return processors
+	m["processors"] = processors
+
+	return m
 }
 
 type retryOpts struct {
@@ -454,26 +456,31 @@ func (s *outputS3Opts) Benthos() map[string]any {
 	}
 	if b := s.Batching; b != nil {
 		bMap := b.Benthos()
-		bProc := b.Processors()
-
-		// Add mapping processor to pull out data from the first batch item for use in the naming scheme
-		processors := make([]map[string]any, 1, len(bProc)+1)
-		processors[0] = map[string]any{
-			"mutation": s3MetaMapping,
+		bProc, ok := bMap["processors"].([]map[string]any)
+		if !ok {
+			bProc = []map[string]any{}
 		}
-		processors = append(processors, bProc...)
 
-		bMap["processors"] = processors
+		if b.Format != "none" {
+			// Add mapping processor to pull out data from the first batch item for use in the naming scheme
+			processors := make([]map[string]any, 1, len(bProc)+1)
+			processors[0] = map[string]any{
+				"mutation": s3MetaMapping,
+			}
+			processors = append(processors, bProc...)
+			bMap["processors"] = processors
+			objectPath := `eopa=${!@eopa_id}/first_ts=${!@first_ts}/last_ts=${!@last_ts}/batch_id=${!uuid_v4()}.json`
+			if b.Format != "array" {
+				// Make the extension `.jsonl` in non-array mode indicating json lines format
+				objectPath += "l"
+			}
+			if b.Compress {
+				objectPath += ".gz"
+			}
+			m["path"] = objectPath
+		}
+
 		m["batching"] = bMap
-		objectPath := `eopa=${!@eopa_id}/first_ts=${!@first_ts}/last_ts=${!@last_ts}/batch_id=${!uuid_v4()}.json`
-		if !b.Array {
-			// Make the extension `.jsonl` in non-array mode indicating json lines format
-			objectPath += "l"
-		}
-		if b.Compress {
-			objectPath += ".gz"
-		}
-		m["path"] = objectPath
 	}
 	if s.tls != nil {
 		m["tls"] = s.tls.Benthos()

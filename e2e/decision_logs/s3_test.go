@@ -158,7 +158,7 @@ plugins:
       access_secret: %[4]s
       batching:
         at_count: 2
-        array: true
+        format: array
 `
 	m, port := minioClient(t, ctx, minioRootUser, minioRootPassword, bucket)
 	eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(plaintextConfig, port, bucket, minioRootUser, minioRootPassword), policy, false)

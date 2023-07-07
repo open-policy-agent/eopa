@@ -233,7 +233,7 @@ output:
 					Timeout: "12s",
 					Batching: &batchOpts{
 						Period:   "10ms",
-						Array:    true,
+						Format:   "array",
 						Compress: true,
 					},
 				}},
@@ -258,7 +258,7 @@ output:
 					Timeout: "10s",
 					Batching: &batchOpts{
 						Period:   "10ms",
-						Array:    true,
+						Format:   "array",
 						Compress: true,
 					},
 				}},
@@ -291,7 +291,7 @@ output:
 					},
 					Batching: &batchOpts{
 						Period:   "10ms",
-						Array:    true,
+						Format:   "array",
 						Compress: true,
 					},
 				}},
@@ -325,7 +325,7 @@ output:
 					Timeout: "10s",
 					Batching: &batchOpts{
 						Period:   "10ms",
-						Array:    true,
+						Format:   "array",
 						Compress: true,
 					},
 					OAuth2: &httpAuthOAuth2{
@@ -364,7 +364,7 @@ output:
 					Timeout: "10s",
 					Batching: &batchOpts{
 						Period:   "10ms",
-						Array:    true,
+						Format:   "array",
 						Compress: true,
 					},
 					TLS: &sinkAuthTLS{
@@ -654,7 +654,7 @@ output:
     at_count: 42
     at_bytes: 43
     at_period: "300ms"
-    array: true
+    format: array
     compress: true
 `,
 			checks: isConfig(Config{
@@ -668,7 +668,7 @@ output:
 						Period:   "300ms",
 						Count:    42,
 						Bytes:    43,
-						Array:    true,
+						Format:   "array",
 						Compress: true,
 					},
 				}},
@@ -710,7 +710,7 @@ output:
     at_count: 42
     at_bytes: 43
     at_period: "300ms"
-    array: true # overridden for splunk
+    format: "array" # overridden for splunk
     compress: true
   tls:
       cert: testdata/cert.pem
@@ -730,7 +730,7 @@ output:
 							Period:   "300ms",
 							Count:    42,
 							Bytes:    43,
-							Array:    false, // NB: overridden
+							Format:   "lines", // NB: overridden
 							Compress: true,
 						},
 						tls: &sinkAuthTLS{
@@ -783,7 +783,7 @@ output:
     at_count: 42
     at_bytes: 43
     at_period: "300ms"
-    array: true # overridden for splunk
+    format: array # overridden for splunk
     compress: false
 `,
 			checks: func(t testing.TB, a any, err error) {
@@ -798,7 +798,7 @@ output:
 							Period:   "300ms",
 							Count:    42,
 							Bytes:    43,
-							Array:    false, // NB: overridden
+							Format:   "lines", // NB: overridden
 							Compress: false,
 						},
 					}},
@@ -825,7 +825,7 @@ output:
 			},
 		},
 		{
-			note: "s3 output with batching",
+			note: "s3 output with request batching only",
 			config: `
 output:
   type: s3
@@ -838,8 +838,8 @@ output:
     at_count: 42
     at_bytes: 43
     at_period: "300ms"
-    array: true # overridden for s3
-    compress: true # overridden for s3
+    format: none
+    compress: true # overridden for S3 in none mode
 `,
 			checks: func(t testing.TB, a any, err error) {
 				isConfig(Config{
@@ -853,12 +853,66 @@ output:
 						AccessKeyID:  "abc123",
 						AccessSecret: "opens3same",
 						Batching: &batchOpts{
-							Period:      "300ms",
-							Count:       42,
-							Bytes:       43,
-							Array:       true,
-							Compress:    true,
-							unprocessed: true,
+							Period:   "300ms",
+							Count:    42,
+							Bytes:    43,
+							Format:   "none",
+							Compress: true,
+						},
+					}},
+				})(t, a, err)
+
+				isBenthos(map[string]any{
+					"aws_s3": map[string]any{
+						"batching": map[string]any{
+							"byte_size": 43,
+							"count":     42,
+							"period":    "300ms",
+						},
+						"bucket":       "dl",
+						"path":         `eopa=${!json("labels.id")}/ts=${!json("timestamp").ts_parse("2006-01-02T15:04:05Z07:00").ts_unix()}/decision_id=${!json("decision_id")}.json`,
+						"endpoint":     "https://local.minio:9000",
+						"content_type": "application/json",
+						"region":       "us-underwater-1",
+						"credentials":  map[string]any{"id": "abc123", "secret": "opens3same"},
+					},
+				})(t, a, err)
+			},
+		},
+		{
+			note: "s3 output with batching",
+			config: `
+output:
+  type: s3
+  endpoint: "https://local.minio:9000"
+  region: us-underwater-1
+  bucket: dl
+  access_key_id: abc123
+  access_secret: opens3same
+  batching:
+    at_count: 42
+    at_bytes: 43
+    at_period: "300ms"
+    format: array
+    compress: true
+`,
+			checks: func(t testing.TB, a any, err error) {
+				isConfig(Config{
+					memoryBuffer: &memBufferOpts{
+						MaxBytes: defaultMemoryMaxBytes,
+					},
+					outputs: []output{&outputS3Opts{
+						Endpoint:     "https://local.minio:9000",
+						Region:       "us-underwater-1",
+						Bucket:       "dl",
+						AccessKeyID:  "abc123",
+						AccessSecret: "opens3same",
+						Batching: &batchOpts{
+							Period:   "300ms",
+							Count:    42,
+							Bytes:    43,
+							Format:   "array",
+							Compress: true,
 						},
 					}},
 				})(t, a, err)

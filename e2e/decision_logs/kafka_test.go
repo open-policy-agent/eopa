@@ -70,8 +70,8 @@ plugins:
 	batchConfig := plaintextConfig + `
       batching:
         at_count: 2
+        format: array
         compress: false
-        array: true
 `
 
 	tlsConfig := plaintextConfig + `
