@@ -51,7 +51,7 @@ require (
 	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea
 	golang.org/x/sync v0.3.0
 	golang.org/x/term v0.10.0
-	google.golang.org/grpc v1.56.1
+	google.golang.org/grpc v1.56.2
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/h2non/gock.v1 v1.1.2
 	gopkg.in/square/go-jose.v2 v2.6.0
