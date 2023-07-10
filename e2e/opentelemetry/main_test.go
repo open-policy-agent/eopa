@@ -88,7 +88,6 @@ p if http.send({"url":"%[1]s", "method":"GET"})
 		` Name           : v1/data`,
 		`InstrumentationScope rego_target_vm`,
 		`Name           : HTTP GET`,
-		`service.name: Str(eopa_dl)`,
 		`InstrumentationScope benthos`,
 		`Name           : mapping`,
 		`Name           : output_stdout`,

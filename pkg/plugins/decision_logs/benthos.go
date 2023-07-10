@@ -14,6 +14,8 @@ import (
 	_ "github.com/benthosdev/benthos/v4/public/components/sql"  // sqlite
 
 	"github.com/benthosdev/benthos/v4/public/service"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/open-policy-agent/opa/logging"
 )
@@ -22,6 +24,14 @@ type Stream interface {
 	Consume(context.Context, map[string]any) error
 	Run(context.Context) error
 	Stop(context.Context) error
+}
+
+const tracing = "eopa_otel_global"
+
+func init() {
+	service.RegisterOtelTracerProvider(tracing, &service.ConfigSpec{}, func(_ *service.ParsedConfig) (trace.TracerProvider, error) {
+		return otel.GetTracerProvider(), nil
+	})
 }
 
 type stream struct {
@@ -35,7 +45,7 @@ func (s *stream) Consume(ctx context.Context, msg map[string]any) error {
 	return s.prod(ctx, m.WithContext(ctx))
 }
 
-func NewStream(_ context.Context, buf fmt.Stringer, out output, tracing map[string]any, logger logging.Logger) (Stream, error) {
+func NewStream(_ context.Context, buf fmt.Stringer, out output, logger logging.Logger) (Stream, error) {
 	builder := service.NewStreamBuilder()
 	builder.SetPrintLogger(&wrap{logger})
 
@@ -77,8 +87,8 @@ func NewStream(_ context.Context, buf fmt.Stringer, out output, tracing map[stri
 		}
 	}
 
-	if tracing != nil {
-		cfg, err := json.Marshal(tracing)
+	{ // setup tracing -- noop if global tracer is not configured
+		cfg, err := json.Marshal(map[string]any{tracing: struct{}{}})
 		if err != nil {
 			return nil, err
 		}
