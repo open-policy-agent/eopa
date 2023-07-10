@@ -1,5 +1,32 @@
 # Changelog
 
+## v1.7.0
+
+### Envoy External Authorization Support
+
+This release makes Styra Enterprise OPA a drop-in replacement for
+[opa-envoy-plugin](https://github.com/open-policy-agent/opa-envoy-plugin/), to be
+used with the [External Authorization feature](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ext_authz_filter.html)
+of the popular Envoy API gateway, and Envoy-based service meshes such as Istio
+and Gloo Edge.
+
+It works exactly like `opa-envoy-plugin``, i.e. the images known as `openpolicyagent/opa:latest-envoy`,
+but featuring all the Enterprise OPA enhancements.
+
+[See here](https://www.openpolicyagent.org/docs/latest/envoy-introduction/) for a general
+introduction to OPA and Envoy.
+
+### Enhanced OpenTelemetry Support
+
+Styra Enterprise OPA now supports OpenTelemetry Traces for the following operations:
+
+- Rego VM evaluations, with extra spans for `http.send` and `sql.send`
+- All decision log operations.
+- All of its gRPC handlers.
+
+This allows for improved observability, allowing you to quicker pin-point any issues
+in your distributed authorization system.
+
 ## v1.6.0
 
 This release updates the OPA version used in Styra Enterprise OPA to
