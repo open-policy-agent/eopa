@@ -16,6 +16,7 @@ import (
 	"github.com/open-policy-agent/opa/topdown/builtins"
 	"github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/open-policy-agent/opa/topdown/print"
+	"github.com/open-policy-agent/opa/tracing"
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
@@ -54,6 +55,7 @@ type (
 		Cache                  builtins.Cache
 		NDBCache               builtins.NDBCache
 		Capabilities           *ast.Capabilities
+		TracingOpts            tracing.Options
 	}
 
 	// State holds all the evaluation state and is passed along the statements as the evaluation progresses.
@@ -83,6 +85,7 @@ type (
 		NDBCache               builtins.NDBCache
 		registersPool          sync.Pool
 		Capabilities           *ast.Capabilities
+		TracingOpts            tracing.Options
 	}
 
 	Limits struct {
@@ -141,6 +144,7 @@ func newGlobals(ctx context.Context, vm *VM, opts EvalOpts, cancel *cancel, runt
 		StrictBuiltinErrors: opts.StrictBuiltinErrors,
 		NDBCache:            opts.NDBCache,
 		Capabilities:        opts.Capabilities,
+		TracingOpts:         opts.TracingOpts,
 		registersPool: sync.Pool{
 			New: func() any {
 				l := new(registersList)

@@ -9,6 +9,7 @@ import (
 	_ "github.com/benthosdev/benthos/v4/public/components/aws" // aws_s3
 	_ "github.com/benthosdev/benthos/v4/public/components/io"  // file/stdout cache/output
 	_ "github.com/benthosdev/benthos/v4/public/components/kafka"
+	_ "github.com/benthosdev/benthos/v4/public/components/otlp"
 	_ "github.com/benthosdev/benthos/v4/public/components/pure" // basics
 	_ "github.com/benthosdev/benthos/v4/public/components/sql"  // sqlite
 
@@ -31,10 +32,10 @@ type stream struct {
 func (s *stream) Consume(ctx context.Context, msg map[string]any) error {
 	m := service.NewMessage(nil)
 	m.SetStructuredMut(msg)
-	return s.prod(ctx, m)
+	return s.prod(ctx, m.WithContext(ctx))
 }
 
-func NewStream(_ context.Context, buf fmt.Stringer, out output, logger logging.Logger) (Stream, error) {
+func NewStream(_ context.Context, buf fmt.Stringer, out output, tracing map[string]any, logger logging.Logger) (Stream, error) {
 	builder := service.NewStreamBuilder()
 	builder.SetPrintLogger(&wrap{logger})
 
@@ -73,6 +74,16 @@ func NewStream(_ context.Context, buf fmt.Stringer, out output, logger logging.L
 			if err := builder.AddResourcesYAML(string(cfg)); err != nil {
 				return nil, err
 			}
+		}
+	}
+
+	if tracing != nil {
+		cfg, err := json.Marshal(tracing)
+		if err != nil {
+			return nil, err
+		}
+		if err := builder.SetTracerYAML(string(cfg)); err != nil {
+			return nil, err
 		}
 	}
 

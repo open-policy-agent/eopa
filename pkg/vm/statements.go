@@ -121,6 +121,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		InterQueryBuiltinCache: state.Globals.InterQueryBuiltinCache,
 		PrintHook:              state.Globals.PrintHook,
 		Capabilities:           state.Globals.Capabilities,
+		DistributedTracingOpts: state.Globals.TracingOpts,
 	}
 
 	// Prefer allocating a fixed size slice, to keep it in stack.

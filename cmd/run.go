@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"go.opentelemetry.io/otel"
 
 	bundleApi "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/hooks"
@@ -337,6 +338,12 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 	plugins.InitBundles(nil)(rt.Manager) // To release memory holding the init bundles.
 
 	rt.SetDistributedTracingLogging()
+
+	// TODO(sr): This trick won't do for SDK usage. Hence, SDK users will currently
+	//           NOT see OTel traces for decision logs or sql.send.
+	if tp := rt.Manager.TracerProvider(); tp != nil {
+		otel.SetTracerProvider(tp)
+	}
 
 	// register the discovery plugin
 	disco, err := discovery.New(rt.Manager,

@@ -1,12 +1,16 @@
 package decisionlogs
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/plugins/logs"
+
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 const DLPluginName = "eopa_dl" // OPA DL plugin
@@ -27,7 +31,7 @@ func (p *Logger) Start(ctx context.Context) error {
 		buffer = p.config.memoryBuffer
 	}
 
-	p.stream, err = NewStream(ctx, buffer, p.config.outputs, p.manager.Logger())
+	p.stream, err = NewStream(ctx, buffer, p.config.outputs, p.otel(), p.manager.Logger())
 	if err != nil {
 		return err
 	}
@@ -35,6 +39,42 @@ func (p *Logger) Start(ctx context.Context) error {
 
 	p.manager.UpdatePluginStatus(DLPluginName, &plugins.Status{State: plugins.StateOK})
 	return nil
+}
+
+func (p *Logger) otel() map[string]any {
+	if p.manager.TracerProvider() == nil {
+		return nil
+	}
+	c := struct {
+		Type        string `json:"type,omitempty"`
+		Address     string `json:"address,omitempty"`
+		ServiceName string `json:"service_name,omitempty"`
+	}{}
+	if err := json.NewDecoder(bytes.NewReader(p.manager.Config.DistributedTracing)).Decode(&c); err != nil {
+		return nil
+	}
+	if c.Type != "grpc" { // nothing else is supported at the moment in OPA
+		return nil
+	}
+	svc := c.ServiceName
+	if svc == "" {
+		svc = DLPluginName
+	}
+
+	var urls []map[string]any
+	if c.Address != "" {
+		urls = append(urls, map[string]any{"url": c.Address})
+	} else {
+		urls = append(urls, map[string]any{}) // default
+	}
+	return map[string]any{
+		"open_telemetry_collector": map[string]any{
+			"grpc": urls,
+			"tags": map[string]any{
+				string(semconv.ServiceNameKey): svc,
+			},
+		},
+	}
 }
 
 func (p *Logger) Log(ctx context.Context, e logs.EventV1) error {

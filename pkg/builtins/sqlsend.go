@@ -13,6 +13,8 @@ import (
 	"github.com/go-sql-driver/mysql"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/lib/pq"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"modernc.org/sqlite"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -120,6 +122,9 @@ type (
 )
 
 func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func(*ast.Term) error) error {
+	_, span := otel.Tracer(sqlSendName).Start(bctx.Context, "execute")
+	defer span.End()
+
 	pos := 1
 	obj, err := builtins.ObjectOperand(operands[0].Value, pos)
 	if err != nil {
@@ -179,6 +184,7 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 	if err != nil {
 		return handleBuiltinErr(sqlSendName, bctx.Location, err)
 	}
+	span.SetAttributes(attribute.String("query", query))
 
 	raiseError, err := getRequestBoolWithDefault(obj, "raise_error", true)
 	if err != nil {

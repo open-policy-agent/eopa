@@ -6,6 +6,10 @@ import (
 	"crypto/rand"
 	"sync"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle" // register bjson extension
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
@@ -39,7 +43,6 @@ func SetLimits(instr int64) {
 }
 
 // SetDefault controls if "vm" assumes the role of the default rego target
-// TODO(sr): call from cmd or something
 func SetDefault(y bool) {
 	defaultTgt = y
 }
@@ -66,7 +69,21 @@ type vme struct {
 	vm *vm.VM
 }
 
+var tracer = otel.Tracer(Name)
+
+func spanFromContext(ctx context.Context, query string) (ctx0 context.Context, span trace.Span) {
+	ctx0, span = tracer.Start(ctx, "eval")
+	span.SetAttributes(
+		attribute.String("query", query),
+	)
+	return
+}
+
 func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (ast.Value, error) {
+	var span trace.Span
+	ctx, span = spanFromContext(ctx, ectx.CompiledQuery().String())
+	defer span.End()
+
 	input := ectx.RawInput()
 	if p := ectx.ParsedInput(); p != nil {
 		i := interface{}(p)
@@ -118,6 +135,7 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		PrintHook:              ectx.PrintHook(),
 		StrictBuiltinErrors:    ectx.StrictBuiltinErrors(),
 		Capabilities:           ectx.Capabilities(),
+		TracingOpts:            tracingOpts(ectx),
 		Limits:                 limits,
 	})
 	ectx.Metrics().Timer(evalTimer).Stop()
