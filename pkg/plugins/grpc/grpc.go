@@ -24,15 +24,17 @@ import (
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/logging"
+	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/server/types"
+	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
 	iCache "github.com/open-policy-agent/opa/topdown/cache"
+
+	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
-	bulkv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/bulk/v1"
-	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
-	policyv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 
 	"google.golang.org/grpc"
@@ -40,10 +42,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/storage"
-
-	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
+	bulkv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/bulk/v1"
+	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
+	policyv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
 )
 
 // AuthenticationScheme enumerates the supported authentication schemes. The
@@ -196,6 +198,17 @@ func New(manager *plugins.Manager, config Config) *Server {
 		metricsOK = true
 		options = append(options, metricsOption)
 		server.metrics = srvMetrics // Hang on to this object for later unregistering.
+	}
+
+	if tp := manager.TracerProvider(); tp != nil {
+		tracing := []otelgrpc.Option{
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithPropagators(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})),
+		}
+		options = append(options,
+			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(tracing...)),
+			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(tracing...)),
+		)
 	}
 
 	// Fills in all grpc.Server-related parts of the Server struct.
