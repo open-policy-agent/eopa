@@ -44,7 +44,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/mysql v0.21.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.21.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.21.0
-	github.com/twmb/franz-go v1.14.0
+	github.com/twmb/franz-go v1.14.1
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.42.0
 	go.opentelemetry.io/otel v1.16.0
