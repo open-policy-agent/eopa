@@ -25,21 +25,38 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
+type backend struct {
+	conn    string
+	cleanup func()
+}
+
 func TestSQLSend(t *testing.T) {
-	file := t.TempDir() + "/sqlite3.db"
-	populate(t, file)
+	type typ int
+	const (
+		sqlite typ = iota
+		mysql
+		postgres
+		none
+	)
 
-	mysql, mysqlConnStr := startMySQL(t)
-	defer mysql.Terminate(context.Background())
+	setupSQLite := func(t *testing.T) backend {
+		file := t.TempDir() + "/sqlite3.db"
+		populate(t, file)
+		return backend{conn: file, cleanup: func() {}}
+	}
 
-	postgres, postgresConnStr := startPostgreSQL(t)
-	defer postgres.Terminate(context.Background())
+	backends := map[typ]backend{
+		sqlite:   setupSQLite(t),
+		mysql:    startMySQL(t),
+		postgres: startPostgreSQL(t),
+	}
 
 	now := time.Now()
 
 	tests := []struct {
 		note                string
-		source              string
+		backend             typ
+		query               string
 		result              string
 		error               string
 		doNotResetCache     bool
@@ -48,167 +65,120 @@ func TestSQLSend(t *testing.T) {
 		preparedQueries     int
 	}{
 		{
-			"missing parameter(s)",
-			`p = resp { sql.send({}, resp)}`,
-			"",
-			`eval_type_error: sql.send: operand 1 missing required request parameters(s): {"data_source_name", "driver", "query"}`,
-			false,
-			now,
-			0,
-			0,
+			note:    "missing parameter(s)",
+			backend: none,
+			query:   `p = resp { sql.send({}, resp)}`,
+			error:   `eval_type_error: sql.send: operand 1 missing required request parameters(s): {"data_source_name", "driver", "query"}`,
 		},
 		{
-			"a single row query",
-			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`, file),
-			`{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
-			"",
-			false,
-			now,
-			0,
-			1,
+			note:            "a single row query",
+			backend:         sqlite,
+			query:           `p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
+			result:          `{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
+			preparedQueries: 1,
 		},
 		{
-			"a multi-row query",
-			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T2"}, resp)}`, file),
-			`{{"result": {"p": {"rows": [["A1", "B1"], ["A2", "B2"]]}}}}`,
-			"",
-			false,
-			now,
-			0,
-			1,
+			note:            "a multi-row query",
+			backend:         sqlite,
+			query:           `p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T2"}, resp)}`,
+			result:          `{{"result": {"p": {"rows": [["A1", "B1"], ["A2", "B2"]]}}}}`,
+			preparedQueries: 1,
 		},
 		{
-			"query with args",
-			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1 WHERE ID = $1", "args": ["A"]}, resp)}`, file),
-			`{{"result": {"p": {"rows": [["B"]]}}}}`,
-			"",
-			false,
-			now,
-			0,
-			1,
+			note:            "query with args",
+			backend:         sqlite,
+			query:           `p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1 WHERE ID = $1", "args": ["A"]}, resp)}`,
+			result:          `{{"result": {"p": {"rows": [["B"]]}}}}`,
+			preparedQueries: 1,
 		},
 		{
-			"intra-query query cache",
-			fmt.Sprintf(`p = [ resp1, resp2 ] {
-sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp1)
-sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp2) # cached
-}`, file, file),
-			`{{"result": {"p": [{"rows": [["B"]]},{"rows": [["B"]]}]}}}`,
-			"",
-			false,
-			now,
-			0,
-			1, // prepared query is cached so only one prepared query required
+			note:    "intra-query query cache",
+			backend: sqlite,
+			query: `p = [ resp1, resp2 ] {
+sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALUE FROM T1"}, resp1)
+sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALUE FROM T1"}, resp2) # cached
+}`,
+			result:          `{{"result": {"p": [{"rows": [["B"]]},{"rows": [["B"]]}]}}}`,
+			preparedQueries: 1, // prepared query is cached so only one prepared query required
 		},
 		{
-			"inter-query query cache warmup (default duration)",
-			fmt.Sprintf(`p = resp { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`, file),
-			`{{"result": {"p": {"rows": [["B"]]}}}}`,
-			"",
-			false,
-			now,
-			0,
-			0,
+			note:    "inter-query query cache warmup (default duration)",
+			backend: sqlite,
+			query:   `p = resp { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
+			result:  `{{"result": {"p": {"rows": [["B"]]}}}}`,
 		},
 		{
-			"inter-query query cache check (default duration, valid)",
-			fmt.Sprintf(`p = resp { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`, file),
-			`{{"result": {"p": {"rows": [["B"]]}}}}`,
-			"",
-			true, // keep the warmup results
-			now.Add(interQueryCacheDurationDefault - 1),
-			1,
-			0,
+			note:                "inter-query query cache check (default duration, valid)",
+			backend:             sqlite,
+			query:               `p = resp { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
+			result:              `{{"result": {"p": {"rows": [["B"]]}}}}`,
+			doNotResetCache:     true, // keep the warmup results
+			time:                now.Add(interQueryCacheDurationDefault - 1),
+			interQueryCacheHits: 1,
 		},
 		{
-			"inter-query query cache check (default duration, expired)",
-			fmt.Sprintf(`p = resp { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`, file),
-			`{{"result": {"p": {"rows": [["B"]]}}}}`,
-			"",
-			true, // keep the warmup results
-			now.Add(interQueryCacheDurationDefault),
-			0,
-			0,
+			note:            "inter-query query cache check (default duration, expired)",
+			backend:         sqlite,
+			query:           `p = resp { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
+			result:          `{{"result": {"p": {"rows": [["B"]]}}}}`,
+			doNotResetCache: true, // keep the warmup results
+			time:            now.Add(interQueryCacheDurationDefault),
 		},
 		{
-			"inter-query query cache warmup (explicit duration)",
-			fmt.Sprintf(`p = resp { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`, file),
-			`{{"result": {"p": {"rows": [["B"]]}}}}`,
-			"",
-			false,
-			now,
-			0,
-			0,
+			note:    "inter-query query cache warmup (explicit duration)",
+			backend: sqlite,
+			query:   `p = resp { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
+			result:  `{{"result": {"p": {"rows": [["B"]]}}}}`,
 		},
 		{
-			"inter-query query cache check (explicit duration, valid)",
-			fmt.Sprintf(`p = resp { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`, file),
-			`{{"result": {"p": {"rows": [["B"]]}}}}`,
-			"",
-			true, // keep the warmup results
-			now.Add(10*time.Second - 1),
-			1,
-			0,
+			note:                "inter-query query cache check (explicit duration, valid)",
+			backend:             sqlite,
+			query:               `p = resp { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
+			result:              `{{"result": {"p": {"rows": [["B"]]}}}}`,
+			doNotResetCache:     true, // keep the warmup results
+			time:                now.Add(10*time.Second - 1),
+			interQueryCacheHits: 1,
 		},
 		{
-			"inter-query query cache check (explicit duration, expired)",
-			fmt.Sprintf(`p = resp { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`, file),
-			`{{"result": {"p": {"rows": [["B"]]}}}}`,
-			"",
-			true, // keep the warmup results
-			now.Add(10 * time.Second),
-			0,
-			0,
+			note:            "inter-query query cache check (explicit duration, expired)",
+			backend:         sqlite,
+			query:           `p = resp { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
+			result:          `{{"result": {"p": {"rows": [["B"]]}}}}`,
+			doNotResetCache: true, // keep the warmup results
+			time:            now.Add(10 * time.Second),
 		},
 		{
-			"rows as objects",
-			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T1", "row_object": true}, resp)}`, file),
-			`{{"result": {"p": {"rows": [{"ID": "A", "VALUE": "B"}]}}}}`,
-			"",
-			false,
-			now,
-			0,
-			0, // single row query already prepared the query
+			note:            "rows as objects",
+			backend:         sqlite,
+			query:           `p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T1", "row_object": true}, resp)}`,
+			result:          `{{"result": {"p": {"rows": [{"ID": "A", "VALUE": "B"}]}}}}`,
+			preparedQueries: 0, // single row query already prepared the query
 		},
 		{
-			"error w/o raise",
-			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM NON_EXISTING"}, resp)}`, file),
-			"",
-			"eval_builtin_error: sql.send: SQL logic error: no such table: NON_EXISTING (1)",
-			false,
-			now,
-			0,
-			0,
+			note:    "error w/o raise",
+			backend: sqlite,
+			query:   `p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM NON_EXISTING"}, resp)}`,
+			error:   "eval_builtin_error: sql.send: SQL logic error: no such table: NON_EXISTING (1)",
 		},
 		{
-			"error with raise",
-			fmt.Sprintf(`p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM NON_EXISTING", "raise_error": false}, resp)}`, file),
-			`{{"result": {"p": {"rows": [], "error": {"code": 1, "message": "SQL logic error: no such table: NON_EXISTING (1)"}}}}}`,
-			"",
-			false,
-			now,
-			0,
-			0,
+			note:    "error with raise",
+			backend: sqlite,
+			query:   `p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM NON_EXISTING", "raise_error": false}, resp)}`,
+			result:  `{{"result": {"p": {"rows": [], "error": {"code": 1, "message": "SQL logic error: no such table: NON_EXISTING (1)"}}}}}`,
 		},
 		{
-			"mysql: a single row query",
-			fmt.Sprintf(`p = resp { sql.send({"driver": "mysql", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`, mysqlConnStr),
-			`{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
-			"",
-			false,
-			now,
-			0,
-			1,
+			note:            "mysql: a single row query",
+			backend:         mysql,
+			query:           `p = resp { sql.send({"driver": "mysql", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
+			result:          `{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
+			preparedQueries: 1,
 		},
 		{
-			"postgresql: a single row query",
-			fmt.Sprintf(`p = resp { sql.send({"driver": "postgres", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`, postgresConnStr),
-			`{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
-			"",
-			false,
-			now,
-			0,
-			1,
+			note:            "postgresql: a single row query",
+			backend:         postgres,
+			query:           `p = resp { sql.send({"driver": "postgres", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
+			result:          `{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
+			preparedQueries: 1,
 		},
 	}
 
@@ -221,6 +191,18 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
+			query := tc.query
+			if tc.backend != none {
+				be, ok := backends[tc.backend]
+				if !ok {
+					t.Skip("test skipped")
+				}
+				query = fmt.Sprintf(tc.query, be.conn)
+			}
+			if tc.time.IsZero() {
+				tc.time = now
+				t.Log("replaced time")
+			}
 			if !tc.doNotResetCache {
 				interQueryCache = cache.NewInterQueryCache(&cache.Config{
 					InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
@@ -229,12 +211,12 @@ sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE F
 				})
 			}
 
-			execute(t, interQueryCache, "package t\n"+tc.source, "t", tc.result, tc.error, tc.time, tc.interQueryCacheHits, tc.preparedQueries)
+			execute(t, interQueryCache, "package t\n"+query, "t", tc.result, tc.error, tc.time, tc.interQueryCacheHits, tc.preparedQueries)
 		})
 	}
 }
 
-func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string, query string, expectedResult string, expectedError string, time time.Time, expectedInterQueryCacheHits int, expectedPreparedQueries int) {
+func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string, query string, expectedResult string, expectedError string, now time.Time, expectedInterQueryCacheHits int, expectedPreparedQueries int) {
 	b := &bundle.Bundle{
 		Modules: []bundle.ModuleFile{
 			{
@@ -265,7 +247,7 @@ func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string
 	metrics := metrics.New()
 	v, err := vm.NewVM().WithExecutable(executable).Eval(ctx, query, vm.EvalOpts{
 		Metrics:                metrics,
-		Time:                   time,
+		Time:                   now,
 		Cache:                  builtins.Cache{},
 		InterQueryBuiltinCache: interQueryCache,
 		StrictBuiltinErrors:    true,
@@ -286,11 +268,11 @@ func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string
 	}
 
 	if hits := metrics.Counter(sqlSendInterQueryCacheHits).Value().(uint64); hits != uint64(expectedInterQueryCacheHits) {
-		tb.Fatalf("got %v hits, wanted %v\n", hits, expectedInterQueryCacheHits)
+		tb.Fatalf("inter-query cache: got %v hits, wanted %v\n", hits, expectedInterQueryCacheHits)
 	}
 
 	if prepared := metrics.Counter(sqlSendPreparedQueries).Value().(uint64); prepared != uint64(expectedPreparedQueries) {
-		tb.Fatalf("got %v prepared queries, wanted %v\n", prepared, expectedPreparedQueries)
+		tb.Fatalf("prepared queries: got %v prepared queries, wanted %v\n", prepared, expectedPreparedQueries)
 	}
 }
 
@@ -315,7 +297,7 @@ func populate(tb testing.TB, file string) {
 	}
 }
 
-func startMySQL(t *testing.T) (*mysql.MySQLContainer, string) {
+func startMySQL(t *testing.T) backend {
 	t.Helper()
 
 	srv, err := mysql.RunContainer(context.Background())
@@ -341,10 +323,10 @@ func startMySQL(t *testing.T) (*mysql.MySQLContainer, string) {
 		}
 	}
 
-	return srv, connStr
+	return backend{conn: connStr, cleanup: func() { srv.Terminate(context.Background()) }}
 }
 
-func startPostgreSQL(t *testing.T) (*postgres.PostgresContainer, string) {
+func startPostgreSQL(t *testing.T) backend {
 	t.Helper()
 
 	srv, err := postgres.RunContainer(context.Background(),
@@ -372,5 +354,5 @@ func startPostgreSQL(t *testing.T) (*postgres.PostgresContainer, string) {
 		}
 	}
 
-	return srv, connStr
+	return backend{conn: connStr, cleanup: func() { srv.Terminate(context.Background()) }}
 }
