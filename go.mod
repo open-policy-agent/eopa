@@ -11,6 +11,7 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-git/go-billy/v5 v5.4.1
 	github.com/go-git/go-git/v5 v5.7.0
+	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/go-ldap/ldap/v3 v3.4.5
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/google/go-cmp v0.5.9
@@ -28,7 +29,7 @@ require (
 	github.com/mithrandie/csvq v1.18.1
 	github.com/mithrandie/csvq-driver v1.7.0
 	github.com/mithrandie/go-text v1.6.0
-	github.com/okta/okta-sdk-golang/v3 v3.0.7
+	github.com/okta/okta-sdk-golang/v3 v3.0.8
 	github.com/open-policy-agent/opa v0.54.0
 	github.com/open-policy-agent/opa-envoy-plugin v0.54.0-envoy.0.20230707122950-42f3cb16971f
 	github.com/ory/dockertest/v3 v3.10.0
@@ -56,7 +57,6 @@ require (
 	google.golang.org/grpc v1.56.2
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/h2non/gock.v1 v1.1.2
-	gopkg.in/square/go-jose.v2 v2.6.0
 	modernc.org/sqlite v1.24.0
 )
 
@@ -146,7 +146,6 @@ require (
 	github.com/go-faster/errors v0.6.1 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
-	github.com/go-jose/go-jose/v3 v3.0.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-test/deep v1.1.0 // indirect

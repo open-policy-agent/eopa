@@ -9,10 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-jose/go-jose/v3"
 	"github.com/okta/okta-sdk-golang/v3/okta"
+
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/util"
-	"gopkg.in/square/go-jose.v2"
 
 	"github.com/styrainc/enterprise-opa-private/pkg"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
