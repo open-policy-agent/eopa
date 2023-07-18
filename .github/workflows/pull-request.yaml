@@ -13,6 +13,7 @@ concurrency:
 
 env:
   GOPRIVATE: github.com/StyraInc/opa
+  GO_VERSION: 1.20.5 # TODO(sr): Update to 1.20.6 when the testcontainers-go issue is resolved
 
 jobs:
   lint:
@@ -39,8 +40,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
-          go-version-file: go.mod
-          check-latest: true
+          go-version: ${{ env.GO_VERSION }}
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
@@ -112,9 +112,7 @@ jobs:
           path: enterprise-opa
       - uses: actions/setup-go@v4
         with:
-          go-version-file: enterprise-opa/go.mod
-          cache-dependency-path: enterprise-opa/go.sum
-          check-latest: true
+          go-version: ${{ env.GO_VERSION }}
       - name: pick up opa version
         id: enterprise-opa
         run: echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
@@ -183,8 +181,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@v4
         with:
-          go-version-file: go.mod
-          check-latest: true
+          go-version: ${{ env.GO_VERSION }}
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Set up grpcurl
@@ -322,8 +319,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@v4
         with:
-          go-version-file: go.mod
-          check-latest: true
+          go-version: ${{ env.GO_VERSION }}
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: ko-build/setup-ko@v0.6
