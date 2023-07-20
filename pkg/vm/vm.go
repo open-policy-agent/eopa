@@ -230,6 +230,20 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 
 			state := newState(globals, StatisticsGet(ctx))
 			defer state.Release()
+
+			globals.Ctx = context.WithValue(globals.Ctx, regoEvalOptsContextKey{}, EvalOpts{
+				Limits:              &globals.Limits, // TODO: Relay the instruction count.
+				Metrics:             globals.Metrics,
+				Time:                globals.Time,
+				Seed:                globals.Seed,
+				Runtime:             globals.Runtime,
+				PrintHook:           globals.PrintHook,
+				StrictBuiltinErrors: globals.StrictBuiltinErrors,
+				NDBCache:            globals.NDBCache,
+				Capabilities:        globals.Capabilities,
+			})
+			globals.Ctx = context.WithValue(globals.Ctx, regoEvalNamespaceContextKey{}, vm.data)
+
 			if err := plan.Execute(&state); err != nil {
 				return nil, err
 			}
@@ -372,9 +386,12 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 func (vm *VM) runtime(ctx context.Context, v interface{}) (*ast.Term, error) {
 	var runtime ast.Value
 	if v != nil {
-		var ok bool
-		runtime, ok = v.(ast.Value)
-		if !ok {
+		switch v := v.(type) {
+		case ast.Value:
+			runtime = v
+		case *ast.Term:
+			runtime = v.Value
+		default:
 			ok, err := vm.ops.IsObject(ctx, v)
 			if err != nil {
 				return nil, err
@@ -719,4 +736,8 @@ func (c *cancel) Cancel() {
 
 func (c *cancel) Cancelled() bool { // nolint:misspell // opa Cancel interface contains Cancelled function
 	return atomic.LoadInt32(&c.value) != 0
+}
+
+func EvalOptsFromContext(ctx context.Context) EvalOpts {
+	return ctx.Value(regoEvalOptsContextKey{}).(EvalOpts)
 }

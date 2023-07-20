@@ -28,6 +28,7 @@ var DefaultBuiltins = [...]*ast.Builtin{
 	// SQL/database builtins.
 	dynamoDBSend,
 	mongoDBSend,
+	regoEval,
 	sqlSend,
 	vaultSend,
 }
