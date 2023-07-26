@@ -14,7 +14,6 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
@@ -119,9 +118,7 @@ LOOP:
 }
 
 func (c *Data) poll(ctx context.Context) error {
-	if err := c.fetch(ctx); errors.Is(err, git.NoErrAlreadyUpToDate) || errors.Is(err, transport.ErrEmptyUploadPackRequest) {
-		// ignore ErrEmptyUploadPackRequest due to a bug in the go-git library: https://github.com/go-git/go-git/issues/328
-		// everything works fine
+	if err := c.fetch(ctx); errors.Is(err, git.NoErrAlreadyUpToDate) {
 		return nil // no updates, go to next round
 	} else if err != nil {
 		return err
