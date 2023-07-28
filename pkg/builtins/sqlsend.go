@@ -227,7 +227,7 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 
 	bctx.Metrics.Timer(sqlSendLatencyMetricKey).Start()
 
-	if responseObj, ok, err := checkCaches(bctx, obj, interQueryCacheEnabled); ok {
+	if responseObj, ok, err := checkCaches(bctx, obj, interQueryCacheEnabled, sqlSendBuiltinCacheKey, sqlSendInterQueryCacheHits); ok {
 		if err != nil {
 			return handleBuiltinErr(sqlSendName, bctx.Location, err)
 		}
@@ -333,7 +333,7 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 		return handleBuiltinErr(sqlSendName, bctx.Location, err)
 	}
 
-	if err := insertCaches(bctx, obj, responseObj.(ast.Object), queryErr, interQueryCacheEnabled, ttl); err != nil {
+	if err := insertCaches(bctx, obj, responseObj.(ast.Object), queryErr, interQueryCacheEnabled, ttl, sqlSendBuiltinCacheKey); err != nil {
 		return handleBuiltinErr(sqlSendName, bctx.Location, err)
 	}
 
@@ -505,7 +505,12 @@ func handleBuiltinErr(name string, loc *ast.Location, err error) error {
 }
 
 func getRequestString(obj ast.Object, key string) (string, error) {
-	if s, ok := obj.Get(ast.StringTerm(key)).Value.(ast.String); ok {
+	s := obj.Get(ast.StringTerm(key))
+	if s == nil {
+		return "", builtins.NewOperandErr(1, "'%s' missing", key)
+	}
+
+	if s, ok := s.Value.(ast.String); ok {
 		return string(s), nil
 	}
 
@@ -588,17 +593,17 @@ func getRequestIntWithDefault(obj ast.Object, key string, def int64) (int64, err
 	}
 }
 
-func checkCaches(bctx topdown.BuiltinContext, req ast.Object, interQueryCacheEnabled bool) (ast.Value, bool, error) {
+func checkCaches(bctx topdown.BuiltinContext, req ast.Object, interQueryCacheEnabled bool, cacheKey interface{}, hitsKey string) (ast.Value, bool, error) {
 	if interQueryCacheEnabled {
-		if resp, ok, err := checkInterQueryCache(bctx, req); ok {
+		if resp, ok, err := checkInterQueryCache(bctx, req, hitsKey); ok {
 			return resp, true, err
 		}
 	}
 
-	return checkIntraQueryCache(bctx, req)
+	return checkIntraQueryCache(bctx, req, cacheKey)
 }
 
-func checkInterQueryCache(bctx topdown.BuiltinContext, req ast.Object) (ast.Value, bool, error) {
+func checkInterQueryCache(bctx topdown.BuiltinContext, req ast.Object, hitsKey string) (ast.Value, bool, error) {
 	cache := bctx.InterQueryBuiltinCache
 
 	// TODO: Cache keys will not overlap with the http.send cache
@@ -619,7 +624,7 @@ func checkInterQueryCache(bctx topdown.BuiltinContext, req ast.Object) (ast.Valu
 	}
 
 	if getCurrentTime(bctx).Before(resp.ExpiresAt) {
-		bctx.Metrics.Counter(sqlSendInterQueryCacheHits).Incr()
+		bctx.Metrics.Counter(hitsKey).Incr()
 		resp, err := resp.FormatToAST()
 		return resp, true, err
 	}
@@ -629,8 +634,8 @@ func checkInterQueryCache(bctx topdown.BuiltinContext, req ast.Object) (ast.Valu
 	return nil, false, nil
 }
 
-func checkIntraQueryCache(bctx topdown.BuiltinContext, req ast.Object) (ast.Value, bool, error) {
-	if v := getIntraQueryCache(bctx).Get(req); v != nil {
+func checkIntraQueryCache(bctx topdown.BuiltinContext, req ast.Object, cacheKey interface{}) (ast.Value, bool, error) {
+	if v := getIntraQueryCache(bctx, cacheKey).Get(req); v != nil {
 		// It's safe not to clone the response as the VM will
 		// convert the AST types into its internal
 		// representation anyway.
@@ -640,11 +645,11 @@ func checkIntraQueryCache(bctx topdown.BuiltinContext, req ast.Object) (ast.Valu
 	return nil, false, nil
 }
 
-func getIntraQueryCache(bctx topdown.BuiltinContext) *intraQueryCache {
-	raw, ok := bctx.Cache.Get(sqlSendBuiltinCacheKey)
+func getIntraQueryCache(bctx topdown.BuiltinContext, cacheKey interface{}) *intraQueryCache {
+	raw, ok := bctx.Cache.Get(cacheKey)
 	if !ok {
 		c := newIntraQueryCache()
-		bctx.Cache.Put(sqlSendBuiltinCacheKey, c)
+		bctx.Cache.Put(cacheKey, c)
 		return c
 	}
 
@@ -754,7 +759,7 @@ func (cache *intraQueryCache) PutError(key ast.Value, err error) {
 	cache.entries.Put(key, intraQueryCacheEntry{Error: err})
 }
 
-func insertCaches(bctx topdown.BuiltinContext, req ast.Object, resp ast.Object, queryErr error, interQueryCacheEnabled bool, ttl time.Duration) error {
+func insertCaches(bctx topdown.BuiltinContext, req ast.Object, resp ast.Object, queryErr error, interQueryCacheEnabled bool, ttl time.Duration, cacheKey interface{}) error {
 	if queryErr == nil && interQueryCacheEnabled {
 		// Only cache successful queries for across queries;
 		// currently we can't separate between transient
@@ -770,7 +775,7 @@ func insertCaches(bctx topdown.BuiltinContext, req ast.Object, resp ast.Object, 
 	// Within a query we expect deterministic results, hence cache
 	// errors too.
 
-	insertIntraQueryCache(bctx, req, resp, queryErr)
+	insertIntraQueryCache(bctx, req, resp, queryErr, cacheKey)
 	return nil
 }
 
@@ -784,11 +789,11 @@ func insertInterQueryCache(bctx topdown.BuiltinContext, req ast.Object, resp ast
 	return nil
 }
 
-func insertIntraQueryCache(bctx topdown.BuiltinContext, req ast.Object, resp ast.Object, queryErr error) {
+func insertIntraQueryCache(bctx topdown.BuiltinContext, req ast.Object, resp ast.Object, queryErr error, cacheKey interface{}) {
 	if queryErr == nil {
-		getIntraQueryCache(bctx).PutResponse(req, resp)
+		getIntraQueryCache(bctx, cacheKey).PutResponse(req, resp)
 	} else {
-		getIntraQueryCache(bctx).PutError(req, queryErr)
+		getIntraQueryCache(bctx, cacheKey).PutError(req, queryErr)
 	}
 }
 
