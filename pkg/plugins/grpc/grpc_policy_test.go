@@ -386,7 +386,7 @@ func TestStreamingPolicyRWSeq(t *testing.T) {
 	for _, tc := range tests {
 		// We do the full setup/teardown for every test, or else we'd get
 		// collisions between testcases due to statefulness.
-		{
+		t.Run(tc.note, func(t *testing.T) {
 			storeData := "{}"
 			if tc.storeData != "" {
 				storeData = tc.storeData
@@ -437,6 +437,6 @@ func TestStreamingPolicyRWSeq(t *testing.T) {
 			if err := sclient.CloseSend(); err != nil {
 				t.Fatal(err)
 			}
-		}
+		})
 	}
 }

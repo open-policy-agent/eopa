@@ -10,7 +10,6 @@ import (
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
-	iCache "github.com/open-policy-agent/opa/topdown/cache"
 )
 
 const PluginName = "grpc"
@@ -90,9 +89,8 @@ func (p *grpcServerPlugin) Start(context.Context) error {
 		return err
 	}
 
-	// Note(philip): This may be the source of the bug.
-	// Register triggers so that if the runtime reloads the policies, the
-	// server sees the change.
+	// Note(philip): Triggers so that if the runtime reloads the policies,
+	// the gRPC server sees the change.
 	config := storage.TriggerConfig{
 		OnCommit: func(_ context.Context, _ storage.Transaction, ev storage.TriggerEvent) {
 			// Note(philip): Write-lock server instance before replacing the cache.
@@ -109,15 +107,6 @@ func (p *grpcServerPlugin) Start(context.Context) error {
 	}
 	p.trigger = triggerHandle
 	p.server.store.Commit(ctx, txn)
-
-	// Note(philip): Register compiler trigger here so that on store
-	// updates, we correctly clear all caches.
-	p.manager.RegisterCompilerTrigger(func(storage.Transaction) {
-		p.mtx.Lock()
-		p.server.preparedEvalQueries = newCache(pqMaxCacheSize)
-		p.server.interQueryBuiltinCache = iCache.NewInterQueryCache(p.manager.InterQueryBuiltinCacheConfig())
-		p.mtx.Unlock()
-	})
 
 	p.manager.UpdatePluginStatus(PluginName, &plugins.Status{State: plugins.StateOK})
 	return nil

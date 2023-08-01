@@ -297,7 +297,7 @@ func TestBulkRW(t *testing.T) {
 	for _, tc := range tests {
 		// We do the full setup/teardown for every test, or else we'd get
 		// collisions between testcases due to statefulness.
-		{
+		t.Run(tc.note, func(t *testing.T) {
 			storeData := "{}"
 			if tc.storeData != "" {
 				storeData = tc.storeData
@@ -330,7 +330,7 @@ func TestBulkRW(t *testing.T) {
 				fmt.Println("Diff:\n", cmp.Diff(tc.expResponse, resp, protocmp.Transform()))
 				t.Fatalf("[%s] Expected:\n%v\n\nGot:\n%v", tc.note, tc.expResponse, resp)
 			}
-		}
+		})
 	}
 }
 
@@ -414,7 +414,7 @@ func TestBulkRWSeq(t *testing.T) {
 	for _, tc := range tests {
 		// We do the full setup/teardown for every test, or else we'd get
 		// collisions between testcases due to statefulness.
-		{
+		t.Run(tc.note, func(t *testing.T) {
 			storeData := "{}"
 			if tc.storeData != "" {
 				storeData = tc.storeData
@@ -451,6 +451,6 @@ func TestBulkRWSeq(t *testing.T) {
 					t.Fatalf("[%s] Expected:\n%v\n\nGot:\n%v", tc.note, step.expResponse, resp)
 				}
 			}
-		}
+		})
 	}
 }

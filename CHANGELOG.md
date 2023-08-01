@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.8.0
+
+This release updates the OPA version used in Enterprise OPA to
+[v0.55.0](https://github.com/open-policy-agent/opa/releases/tag/v0.55.0).
+
 ## v1.7.0
 
 ### Envoy External Authorization Support

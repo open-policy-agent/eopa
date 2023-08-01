@@ -19,7 +19,6 @@ import (
 	"github.com/open-policy-agent/opa/util"
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
 	grpc_plugin "github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
@@ -93,6 +92,12 @@ func setupTest(t *testing.T, config, storeDataInput string, storePolicyInputs ma
 	}
 	ctx := context.Background()
 	mgr := pluginMgr(ctx, t, store, config)
+	// Note(philip): This Init() step is important-- without it, the
+	// manager never initializes its compiler instance, causing chaos down
+	// the road.
+	if err := mgr.Init(context.TODO()); err != nil {
+		t.Fatal(err)
+	}
 	// Note(philip): In the past, we actually created an instance of
 	// grpc_plugin.Server, and worked off of that. However, to get proper
 	// compiler/store triggers when policies update, we need to work at the
@@ -135,7 +140,6 @@ func pluginMgr(_ context.Context, t *testing.T, store storage.Store, config stri
 	}
 	disco, err := discovery.New(mgr,
 		discovery.Factories(map[string]plugins.Factory{
-			data.Name:              data.Factory(),
 			grpc_plugin.PluginName: grpc_plugin.Factory(),
 		}),
 	)
@@ -430,7 +434,7 @@ func TestStreamingDataRWSeq(t *testing.T) {
 	for _, tc := range tests {
 		// We do the full setup/teardown for every test, or else we'd get
 		// collisions between testcases due to statefulness.
-		{
+		t.Run(tc.note, func(t *testing.T) {
 			storeData := "{}"
 			if tc.storeData != "" {
 				storeData = tc.storeData
@@ -477,6 +481,6 @@ func TestStreamingDataRWSeq(t *testing.T) {
 			if err := sclient.CloseSend(); err != nil {
 				t.Fatal(err)
 			}
-		}
+		})
 	}
 }
