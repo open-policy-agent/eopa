@@ -31,7 +31,7 @@ require (
 	github.com/mithrandie/go-text v1.6.0
 	github.com/okta/okta-sdk-golang/v3 v3.0.8
 	github.com/open-policy-agent/opa v0.55.0
-	github.com/open-policy-agent/opa-envoy-plugin v0.54.0-envoy.0.20230707122950-42f3cb16971f
+	github.com/open-policy-agent/opa-envoy-plugin v0.55.0-envoy
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/rs/zerolog v1.29.1
