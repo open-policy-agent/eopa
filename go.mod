@@ -34,7 +34,7 @@ require (
 	github.com/open-policy-agent/opa-envoy-plugin v0.55.0-envoy
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/prometheus/client_golang v1.16.0
-	github.com/rs/zerolog v1.29.1
+	github.com/rs/zerolog v1.30.0
 	github.com/sbabiv/xml2map v1.2.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sourcegraph/conc v0.3.0
