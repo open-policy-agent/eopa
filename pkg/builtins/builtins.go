@@ -27,6 +27,7 @@ var BuiltinMap map[string]*ast.Builtin
 var DefaultBuiltins = [...]*ast.Builtin{
 	// SQL/database builtins.
 	dynamoDBSend,
+	mongoDBSend,
 	sqlSend,
 }
 
