@@ -41,7 +41,7 @@ func TestSQLSend(t *testing.T) {
 
 	setupSQLite := func(t *testing.T) backend {
 		file := t.TempDir() + "/sqlite3.db"
-		populate(t, file)
+		populate(t, file, initSQL)
 		return backend{conn: file, cleanup: func() {}}
 	}
 
@@ -211,12 +211,224 @@ sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALU
 				})
 			}
 
-			execute(t, interQueryCache, "package t\n"+query, "t", tc.result, tc.error, tc.time, tc.interQueryCacheHits, tc.preparedQueries)
+			execute(t, interQueryCache, "package t\n"+query, "t", tc.result, tc.error, tc.time, nil, tc.interQueryCacheHits, tc.preparedQueries)
 		})
 	}
 }
 
-func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string, query string, expectedResult string, expectedError string, now time.Time, expectedInterQueryCacheHits int, expectedPreparedQueries int) {
+// TestRegoZanzibar implements the example (slightly improved) described in: https://storage.googleapis.com/pub-tools-public-publication-data/pdf/10683a8987dbf0c6d4edcafb9b4f05cc9de5974a.pdf
+func TestRegoZanzibar(t *testing.T) {
+	// Test data:
+	//
+	// doc:readme#owner@10
+	// group:eng#member@11
+	// folder:X#viewer@12
+	// doc:readme#viewer@group:eng#member
+	// folder:A#parent@folder:X#...
+	// doc:readme#parent@folder:A#...
+
+	var initSQL = `
+        CREATE TABLE OWNER (OBJECT TEXT, USER TEXT, USERSET_OBJECT TEXT, USERSET_RELATION TEXT);
+        CREATE TABLE EDITOR (OBJECT TEXT, USER TEXT, USERSET_OBJECT TEXT, USERSET_RELATION TEXT);
+        CREATE TABLE MEMBER (OBJECT TEXT, USER TEXT, USERSET_OBJECT TEXT, USERSET_RELATION TEXT);
+        CREATE TABLE VIEWER (OBJECT TEXT, USER TEXT, USERSET_OBJECT TEXT, USERSET_RELATION TEXT);
+        CREATE TABLE PARENT (OBJECT TEXT, USER TEXT, USERSET_OBJECT TEXT, USERSET_RELATION TEXT);
+
+        INSERT INTO OWNER(OBJECT, USER, USERSET_OBJECT, USERSET_RELATION) VALUES('doc:readme', '10', '', '');
+        INSERT INTO MEMBER(OBJECT, USER, USERSET_OBJECT, USERSET_RELATION) VALUES('group:eng', '11', '', '');
+        INSERT INTO VIEWER(OBJECT, USER, USERSET_OBJECT, USERSET_RELATION) VALUES('folder:X', '12', '', '');
+        INSERT INTO VIEWER(OBJECT, USER, USERSET_OBJECT, USERSET_RELATION) VALUES('doc:readme', '', 'group:eng', 'MEMBER');
+        INSERT INTO PARENT(OBJECT, USER, USERSET_OBJECT, USERSET_RELATION) VALUES('folder:A', '', 'folder:X', '...');
+        INSERT INTO PARENT(OBJECT, USER, USERSET_OBJECT, USERSET_RELATION) VALUES('doc:readme', '', 'folder:A', '...');
+	`
+
+	file := t.TempDir() + "/sqlite3.db"
+	populate(t, file, initSQL)
+
+	module := fmt.Sprintf(`
+	package doc
+
+	### Entrypoints
+
+	is_owner { owner(input.resource, input.user) }
+	is_editor { editor(input.resource, input.user) }
+	is_viewer { viewer(input.resource, input.user) }
+
+	### Owner
+	#
+	# relation { name: "owner" }
+
+	owner(resource, user) {
+	    query("owner", resource, user)
+	}
+
+	### Editor
+	#
+	#
+	# relation {
+	#   name: "editor"
+	#   userset_rewrite {
+	#     union {
+	#	child { _this {} }
+	#	child { computed_userset { relation: "owner" } }
+	#     }
+	#   }
+	# }
+
+	editor(resource, user) {
+	    query("editor", resource, user)
+	}
+
+	editor(resource, user) {
+	    owner(resource, user)
+	}
+
+	### Viewer
+	#
+	# relation {
+	#   name: "viewer"
+	#   userset_rewrite {
+	#     union {
+	#	child { _this {} }
+	#	child { computed_userset { relation: "editor" } }
+	#	child { tuple_to_userset {
+	#	  tupleset { relation: "parent" }
+	#	  computed_userset {
+	#	    object: $TUPLE_USERSET_OBJECT # parent folder
+	#	    relation: "viewer"
+	#	  }
+	#	} }
+	#     }
+	#   }
+	# }
+
+	viewer(resource, user) {
+	    query("viewer", resource, user)
+	}
+
+	viewer(resource, user) {
+	    editor(resource, user)
+	}
+
+	viewer(resource, user) {
+	     p := parent(resource)
+	     viewer1(p, user) # recurse
+	}
+
+	## SQL helpers
+
+	query(table, resource, user) {
+	    sql_send(table, resource)[_].user = user
+	}
+
+	query(table, resource, user) {
+	    row := sql_send(table, resource)[_]
+	    row.userset_relation != ""
+	    query1(row.userset_relation, row.userset_object, user) # recurse
+	}
+
+	parent(resource) := folder {
+	    row := sql_send("parent", resource)[0]
+	    row.userset_relation = "..."
+	    folder := row.userset_object
+	}
+
+	sql_send(table, resource) := rows {
+	      result := sql.send({"driver": "sqlite", "data_source_name": "%s", "query": concat("", ["SELECT OBJECT, USER, USERSET_OBJECT, USERSET_RELATION FROM ", table, " WHERE OBJECT = $1"]), "args": [ resource ]})
+	      rows := [ { "object": row[0], "user": row[1], "userset_object": row[2], "userset_relation": row[3] } | row := result.rows[_] ]
+	}
+
+	### fake viewer recursion (2 levels)
+
+	viewer1(resource, user) {
+	    query("viewer", resource, user)
+	}
+
+	viewer2(resource, user) {
+	    query("viewer", resource, user)
+	}
+
+	viewer1(resource, user) {
+	    editor(resource, user)
+	}
+
+	viewer2(resource, user) {
+	    editor(resource, user)
+	}
+
+	viewer1(resource, user) {
+	     p := parent(resource)
+	     viewer2(p, user) # recurse
+	}
+
+	# fake query recursion (2 levels)
+
+	query1(table, resource, user) {
+	    sql_send(table, resource)[_].user = user
+	}
+
+	query2(table, resource, user) {
+	    sql_send(table, resource)[_].user = user
+	}
+
+	query1(table, resource, user) {
+	    row := sql_send(table, resource)[_]
+	    row.userset_relation != ""
+	    query2(row.userset_relation, row.userset_object, user) # recurse
+	}
+`, file)
+
+	tests := []struct {
+		note   string
+		query  string
+		input  string
+		result string
+	}{
+		{
+			note:   "owner is owner",
+			query:  `doc/is_owner`,
+			input:  `{"resource": "doc:readme", "user": "10"}`,
+			result: `{{"result": true}}`,
+		},
+		{
+			note:   "owner is editor",
+			query:  `doc/is_editor`,
+			input:  `{"resource": "doc:readme", "user": "10"}`,
+			result: `{{"result": true}}`,
+		},
+		{
+			note:   "editor is viewer",
+			query:  `doc/is_viewer`,
+			input:  `{"resource": "doc:readme", "user": "10"}`,
+			result: `{{"result": true}}`,
+		},
+		{
+			note:   "parent viewer is viewer",
+			query:  `doc/is_viewer`,
+			input:  `{"resource": "doc:readme", "user": "12"}`,
+			result: `{{"result": true}}`,
+		},
+		{
+			note:   "group member viewer is viewer",
+			query:  `doc/is_viewer`,
+			input:  `{"resource": "doc:readme", "user": "11"}`,
+			result: `{{"result": true}}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.note, func(t *testing.T) {
+			var input interface{}
+			if err := json.Unmarshal([]byte(tc.input), &input); err != nil {
+				t.Fatal(err)
+			}
+
+			execute(t, nil, module, tc.query, tc.result, "", time.Now(), &input, 0, -1)
+		})
+	}
+}
+
+func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string, query string, expectedResult string, expectedError string, now time.Time, input *interface{}, expectedInterQueryCacheHits int, expectedPreparedQueries int) {
 	b := &bundle.Bundle{
 		Modules: []bundle.ModuleFile{
 			{
@@ -246,6 +458,7 @@ func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string
 	_, ctx := vm.WithStatistics(context.Background())
 	metrics := metrics.New()
 	v, err := vm.NewVM().WithExecutable(executable).Eval(ctx, query, vm.EvalOpts{
+		Input:                  input,
 		Metrics:                metrics,
 		Time:                   now,
 		Cache:                  builtins.Cache{},
@@ -271,8 +484,10 @@ func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string
 		tb.Fatalf("inter-query cache: got %v hits, wanted %v\n", hits, expectedInterQueryCacheHits)
 	}
 
-	if prepared := metrics.Counter(sqlSendPreparedQueries).Value().(uint64); prepared != uint64(expectedPreparedQueries) {
-		tb.Fatalf("prepared queries: got %v prepared queries, wanted %v\n", prepared, expectedPreparedQueries)
+	if expectedPreparedQueries >= 0 {
+		if prepared := metrics.Counter(sqlSendPreparedQueries).Value().(uint64); prepared != uint64(expectedPreparedQueries) {
+			tb.Fatalf("prepared queries: got %v prepared queries, wanted %v\n", prepared, expectedPreparedQueries)
+		}
 	}
 }
 
@@ -285,14 +500,14 @@ var initSQL = `
         INSERT INTO T2(ID, VALUE) VALUES('A2', 'B2');
 	`
 
-func populate(tb testing.TB, file string) {
+func populate(tb testing.TB, file string, init string) {
 	db, err := sql.Open("sqlite", file)
 	if err != nil {
 		tb.Fatal(err)
 	}
 	defer db.Close()
 
-	if _, err = db.Exec(initSQL); err != nil {
+	if _, err = db.Exec(init); err != nil {
 		tb.Fatal(err)
 	}
 }
