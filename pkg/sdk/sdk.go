@@ -13,9 +13,9 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
-// DefaultOptions returns an sdk.Options struct initialized with the
-// values required to use Load's features. Typically, you would add
-// your specific config to its Config field.
+// DefaultOptions returns an sdk.Options struct initialized with the values
+// required to use Enterprise OPA's features. Typically, you would add your
+// specific config to its Config field.
 func DefaultOptions() sdk.Options {
 	rego_vm.SetDefault(true)
 
