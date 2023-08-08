@@ -29,6 +29,7 @@ var DefaultBuiltins = [...]*ast.Builtin{
 	dynamoDBSend,
 	mongoDBSend,
 	sqlSend,
+	vaultSend,
 }
 
 func init() {
