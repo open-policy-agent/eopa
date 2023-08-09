@@ -294,12 +294,8 @@ func startMongoDB(t *testing.T) (testcontainers.Container, string) {
 
 	// Create the test content.
 
-	client, err := mongo.NewClient(options.Client().ApplyURI(endpoint))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(endpoint))
 	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := client.Connect(ctx); err != nil {
 		t.Fatal(err)
 	}
 

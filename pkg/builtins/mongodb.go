@@ -360,16 +360,7 @@ func (p *mongoDBClientPool) Get(ctx context.Context, uri string) (*mongo.Client,
 }
 
 func (p *mongoDBClientPool) open(ctx context.Context, uri string) (*mongo.Client, error) {
-	client, err := mongo.NewClient(options.Client().ApplyURI(uri))
-	if err != nil {
-		return nil, err
-	}
-
-	if err := client.Connect(ctx); err != nil {
-		return nil, err
-	}
-
-	return client, nil
+	return mongo.Connect(ctx, options.Client().ApplyURI(uri))
 }
 
 func init() {
