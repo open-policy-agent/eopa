@@ -3,6 +3,7 @@ package builtins
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"reflect"
 	"sync"
 	"time"
@@ -34,11 +35,12 @@ var (
 		ast.StringTerm("cache"),
 		ast.StringTerm("cache_duration"),
 		ast.StringTerm("find"),
+		ast.StringTerm("find_one"),
 		ast.StringTerm("raise_error"),
 		ast.StringTerm("uri"),
 	)
 
-	mongoDBRequiredKeys = ast.NewSet(ast.StringTerm("find"), ast.StringTerm("uri"))
+	mongoDBRequiredKeys = ast.NewSet(ast.StringTerm("uri"))
 
 	// Marked non-deterministic because query results can be non-deterministic.
 	mongoDBSend = &ast.Builtin{
@@ -91,9 +93,30 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 		return builtins.NewOperandErr(pos, "missing required request parameters(s): %v", missingKeys)
 	}
 
-	find, err := getRequestObject(obj, "find")
+	find, err := getRequestObjectWithDefault(obj, "find", nil)
 	if err != nil {
 		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+	}
+
+	findOne, err := getRequestObjectWithDefault(obj, "find_one", nil)
+	if err != nil {
+		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+	}
+
+	cacheKey := ast.NewObject()
+	var commonFind ast.Object
+
+	switch {
+	case find == nil && findOne == nil:
+		return builtins.NewOperandErr(pos, "missing required request parameters(s): find or find_one")
+	case find != nil && findOne != nil:
+		return builtins.NewOperandErr(pos, "extra request parameters(s): find or find_one")
+	case find != nil:
+		cacheKey.Insert(ast.StringTerm("find"), ast.NewTerm(find))
+		commonFind = find
+	case findOne != nil:
+		cacheKey.Insert(ast.StringTerm("find_one"), ast.NewTerm(findOne))
+		commonFind = findOne
 	}
 
 	uri, err := getRequestString(obj, "uri")
@@ -120,29 +143,29 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 	// types of errors (invalid queries, connectivity errors,
 	// etc.)
 
-	database, err := getRequestString(find, "database")
+	database, err := getRequestString(commonFind, "database")
 	if err != nil {
 		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
 	}
 
-	collection, err := getRequestString(find, "collection")
+	collection, err := getRequestString(commonFind, "collection")
 	if err != nil {
 		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
 	}
 
-	filter, err := getRequestObject(find, "filter")
+	filter, err := getRequestObject(commonFind, "filter")
 	if err != nil {
 		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
 	}
 
-	opt, err := getRequestObjectWithDefault(find, "options", ast.NewObject())
+	opt, err := getRequestObjectWithDefault(commonFind, "options", ast.NewObject())
 	if err != nil {
 		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
 	}
 
 	bctx.Metrics.Timer(mongoDBSendLatencyMetricKey).Start()
 
-	if responseObj, ok, err := checkCaches(bctx, find, interQueryCacheEnabled, mongoDBSendBuiltinCacheKey, mongoDBSendInterQueryCacheHits); ok {
+	if responseObj, ok, err := checkCaches(bctx, cacheKey, interQueryCacheEnabled, mongoDBSendBuiltinCacheKey, mongoDBSendInterQueryCacheHits); ok {
 		if err != nil {
 			return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
 		}
@@ -150,77 +173,118 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 		return iter(ast.NewTerm(responseObj))
 	}
 
-	result, queryErr := func() ([]interface{}, error) {
+	m := map[string]interface{}{}
+	queryErr := func() error {
 		client, err := mongoDBClients.Get(bctx.Context, uri)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		j, err := ast.JSON(filter)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		data, err := json.Marshal(j)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		var filter interface{}
 		if err := bson.UnmarshalExtJSON(data, true, &filter); err != nil {
-			return nil, err
+			return err
 		}
 
-		var o options.FindOptions
+		coll := client.Database(database).Collection(collection)
+
+		if find != nil {
+			var o options.FindOptions
+			if opt.Len() > 0 {
+				v, err := ast.JSON(opt)
+				if err != nil {
+					return err
+				}
+
+				data, err := json.Marshal(v)
+				if err != nil {
+					return err
+				}
+
+				if err := json.Unmarshal(data, &o); err != nil {
+					return err
+				}
+			}
+
+			cursor, err := coll.Find(bctx.Context, filter, &o)
+			if err != nil {
+				return err
+			}
+
+			var docs []bson.M
+			if err = cursor.All(bctx.Context, &docs); err != nil {
+				return err
+			}
+
+			results := make([]interface{}, 0, len(docs))
+			for _, doc := range docs {
+				data, err = bson.MarshalExtJSON(doc, true, false)
+				if err != nil {
+					return err
+				}
+
+				var result interface{}
+				if err := util.UnmarshalJSON(data, &result); err != nil {
+					return err
+				}
+
+				results = append(results, result)
+			}
+
+			if len(results) > 0 {
+				m["documents"] = results
+			}
+
+			return nil
+		}
+
+		var o options.FindOneOptions
 		if opt.Len() > 0 {
 			v, err := ast.JSON(opt)
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			data, err := json.Marshal(v)
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			if err := json.Unmarshal(data, &o); err != nil {
-				return nil, err
+				return err
 			}
 		}
 
-		coll := client.Database(database).Collection(collection)
-		cursor, err := coll.Find(bctx.Context, filter, &o)
+		var doc bson.M
+		if err := coll.FindOne(bctx.Context, filter, &o).Decode(&doc); errors.Is(err, mongo.ErrNoDocuments) {
+			return nil
+		} else if err != nil {
+			return err
+		}
+
+		data, err = bson.MarshalExtJSON(doc, true, false)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		var docs []bson.M
-		if err = cursor.All(bctx.Context, &docs); err != nil {
-			return nil, err
+		var result interface{}
+		if err := util.UnmarshalJSON(data, &result); err != nil {
+			return err
 		}
 
-		results := make([]interface{}, 0, len(docs))
-		for _, doc := range docs {
-			data, err = bson.MarshalExtJSON(doc, true, false)
-			if err != nil {
-				return nil, err
-			}
+		m["document"] = result
 
-			var result interface{}
-			if err := util.UnmarshalJSON(data, &result); err != nil {
-				return nil, err
-			}
-
-			results = append(results, result)
-		}
-
-		return results, nil
+		return nil
 	}()
-
-	m := map[string]interface{}{}
-	if len(result) > 0 {
-		m["documents"] = result
-	}
 
 	if queryErr != nil {
 		if !raiseError {
@@ -253,7 +317,7 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
 	}
 
-	if err := insertCaches(bctx, find, responseObj.(ast.Object), queryErr, interQueryCacheEnabled, ttl, mongoDBSendBuiltinCacheKey); err != nil {
+	if err := insertCaches(bctx, cacheKey, responseObj.(ast.Object), queryErr, interQueryCacheEnabled, ttl, mongoDBSendBuiltinCacheKey); err != nil {
 		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
 	}
 
