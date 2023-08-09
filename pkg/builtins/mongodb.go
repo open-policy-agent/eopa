@@ -163,6 +163,11 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
 	}
 
+	canonical, err := getRequestBoolWithDefault(commonFind, "canonical", false)
+	if err != nil {
+		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+	}
+
 	bctx.Metrics.Timer(mongoDBSendLatencyMetricKey).Start()
 
 	if responseObj, ok, err := checkCaches(bctx, cacheKey, interQueryCacheEnabled, mongoDBSendBuiltinCacheKey, mongoDBSendInterQueryCacheHits); ok {
@@ -227,7 +232,7 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 
 			results := make([]interface{}, 0, len(docs))
 			for _, doc := range docs {
-				data, err = bson.MarshalExtJSON(doc, true, false)
+				data, err = bson.MarshalExtJSON(doc, canonical, false)
 				if err != nil {
 					return err
 				}
@@ -271,7 +276,7 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 			return err
 		}
 
-		data, err = bson.MarshalExtJSON(doc, true, false)
+		data, err = bson.MarshalExtJSON(doc, canonical, false)
 		if err != nil {
 			return err
 		}
