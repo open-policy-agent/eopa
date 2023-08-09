@@ -41,8 +41,8 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
-	github.com/testcontainers/testcontainers-go v0.21.0
-	github.com/testcontainers/testcontainers-go/modules/mysql v0.21.0
+	github.com/testcontainers/testcontainers-go v0.22.0
+	github.com/testcontainers/testcontainers-go/modules/mysql v0.22.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.21.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.21.0
 	github.com/twmb/franz-go v1.14.2
@@ -116,7 +116,7 @@ require (
 	github.com/cncf/xds/go v0.0.0-20230607035331-e9ce68804cb4 // indirect
 	github.com/cockroachdb/apd/v2 v2.0.2 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
-	github.com/containerd/containerd v1.7.2 // indirect
+	github.com/containerd/containerd v1.7.3 // indirect
 	github.com/containerd/continuity v0.4.1 // indirect
 	github.com/cpuguy83/dockercfg v0.3.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
@@ -128,7 +128,7 @@ require (
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/docker/cli v23.0.1+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
-	github.com/docker/docker v23.0.5+incompatible // indirect
+	github.com/docker/docker v24.0.5+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
