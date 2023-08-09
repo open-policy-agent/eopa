@@ -394,6 +394,16 @@ transform contains {"op": "add", "path": key, "value": val} if {
 }
 
 func testKafka(t *testing.T) *dockertest.Resource {
+	// HACK(philip): These Kafka tests are expected to be run serially
+	// (thus the shared port number). Both CI and local runs can be
+	// disrupted by lingering Kafka containers from prior runs that
+	// terminated early with errors/timeouts/panics, which prevented the
+	// `t.Cleanup()` function from running normally. Therefore, we hackily
+	// look up the container and purge it *before* creating a new Kafka
+	// instance.
+	if res, found := dockerPool.ContainerByName("kafka"); found {
+		_ = dockerPool.Purge(res)
+	}
 	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "kafka",
 		Repository: "bitnami/kafka",
@@ -416,6 +426,12 @@ func testKafka(t *testing.T) *dockertest.Resource {
 			"19092/tcp": {{HostIP: "localhost", HostPort: "19092/tcp"}},
 		},
 		ExposedPorts: []string{"19092/tcp"},
+	}, func(config *docker.HostConfig) {
+		// set AutoRemove to true so that stopped container goes away by itself
+		config.AutoRemove = true
+		config.RestartPolicy = docker.RestartPolicy{
+			Name: "no",
+		}
 	})
 	if err != nil {
 		t.Fatalf("could not start kafka: %s", err)
