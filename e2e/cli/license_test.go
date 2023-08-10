@@ -30,12 +30,15 @@ func TestNoLicenseForEval(t *testing.T) {
 				t.Errorf("expected exit code %d, got %d", exp, act)
 			}
 		}
-		ee := err.(*exec.ExitError)
-		prefix := `invalid license: no license provided
+		if ee, ok := err.(*exec.ExitError); ok {
+			prefix := `invalid license: no license provided
 
 Sign up for a free trial now`
-		if act := string(ee.Stderr); !strings.HasPrefix(act, prefix) {
-			t.Errorf("expected output %s, got %s", prefix, act)
+			if act := string(ee.Stderr); !strings.HasPrefix(act, prefix) {
+				t.Errorf("expected output %s, got %s", prefix, act)
+			}
+		} else {
+			t.Errorf("expected *exec.ExitError, got %T instead", err)
 		}
 	})
 }
@@ -73,10 +76,13 @@ func TestNoLicenseForLongEval(t *testing.T) {
 			t.Errorf("expected exit code %d, got %d", exp, act)
 		}
 	}
-	ee := err.(*exec.ExitError)
-	exp := "invalid license: invalid license: license key is invalid\n"
-	if act := string(ee.Stderr); exp != act {
-		t.Errorf("expected output %s, got %s", exp, act)
+	if ee, ok := err.(*exec.ExitError); ok {
+		exp := "invalid license: invalid license: license key is invalid\n"
+		if act := string(ee.Stderr); exp != act {
+			t.Errorf("expected output %s, got %s", exp, act)
+		}
+	} else {
+		t.Errorf("expected *exec.ExitError, got %T instead", err)
 	}
 }
 

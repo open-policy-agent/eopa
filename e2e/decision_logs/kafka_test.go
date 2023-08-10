@@ -272,6 +272,11 @@ func testRedPanda(t *testing.T, flags []string, opts []kgo.Opt, setup func(*dock
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Hack(philip): Because these tests are typically run serially, we use
+	// this hack to try to prevent some common CI test failures.
+	if res, found := dockerPool.ContainerByName("kafka-dl-e2e"); found {
+		_ = dockerPool.Purge(res)
+	}
 	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "kafka-dl-e2e",
 		Repository: "docker.redpanda.com/redpandadata/redpanda",
@@ -350,6 +355,11 @@ func pingKafka(opts ...kgo.Opt) error {
 }
 
 func testKafka(t *testing.T, extraEnv []string, opts []kgo.Opt, setup func(*dockertest.Resource) error) *dockertest.Resource {
+	// Hack(philip): Because these tests are typically run serially, we use
+	// this hack to try to prevent some common CI test failures.
+	if res, found := dockerPool.ContainerByName("kafka-dl-e2e"); found {
+		_ = dockerPool.Purge(res)
+	}
 	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "kafka-dl-e2e",
 		Repository: "bitnami/kafka",

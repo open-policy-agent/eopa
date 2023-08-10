@@ -63,7 +63,7 @@ p { data.xs[_] }`
 		if err := eopa.Start(); err != nil {
 			t.Fatal(err)
 		}
-		wait.ForLog(t, eopaOut,  func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+		wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
