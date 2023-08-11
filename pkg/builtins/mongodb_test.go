@@ -62,7 +62,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"a single row query (find many)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
+			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 			"",
 			false,
@@ -71,7 +71,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"a single row query (find many, canonical)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}, "canonical": true}})`, uri, auth),
+			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}, "canonical": true}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": {"$numberInt": "1"}, "foo": "x"}]}}}}`,
 			"",
 			false,
@@ -89,7 +89,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"a single row query (find one)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
+			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"document": {"bar": 1, "foo": "x"}}}}}`,
 			"",
 			false,
@@ -98,7 +98,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"a single row query (find one, canonical)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}, "canonical": true}})`, uri, auth),
+			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}, "canonical": true}})`, uri, auth),
 			`{{"result": {"p": {"document": {"bar": {"$numberInt": "1"}, "foo": "x"}}}}}`,
 			"",
 			false,
@@ -109,8 +109,8 @@ func TestMongoDBSend(t *testing.T) {
 		{
 			"intra-query query cache",
 			fmt.Sprintf(`p = [ resp1, resp2 ] {
-                                mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}}, resp1)
-                                mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}}, resp2) # cached
+                                mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}}, resp1)
+                                mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}}, resp2) # cached
 				}`, uri, auth, uri, auth),
 			`{{"result": {"p": [{"documents": [{"bar": 1, "foo": "x"}]}, {"documents": [{"bar": 1, "foo": "x"}]}]}}}`,
 			"",
@@ -120,7 +120,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"inter-query query cache warmup (default duration)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "auth" :%s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
+			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "auth" :%s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 			"",
 			false,
@@ -129,7 +129,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"inter-query query cache check (default duration, valid)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
+			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 			"",
 			true, // keep the warmup results
@@ -138,7 +138,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"inter-query query cache check (default duration, expired)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
+			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 			"",
 			true, // keep the warmup results
@@ -147,7 +147,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"inter-query query cache warmup (explicit duration)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
+			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 			"",
 			false,
@@ -156,7 +156,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"inter-query query cache check (explicit duration, valid)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
+			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 
 			"",
@@ -166,7 +166,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"inter-query query cache check (explicit duration, expired)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
+			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 			"",
 			true, // keep the warmup results
