@@ -32,6 +32,7 @@ var (
 	mongoDBClients = mongoDBClientPool{clients: make(map[mongoDBClientKey]*mongo.Client)}
 
 	mongoDBAllowedKeys = ast.NewSet(
+		ast.StringTerm("auth"),
 		ast.StringTerm("cache"),
 		ast.StringTerm("cache_duration"),
 		ast.StringTerm("find"),
@@ -66,7 +67,8 @@ type (
 	}
 
 	mongoDBClientKey struct {
-		uri string
+		uri        string
+		credential string
 	}
 
 	mongoDBSendKey string
@@ -117,6 +119,23 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 	case findOne != nil:
 		cacheKey.Insert(ast.StringTerm("find_one"), ast.NewTerm(findOne))
 		commonFind = findOne
+	}
+
+	var credential []byte
+	if auth, err := getRequestObjectWithDefault(obj, "auth", nil); err != nil {
+		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+	} else if auth != nil {
+		a, err := ast.JSON(auth)
+		if err != nil {
+			return err
+		}
+
+		credential, err = json.Marshal(a)
+		if err != nil {
+			return err
+		}
+
+		cacheKey.Insert(ast.StringTerm("auth"), ast.StringTerm(string(credential)))
 	}
 
 	uri, err := getRequestString(obj, "uri")
@@ -180,7 +199,7 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 
 	m := map[string]interface{}{}
 	queryErr := func() error {
-		client, err := mongoDBClients.Get(bctx.Context, uri)
+		client, err := mongoDBClients.Get(bctx.Context, uri, credential)
 		if err != nil {
 			return err
 		}
@@ -331,12 +350,13 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 	return iter(ast.NewTerm(responseObj))
 }
 
-func (p *mongoDBClientPool) Get(ctx context.Context, uri string) (*mongo.Client, error) {
+func (p *mongoDBClientPool) Get(ctx context.Context, uri string, credential []byte) (*mongo.Client, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	key := mongoDBClientKey{
 		uri,
+		string(credential),
 	}
 	client, ok := p.clients[key]
 	if ok {
@@ -344,7 +364,7 @@ func (p *mongoDBClientPool) Get(ctx context.Context, uri string) (*mongo.Client,
 	}
 
 	p.mu.Unlock()
-	client, err := p.open(ctx, uri)
+	client, err := p.open(ctx, uri, credential)
 	p.mu.Lock()
 
 	if err != nil {
@@ -359,8 +379,46 @@ func (p *mongoDBClientPool) Get(ctx context.Context, uri string) (*mongo.Client,
 	return client, nil
 }
 
-func (p *mongoDBClientPool) open(ctx context.Context, uri string) (*mongo.Client, error) {
-	return mongo.Connect(ctx, options.Client().ApplyURI(uri))
+func (p *mongoDBClientPool) open(ctx context.Context, uri string, credential []byte) (*mongo.Client, error) {
+	opts := options.Client().ApplyURI(uri)
+
+	if len(credential) > 0 {
+		var c struct {
+			// AuthMechanism defines the mechanism to use for authentication. Supported values include "SCRAM-SHA-256", "SCRAM-SHA-1",
+			// "MONGODB-CR", "PLAIN", "GSSAPI", "MONGODB-X509", and "MONGODB-AWS". For more details,
+			// https://www.mongodb.com/docs/manual/core/authentication-mechanisms/.
+			AuthMechanism string `json:"auth_mechanism"`
+			// AuthMechanismProperties can be used to specify additional configuration options for certain mechanisms.
+			// See https://www.mongodb.com/docs/manual/reference/connection-string/#mongodb-urioption-urioption.authMechanismProperties
+			AuthMechanismProperties map[string]string `json:"auth_mechanism_properties"`
+			// AuthSource sets the name of the database to use for authentication.
+			// https://www.mongodb.com/docs/manual/reference/connection-string/#mongodb-urioption-urioption.authSource
+			AuthSource string `json:"auth_source"`
+			// Username is the username for authentication.
+			Username string `json:"username"`
+			// Password is the password for authentication.
+			Password string `json:"password"`
+			// PasswordSet is for GSSAPI, this must be true if a password is specified, even if the password is the empty string, and
+			// false if no password is specified, indicating that the password should be taken from the context of the running
+			// process. For other mechanisms, this field is ignored.
+			PasswordSet bool `json:"password_set"`
+		}
+
+		if err := json.Unmarshal(credential, &c); err != nil {
+			return nil, err
+		}
+
+		opts = opts.SetAuth(options.Credential{
+			AuthMechanism:           c.AuthMechanism,
+			AuthMechanismProperties: c.AuthMechanismProperties,
+			AuthSource:              c.AuthSource,
+			Username:                c.Username,
+			Password:                c.Password,
+			PasswordSet:             c.PasswordSet,
+		})
+	}
+
+	return mongo.Connect(ctx, opts)
 }
 
 func init() {

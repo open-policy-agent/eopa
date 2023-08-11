@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/compile"
@@ -25,9 +26,11 @@ import (
 )
 
 func TestMongoDBSend(t *testing.T) {
-	mongodb, uri := startMongoDB(t)
+	username, password := "root", "password"
+	mongodb, uri := startMongoDB(t, username, password)
 	defer mongodb.Terminate(context.Background())
 
+	auth := fmt.Sprintf(`{"username": "%s", "password": "%s"}`, username, password)
 	now := time.Now()
 
 	tests := []struct {
@@ -50,7 +53,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"non-existing doc query (find many)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "find": {"database": "database", "collection": "collection", "filter": {"foo": "nonexisting"}}})`, uri),
+			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "nonexisting"}}})`, uri, auth),
 			`{{"result": {"p": {}}}}`,
 			"",
 			false,
@@ -59,7 +62,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"a single row query (find many)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri),
+			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 			"",
 			false,
@@ -68,7 +71,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"a single row query (find many, canonical)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}, "canonical": true}})`, uri),
+			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}, "canonical": true}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": {"$numberInt": "1"}, "foo": "x"}]}}}}`,
 			"",
 			false,
@@ -77,7 +80,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"non-existing doc query (find one)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "nonexisting"}}})`, uri),
+			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "nonexisting"}}})`, uri, auth),
 			`{{"result": {"p": {}}}}`,
 			"",
 			false,
@@ -86,7 +89,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"a single row query (find one)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri),
+			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"document": {"bar": 1, "foo": "x"}}}}}`,
 			"",
 			false,
@@ -95,7 +98,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"a single row query (find one, canonical)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}, "canonical": true}})`, uri),
+			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}, "canonical": true}})`, uri, auth),
 			`{{"result": {"p": {"document": {"bar": {"$numberInt": "1"}, "foo": "x"}}}}}`,
 			"",
 			false,
@@ -106,9 +109,9 @@ func TestMongoDBSend(t *testing.T) {
 		{
 			"intra-query query cache",
 			fmt.Sprintf(`p = [ resp1, resp2 ] {
-                                mongodb.send({"uri": "%s", "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}}, resp1)
-                                mongodb.send({"uri": "%s", "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}}, resp2) # cached
-				}`, uri, uri),
+                                mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}}, resp1)
+                                mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}}, resp2) # cached
+				}`, uri, auth, uri, auth),
 			`{{"result": {"p": [{"documents": [{"bar": 1, "foo": "x"}]}, {"documents": [{"bar": 1, "foo": "x"}]}]}}}`,
 			"",
 			false,
@@ -117,7 +120,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"inter-query query cache warmup (default duration)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri),
+			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "auth" :%s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 			"",
 			false,
@@ -126,7 +129,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"inter-query query cache check (default duration, valid)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri),
+			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 			"",
 			true, // keep the warmup results
@@ -135,7 +138,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"inter-query query cache check (default duration, expired)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri),
+			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 			"",
 			true, // keep the warmup results
@@ -144,7 +147,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"inter-query query cache warmup (explicit duration)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri),
+			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 			"",
 			false,
@@ -153,7 +156,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"inter-query query cache check (explicit duration, valid)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri),
+			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 
 			"",
@@ -163,7 +166,7 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"inter-query query cache check (explicit duration, expired)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri),
+			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"Projection": {"_id": false}}}})`, uri, auth),
 			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
 			"",
 			true, // keep the warmup results
@@ -268,12 +271,18 @@ func executeMongoDB(tb testing.TB, interQueryCache cache.InterQueryCache, module
 	}
 }
 
-func startMongoDB(t *testing.T) (testcontainers.Container, string) {
+func startMongoDB(t *testing.T, username string, password string) (testcontainers.Container, string) {
 	t.Helper()
 
 	ctx := context.Background()
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
+			ConfigModifier: func(config *container.Config) {
+				config.Env = []string{
+					fmt.Sprintf("MONGO_INITDB_ROOT_USERNAME=%s", username),
+					fmt.Sprintf("MONGO_INITDB_ROOT_PASSWORD=%s", password),
+				}
+			},
 			Image:        "mongo:6",
 			ExposedPorts: []string{"27017/tcp"},
 			WaitingFor: wait.ForAll(
@@ -294,7 +303,7 @@ func startMongoDB(t *testing.T) (testcontainers.Container, string) {
 
 	// Create the test content.
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(endpoint))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(authMongoURI(endpoint, username, password)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,4 +315,8 @@ func startMongoDB(t *testing.T) (testcontainers.Container, string) {
 	}
 
 	return container, endpoint
+}
+
+func authMongoURI(uri string, username string, password string) string {
+	return strings.ReplaceAll(uri, "localhost", username+":"+password+"@localhost")
 }
