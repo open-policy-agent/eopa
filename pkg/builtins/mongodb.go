@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -229,7 +230,7 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 					return err
 				}
 
-				data, err := json.Marshal(v)
+				data, err := json.Marshal(toSnakeCase(v))
 				if err != nil {
 					return err
 				}
@@ -278,7 +279,7 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 				return err
 			}
 
-			data, err := json.Marshal(v)
+			data, err := json.Marshal(toSnakeCase(v))
 			if err != nil {
 				return err
 			}
@@ -419,6 +420,28 @@ func (p *mongoDBClientPool) open(ctx context.Context, uri string, credential []b
 	}
 
 	return mongo.Connect(ctx, opts)
+}
+
+// toSnakeCase converts the top level map keys to snake case enough
+// for JSON decoder, removing underscores. Since JSON decoding prefers
+// case matching but finds noncase matching fields, this is enough.
+func toSnakeCase(v interface{}) interface{} {
+	m, ok := v.(map[string]interface{})
+	if !ok {
+		return v
+	}
+
+	n := make(map[string]interface{}, len(m))
+
+	for k, v := range m {
+		for i := strings.IndexByte(k, '_'); i != -1; i = strings.IndexByte(k, '_') {
+			k = k[0:i] + k[i+1:]
+		}
+
+		n[k] = v
+	}
+
+	return n
 }
 
 func init() {

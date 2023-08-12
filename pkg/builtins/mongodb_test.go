@@ -89,8 +89,8 @@ func TestMongoDBSend(t *testing.T) {
 		},
 		{
 			"a single row query (find one)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
-			`{{"result": {"p": {"document": {"bar": 1, "foo": "x"}}}}}`,
+			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}, "show_record_id": true}}})`, uri, auth),
+			`{{"result": {"p": {"document": {"bar": 1, "foo": "x", "$recordId": 1}}}}}`, // recordId is included only if show_record_id is converted to camel casing correctly.
 			"",
 			false,
 			now,
