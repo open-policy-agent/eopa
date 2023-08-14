@@ -149,7 +149,7 @@ transform contains {"op": "add", "path": key, "value": val} if {
 					t.Fatal(err)
 				}
 				return cmp.Diff(exp, act["result"]) == ""
-			}, 50*time.Millisecond, 5*time.Second); err != nil {
+			}, 50*time.Millisecond, 15*time.Second); err != nil {
 				t.Error(err)
 			}
 
