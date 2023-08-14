@@ -4,10 +4,11 @@ go 1.20
 
 require (
 	github.com/OneOfOne/xxhash v1.2.8
-	github.com/aws/aws-sdk-go v1.44.321
+	github.com/aws/aws-sdk-go v1.44.322
 	github.com/benthosdev/benthos/v4 v4.18.0
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.1
+	github.com/docker/docker v24.0.5+incompatible
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-git/go-billy/v5 v5.4.1
 	github.com/go-git/go-git/v5 v5.8.1
@@ -128,7 +129,6 @@ require (
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/docker/cli v23.0.1+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
-	github.com/docker/docker v24.0.5+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
