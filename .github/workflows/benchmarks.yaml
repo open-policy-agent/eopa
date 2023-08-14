@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main ]
 
+env:
+  GO_VERSION: 1.21
+
 jobs:
   benchmarks:
     name: Benchmarks
@@ -23,7 +26,7 @@ jobs:
           path: eopa
       - uses: actions/setup-go@v4
         with:
-          go-version-file: eopa/go.mod
+          go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: eopa/go.sum
           check-latest: true
       - name: Check out "benchmarks" branch

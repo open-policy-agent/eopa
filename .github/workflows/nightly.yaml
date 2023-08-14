@@ -4,6 +4,9 @@ on:
   schedule:
     - cron:  '0 8 * * *'  # Daily, at 8:00 UTC
 
+env:
+  GO_VERSION: 1.21
+
 jobs:
   build:
     name: Ko Build
@@ -12,25 +15,42 @@ jobs:
     env:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - name: Check out code
+      - uses: open-policy-agent/setup-opa@v2
+      - name: checkout Enterprise OPA
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          path: enterprise-opa
       - uses: actions/setup-go@v4
         with:
-          go-version-file: go.mod
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: enterprise-opa/go.sum
           check-latest: true
-      - uses: open-policy-agent/setup-opa@v2
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: ko-build/setup-ko@v0.6
       - name: Build
         run: make build
+        working-directory: enterprise-opa
       - name: Upload image tarball
         uses: actions/upload-artifact@v3
         with:
           name: image
           path: local.tar
+      - name: checkout OPA
+        uses: actions/checkout@v3
+        with:
+          repository: open-policy-agent/opa
+          ref: ${{ steps.enterprise-opa.outputs.opa_version }}
+          path: opa
+      - name: pick up opa directory
+        id: opa
+        working-directory: opa
+        run: echo "dir=$(pwd)" >> $GITHUB_OUTPUT
+      - run: make test-race
+        working-directory: enterprise-opa
+        env:
+          OPA_ROOT: ${{ steps.opa.outputs.dir }}
 
   goreleaser:
     name: GoReleaser
@@ -63,7 +83,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@v4
         with:
-          go-version-file: go.mod
+          go-version: ${{ env.GO_VERSION }}
           check-latest: true
       - name: setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
@@ -192,7 +212,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
-          go-version-file: go.mod
+          go-version: ${{ env.GO_VERSION }}
           check-latest: true
 
       - run: go install golang.org/x/vuln/cmd/govulncheck@latest
@@ -206,7 +226,7 @@ jobs:
         uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
-          go-version-file: go.mod
+          go-version: ${{ env.GO_VERSION }}
           check-latest: true
       - run: make fuzz
       - name: Dump crashers

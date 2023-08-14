@@ -273,7 +273,9 @@ func TestMutualTLSFailureClientLacksCert(t *testing.T) {
 	if response, err := client.UpdateData(ctx, &datav1.UpdateDataRequest{Data: &datav1.DataDocument{Path: "/test/a", Document: structpb.NewNumberValue(5)}}); err == nil {
 		t.Fatalf("expected error, got: %v", response)
 	} else {
-		if !strings.Contains(err.Error(), "tls: bad certificate") && !strings.Contains(err.Error(), "write: broken pipe") {
+		if !strings.Contains(err.Error(), "tls: bad certificate") &&
+			!strings.Contains(err.Error(), "write: broken pipe") &&
+			!strings.Contains(err.Error(), "tls: certificate required") {
 			t.Fatalf("expected tls error or broken pipe (from early client hangup), got: %v", err)
 		}
 	}
