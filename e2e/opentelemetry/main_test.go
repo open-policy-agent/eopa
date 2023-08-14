@@ -16,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ory/dockertest"
-	"github.com/ory/dockertest/docker"
-	"github.com/ory/dockertest/docker/pkg/stdcopy"
+	"github.com/ory/dockertest/v3"
+	"github.com/ory/dockertest/v3/docker"
+	"github.com/ory/dockertest/v3/docker/pkg/stdcopy"
 
 	"github.com/styrainc/enterprise-opa-private/e2e/retry"
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"

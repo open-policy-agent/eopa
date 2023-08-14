@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/ory/dockertest/docker"
+	"github.com/ory/dockertest/v3/docker"
 	"github.com/twmb/franz-go/pkg/kgo"
 
 	"github.com/open-policy-agent/opa/util"

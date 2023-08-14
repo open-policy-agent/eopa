@@ -25,7 +25,7 @@ import (
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/go-cmp/cmp"
 	"github.com/open-policy-agent/opa/util"
-	"github.com/ory/dockertest"
+	"github.com/ory/dockertest/v3"
 
 	_ "github.com/styrainc/enterprise-opa-private/pkg/plugins/data/git"
 )
