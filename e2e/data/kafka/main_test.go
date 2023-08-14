@@ -335,6 +335,9 @@ func loadEnterpriseOPA(t *testing.T, config, policy, image string, network *dock
 }
 
 func testKafka(t *testing.T, network *docker.Network) *dockertest.Resource {
+	if res, found := dockerPool.ContainerByName("kafka-e2e"); found {
+		_ = dockerPool.Purge(res)
+	}
 	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "kafka-e2e",
 		Repository: "bitnami/kafka",
@@ -378,6 +381,9 @@ func testKafka(t *testing.T, network *docker.Network) *dockertest.Resource {
 }
 
 func testRedPanda(t *testing.T, network *docker.Network) *dockertest.Resource {
+	if res, found := dockerPool.ContainerByName("kafka-e2e"); found {
+		_ = dockerPool.Purge(res)
+	}
 	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "kafka-e2e",
 		Repository: "redpandadata/redpanda",
