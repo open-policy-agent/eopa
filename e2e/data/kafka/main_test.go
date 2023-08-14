@@ -380,7 +380,7 @@ func testKafka(t *testing.T, network *docker.Network) *dockertest.Resource {
 func testRedPanda(t *testing.T, network *docker.Network) *dockertest.Resource {
 	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "kafka-e2e",
-		Repository: "docker.redpanda.com/vectorized/redpanda",
+		Repository: "redpandadata/redpanda",
 		Tag:        "latest",
 		NetworkID:  network.ID,
 		Hostname:   "kafka-e2e",

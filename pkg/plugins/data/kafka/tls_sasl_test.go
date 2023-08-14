@@ -419,7 +419,7 @@ func testRedPanda(t *testing.T, flags []string, extra ...kgo.Opt) *dockertest.Re
 	}
 	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "kafka",
-		Repository: "docker.redpanda.com/vectorized/redpanda",
+		Repository: "redpandadata/redpanda",
 		Tag:        "latest",
 		Hostname:   "kafka",
 		Env:        []string{},
