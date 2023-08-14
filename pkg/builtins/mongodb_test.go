@@ -46,7 +46,7 @@ func TestMongoDBSend(t *testing.T) {
 			"missing parameter(s)",
 			`p := mongodb.send({})`,
 			"",
-			`eval_type_error: mongodb.send: operand 1 missing required request parameters(s): {"uri"}`,
+			`eval_type_error: mongodb.send: operand 1 missing required request parameter(s): {"uri"}`,
 			false,
 			now,
 			0,

@@ -98,12 +98,12 @@ func builtinDynamoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter
 	requestKeys := ast.NewSet(obj.Keys()...)
 	invalidKeys := requestKeys.Diff(dynamoDBAllowedKeys)
 	if invalidKeys.Len() != 0 {
-		return builtins.NewOperandErr(pos, "invalid request parameters(s): %v", invalidKeys)
+		return builtins.NewOperandErr(pos, "invalid request parameter(s): %v", invalidKeys)
 	}
 
 	missingKeys := dynamoDBRequiredKeys.Diff(requestKeys)
 	if missingKeys.Len() != 0 {
-		return builtins.NewOperandErr(pos, "missing required request parameters(s): %v", missingKeys)
+		return builtins.NewOperandErr(pos, "missing required request parameter(s): %v", missingKeys)
 	}
 
 	get, err := getRequestObject(obj, "get")

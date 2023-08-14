@@ -45,7 +45,7 @@ func TestDynamoDBSend(t *testing.T) {
 			"missing parameter(s)",
 			`p = resp { dynamodb.send({}, resp)}`,
 			"",
-			`eval_type_error: dynamodb.send: operand 1 missing required request parameters(s): {"get", "region"}`,
+			`eval_type_error: dynamodb.send: operand 1 missing required request parameter(s): {"get", "region"}`,
 			false,
 			now,
 			0,

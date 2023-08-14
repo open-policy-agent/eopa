@@ -88,12 +88,12 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 	requestKeys := ast.NewSet(obj.Keys()...)
 	invalidKeys := requestKeys.Diff(mongoDBAllowedKeys)
 	if invalidKeys.Len() != 0 {
-		return builtins.NewOperandErr(pos, "invalid request parameters(s): %v", invalidKeys)
+		return builtins.NewOperandErr(pos, "invalid request parameter(s): %v", invalidKeys)
 	}
 
 	missingKeys := mongoDBRequiredKeys.Diff(requestKeys)
 	if missingKeys.Len() != 0 {
-		return builtins.NewOperandErr(pos, "missing required request parameters(s): %v", missingKeys)
+		return builtins.NewOperandErr(pos, "missing required request parameter(s): %v", missingKeys)
 	}
 
 	find, err := getRequestObjectWithDefault(obj, "find", nil)
@@ -111,9 +111,9 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 
 	switch {
 	case find == nil && findOne == nil:
-		return builtins.NewOperandErr(pos, "missing required request parameters(s): find or find_one")
+		return builtins.NewOperandErr(pos, "missing required request parameter(s): find or find_one")
 	case find != nil && findOne != nil:
-		return builtins.NewOperandErr(pos, "extra request parameters(s): find or find_one")
+		return builtins.NewOperandErr(pos, "extra request parameter(s): find or find_one")
 	case find != nil:
 		cacheKey.Insert(ast.StringTerm("find"), ast.NewTerm(find))
 		commonFind = find
