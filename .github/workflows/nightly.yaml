@@ -9,7 +9,7 @@ env:
 
 jobs:
   build:
-    name: Ko Build
+    name: Build and Test
     runs-on: ubuntu-22.04
     environment: ci
     env:
@@ -36,7 +36,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: image
-          path: local.tar
+          path: enterprise-opa/local.tar
       - name: checkout OPA
         uses: actions/checkout@v3
         with:
