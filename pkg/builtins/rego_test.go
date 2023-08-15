@@ -43,7 +43,7 @@ func TestRegoEval(t *testing.T) {
 		},
 		{
 			note:                "a basic eval",
-			source:              `p := rego.eval({"module": "package foo.bar\nx := true", "path": "foo.bar.x"})`,
+			source:              `p := rego.eval({"input": true, "module": "package foo.bar\nx := input", "path": "foo.bar.x"})`,
 			result:              `{{"result": {"p": {{"result": true}}}}}`,
 			error:               "",
 			doNotResetCache:     false,

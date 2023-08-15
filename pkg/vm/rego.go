@@ -90,6 +90,8 @@ func builtinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter fun
 		path = ast.String("data." + p)
 	}
 
+	input := obj.Get(ast.StringTerm("input"))
+
 	raiseError, err := getRequestBoolWithDefault(obj, "raise_error", true)
 	if err != nil {
 		return handleBuiltinErr(rego.RegoEvalName, bctx.Location, err)
@@ -147,7 +149,16 @@ func builtinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter fun
 		vm := NewVM().
 			WithExecutable(executable).
 			WithDataNamespace(bctx.Context.Value(regoEvalNamespaceContextKey{}))
-		return vm.Eval(bctx.Context, spath, EvalOptsFromContext(bctx.Context))
+		opts := EvalOptsFromContext(bctx.Context)
+		if input != nil {
+			i, err := ast.JSON(input.Value)
+			if err != nil {
+				return nil, err
+			}
+
+			opts.Input = &i
+		}
+		return vm.Eval(bctx.Context, spath, opts)
 	}()
 
 	if err != nil {
