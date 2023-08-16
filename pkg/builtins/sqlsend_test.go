@@ -68,7 +68,13 @@ func TestSQLSend(t *testing.T) {
 			note:    "missing parameter(s)",
 			backend: none,
 			query:   `p = resp { sql.send({}, resp)}`,
-			error:   `eval_type_error: sql.send: operand 1 missing required request parameters(s): {"data_source_name", "driver", "query"}`,
+			error:   `eval_type_error: sql.send: operand 1 missing required request parameter(s): {"data_source_name", "driver", "query"}`,
+		},
+		{
+			note:    "unknown driver",
+			backend: none,
+			query:   `p = resp { sql.send({"driver": "pg", "data_source_name": "", "query": ""}, resp)}`,
+			error:   `eval_type_error: sql.send: operand 1 unknown driver pg, must be one of {"mysql", "postgres", "sqlite"}`,
 		},
 		{
 			note:            "a single row query",
@@ -201,7 +207,6 @@ sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALU
 			}
 			if tc.time.IsZero() {
 				tc.time = now
-				t.Log("replaced time")
 			}
 			if !tc.doNotResetCache {
 				interQueryCache = cache.NewInterQueryCache(&cache.Config{
@@ -556,7 +561,7 @@ func startPostgreSQL(t *testing.T) backend {
 		t.Fatal(err)
 	}
 
-	db, err := sql.Open("postgres", connStr)
+	db, err := sql.Open("pgx", connStr)
 	if err != nil {
 		t.Fatal(err)
 	}

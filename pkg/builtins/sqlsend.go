@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -11,11 +12,14 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/jackc/pgx/v5/pgconn"
+	_ "github.com/jackc/pgx/v5/stdlib" // database/sql compatible driver for pgx
+	"modernc.org/sqlite"
+
 	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/lib/pq"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"modernc.org/sqlite"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/topdown"
@@ -52,7 +56,8 @@ var (
 		ast.StringTerm("row_object"),
 	)
 
-	requiredKeys = ast.NewSet(ast.StringTerm("driver"), ast.StringTerm("data_source_name"), ast.StringTerm("query"))
+	requiredKeys     = ast.NewSet(ast.StringTerm("driver"), ast.StringTerm("data_source_name"), ast.StringTerm("query"))
+	supportedDrivers = ast.NewSet(ast.StringTerm("postgres"), ast.StringTerm("mysql"), ast.StringTerm("sqlite"))
 
 	// Marked non-deterministic because SQL query results can be non-deterministic.
 	sqlSend = &ast.Builtin{
@@ -134,15 +139,20 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 	requestKeys := ast.NewSet(obj.Keys()...)
 	invalidKeys := requestKeys.Diff(allowedKeys)
 	if invalidKeys.Len() != 0 {
-		return builtins.NewOperandErr(pos, "invalid request parameters(s): %v", invalidKeys)
+		return builtins.NewOperandErr(pos, "invalid request parameter(s): %v", invalidKeys)
 	}
 
 	missingKeys := requiredKeys.Diff(requestKeys)
 	if missingKeys.Len() != 0 {
-		return builtins.NewOperandErr(pos, "missing required request parameters(s): %v", missingKeys)
+		return builtins.NewOperandErr(pos, "missing required request parameter(s): %v", missingKeys)
 	}
 
 	driver, err := getRequestString(obj, "driver")
+	if err != nil {
+		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+	}
+
+	driver, err = validateDriver(driver)
 	if err != nil {
 		return handleBuiltinErr(sqlSendName, bctx.Location, err)
 	}
@@ -311,14 +321,17 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 			case *mysql.MySQLError:
 				// See: https://github.com/go-sql-driver/mysql/blob/master/errors.go
 				e["number"] = int(queryErr.Number)
-			case *pq.Error:
-				// See: https://github.com/lib/pq/blob/master/error.go
-				e["severity"] = queryErr.Severity
-				e["code"] = string(queryErr.Code)
-				e["detail"] = queryErr.Detail
 			case *sqlite.Error:
 				// See: https://pkg.go.dev/modernc.org/sqlite#Error
 				e["code"] = queryErr.Code()
+			default:
+				var perr *pgconn.PgError
+				if errors.As(queryErr, &perr) {
+					// See: https://pkg.go.dev/github.com/jackc/pgconn#PgError
+					e["severity"] = perr.Severity
+					e["code"] = perr.Code
+					e["detail"] = perr.Detail
+				}
 			}
 
 			m["error"] = e
@@ -795,6 +808,17 @@ func insertIntraQueryCache(bctx topdown.BuiltinContext, req ast.Object, resp ast
 	} else {
 		getIntraQueryCache(bctx, cacheKey).PutError(req, queryErr)
 	}
+}
+
+func validateDriver(d string) (string, error) {
+	switch d {
+	case "postgres":
+		d = "pgx"
+	case "mysql", "sqlite": // OK
+	default:
+		return "", builtins.NewOperandErr(1, "unknown driver %s, must be one of %v", d, supportedDrivers)
+	}
+	return d, nil
 }
 
 func init() {
