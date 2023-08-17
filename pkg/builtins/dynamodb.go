@@ -45,11 +45,12 @@ var (
 		ast.StringTerm("credentials"), // environment variables used if no credentials provided
 		ast.StringTerm("endpoint"),
 		ast.StringTerm("get"),
+		ast.StringTerm("query"),
 		ast.StringTerm("raise_error"),
 		ast.StringTerm("region"),
 	)
 
-	dynamoDBRequiredKeys = ast.NewSet(ast.StringTerm("get"), ast.StringTerm("region"))
+	dynamoDBRequiredKeys = ast.NewSet(ast.StringTerm("region"))
 
 	// Marked non-deterministic because DynamoDB query results can be non-deterministic.
 	dynamoDBSend = &ast.Builtin{
@@ -106,9 +107,30 @@ func builtinDynamoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter
 		return builtins.NewOperandErr(pos, "missing required request parameter(s): %v", missingKeys)
 	}
 
-	get, err := getRequestObject(obj, "get")
+	get, err := getRequestObjectWithDefault(obj, "get", nil)
 	if err != nil {
 		return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
+	}
+
+	query, err := getRequestObjectWithDefault(obj, "query", nil)
+	if err != nil {
+		return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
+	}
+
+	cacheKey := ast.NewObject()
+	var common ast.Object
+
+	switch {
+	case get == nil && query == nil:
+		return builtins.NewOperandErr(pos, "missing required request parameter(s): get or query")
+	case get != nil && query != nil:
+		return builtins.NewOperandErr(pos, "extra request parameter(s): get or query")
+	case get != nil:
+		cacheKey.Insert(ast.StringTerm("get"), ast.NewTerm(get))
+		common = get
+	case query != nil:
+		cacheKey.Insert(ast.StringTerm("query"), ast.NewTerm(query))
+		common = query
 	}
 
 	region, err := getRequestStringWithDefault(obj, "region", "")
@@ -160,17 +182,12 @@ func builtinDynamoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter
 	// types of errors (invalid queries, connectivity errors,
 	// etc.)
 
-	table, err := getRequestString(get, "table")
+	table, err := getRequestString(common, "table")
 	if err != nil {
 		return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
 	}
 
-	consistentRead, err := getRequestBoolWithDefault(get, "consistent_read", false)
-	if err != nil {
-		return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
-	}
-
-	key, err := getRequestObject(get, "key")
+	consistentRead, err := getRequestBoolWithDefault(common, "consistent_read", false)
 	if err != nil {
 		return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
 	}
@@ -179,7 +196,7 @@ func builtinDynamoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter
 
 	bctx.Metrics.Timer(dynamoDBSendLatencyMetricKey).Start()
 
-	if responseObj, ok, err := checkCaches(bctx, get, interQueryCacheEnabled && !consistentRead, dynamoDBSendBuiltinCacheKey, dynamoDBSendInterQueryCacheHits); ok {
+	if responseObj, ok, err := checkCaches(bctx, cacheKey, interQueryCacheEnabled && !consistentRead, dynamoDBSendBuiltinCacheKey, dynamoDBSendInterQueryCacheHits); ok {
 		if err != nil {
 			return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
 		}
@@ -187,51 +204,155 @@ func builtinDynamoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter
 		return iter(ast.NewTerm(responseObj))
 	}
 
-	result, queryErr := func() (map[string]interface{}, error) {
-		client, err := dynamoDBClients.Get(bctx.Context, region, endpoint, accessKey, secretKey, sessionToken)
-		if err != nil {
-			return nil, err
-		}
-
-		key, err := ast.JSON(key)
-		if err != nil {
-			return nil, err
-		}
-
-		m := make(map[string]*dynamodb.AttributeValue)
-		for k, v := range key.(map[string]interface{}) {
-			data, err := json.Marshal(v)
-			if err != nil {
-				return nil, err
-			}
-
-			var a dynamodb.AttributeValue
-			if err := json.Unmarshal(data, &a); err != nil {
-				return nil, err
-			}
-
-			m[k] = &a
-		}
-
-		request := dynamodb.GetItemInput{
-			ConsistentRead: &consistentRead,
-			Key:            m,
-			TableName:      &table,
-		}
-
-		response, err := client.GetItemWithContext(bctx.Context, &request)
-		if err != nil {
-			return nil, err
-		}
-
-		row := make(map[string]interface{})
-		err = dynamodbattribute.UnmarshalMap(response.Item, &row)
-		return row, err
-	}()
-
 	m := map[string]interface{}{}
-	if len(result) > 0 {
-		m["row"] = result
+	var queryErr error
+
+	if get != nil {
+		key, err := getRequestAttributeValuesWithDefault(get, "key", nil)
+		if err != nil {
+			return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
+		} else if key == nil {
+			return builtins.NewOperandErr(pos, "missing required field in request get parameter: key")
+		}
+
+		queryErr = func() error {
+			client, err := dynamoDBClients.Get(bctx.Context, region, endpoint, accessKey, secretKey, sessionToken)
+			if err != nil {
+				return err
+			}
+
+			request := dynamodb.GetItemInput{
+				ConsistentRead: &consistentRead,
+				Key:            key,
+				TableName:      &table,
+			}
+
+			response, err := client.GetItemWithContext(bctx.Context, &request)
+			if err != nil {
+				return err
+			}
+
+			row := make(map[string]interface{})
+			err = dynamodbattribute.UnmarshalMap(response.Item, &row)
+
+			if len(row) > 0 {
+				m["row"] = row
+			}
+
+			return err
+		}()
+
+	} else {
+		exclusiveStartKey, err := getRequestAttributeValuesWithDefault(query, "exclusive_start_key", nil)
+		if err != nil {
+			return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
+		}
+
+		expressionAttributeNames, err := getRequestAttributeNamesWithDefault(query, "expression_attribute_names", nil)
+		if err != nil {
+			return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
+		}
+
+		expressionAttributeValues, err := getRequestAttributeValuesWithDefault(query, "expression_attribute_values", nil)
+		if err != nil {
+			return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
+		}
+
+		indexName, err := getRequestStringWithDefault(query, "index_name", "")
+		if err != nil {
+			return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
+		}
+
+		keyConditionExpression, err := getRequestString(query, "key_condition_expression")
+		if err != nil {
+			return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
+		}
+
+		limit, err := getRequestIntWithDefault(query, "limit", 0)
+		if err != nil {
+			return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
+		}
+
+		projectionExpression, err := getRequestStringWithDefault(query, "projection_expression", "")
+		if err != nil {
+			return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
+		}
+
+		scanIndexForward, err := getRequestBoolWithDefault(query, "scan_index_forward", true)
+		if err != nil {
+			return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
+		}
+
+		selekt, err := getRequestStringWithDefault(query, "select", "")
+		if err != nil {
+			return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
+		}
+
+		paramString := func(s string) *string {
+			if s == "" {
+				return nil
+			}
+
+			return &s
+		}
+
+		paramInt := func(i int64) *int64 {
+			if i <= 0 {
+				return nil
+			}
+
+			return &i
+		}
+
+		queryErr = func() error {
+			client, err := dynamoDBClients.Get(bctx.Context, region, endpoint, accessKey, secretKey, sessionToken)
+			if err != nil {
+				return err
+			}
+
+			request := dynamodb.QueryInput{
+				ConsistentRead:            &consistentRead,
+				ExclusiveStartKey:         exclusiveStartKey,
+				ExpressionAttributeNames:  expressionAttributeNames,
+				ExpressionAttributeValues: expressionAttributeValues,
+				IndexName:                 paramString(indexName),
+				KeyConditionExpression:    paramString(keyConditionExpression),
+				Limit:                     paramInt(limit),
+				ProjectionExpression:      paramString(projectionExpression),
+				ScanIndexForward:          &scanIndexForward,
+				Select:                    paramString(selekt),
+				TableName:                 &table,
+			}
+
+			var (
+				rows []map[string]interface{}
+				err2 error
+			)
+
+			if err := client.QueryPagesWithContext(bctx.Context, &request, func(output *dynamodb.QueryOutput, last bool) bool {
+				for _, item := range output.Items {
+					row := make(map[string]interface{})
+					err2 = dynamodbattribute.UnmarshalMap(item, &row)
+					if err2 != nil {
+						return false
+					}
+
+					rows = append(rows, row)
+				}
+
+				return true
+			}); err != nil {
+				return err
+			} else if err2 != nil {
+				return err2
+			}
+
+			if len(rows) > 0 {
+				m["rows"] = rows
+			}
+
+			return err
+		}()
 	}
 
 	if queryErr != nil {
@@ -261,7 +382,7 @@ func builtinDynamoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter
 		return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
 	}
 
-	if err := insertCaches(bctx, get, responseObj.(ast.Object), queryErr, interQueryCacheEnabled && !consistentRead, ttl, dynamoDBSendBuiltinCacheKey); err != nil {
+	if err := insertCaches(bctx, cacheKey, responseObj.(ast.Object), queryErr, interQueryCacheEnabled && !consistentRead, ttl, dynamoDBSendBuiltinCacheKey); err != nil {
 		return handleBuiltinErr(dynamoDBSendName, bctx.Location, err)
 	}
 
@@ -433,6 +554,73 @@ func getRequestObjectWithDefault(obj ast.Object, key string, def ast.Object) (as
 	}
 
 	return nil, builtins.NewOperandErr(1, "'%s' must be object", key)
+}
+
+func getRequestAttributeValuesWithDefault(obj ast.Object, key string, def map[string]*dynamodb.AttributeValue) (map[string]*dynamodb.AttributeValue, error) {
+	v, err := getRequestObjectWithDefault(obj, key, nil)
+	if err != nil {
+		return nil, err
+	} else if v == nil {
+		return def, nil
+	}
+
+	j, err := ast.JSON(v)
+	if err != nil {
+		return nil, err
+	}
+
+	o, ok := j.(map[string]interface{})
+	if !ok {
+		return nil, builtins.NewOperandErr(1, "'%s' must be object", key)
+	}
+
+	m := make(map[string]*dynamodb.AttributeValue)
+	for k, v := range o {
+		data, err := json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+
+		var a dynamodb.AttributeValue
+		if err := json.Unmarshal(data, &a); err != nil {
+			return nil, err
+		}
+
+		m[k] = &a
+	}
+
+	return m, nil
+}
+
+func getRequestAttributeNamesWithDefault(obj ast.Object, key string, def map[string]*string) (map[string]*string, error) {
+	v, err := getRequestObjectWithDefault(obj, key, nil)
+	if err != nil {
+		return nil, err
+	} else if v == nil {
+		return def, nil
+	}
+
+	j, err := ast.JSON(v)
+	if err != nil {
+		return nil, err
+	}
+
+	o, ok := j.(map[string]interface{})
+	if !ok {
+		return nil, builtins.NewOperandErr(1, "'%s' must be object of strings", key)
+	}
+
+	m := make(map[string]*string)
+	for k, v := range o {
+		s, ok := v.(string)
+		if !ok {
+			return nil, builtins.NewOperandErr(1, "'%s' must be object of strings", key)
+		}
+
+		m[k] = &s
+	}
+
+	return m, nil
 }
 
 func init() {
