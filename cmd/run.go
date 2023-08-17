@@ -34,6 +34,7 @@ import (
 	dl "github.com/styrainc/enterprise-opa-private/pkg/plugins/decision_logs"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/preview"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
@@ -351,6 +352,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 		discovery.Factories(map[string]plugins.Factory{
 			data.Name:            data.Factory(),
 			impact.Name:          impact.Factory(),
+			preview.Name:         preview.Factory(),
 			grpc.PluginName:      grpc.Factory(),
 			dl.DLPluginName:      dl.Factory(),
 			opa_envoy.PluginName: &opa_envoy.Factory{}, // Hack(philip): This is ugly, but necessary because upstream lacks the Factory() function.
