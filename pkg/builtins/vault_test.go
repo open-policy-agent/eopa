@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	vault "github.com/hashicorp/vault/api"
 	"github.com/testcontainers/testcontainers-go"
 	testcontainersvault "github.com/testcontainers/testcontainers-go/modules/vault"
 
@@ -24,7 +23,7 @@ import (
 )
 
 func TestVaultSend(t *testing.T) {
-	vault, address, token := startVault(t)
+	vault, address, token := startVault(t, "kv2", "test", map[string]string{"foo": "bar"})
 	defer vault.Terminate(context.Background())
 	now := time.Now()
 
@@ -189,16 +188,26 @@ func executeVault(tb testing.TB, interQueryCache cache.InterQueryCache, module s
 	}
 }
 
-func startVault(t *testing.T) (*testcontainersvault.VaultContainer, string, string) {
+func startVault(t *testing.T, mount, path string, data map[string]string) (*testcontainersvault.VaultContainer, string, string) {
 	t.Helper()
+	d := ""
+	for k, v := range data {
+		d += k + "=" + v + " "
+	}
 
 	token := "root-token"
 	opts := []testcontainers.ContainerCustomizer{
 		testcontainers.WithImage("hashicorp/vault:1.13.3"),
 		testcontainersvault.WithToken(token),
-		testcontainersvault.WithInitCommand("secrets enable --version=2 --path=kv2 kv"),
-		testcontainersvault.WithInitCommand("kv put kv2/test foo=bar"),
 	}
+
+	// NOTE(sr): "secret" seems to be enabled by default, as this would fail with
+	//  error occurred during enable mount: path=secret/ error="path is already in use at secret/"
+	if mount != "secret" {
+		opts = append(opts, testcontainersvault.WithInitCommand(fmt.Sprintf("secrets enable --version=2 --path=%s kv", mount)))
+	}
+
+	opts = append(opts, testcontainersvault.WithInitCommand(fmt.Sprintf("kv put %s/%s %s", mount, path, d)))
 
 	ctx := context.Background()
 	srv, err := testcontainersvault.RunContainer(ctx, opts...)
@@ -209,18 +218,6 @@ func startVault(t *testing.T) (*testcontainersvault.VaultContainer, string, stri
 	address, err := srv.HttpHostAddress(ctx)
 	if err != nil {
 		t.Fatal(err)
-
 	}
-
-	config := vault.DefaultConfig()
-	config.Address = address
-
-	client, err := vault.NewClient(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	client.SetToken(token)
-
 	return srv, address, token
 }

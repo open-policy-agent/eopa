@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -11,6 +12,7 @@ import (
 	eopaCmd "github.com/styrainc/enterprise-opa-private/cmd"
 	internal "github.com/styrainc/enterprise-opa-private/internal/cmd"
 	"github.com/styrainc/enterprise-opa-private/internal/license"
+	"github.com/styrainc/enterprise-opa-private/pkg/library"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
 
@@ -29,6 +31,12 @@ func main() {
 
 	lic := license.NewChecker()
 	root := eopaCmd.EnterpriseOPACommand(lic)
+
+	// setup default modules
+	if err := library.Init(); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		exit = 2
+	}
 
 	// do release in a defer function; works with panics
 	defer lic.ReleaseLicense()
