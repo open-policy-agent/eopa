@@ -25,7 +25,7 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
-func TestMongoDBSend(t *testing.T) {
+func TestMongoDBFind(t *testing.T) {
 	username, password := "root", "password"
 	mongodb, uri := startMongoDB(t, username, password)
 	defer mongodb.Terminate(context.Background())
@@ -34,162 +34,133 @@ func TestMongoDBSend(t *testing.T) {
 	now := time.Now()
 
 	tests := []struct {
-		note                string
-		source              string
-		result              string
-		error               string
-		doNotResetCache     bool
-		time                time.Time
-		interQueryCacheHits int
+		Note                string
+		Source              string
+		Result              string
+		Error               string
+		DoNotResetCache     bool
+		Time                time.Time
+		InterQueryCacheHits int
 	}{
 		{
-			"missing parameter(s)",
-			`p := mongodb.send({})`,
-			"",
-			`eval_type_error: mongodb.send: operand 1 missing required request parameter(s): {"uri"}`,
-			false,
-			now,
-			0,
+			Note:                "missing parameter(s)",
+			Source:              `p := mongodb.find({})`,
+			Result:              "",
+			Error:               `eval_type_error: mongodb.find: operand 1 missing required request parameter(s): {"uri"}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
 		},
 		{
-			"non-existing doc query (find many)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "nonexisting"}}})`, uri, auth),
-			`{{"result": {"p": {}}}}`,
-			"",
-			false,
-			now,
-			0,
+			Note:                "non-existing doc query (find many)",
+			Source:              fmt.Sprintf(`p := mongodb.find({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "nonexisting"}})`, uri, auth),
+			Result:              `{{"result": {"p": {}}}}`,
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
 		},
 		{
-			"a single row query (find many)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
-			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
-			"",
-			false,
-			now,
-			0,
+			Note:                "a single row query (find many)",
+			Source:              fmt.Sprintf(`p := mongodb.find({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": [{"bar": 1, "foo": "x"}]}}}}`,
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
 		},
 		{
-			"a single row query (find many, canonical)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}, "canonical": true}})`, uri, auth),
-			`{{"result": {"p": {"documents": [{"bar": {"$numberInt": "1"}, "foo": "x"}]}}}}`,
-			"",
-			false,
-			now,
-			0,
+			Note:                "a single row query (find many, canonical)",
+			Source:              fmt.Sprintf(`p := mongodb.find({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}, "canonical": true})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": [{"bar": {"$numberInt": "1"}, "foo": "x"}]}}}}`,
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
 		},
 		{
-			"non-existing doc query (find one)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "nonexisting"}}})`, uri, auth),
-			`{{"result": {"p": {}}}}`,
-			"",
-			false,
-			now,
-			0,
-		},
-		{
-			"a single row query (find one)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}, "show_record_id": true}}})`, uri, auth),
-			`{{"result": {"p": {"document": {"bar": 1, "foo": "x", "$recordId": 1}}}}}`, // recordId is included only if show_record_id is converted to camel casing correctly.
-			"",
-			false,
-			now,
-			0,
-		},
-		{
-			"a single row query (find one, canonical)",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "auth": %s, "find_one": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}, "canonical": true}})`, uri, auth),
-			`{{"result": {"p": {"document": {"bar": {"$numberInt": "1"}, "foo": "x"}}}}}`,
-			"",
-			false,
-			now,
-			0,
-		},
-
-		{
-			"intra-query query cache",
-			fmt.Sprintf(`p = [ resp1, resp2 ] {
-                                mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}}, resp1)
-                                mongodb.send({"uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}}, resp2) # cached
+			Note: "intra-query query cache",
+			Source: fmt.Sprintf(`p = [ resp1, resp2 ] {
+                                mongodb.find({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}, resp1)
+                                mongodb.find({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}, resp2) # cached
 				}`, uri, auth, uri, auth),
-			`{{"result": {"p": [{"documents": [{"bar": 1, "foo": "x"}]}, {"documents": [{"bar": 1, "foo": "x"}]}]}}}`,
-			"",
-			false,
-			now,
-			0,
+			Result:              `{{"result": {"p": [{"results": [{"bar": 1, "foo": "x"}]}, {"results": [{"bar": 1, "foo": "x"}]}]}}}`,
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
 		},
 		{
-			"inter-query query cache warmup (default duration)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "auth" :%s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
-			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
-			"",
-			false,
-			now,
-			0,
+			Note:                "inter-query query cache warmup (default duration)",
+			Source:              fmt.Sprintf(`p := mongodb.find({"cache": true, "uri": "%s", "auth" :%s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": [{"bar": 1, "foo": "x"}]}}}}`,
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
 		},
 		{
-			"inter-query query cache check (default duration, valid)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
-			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
-			"",
-			true, // keep the warmup results
-			now.Add(interQueryCacheDurationDefault - 1),
-			1,
+			Note:                "inter-query query cache check (default duration, valid)",
+			Source:              fmt.Sprintf(`p := mongodb.find({"cache": true, "uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": [{"bar": 1, "foo": "x"}]}}}}`,
+			Error:               "",
+			DoNotResetCache:     true, // keep the warmup results
+			Time:                now.Add(interQueryCacheDurationDefault - 1),
+			InterQueryCacheHits: 1,
 		},
 		{
-			"inter-query query cache check (default duration, expired)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
-			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
-			"",
-			true, // keep the warmup results
-			now.Add(interQueryCacheDurationDefault),
-			0,
+			Note:                "inter-query query cache check (default duration, expired)",
+			Source:              fmt.Sprintf(`p := mongodb.find({"cache": true, "uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": [{"bar": 1, "foo": "x"}]}}}}`,
+			Error:               "",
+			DoNotResetCache:     true, // keep the warmup results
+			Time:                now.Add(interQueryCacheDurationDefault),
+			InterQueryCacheHits: 0,
 		},
 		{
-			"inter-query query cache warmup (explicit duration)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
-			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
-			"",
-			false,
-			now,
-			0,
+			Note:                "inter-query query cache warmup (explicit duration)",
+			Source:              fmt.Sprintf(`p := mongodb.find({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": [{"bar": 1, "foo": "x"}]}}}}`,
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
 		},
 		{
-			"inter-query query cache check (explicit duration, valid)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
-			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
-
-			"",
-			true, // keep the warmup results
-			now.Add(10*time.Second - 1),
-			1,
+			Note:                "inter-query query cache check (explicit duration, valid)",
+			Source:              fmt.Sprintf(`p := mongodb.find({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": [{"bar": 1, "foo": "x"}]}}}}`,
+			Error:               "",
+			DoNotResetCache:     true, // keep the warmup results
+			Time:                now.Add(10*time.Second - 1),
+			InterQueryCacheHits: 1,
 		},
 		{
-			"inter-query query cache check (explicit duration, expired)",
-			fmt.Sprintf(`p := mongodb.send({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}})`, uri, auth),
-			`{{"result": {"p": {"documents": [{"bar": 1, "foo": "x"}]}}}}`,
-			"",
-			true, // keep the warmup results
-			now.Add(10 * time.Second),
-			0,
+			Note:                "inter-query query cache check (explicit duration, expired)",
+			Source:              fmt.Sprintf(`p := mongodb.find({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": [{"bar": 1, "foo": "x"}]}}}}`,
+			Error:               "",
+			DoNotResetCache:     true, // keep the warmup results
+			Time:                now.Add(10 * time.Second),
+			InterQueryCacheHits: 0,
 		},
 		{
-			"error w/o raise",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}}})`, "mongodb+wrong://invalid-uri"),
-			"",
-			`eval_builtin_error: mongodb.send: error parsing uri: scheme must be "mongodb" or "mongodb+srv"`,
-			false,
-			now,
-			0,
+			Note:                "error w/o raise",
+			Source:              fmt.Sprintf(`p := mongodb.find({"uri": "%s", "database": "database", "collection": "collection", "filter": {"foo": "x"}})`, "mongodb+wrong://invalid-uri"),
+			Result:              "",
+			Error:               `eval_builtin_error: mongodb.find: error parsing uri: scheme must be "mongodb" or "mongodb+srv"`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
 		},
 		{
-			"error with raise",
-			fmt.Sprintf(`p := mongodb.send({"uri": "%s", "find": {"database": "database", "collection": "collection", "filter": {"foo": "x"}}, "raise_error": false})`, "mongodb+wrong://invalid-uri"),
-			`{{"result": {"p": {"error": {"message": "error parsing uri: scheme must be \"mongodb\" or \"mongodb+srv\""}}}}}`,
-			"",
-			false,
-			now,
-			0,
+			Note:                "error with raise",
+			Source:              fmt.Sprintf(`p := mongodb.find({"uri": "%s", "database": "database", "collection": "collection", "filter": {"foo": "x"}, "raise_error": false})`, "mongodb+wrong://invalid-uri"),
+			Result:              `{{"result": {"p": {"error": {"message": "error parsing uri: scheme must be \"mongodb\" or \"mongodb+srv\""}}}}}`,
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
 		},
 	}
 
@@ -201,8 +172,8 @@ func TestMongoDBSend(t *testing.T) {
 	})
 
 	for _, tc := range tests {
-		t.Run(tc.note, func(t *testing.T) {
-			if !tc.doNotResetCache {
+		t.Run(tc.Note, func(t *testing.T) {
+			if !tc.DoNotResetCache {
 				interQueryCache = cache.NewInterQueryCache(&cache.Config{
 					InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
 						MaxSizeBytes: &maxSize,
@@ -210,7 +181,168 @@ func TestMongoDBSend(t *testing.T) {
 				})
 			}
 
-			executeMongoDB(t, interQueryCache, "package t\n"+tc.source, "t", tc.result, tc.error, tc.time, tc.interQueryCacheHits)
+			executeMongoDB(t, interQueryCache, "package t\n"+tc.Source, "t", tc.Result, tc.Error, tc.Time, tc.InterQueryCacheHits)
+		})
+	}
+}
+
+func TestMongoDBFindOne(t *testing.T) {
+	username, password := "root", "password"
+	mongodb, uri := startMongoDB(t, username, password)
+	defer mongodb.Terminate(context.Background())
+
+	auth := fmt.Sprintf(`{"username": "%s", "password": "%s"}`, username, password)
+	now := time.Now()
+
+	tests := []struct {
+		Note                string
+		Source              string
+		Result              string
+		Error               string
+		DoNotResetCache     bool
+		Time                time.Time
+		InterQueryCacheHits int
+	}{
+		{
+			Note:                "missing parameter(s)",
+			Source:              `p := mongodb.find_one({})`,
+			Result:              "",
+			Error:               `eval_type_error: mongodb.find_one: operand 1 missing required request parameter(s): {"uri"}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "non-existing doc query (find one)",
+			Source:              fmt.Sprintf(`p := mongodb.find_one({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "nonexisting"}})`, uri, auth),
+			Result:              `{{"result": {"p": {}}}}`,
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "a single row query (find one)",
+			Source:              fmt.Sprintf(`p := mongodb.find_one({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}, "show_record_id": true}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": {"bar": 1, "foo": "x", "$recordId": 1}}}}}`, // recordId is included only if show_record_id is converted to camel casing correctly.
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "a single row query (find one, canonical)",
+			Source:              fmt.Sprintf(`p := mongodb.find_one({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}, "canonical": true})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": {"bar": {"$numberInt": "1"}, "foo": "x"}}}}}`,
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note: "intra-query query cache",
+			Source: fmt.Sprintf(`p = [ resp1, resp2 ] {
+                                mongodb.find_one({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}, resp1)
+                                mongodb.find_one({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}, resp2) # cached
+				}`, uri, auth, uri, auth),
+			Result:              `{{"result": {"p": [{"results": {"bar": 1, "foo": "x"}}, {"results": {"bar": 1, "foo": "x"}}]}}}`,
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "inter-query query cache warmup (default duration)",
+			Source:              fmt.Sprintf(`p := mongodb.find_one({"cache": true, "uri": "%s", "auth" :%s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": {"bar": 1, "foo": "x"}}}}}`,
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "inter-query query cache check (default duration, valid)",
+			Source:              fmt.Sprintf(`p := mongodb.find_one({"cache": true, "uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": {"bar": 1, "foo": "x"}}}}}`,
+			Error:               "",
+			DoNotResetCache:     true, // keep the warmup results
+			Time:                now.Add(interQueryCacheDurationDefault - 1),
+			InterQueryCacheHits: 1,
+		},
+		{
+			Note:                "inter-query query cache check (default duration, expired)",
+			Source:              fmt.Sprintf(`p := mongodb.find_one({"cache": true, "uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": {"bar": 1, "foo": "x"}}}}}`,
+			Error:               "",
+			DoNotResetCache:     true, // keep the warmup results
+			Time:                now.Add(interQueryCacheDurationDefault),
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "inter-query query cache warmup (explicit duration)",
+			Source:              fmt.Sprintf(`p := mongodb.find_one({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": {"bar": 1, "foo": "x"}}}}}`,
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "inter-query query cache check (explicit duration, valid)",
+			Source:              fmt.Sprintf(`p := mongodb.find_one({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": {"bar": 1, "foo": "x"}}}}}`,
+			Error:               "",
+			DoNotResetCache:     true, // keep the warmup results
+			Time:                now.Add(10*time.Second - 1),
+			InterQueryCacheHits: 1,
+		},
+		{
+			Note:                "inter-query query cache check (explicit duration, expired)",
+			Source:              fmt.Sprintf(`p := mongodb.find_one({"cache": true, "cache_duration": "10s", "uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}})`, uri, auth),
+			Result:              `{{"result": {"p": {"results": {"bar": 1, "foo": "x"}}}}}`,
+			Error:               "",
+			DoNotResetCache:     true, // keep the warmup results
+			Time:                now.Add(10 * time.Second),
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "error w/o raise",
+			Source:              fmt.Sprintf(`p := mongodb.find_one({"uri": "%s", "database": "database", "collection": "collection", "filter": {"foo": "x"}})`, "mongodb+wrong://invalid-uri"),
+			Result:              "",
+			Error:               `eval_builtin_error: mongodb.find_one: error parsing uri: scheme must be "mongodb" or "mongodb+srv"`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "error with raise",
+			Source:              fmt.Sprintf(`p := mongodb.find_one({"uri": "%s", "database": "database", "collection": "collection", "filter": {"foo": "x"}, "raise_error": false})`, "mongodb+wrong://invalid-uri"),
+			Result:              `{{"result": {"p": {"error": {"message": "error parsing uri: scheme must be \"mongodb\" or \"mongodb+srv\""}}}}}`,
+			Error:               "",
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+	}
+
+	var maxSize int64 = 1024 * 1024
+	interQueryCache := cache.NewInterQueryCache(&cache.Config{
+		InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
+			MaxSizeBytes: &maxSize,
+		},
+	})
+
+	for _, tc := range tests {
+		t.Run(tc.Note, func(t *testing.T) {
+			if !tc.DoNotResetCache {
+				interQueryCache = cache.NewInterQueryCache(&cache.Config{
+					InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
+						MaxSizeBytes: &maxSize,
+					},
+				})
+			}
+
+			executeMongoDB(t, interQueryCache, "package t\n"+tc.Source, "t", tc.Result, tc.Error, tc.Time, tc.InterQueryCacheHits)
 		})
 	}
 }
@@ -266,7 +398,13 @@ func executeMongoDB(tb testing.TB, interQueryCache cache.InterQueryCache, module
 		tb.Fatalf("got %v wanted %v\n", v, expectedResult)
 	}
 
-	if hits := metrics.Counter(mongoDBSendInterQueryCacheHits).Value().(uint64); hits != uint64(expectedInterQueryCacheHits) {
+	// HACK(philip): This hack of adding the counters together allows us to
+	// reuse this function for testing both mongodb.find and find_one
+	// operations, although it will require some care if we ever mix the
+	// two operations in a unit test.
+	hitsFind := metrics.Counter(mongoDBFindInterQueryCacheHits).Value().(uint64)
+	hitsFindOne := metrics.Counter(mongoDBFindOneInterQueryCacheHits).Value().(uint64)
+	if hits := hitsFind + hitsFindOne; hits != uint64(expectedInterQueryCacheHits) {
 		tb.Fatalf("got %v hits, wanted %v\n", hits, expectedInterQueryCacheHits)
 	}
 }

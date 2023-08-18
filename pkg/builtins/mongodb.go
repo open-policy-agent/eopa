@@ -22,11 +22,13 @@ import (
 )
 
 const (
-	mongoDBSendName = "mongodb.send"
+	mongoDBFindName    = "mongodb.find"
+	mongoDBFindOneName = "mongodb.find_one"
 	// mongoDBSendBuiltinCacheKey is the key in the builtin context cache that
 	// points to the mongodb.send() specific intra-query cache resides at.
-	mongoDBSendBuiltinCacheKey            mongoDBSendKey = "MONGODB_SEND_CACHE_KEY"
-	mongoDBInterQueryCacheDurationDefault                = 60 * time.Second
+	mongoDBFindBuiltinCacheKey            mongoDBFindKey    = "MONGODB_FIND_CACHE_KEY"
+	mongoDBFindOneBuiltinCacheKey         mongoDBFindOneKey = "MONGODB_FIND_ONE_CACHE_KEY"
+	mongoDBInterQueryCacheDurationDefault                   = 60 * time.Second
 )
 
 var (
@@ -36,17 +38,23 @@ var (
 		ast.StringTerm("auth"),
 		ast.StringTerm("cache"),
 		ast.StringTerm("cache_duration"),
-		ast.StringTerm("find"),
-		ast.StringTerm("find_one"),
 		ast.StringTerm("raise_error"),
 		ast.StringTerm("uri"),
 	)
 
+	mongoDBAllowedFindKeys = ast.NewSet(
+		ast.StringTerm("database"),
+		ast.StringTerm("collection"),
+		ast.StringTerm("filter"),
+		ast.StringTerm("options"),
+		ast.StringTerm("canonical"),
+	).Union(mongoDBAllowedKeys)
+
 	mongoDBRequiredKeys = ast.NewSet(ast.StringTerm("uri"))
 
 	// Marked non-deterministic because query results can be non-deterministic.
-	mongoDBSend = &ast.Builtin{
-		Name:        mongoDBSendName,
+	mongoDBFind = &ast.Builtin{
+		Name:        mongoDBFindName,
 		Description: "Returns query result rows to the given MongoDB operation.",
 		Decl: types.NewFunction(
 			types.Args(
@@ -56,9 +64,22 @@ var (
 		),
 		Nondeterministic: true,
 	}
+	mongoDBFindOne = &ast.Builtin{
+		Name:        mongoDBFindOneName,
+		Description: "Returns query result row to the given MongoDB operation.",
+		Decl: types.NewFunction(
+			types.Args(
+				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))),
+			),
+			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))),
+		),
+		Nondeterministic: true,
+	}
 
-	mongoDBSendLatencyMetricKey    = "rego_builtin_mongodb_send"
-	mongoDBSendInterQueryCacheHits = mongoDBSendLatencyMetricKey + "_interquery_cache_hits"
+	mongoDBFindLatencyMetricKey       = "rego_builtin_mongodb_find"
+	mongoDBFindInterQueryCacheHits    = mongoDBFindLatencyMetricKey + "_interquery_cache_hits"
+	mongoDBFindOneLatencyMetricKey    = "rego_builtin_mongodb_find_one"
+	mongoDBFindOneInterQueryCacheHits = mongoDBFindOneLatencyMetricKey + "_interquery_cache_hits"
 )
 
 type (
@@ -72,21 +93,22 @@ type (
 		credential string
 	}
 
-	mongoDBSendKey string
+	mongoDBFindKey    string
+	mongoDBFindOneKey string
 )
 
-func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func(*ast.Term) error) error {
-	_, span := otel.Tracer(mongoDBSendName).Start(bctx.Context, "execute")
+func builtinMongoDBFind(bctx topdown.BuiltinContext, operands []*ast.Term, iter func(*ast.Term) error) error {
+	_, span := otel.Tracer(mongoDBFindName).Start(bctx.Context, "execute")
 	defer span.End()
 
 	pos := 1
 	obj, err := builtins.ObjectOperand(operands[0].Value, pos)
 	if err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
 	}
 
 	requestKeys := ast.NewSet(obj.Keys()...)
-	invalidKeys := requestKeys.Diff(mongoDBAllowedKeys)
+	invalidKeys := requestKeys.Diff(mongoDBAllowedFindKeys)
 	if invalidKeys.Len() != 0 {
 		return builtins.NewOperandErr(pos, "invalid request parameter(s): %v", invalidKeys)
 	}
@@ -96,35 +118,15 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 		return builtins.NewOperandErr(pos, "missing required request parameter(s): %v", missingKeys)
 	}
 
-	find, err := getRequestObjectWithDefault(obj, "find", nil)
-	if err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
-	}
-
-	findOne, err := getRequestObjectWithDefault(obj, "find_one", nil)
-	if err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
-	}
+	// find, err := getRequestObjectWithDefault(obj, "find", nil)
+	// if err != nil {
+	// 	return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+	// }
 
 	cacheKey := ast.NewObject()
-	var commonFind ast.Object
-
-	switch {
-	case find == nil && findOne == nil:
-		return builtins.NewOperandErr(pos, "missing required request parameter(s): find or find_one")
-	case find != nil && findOne != nil:
-		return builtins.NewOperandErr(pos, "extra request parameter(s): find or find_one")
-	case find != nil:
-		cacheKey.Insert(ast.StringTerm("find"), ast.NewTerm(find))
-		commonFind = find
-	case findOne != nil:
-		cacheKey.Insert(ast.StringTerm("find_one"), ast.NewTerm(findOne))
-		commonFind = findOne
-	}
-
 	var credential []byte
 	if auth, err := getRequestObjectWithDefault(obj, "auth", nil); err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
 	} else if auth != nil {
 		a, err := ast.JSON(auth)
 		if err != nil {
@@ -141,58 +143,58 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 
 	uri, err := getRequestString(obj, "uri")
 	if err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
 	}
 
 	raiseError, err := getRequestBoolWithDefault(obj, "raise_error", true)
 	if err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
 	}
 
 	interQueryCacheEnabled, err := getRequestBoolWithDefault(obj, "cache", false)
 	if err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
 	}
 
 	ttl, err := getRequestTimeoutWithDefault(obj, "cache_duration", interQueryCacheDurationDefault)
 	if err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
 	}
 
 	// TODO: Improve error handling to allow separation between
 	// types of errors (invalid queries, connectivity errors,
 	// etc.)
 
-	database, err := getRequestString(commonFind, "database")
+	database, err := getRequestString(obj, "database")
 	if err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
 	}
 
-	collection, err := getRequestString(commonFind, "collection")
+	collection, err := getRequestString(obj, "collection")
 	if err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
 	}
 
-	filter, err := getRequestObject(commonFind, "filter")
+	filter, err := getRequestObject(obj, "filter")
 	if err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
 	}
 
-	opt, err := getRequestObjectWithDefault(commonFind, "options", ast.NewObject())
+	opt, err := getRequestObjectWithDefault(obj, "options", ast.NewObject())
 	if err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
 	}
 
-	canonical, err := getRequestBoolWithDefault(commonFind, "canonical", false)
+	canonical, err := getRequestBoolWithDefault(obj, "canonical", false)
 	if err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
 	}
 
-	bctx.Metrics.Timer(mongoDBSendLatencyMetricKey).Start()
+	bctx.Metrics.Timer(mongoDBFindLatencyMetricKey).Start()
 
-	if responseObj, ok, err := checkCaches(bctx, cacheKey, interQueryCacheEnabled, mongoDBSendBuiltinCacheKey, mongoDBSendInterQueryCacheHits); ok {
+	if responseObj, ok, err := checkCaches(bctx, cacheKey, interQueryCacheEnabled, mongoDBFindBuiltinCacheKey, mongoDBFindInterQueryCacheHits); ok {
 		if err != nil {
-			return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+			return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
 		}
 
 		return iter(ast.NewTerm(responseObj))
@@ -222,55 +224,216 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 
 		coll := client.Database(database).Collection(collection)
 
-		if find != nil {
-			var o options.FindOptions
-			if opt.Len() > 0 {
-				v, err := ast.JSON(opt)
-				if err != nil {
-					return err
-				}
-
-				data, err := json.Marshal(toSnakeCase(v))
-				if err != nil {
-					return err
-				}
-
-				if err := json.Unmarshal(data, &o); err != nil {
-					return err
-				}
-			}
-
-			cursor, err := coll.Find(bctx.Context, filter, &o)
+		var o options.FindOptions
+		if opt.Len() > 0 {
+			v, err := ast.JSON(opt)
 			if err != nil {
 				return err
 			}
 
-			var docs []bson.M
-			if err = cursor.All(bctx.Context, &docs); err != nil {
+			data, err := json.Marshal(toSnakeCase(v))
+			if err != nil {
 				return err
 			}
 
-			results := make([]interface{}, 0, len(docs))
-			for _, doc := range docs {
-				data, err = bson.MarshalExtJSON(doc, canonical, false)
-				if err != nil {
-					return err
-				}
-
-				var result interface{}
-				if err := util.UnmarshalJSON(data, &result); err != nil {
-					return err
-				}
-
-				results = append(results, result)
+			if err := json.Unmarshal(data, &o); err != nil {
+				return err
 			}
-
-			if len(results) > 0 {
-				m["documents"] = results
-			}
-
-			return nil
 		}
+
+		cursor, err := coll.Find(bctx.Context, filter, &o)
+		if err != nil {
+			return err
+		}
+
+		var docs []bson.M
+		if err = cursor.All(bctx.Context, &docs); err != nil {
+			return err
+		}
+
+		results := make([]interface{}, 0, len(docs))
+		for _, doc := range docs {
+			data, err = bson.MarshalExtJSON(doc, canonical, false)
+			if err != nil {
+				return err
+			}
+
+			var result interface{}
+			if err := util.UnmarshalJSON(data, &result); err != nil {
+				return err
+			}
+
+			results = append(results, result)
+		}
+
+		if len(results) > 0 {
+			m["results"] = results
+		}
+
+		return nil
+	}()
+
+	if queryErr != nil {
+		if !raiseError {
+			// Unpack the driver specific error type to
+			// get more details, if possible.
+
+			e := map[string]interface{}{}
+			v := reflect.ValueOf(queryErr)
+
+			if v.Kind() == reflect.Struct {
+				if c := v.FieldByName("Code"); c.CanInt() {
+					e["code"] = c.Int()
+				}
+				if m := v.FieldByName("Message"); m.Kind() == reflect.String {
+					e["message"] = m.Interface()
+				}
+			} else {
+				e["message"] = string(queryErr.Error())
+			}
+
+			m["error"] = e
+			queryErr = nil
+		} else {
+			return handleBuiltinErr(mongoDBFindName, bctx.Location, queryErr)
+		}
+	}
+
+	responseObj, err := ast.InterfaceToValue(m)
+	if err != nil {
+		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+	}
+
+	if err := insertCaches(bctx, cacheKey, responseObj.(ast.Object), queryErr, interQueryCacheEnabled, ttl, mongoDBFindBuiltinCacheKey); err != nil {
+		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+	}
+
+	bctx.Metrics.Timer(mongoDBFindLatencyMetricKey).Stop()
+
+	return iter(ast.NewTerm(responseObj))
+}
+
+func builtinMongoDBFindOne(bctx topdown.BuiltinContext, operands []*ast.Term, iter func(*ast.Term) error) error {
+	_, span := otel.Tracer(mongoDBFindOneName).Start(bctx.Context, "execute")
+	defer span.End()
+
+	pos := 1
+	obj, err := builtins.ObjectOperand(operands[0].Value, pos)
+	if err != nil {
+		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+	}
+
+	requestKeys := ast.NewSet(obj.Keys()...)
+	invalidKeys := requestKeys.Diff(mongoDBAllowedFindKeys)
+	if invalidKeys.Len() != 0 {
+		return builtins.NewOperandErr(pos, "invalid request parameter(s): %v", invalidKeys)
+	}
+
+	missingKeys := mongoDBRequiredKeys.Diff(requestKeys)
+	if missingKeys.Len() != 0 {
+		return builtins.NewOperandErr(pos, "missing required request parameter(s): %v", missingKeys)
+	}
+
+	cacheKey := ast.NewObject()
+	var credential []byte
+	if auth, err := getRequestObjectWithDefault(obj, "auth", nil); err != nil {
+		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+	} else if auth != nil {
+		a, err := ast.JSON(auth)
+		if err != nil {
+			return err
+		}
+
+		credential, err = json.Marshal(a)
+		if err != nil {
+			return err
+		}
+
+		cacheKey.Insert(ast.StringTerm("auth"), ast.StringTerm(string(credential)))
+	}
+
+	uri, err := getRequestString(obj, "uri")
+	if err != nil {
+		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+	}
+
+	raiseError, err := getRequestBoolWithDefault(obj, "raise_error", true)
+	if err != nil {
+		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+	}
+
+	interQueryCacheEnabled, err := getRequestBoolWithDefault(obj, "cache", false)
+	if err != nil {
+		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+	}
+
+	ttl, err := getRequestTimeoutWithDefault(obj, "cache_duration", interQueryCacheDurationDefault)
+	if err != nil {
+		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+	}
+
+	// TODO: Improve error handling to allow separation between
+	// types of errors (invalid queries, connectivity errors,
+	// etc.)
+
+	database, err := getRequestString(obj, "database")
+	if err != nil {
+		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+	}
+
+	collection, err := getRequestString(obj, "collection")
+	if err != nil {
+		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+	}
+
+	filter, err := getRequestObject(obj, "filter")
+	if err != nil {
+		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+	}
+
+	opt, err := getRequestObjectWithDefault(obj, "options", ast.NewObject())
+	if err != nil {
+		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+	}
+
+	canonical, err := getRequestBoolWithDefault(obj, "canonical", false)
+	if err != nil {
+		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+	}
+
+	bctx.Metrics.Timer(mongoDBFindOneLatencyMetricKey).Start()
+
+	if responseObj, ok, err := checkCaches(bctx, cacheKey, interQueryCacheEnabled, mongoDBFindBuiltinCacheKey, mongoDBFindInterQueryCacheHits); ok {
+		if err != nil {
+			return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		}
+
+		return iter(ast.NewTerm(responseObj))
+	}
+
+	m := map[string]interface{}{}
+	queryErr := func() error {
+		client, err := mongoDBClients.Get(bctx.Context, uri, credential)
+		if err != nil {
+			return err
+		}
+
+		j, err := ast.JSON(filter)
+		if err != nil {
+			return err
+		}
+
+		data, err := json.Marshal(j)
+		if err != nil {
+			return err
+		}
+
+		var filter interface{}
+		if err := bson.UnmarshalExtJSON(data, true, &filter); err != nil {
+			return err
+		}
+
+		coll := client.Database(database).Collection(collection)
 
 		var o options.FindOneOptions
 		if opt.Len() > 0 {
@@ -306,7 +469,7 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 			return err
 		}
 
-		m["document"] = result
+		m["results"] = result
 
 		return nil
 	}()
@@ -333,20 +496,20 @@ func builtinMongoDBSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 			m["error"] = e
 			queryErr = nil
 		} else {
-			return handleBuiltinErr(mongoDBSendName, bctx.Location, queryErr)
+			return handleBuiltinErr(mongoDBFindOneName, bctx.Location, queryErr)
 		}
 	}
 
 	responseObj, err := ast.InterfaceToValue(m)
 	if err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
 	}
 
-	if err := insertCaches(bctx, cacheKey, responseObj.(ast.Object), queryErr, interQueryCacheEnabled, ttl, mongoDBSendBuiltinCacheKey); err != nil {
-		return handleBuiltinErr(mongoDBSendName, bctx.Location, err)
+	if err := insertCaches(bctx, cacheKey, responseObj.(ast.Object), queryErr, interQueryCacheEnabled, ttl, mongoDBFindOneBuiltinCacheKey); err != nil {
+		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
 	}
 
-	bctx.Metrics.Timer(mongoDBSendLatencyMetricKey).Stop()
+	bctx.Metrics.Timer(mongoDBFindOneLatencyMetricKey).Stop()
 
 	return iter(ast.NewTerm(responseObj))
 }
@@ -445,5 +608,6 @@ func toSnakeCase(v interface{}) interface{} {
 }
 
 func init() {
-	topdown.RegisterBuiltinFunc(mongoDBSendName, builtinMongoDBSend)
+	topdown.RegisterBuiltinFunc(mongoDBFindName, builtinMongoDBFind)
+	topdown.RegisterBuiltinFunc(mongoDBFindOneName, builtinMongoDBFindOne)
 }
