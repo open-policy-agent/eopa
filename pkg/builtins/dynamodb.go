@@ -517,45 +517,6 @@ func remoteCredProviders(config *aws.Config) ([]credentials.Provider, error) {
 	return providers, nil
 }
 
-func getRequestStringWithDefault(obj ast.Object, key string, def string) (string, error) {
-	v := obj.Get(ast.StringTerm(key))
-	if v == nil {
-		return def, nil
-	}
-
-	if s, ok := v.Value.(ast.String); ok {
-		return string(s), nil
-	}
-
-	return "", builtins.NewOperandErr(1, "'%s' must be string", key)
-}
-
-func getRequestObject(obj ast.Object, key string) (ast.Object, error) {
-	o := obj.Get(ast.StringTerm(key))
-	if o == nil {
-		return nil, builtins.NewOperandErr(1, "'%s' missing", key)
-	}
-
-	if o, ok := o.Value.(ast.Object); ok {
-		return o, nil
-	}
-
-	return nil, builtins.NewOperandErr(1, "'%s' must be object", key)
-}
-
-func getRequestObjectWithDefault(obj ast.Object, key string, def ast.Object) (ast.Object, error) {
-	v := obj.Get(ast.StringTerm(key))
-	if v == nil {
-		return def, nil
-	}
-
-	if o, ok := v.Value.(ast.Object); ok {
-		return o, nil
-	}
-
-	return nil, builtins.NewOperandErr(1, "'%s' must be object", key)
-}
-
 func getRequestAttributeValuesWithDefault(obj ast.Object, key string, def map[string]*dynamodb.AttributeValue) (map[string]*dynamodb.AttributeValue, error) {
 	v, err := getRequestObjectWithDefault(obj, key, nil)
 	if err != nil {
