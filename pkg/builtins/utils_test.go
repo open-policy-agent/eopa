@@ -10,13 +10,15 @@ import (
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/topdown/cache"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/library"
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
 
+var maxSize int64 = 1024 * 1024 // IQBC
+
 func TestPostgresEnvSend(t *testing.T) {
-	ctx := context.Background()
 	be := startPostgreSQL(t)
 	t.Cleanup(be.cleanup)
 
@@ -40,33 +42,55 @@ func TestPostgresEnvSend(t *testing.T) {
 		"PGSSLMODE":  u.Query().Get("sslmode"),
 	}
 
-	// now, we'll evaluate a policy that uses our embedded utils
-	// for postgres connections built from env vars
-	r := rego.New(
-		rego.Target(rego_vm.Target),
-		rego.Runtime(ast.NewTerm(ast.MustInterfaceToValue(map[string]any{"env": env}))),
-		rego.Module("example.rego", `
-package example
-import data.system.eopa.utils.postgres.v1.env as postgres
+	tests := []struct {
+		note   string
+		query  string
+		module string
+		exp    func(*testing.T, rego.ResultSet)
+	}{
+		{
+			note:  "send",
+			query: "x := data.example.p",
+			module: `
 p := count(postgres.send("SELECT 1 FROM T1 WHERE $1", [input.x]).rows)
-`),
-		rego.Query(`x := data.example.p`),
-		rego.Input(map[string]any{"x": true}),
-		rego.StrictBuiltinErrors(true),
-	)
-	rs, err := r.Eval(ctx)
-	if err != nil {
-		t.Fatal(err)
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"]
+				exp := json.Number("1")
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "send with options",
+			query: "x := data.example.p",
+			module: `
+p := count(postgres.send_opts("SELECT 1 FROM T1 WHERE $1", [input.x], {"cache": true, "cache_duration": "10s", "raise_error": false}).rows)
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"]
+				exp := json.Number("1")
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
 	}
-	act := rs[0].Bindings["x"]
-	exp := json.Number("1")
-	if diff := cmp.Diff(exp, act); diff != "" {
-		t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+
+	for _, tc := range tests {
+		t.Run(tc.note, runRegoTests(tc.exp,
+			rego.Runtime(ast.NewTerm(ast.MustInterfaceToValue(map[string]any{"env": env}))),
+			rego.Module("example.rego", `package example
+import data.system.eopa.utils.postgres.v1.env as postgres
+`+tc.module),
+			rego.Query(tc.query),
+			rego.Input(map[string]any{"x": true}),
+		))
 	}
 }
 
 func TestPostgresVaultSend(t *testing.T) {
-	ctx := context.Background()
 	be := startPostgreSQL(t)
 	t.Cleanup(be.cleanup)
 
@@ -75,7 +99,7 @@ func TestPostgresVaultSend(t *testing.T) {
 	}
 
 	// first we dissect the conn string into user, password, host etc
-	// and set them as temporary env vars
+	// and set them as vault data
 	u, err := url.Parse(be.conn)
 	if err != nil {
 		t.Fatal(err)
@@ -98,25 +122,380 @@ func TestPostgresVaultSend(t *testing.T) {
 		"VAULT_TOKEN":   token,
 	}
 
-	r := rego.New(
-		rego.Target(rego_vm.Target),
-		rego.Runtime(ast.NewTerm(ast.MustInterfaceToValue(map[string]any{"env": env}))),
-		rego.Module("example.rego", `
-package example
-import data.system.eopa.utils.postgres.v1.vault as postgres
+	tests := []struct {
+		note   string
+		query  string
+		module string
+		exp    func(*testing.T, rego.ResultSet)
+	}{
+		{
+			note:  "send",
+			query: "x := data.example.p",
+			module: `
 p := count(postgres.send("SELECT 1 FROM T1 WHERE $1", [input.x]).rows)
-`),
-		rego.Query(`x := data.example.p`),
-		rego.Input(map[string]any{"x": true}),
-		rego.StrictBuiltinErrors(true),
-	)
-	rs, err := r.Eval(ctx)
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"]
+				exp := json.Number("1")
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "send with options",
+			query: "x := data.example.p",
+			module: `
+p := count(postgres.send_opts("SELECT 1 FROM T1 WHERE $1", [input.x], {"cache": true, "cache_duration": "10s", "raise_error": false}).rows)
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"]
+				exp := json.Number("1")
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.note, runRegoTests(tc.exp,
+			rego.Runtime(ast.NewTerm(ast.MustInterfaceToValue(map[string]any{"env": env}))),
+			rego.Module("example.rego", `package example
+import data.system.eopa.utils.postgres.v1.vault as postgres
+`+tc.module),
+			rego.Query(tc.query),
+			rego.Input(map[string]any{"x": true}),
+		))
+	}
+}
+
+func TestVaultData(t *testing.T) {
+	if err := library.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	tc, addr, token := startVault(t, "a", "b/c/d", map[string]string{"fox": "trot"})
+	t.Cleanup(func() { tc.Terminate(context.Background()) })
+
+	env := map[string]string{
+		"VAULT_ADDRESS": addr,
+		"VAULT_TOKEN":   token,
+	}
+
+	tests := []struct {
+		note   string
+		query  string
+		module string
+		exp    func(*testing.T, rego.ResultSet)
+	}{
+		{
+			note:  "secret",
+			query: "x := data.example.p",
+			module: `
+p := vault.secret("a/b/c/d")
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"]
+				exp := map[string]any{"fox": "trot"}
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "secret_opts",
+			query: "x := data.example.p",
+			module: `
+p := vault.secret_opts("a/b/c/d", {"cache": true, "cache_duration": "10s", "raise_error": false})
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"]
+				exp := map[string]any{"fox": "trot"}
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.note, runRegoTests(tc.exp,
+			rego.Runtime(ast.NewTerm(ast.MustInterfaceToValue(map[string]any{"env": env}))),
+			rego.Module("example.rego", `package example
+import data.system.eopa.utils.vault.v1.env as vault
+`+tc.module),
+			rego.Query(tc.query),
+		))
+	}
+}
+
+func TestMongoDBFindVault(t *testing.T) {
+	ctx := context.Background()
+
+	username, password := "alice", "wasspord"
+	tc, endpoint := startMongoDB(t, username, password)
+	t.Cleanup(func() { tc.Terminate(ctx) })
+
+	if err := library.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	u, err := url.Parse(endpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
-	act := rs[0].Bindings["x"]
-	exp := json.Number("1")
-	if diff := cmp.Diff(exp, act); diff != "" {
-		t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+	databag := map[string]string{
+		"host":     u.Hostname(),
+		"port":     u.Port(),
+		"user":     username,
+		"password": password,
+	}
+
+	tc, addr, token := startVault(t, "secret", "mongodb", databag)
+	t.Cleanup(func() { tc.Terminate(context.Background()) })
+
+	env := map[string]string{
+		"VAULT_ADDRESS": addr,
+		"VAULT_TOKEN":   token,
+	}
+
+	tests := []struct {
+		note   string
+		query  string
+		module string
+		exp    func(*testing.T, rego.ResultSet)
+	}{
+		{
+			note:  "find with filter",
+			query: "x := data.example.p.results[0]",
+			module: `
+p := mongodb.find({"database": "database", "collection": "collection", "filter": {"foo": input.x}})
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"].(map[string]any)
+				delete(act, "_id")
+				exp := map[string]any{
+					"bar": json.Number("1"),
+					"foo": "x",
+				}
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "find with options",
+			query: "x := data.example.p.results[0]",
+			module: `
+p := mongodb.find({"database": "database", "collection": "collection", "filter": {}, "options": {"projection": {"_id": false}}})
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"].(map[string]any)
+				exp := map[string]any{
+					"bar": json.Number("1"),
+					"foo": "x",
+				}
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "find with cache+error options",
+			query: "x := data.example.p.results[0]",
+			module: `
+p := mongodb.find({"database": "database", "collection": "collection", "filter": {}, "options": {"projection": {"_id": false}}, "cache": true, "cache_duration": "10s", "raise_error": false})
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"].(map[string]any)
+				exp := map[string]any{
+					"bar": json.Number("1"),
+					"foo": "x",
+				}
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "find_one with filter",
+			query: "x := data.example.p.results",
+			module: `
+p := mongodb.find_one({"database": "database", "collection": "collection", "filter": {"foo": input.x}})
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"].(map[string]any)
+				delete(act, "_id")
+				exp := map[string]any{
+					"bar": json.Number("1"),
+					"foo": "x",
+				}
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "find_one with options",
+			query: "x := data.example.p.results",
+			module: `
+p := mongodb.find_one({"database": "database", "collection": "collection", "filter": {}, "options": {"projection": {"_id": false}}})
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"].(map[string]any)
+				exp := map[string]any{
+					"bar": json.Number("1"),
+					"foo": "x",
+				}
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "find_one with cache+error options",
+			query: "x := data.example.p.results",
+			module: `
+p := mongodb.find_one({"database": "database", "collection": "collection", "filter": {}, "options": {"projection": {"_id": false}}, "cache": true, "cache_duration": "10s", "raise_error": false})
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"].(map[string]any)
+				exp := map[string]any{
+					"bar": json.Number("1"),
+					"foo": "x",
+				}
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.note, runRegoTests(tc.exp,
+			rego.Runtime(ast.NewTerm(ast.MustInterfaceToValue(map[string]any{"env": env}))),
+			rego.Module("example.rego", `package example
+import data.system.eopa.utils.mongodb.v1.vault as mongodb
+`+tc.module),
+			rego.Query(tc.query),
+			rego.Input(map[string]any{"x": "x"}),
+		))
+	}
+}
+
+func TestDynamoDBSendVault(t *testing.T) {
+	ctx := context.Background()
+
+	tc, endpoint := startDynamoDB(t)
+	t.Cleanup(func() { tc.Terminate(ctx) })
+
+	if err := library.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	dummy := "dummy"
+	databag := map[string]string{
+		"endpoint":   endpoint,
+		"region":     "us-west-2",
+		"access_key": dummy,
+		"secret_key": dummy,
+	}
+
+	tc, addr, token := startVault(t, "secret", "dynamodb", databag)
+	t.Cleanup(func() { tc.Terminate(context.Background()) })
+
+	env := map[string]string{
+		"VAULT_ADDRESS": addr,
+		"VAULT_TOKEN":   token,
+	}
+
+	tests := []struct {
+		note   string
+		query  string
+		module string
+		exp    func(*testing.T, rego.ResultSet)
+	}{
+		{
+			note:  "send/get",
+			query: "x := data.example.p.row",
+			module: `
+p := dynamodb.send({"get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}})
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"].(map[string]any)
+				exp := map[string]any{
+					"number": json.Number("1234"),
+					"p":      "x",
+					"s":      json.Number("1"),
+					"string": "value",
+				}
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "send/query",
+			query: "x := data.example.p.rows",
+			module: `
+p := dynamodb.send({"query": {"table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}}})
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"].([]any)
+				exp := []any{
+					map[string]any{
+						"number": json.Number("1234"),
+						"p":      "x",
+						"s":      json.Number("1"),
+						"string": "value",
+					},
+					map[string]any{
+						"number": json.Number("4321"),
+						"p":      "x",
+						"s":      json.Number("2"),
+						"string": "value2",
+					},
+				}
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.note, runRegoTests(tc.exp,
+			rego.Runtime(ast.NewTerm(ast.MustInterfaceToValue(map[string]any{"env": env}))),
+			rego.Module("example.rego", `package example
+import data.system.eopa.utils.dynamodb.v1.vault as dynamodb
+`+tc.module),
+			rego.Query(tc.query),
+			rego.Input(map[string]any{"x": "x"}),
+		))
+	}
+}
+
+func runRegoTests(exp func(*testing.T, rego.ResultSet), r ...func(*rego.Rego)) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		ctx := context.Background()
+		c := cache.NewInterQueryCache(&cache.Config{
+			InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
+				MaxSizeBytes: &maxSize,
+			},
+		})
+		opts := []func(*rego.Rego){
+			rego.Target(rego_vm.Target),
+			rego.StrictBuiltinErrors(true),
+			rego.InterQueryBuiltinCache(c),
+		}
+		opts = append(opts, r...)
+		rs, err := rego.New(opts...).Eval(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		exp(t, rs)
 	}
 }

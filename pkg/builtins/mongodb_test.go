@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/compile"
@@ -16,6 +15,7 @@ import (
 	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/topdown/builtins"
 	"github.com/open-policy-agent/opa/topdown/cache"
+
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.mongodb.org/mongo-driver/bson"
@@ -409,20 +409,19 @@ func executeMongoDB(tb testing.TB, interQueryCache cache.InterQueryCache, module
 	}
 }
 
-func startMongoDB(t *testing.T, username string, password string) (testcontainers.Container, string) {
+func startMongoDB(t *testing.T, username, password string) (testcontainers.Container, string) {
 	t.Helper()
 
 	ctx := context.Background()
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			ConfigModifier: func(config *container.Config) {
-				config.Env = []string{
-					fmt.Sprintf("MONGO_INITDB_ROOT_USERNAME=%s", username),
-					fmt.Sprintf("MONGO_INITDB_ROOT_PASSWORD=%s", password),
-				}
-			},
 			Image:        "mongo:6",
 			ExposedPorts: []string{"27017/tcp"},
+			Env: map[string]string{
+				"MONGO_INITDB_ROOT_USERNAME": username,
+				"MONGO_INITDB_ROOT_PASSWORD": password,
+			},
+
 			WaitingFor: wait.ForAll(
 				wait.ForLog("Waiting for connections"),
 				wait.ForListeningPort("27017/tcp"),
@@ -440,7 +439,6 @@ func startMongoDB(t *testing.T, username string, password string) (testcontainer
 	}
 
 	// Create the test content.
-
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(authMongoURI(endpoint, username, password)))
 	if err != nil {
 		t.Fatal(err)

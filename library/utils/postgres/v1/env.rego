@@ -10,32 +10,35 @@ package system.eopa.utils.postgres.v1.env
 
 import future.keywords.if
 
-send(query, args) := sql.send({
+send(query, args) := send_opts(query, args, {})
+
+send_opts(query, args, opts) := sql.send({
 	"driver": "postgres",
 	"data_source_name": dsn,
 	"query": query,
 	"args": args,
+	"cache": cache,
+	"cache_duration": cache_duration,
+	"raise_error": raise_error,
 }) if {
-    env := opa.runtime().env
+    dsn := _dsn(opa.runtime().env)
+   	cache := object.get(opts, "cache", false)
+	cache_duration := object.get(opts, "cache_duration", "60s")
+	raise_error := object.get(opts, "raise_error", true)
+}
+
+_dsn(env) := sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=%s", [user, pass, host, port, dbname, sslmode]) if {
 	user := env.PGUSER
 	pass := env.PGPASSWORD
 	dbname := env.PGDBNAME
 	host := object.get(env, "PGHOST", "localhost")
 	port := object.get(env, "PGPORT", "5432")
 	sslmode := object.get(env, "PGSSLMODE", "require")
-	dsn := sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=%s", [user, pass, host, port, dbname, sslmode])
 }
 
-else := sql.send({
-	"driver": "postgres",
-	"data_source_name": dsn,
-	"query": query,
-	"args": args,
-}) if {
-    env := opa.runtime().env
+else := sprintf("postgresql://%s:%s/%s?sslmode=%s", [host, port, dbname, sslmode]) if {
 	dbname := env.PGDBNAME
 	host := object.get(env, "PGHOST", "localhost")
 	port := object.get(env, "PGPORT", "5432")
 	sslmode := object.get(env, "PGSSLMODE", "require")
-	dsn := sprintf("postgresql://%s:%s/%s?sslmode=%s", [host, port, dbname, sslmode])
 }
