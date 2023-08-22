@@ -10,7 +10,7 @@ package system.eopa.utils.dynamodb.v1.vault
 import future.keywords.if
 import data.system.eopa.utils.vault.v1.env as vault
 
-send(req) := dynamodb.send(object.union(auth(vault.secret("secret/dynamodb")), req))
+send(req) := dynamodb.send(object.union(auth(vault.secret(secret_path(true))), req))
 
 auth(vault_data) := {
 	"credentials": credentials,
@@ -25,3 +25,8 @@ auth(vault_data) := {
 else := {
 	"region": vault_data.region, # required key, no default
 }
+
+override.secret_path if false
+
+secret_path(_) = override.secret_path if true
+else := "secret/dynamodb"

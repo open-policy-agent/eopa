@@ -10,8 +10,8 @@ import future.keywords.if
 secret(path) := secret_opts(path, {})
 
 secret_opts(path, opts) := vault.send({
-	"address": env.VAULT_ADDRESS,
-	"token": env.VAULT_TOKEN,
+	"address": address(env),
+	"token": token(env),
 	"kv2_get": req,
 	"cache": cache,
 	"cache_duration": cache_duration,
@@ -26,3 +26,12 @@ secret_opts(path, opts) := vault.send({
 	cache_duration := object.get(opts, "cache_duration", "60s")
 	raise_error := object.get(opts, "raise_error", true)
 }
+
+override.address if false
+override.token if false
+
+address(env) := override.address if true
+else := env.VAULT_ADDRESS
+
+token(env) := override.token if true
+else := env.VAULT_TOKEN

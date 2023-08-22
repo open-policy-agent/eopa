@@ -189,11 +189,11 @@ func executeVault(tb testing.TB, interQueryCache cache.InterQueryCache, module s
 }
 
 func startVault(t *testing.T, mount, path string, data map[string]string) (*testcontainersvault.VaultContainer, string, string) {
+	return startVaultMulti(t, mount, map[string]map[string]string{path: data})
+}
+
+func startVaultMulti(t *testing.T, mount string, data map[string]map[string]string) (*testcontainersvault.VaultContainer, string, string) {
 	t.Helper()
-	d := ""
-	for k, v := range data {
-		d += k + "=" + v + " "
-	}
 
 	token := "root-token"
 	opts := []testcontainers.ContainerCustomizer{
@@ -201,13 +201,19 @@ func startVault(t *testing.T, mount, path string, data map[string]string) (*test
 		testcontainersvault.WithToken(token),
 	}
 
-	// NOTE(sr): "secret" seems to be enabled by default, as this would fail with
-	//  error occurred during enable mount: path=secret/ error="path is already in use at secret/"
-	if mount != "secret" {
-		opts = append(opts, testcontainersvault.WithInitCommand(fmt.Sprintf("secrets enable --version=2 --path=%s kv", mount)))
-	}
+	for path, data := range data {
+		d := ""
+		for k, v := range data {
+			d += k + "=" + v + " "
+		}
+		// NOTE(sr): "secret" seems to be enabled by default, as this would fail with
+		//  error occurred during enable mount: path=secret/ error="path is already in use at secret/"
+		if mount != "secret" {
+			opts = append(opts, testcontainersvault.WithInitCommand(fmt.Sprintf("secrets enable --version=2 --path=%s kv", mount)))
+		}
 
-	opts = append(opts, testcontainersvault.WithInitCommand(fmt.Sprintf("kv put %s/%s %s", mount, path, d)))
+		opts = append(opts, testcontainersvault.WithInitCommand(fmt.Sprintf("kv put %s/%s %s", mount, path, d)))
+	}
 
 	ctx := context.Background()
 	srv, err := testcontainersvault.RunContainer(ctx, opts...)

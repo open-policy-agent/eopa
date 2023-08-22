@@ -15,9 +15,9 @@ import data.system.eopa.utils.vault.v1.env as vault
 # TODO(sr): treat database like DBNAME in PG? I.e. take it from
 # data in vault instead of making it a parameter? OR DO BOTH?
 
-find(req) := mongodb.find(object.union(auth(vault.secret("secret/mongodb")), req))
+find(req) := mongodb.find(object.union(auth(vault.secret(secret_path(true))), req))
 
-find_one(req) := mongodb.find_one(object.union(auth(vault.secret("secret/mongodb")), req))
+find_one(req) := mongodb.find_one(object.union(auth(vault.secret(secret_path(true))), req))
 
 auth(vault_data) := {
 	"uri": uri,
@@ -37,3 +37,8 @@ else := {
 	port := object.get(vault_data, "port", "27017")
 	uri := sprintf("mongodb://%s:%s", [host, port])
 }
+
+override.secret_path if false
+
+secret_path(_) = override.secret_path if true
+else := "secret/mongodb"

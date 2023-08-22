@@ -21,7 +21,7 @@ send_opts(query, args, opts) := sql.send({
 	"cache_duration": cache_duration,
 	"raise_error": raise_error,
 }) if {
-	vault_data := vault.secret("secret/postgres")
+	vault_data := vault.secret(secret_path(true))
 	dsn := _dsn(vault_data)
 	cache := object.get(opts, "cache", false)
 	cache_duration := object.get(opts, "cache_duration", "60s")
@@ -42,3 +42,8 @@ else := sprintf("postgresql://%s:%s/%s?sslmode=%s", [host, port, dbname, sslmode
 	port := object.get(vault_data, "port", "5432")
 	sslmode := object.get(vault_data, "sslmode", "require")
 }
+
+override.secret_path if false
+
+secret_path(_) = override.secret_path if true
+else := "secret/postgres"

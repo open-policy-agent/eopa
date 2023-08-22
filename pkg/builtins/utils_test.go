@@ -114,12 +114,19 @@ func TestPostgresVaultSend(t *testing.T) {
 		"sslmode":  u.Query().Get("sslmode"),
 	}
 
-	tc, addr, token := startVault(t, "secret", "postgres", databag)
+	secrets := map[string]map[string]string{
+		"postgres":         databag,
+		"overridepostgres": databag,
+	}
+
+	tc, addr, token := startVaultMulti(t, "secret", secrets)
 	t.Cleanup(func() { tc.Terminate(context.Background()) })
 
 	env := map[string]string{
-		"VAULT_ADDRESS": addr,
-		"VAULT_TOKEN":   token,
+		"VAULT_ADDRESS":     addr,
+		"VAULT_TOKEN":       token,
+		"OTHER_ENV_ADDRESS": addr,
+		"OTHER_ENV_TOKEN":   token,
 	}
 
 	tests := []struct {
@@ -133,6 +140,26 @@ func TestPostgresVaultSend(t *testing.T) {
 			query: "x := data.example.p",
 			module: `
 p := count(postgres.send("SELECT 1 FROM T1 WHERE $1", [input.x]).rows)
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"]
+				exp := json.Number("1")
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "send with vault overrides",
+			query: "x := data.example.p",
+			module: `
+import data.system.eopa.utils.vault.v1.env as vault
+postgres_send(query, args) := result {
+	result := postgres.send(query, args) with postgres.override.secret_path as "secret/overridepostgres"
+		with vault.override.address as opa.runtime().env.OTHER_ENV_ADDRESS
+		with vault.override.token as opa.runtime().env.OTHER_ENV_TOKEN
+}
+p := count(postgres_send("SELECT 1 FROM T1 WHERE $1", [input.x]).rows)
 `,
 			exp: func(t *testing.T, rs rego.ResultSet) {
 				act := rs[0].Bindings["x"]
@@ -170,7 +197,7 @@ import data.system.eopa.utils.postgres.v1.vault as postgres
 	}
 }
 
-func TestVaultData(t *testing.T) {
+func TestVaultSecret(t *testing.T) {
 	if err := library.Init(); err != nil {
 		t.Fatal(err)
 	}
@@ -179,8 +206,10 @@ func TestVaultData(t *testing.T) {
 	t.Cleanup(func() { tc.Terminate(context.Background()) })
 
 	env := map[string]string{
-		"VAULT_ADDRESS": addr,
-		"VAULT_TOKEN":   token,
+		"VAULT_ADDRESS":     addr,
+		"VAULT_TOKEN":       token,
+		"OTHER_ENV_ADDRESS": addr,
+		"OTHER_ENV_TOKEN":   token,
 	}
 
 	tests := []struct {
@@ -194,6 +223,25 @@ func TestVaultData(t *testing.T) {
 			query: "x := data.example.p",
 			module: `
 p := vault.secret("a/b/c/d")
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"]
+				exp := map[string]any{"fox": "trot"}
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "secret with overrides",
+			query: "x := data.example.p",
+			module: `
+vault_secret(path) := result {
+	result := vault.secret(path)
+		with vault.override.address as opa.runtime().env.OTHER_ENV_ADDRESS
+		with vault.override.token as opa.runtime().env.OTHER_ENV_TOKEN
+}
+p := vault_secret("a/b/c/d")
 `,
 			exp: func(t *testing.T, rs rego.ResultSet) {
 				act := rs[0].Bindings["x"]
@@ -251,8 +299,12 @@ func TestMongoDBFindVault(t *testing.T) {
 		"user":     username,
 		"password": password,
 	}
+	secrets := map[string]map[string]string{
+		"mongodb":         databag,
+		"overridemongodb": databag,
+	}
 
-	tc, addr, token := startVault(t, "secret", "mongodb", databag)
+	tc, addr, token := startVaultMulti(t, "secret", secrets)
 	t.Cleanup(func() { tc.Terminate(context.Background()) })
 
 	env := map[string]string{
@@ -271,6 +323,28 @@ func TestMongoDBFindVault(t *testing.T) {
 			query: "x := data.example.p.results[0]",
 			module: `
 p := mongodb.find({"database": "database", "collection": "collection", "filter": {"foo": input.x}})
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"].(map[string]any)
+				delete(act, "_id")
+				exp := map[string]any{
+					"bar": json.Number("1"),
+					"foo": "x",
+				}
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "find with filter and overrides",
+			query: "x := data.example.p.results[0]",
+			module: `
+mongodb_find(req) := result {
+	result := mongodb.find(req)
+		with mongodb.override.secret_path as "secret/overridemongodb"
+}
+p := mongodb_find({"database": "database", "collection": "collection", "filter": {"foo": input.x}})
 `,
 			exp: func(t *testing.T, rs rego.ResultSet) {
 				act := rs[0].Bindings["x"].(map[string]any)
@@ -402,7 +476,12 @@ func TestDynamoDBSendVault(t *testing.T) {
 		"secret_key": dummy,
 	}
 
-	tc, addr, token := startVault(t, "secret", "dynamodb", databag)
+	secrets := map[string]map[string]string{
+		"dynamodb":         databag,
+		"overridedynamodb": databag,
+	}
+
+	tc, addr, token := startVaultMulti(t, "secret", secrets)
 	t.Cleanup(func() { tc.Terminate(context.Background()) })
 
 	env := map[string]string{
@@ -421,6 +500,29 @@ func TestDynamoDBSendVault(t *testing.T) {
 			query: "x := data.example.p.row",
 			module: `
 p := dynamodb.send({"get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}})
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"].(map[string]any)
+				exp := map[string]any{
+					"number": json.Number("1234"),
+					"p":      "x",
+					"s":      json.Number("1"),
+					"string": "value",
+				}
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "send/get with override",
+			query: "x := data.example.p.row",
+			module: `
+dynamodb_send(req) := result {
+	result := dynamodb.send(req)
+		with dynamodb.override.secret_path as "secret/overridedynamodb"
+}
+p := dynamodb_send({"get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}})
 `,
 			exp: func(t *testing.T, rs rego.ResultSet) {
 				act := rs[0].Bindings["x"].(map[string]any)
