@@ -520,7 +520,7 @@ func populate(tb testing.TB, file string, init string) {
 func startMySQL(t *testing.T) backend {
 	t.Helper()
 
-	srv, err := mysql.RunContainer(context.Background())
+	srv, err := mysql.RunContainer(context.Background(), testLogger(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -549,7 +549,7 @@ func startMySQL(t *testing.T) backend {
 func startPostgreSQL(t *testing.T) backend {
 	t.Helper()
 
-	srv, err := postgres.RunContainer(context.Background(),
+	srv, err := postgres.RunContainer(context.Background(), testLogger(t),
 		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(5*time.Second)),
 	)
 	if err != nil {
@@ -575,4 +575,10 @@ func startPostgreSQL(t *testing.T) backend {
 	}
 
 	return backend{conn: connStr, cleanup: func() { srv.Terminate(context.Background()) }}
+}
+
+func testLogger(t testing.TB) testcontainers.CustomizeRequestOption {
+	return testcontainers.CustomizeRequestOption(func(req *testcontainers.GenericContainerRequest) {
+		req.Logger = testcontainers.TestLogger(t)
+	})
 }

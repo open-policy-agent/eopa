@@ -252,6 +252,7 @@ func startDynamoDB(t *testing.T) (testcontainers.Container, string) {
 			ExposedPorts: []string{"8000/tcp"},
 			WaitingFor:   wait.NewHostPortStrategy("8000"),
 		},
+		Logger:  testcontainers.TestLogger(t),
 		Started: true,
 	})
 	if err != nil {

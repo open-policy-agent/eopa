@@ -3,7 +3,9 @@ package builtins
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/url"
+	"regexp"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -190,6 +192,113 @@ p := count(postgres.send_opts("SELECT 1 FROM T1 WHERE $1", [input.x], {"cache": 
 			rego.Runtime(ast.NewTerm(ast.MustInterfaceToValue(map[string]any{"env": env}))),
 			rego.Module("example.rego", `package example
 import data.system.eopa.utils.postgres.v1.vault as postgres
+`+tc.module),
+			rego.Query(tc.query),
+			rego.Input(map[string]any{"x": true}),
+		))
+	}
+}
+
+func TestMysqlVaultSend(t *testing.T) {
+	be := startMySQL(t)
+	t.Cleanup(be.cleanup)
+
+	if err := library.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	re := regexp.MustCompile(`^([a-z]+):([a-z]+)@tcp\(([a-z1-9:.]+)\)/([a-z]+)\?tls=([a-z-]+)$`)
+	ms := re.FindStringSubmatch(be.conn)
+	if len(ms) < 6 {
+		t.Fatalf("failed to parse conn string %s => %v", be.conn, ms)
+	}
+	host, port, _ := net.SplitHostPort(ms[3])
+
+	databag := map[string]string{
+		"user":     ms[1],
+		"password": ms[2],
+		"host":     host,
+		"port":     port,
+		"dbname":   ms[4],
+		"tls":      ms[5],
+	}
+
+	secrets := map[string]map[string]string{
+		"mysql":         databag,
+		"overridemysql": databag,
+	}
+
+	tc, addr, token := startVaultMulti(t, "secret", secrets)
+	t.Cleanup(func() { tc.Terminate(context.Background()) })
+
+	env := map[string]string{
+		"VAULT_ADDRESS":     addr,
+		"VAULT_TOKEN":       token,
+		"OTHER_ENV_ADDRESS": addr,
+		"OTHER_ENV_TOKEN":   token,
+	}
+
+	tests := []struct {
+		note   string
+		query  string
+		module string
+		exp    func(*testing.T, rego.ResultSet)
+	}{
+		{
+			note:  "send",
+			query: "x := data.example.p",
+			module: `
+p := count(mysql.send("SELECT 1 FROM T1 WHERE ?", [input.x]).rows)
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"]
+				exp := json.Number("1")
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "send with vault overrides",
+			query: "x := data.example.p",
+			module: `
+import data.system.eopa.utils.vault.v1.env as vault
+mysql_send(query, args) := result {
+	result := mysql.send(query, args) with mysql.override.secret_path as "secret/overridemysql"
+		with vault.override.address as opa.runtime().env.OTHER_ENV_ADDRESS
+		with vault.override.token as opa.runtime().env.OTHER_ENV_TOKEN
+}
+p := count(mysql_send("SELECT 1 FROM T1 WHERE ?", [input.x]).rows)
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"]
+				exp := json.Number("1")
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			note:  "send with options",
+			query: "x := data.example.p",
+			module: `
+p := count(mysql.send_opts("SELECT 1 FROM T1 WHERE ?", [input.x], {"cache": true, "cache_duration": "10s", "raise_error": false}).rows)
+`,
+			exp: func(t *testing.T, rs rego.ResultSet) {
+				act := rs[0].Bindings["x"]
+				exp := json.Number("1")
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("expected binding 'x': (-want, +got):\n%s", diff)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.note, runRegoTests(tc.exp,
+			rego.Runtime(ast.NewTerm(ast.MustInterfaceToValue(map[string]any{"env": env}))),
+			rego.Module("example.rego", `package example
+import data.system.eopa.utils.mysql.v1.vault as mysql
 `+tc.module),
 			rego.Query(tc.query),
 			rego.Input(map[string]any{"x": true}),
