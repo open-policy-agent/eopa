@@ -43,24 +43,24 @@ func (s *Server) certLoop() Loop {
 				// Read file contents off disk just once, use up to twice.
 				certPEMBlock, err := os.ReadFile(s.certFilename)
 				if err != nil {
-					s.logger.Info("Failed to reload server certificate: %s", err.Error())
+					s.manager.Logger().Info("Failed to reload server certificate: %s", err.Error())
 					continue
 				}
 				keyPEMBlock, err := os.ReadFile(s.certKeyFilename)
 				if err != nil {
-					s.logger.Info("Failed to reload server certificate key: %s", err.Error())
+					s.manager.Logger().Info("Failed to reload server certificate key: %s", err.Error())
 					continue
 				}
 
 				// Compute hashes of each file's contents.
 				certHash, err := hash(bytes.NewReader(certPEMBlock))
 				if err != nil {
-					s.logger.Info("Failed to refresh server certificate: %s", err.Error())
+					s.manager.Logger().Info("Failed to refresh server certificate: %s", err.Error())
 					continue
 				}
 				certKeyHash, err := hash(bytes.NewReader(keyPEMBlock))
 				if err != nil {
-					s.logger.Info("Failed to refresh server certificate: %s", err.Error())
+					s.manager.Logger().Info("Failed to refresh server certificate: %s", err.Error())
 					continue
 				}
 
@@ -82,7 +82,7 @@ func (s *Server) certLoop() Loop {
 					s.certMtx.Lock()
 					s.cert = &cert
 					s.certMtx.Unlock()
-					s.logger.Debug("Refreshed server certificate")
+					s.manager.Logger().Debug("Refreshed server certificate")
 				}
 			}
 		}

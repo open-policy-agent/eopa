@@ -11,6 +11,7 @@ package grpc
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -23,9 +24,11 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/logging"
+	metrics "github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/plugins/logs"
 	"github.com/open-policy-agent/opa/rego"
+	opa_server "github.com/open-policy-agent/opa/server"
 	"github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
@@ -40,9 +43,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/reflection"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
+	internal_logging "github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc/internal/logging"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc/internal/uuid"
 	bulkv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/bulk/v1"
 	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
 	policyv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
@@ -94,7 +100,7 @@ type Server struct {
 	runtimeData     *ast.Term
 	ndbCacheEnabled bool
 	store           storage.Store
-	logger          logging.Logger // inherited from manager.
+	decisionLogger  func(context.Context, *opa_server.Info) error
 
 	authentication      AuthenticationScheme
 	authorization       AuthorizationScheme
@@ -116,6 +122,7 @@ type Server struct {
 	datav1.UnimplementedDataServiceServer
 	policyv1.UnimplementedPolicyServiceServer
 	bulkv1.UnimplementedBulkServiceServer
+	requestCounter uint64
 }
 
 const pqMaxCacheSize = 100
@@ -126,6 +133,8 @@ var unsafeBuiltinsMap = map[string]struct{}{ast.HTTPSend.Name: {}}
 // Validation of TLS config happens upstream in (factory).Validate().
 func New(manager *plugins.Manager, config Config) *Server {
 	options := make([]grpc.ServerOption, 0, 1)
+	unaryInterceptors := make([]grpc.UnaryServerInterceptor, 0, 1)
+	streamInterceptors := make([]grpc.StreamServerInterceptor, 0, 1)
 	creds := insecure.NewCredentials()
 
 	server := Server{
@@ -134,11 +143,12 @@ func New(manager *plugins.Manager, config Config) *Server {
 		manager:                manager,
 		interQueryBuiltinCache: iCache.NewInterQueryCache(manager.InterQueryBuiltinCacheConfig()),
 		store:                  manager.Store,
-		logger:                 manager.Logger(),
 		certFilename:           config.TLS.CertFile,
 		certKeyFilename:        config.TLS.CertKeyFile,
 		tlsRootCACertFilename:  config.TLS.RootCACertFile,
+		requestCounter:         uint64(0),
 	}
+	server.decisionLogger = server.defaultDecisionLogger
 
 	if config.MaxRecvMessageSize > 0 {
 		options = append(options, grpc.MaxRecvMsgSize(config.MaxRecvMessageSize))
@@ -175,7 +185,6 @@ func New(manager *plugins.Manager, config Config) *Server {
 		),
 	)
 	// Bind metrics to the manager's registerer if it exists.
-	var metricsOption grpc.ServerOption
 	metricsOK := false
 	if reg := manager.PrometheusRegister(); reg != nil {
 		// Note(philip): To avoid AlreadyRegisteredError incidents during
@@ -185,7 +194,7 @@ func New(manager *plugins.Manager, config Config) *Server {
 		err := reg.Register(srvMetrics)
 		if err != nil {
 			server.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to register Prometheus metrics: " + err.Error()})
-			server.logger.Error("Failed to register Prometheus metrics: %s", err.Error())
+			server.manager.Logger().Error("Failed to register Prometheus metrics: %s", err.Error())
 			return nil
 		}
 		exemplarFromContext := func(ctx context.Context) prometheus.Labels {
@@ -194,9 +203,9 @@ func New(manager *plugins.Manager, config Config) *Server {
 			}
 			return nil
 		}
-		metricsOption = grpc.ChainUnaryInterceptor(srvMetrics.UnaryServerInterceptor(grpcprom.WithExemplarFromContext(exemplarFromContext)))
+		metricsUnaryInterceptor := srvMetrics.UnaryServerInterceptor(grpcprom.WithExemplarFromContext(exemplarFromContext))
 		metricsOK = true
-		options = append(options, metricsOption)
+		unaryInterceptors = append(unaryInterceptors, metricsUnaryInterceptor)
 		server.metrics = srvMetrics // Hang on to this object for later unregistering.
 	}
 
@@ -205,10 +214,20 @@ func New(manager *plugins.Manager, config Config) *Server {
 			otelgrpc.WithTracerProvider(tp),
 			otelgrpc.WithPropagators(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})),
 		}
-		options = append(options,
-			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(tracing...)),
-			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(tracing...)),
-		)
+		unaryInterceptors = append(unaryInterceptors, otelgrpc.UnaryServerInterceptor(tracing...))
+		streamInterceptors = append(streamInterceptors, otelgrpc.StreamServerInterceptor(tracing...))
+	}
+
+	// Logging interceptor hooks:
+	unaryInterceptors = append(unaryInterceptors, internal_logging.NewLoggingUnaryServerInterceptor(&server.requestCounter, server.manager.Logger()))
+	streamInterceptors = append(streamInterceptors, internal_logging.NewLoggingStreamServerInterceptor(&server.requestCounter, server.manager.Logger()))
+
+	// Set the chained interceptors for unary/stream endpoints, if present:
+	if len(unaryInterceptors) > 0 {
+		options = append(options, grpc.ChainUnaryInterceptor(unaryInterceptors...))
+	}
+	if len(streamInterceptors) > 0 {
+		options = append(options, grpc.ChainStreamInterceptor(streamInterceptors...))
 	}
 
 	// Fills in all grpc.Server-related parts of the Server struct.
@@ -277,13 +296,13 @@ func (s *Server) loadTLSCredentials() credentials.TransportCredentials {
 		// and reuse the file contents for both use cases (cert, hashes).
 		certPEMBlock, err := os.ReadFile(s.certFilename)
 		if err != nil {
-			s.logger.Error("Failed to reload server certificate: %s.", err.Error())
+			s.manager.Logger().Error("Failed to reload server certificate: %s.", err.Error())
 			s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to reload server certificate: " + err.Error()})
 			return nil
 		}
 		keyPEMBlock, err := os.ReadFile(s.certKeyFilename)
 		if err != nil {
-			s.logger.Error("Failed to reload server certificate key: %s.", err.Error())
+			s.manager.Logger().Error("Failed to reload server certificate key: %s.", err.Error())
 			s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to reload server certificate key: " + err.Error()})
 			return nil
 		}
@@ -299,14 +318,14 @@ func (s *Server) loadTLSCredentials() credentials.TransportCredentials {
 
 		certHash, err := hash(bytes.NewReader(certPEMBlock))
 		if err != nil {
-			s.logger.Error("Failed to refresh server certificate: %s.", err.Error())
+			s.manager.Logger().Error("Failed to refresh server certificate: %s.", err.Error())
 			s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to refresh server certificate: " + err.Error()})
 			return nil
 		}
 		s.certFileHash = certHash
 		certKeyHash, err := hash(bytes.NewReader(keyPEMBlock))
 		if err != nil {
-			s.logger.Error("Failed to refresh server certificate: %s.", err.Error())
+			s.manager.Logger().Error("Failed to refresh server certificate: %s.", err.Error())
 			s.manager.UpdatePluginStatus("grpc", &plugins.Status{State: plugins.StateErr, Message: "Failed to refresh server certificate: " + err.Error()})
 			return nil
 		}
@@ -414,6 +433,12 @@ func (s *Server) WithCertificatePaths(certFilename, keyFilename string, refresh 
 // WithCertPool sets the server-side cert pool that the server will use.
 func (s *Server) WithCertPool(pool *x509.CertPool) *Server {
 	s.certPool = pool
+	return s
+}
+
+// WithDecisionLoggerWithErr sets the decision logger used by the server.
+func (s *Server) WithDecisionLoggerWithErr(logger func(context.Context, *opa_server.Info) error) *Server {
+	s.decisionLogger = logger
 	return s
 }
 
@@ -635,12 +660,22 @@ func (s *Server) makeRego(_ context.Context,
 	return rego.New(opts...), nil
 }
 
-// func (s *Server) generateDecisionID() string {
-// 	if s.decisionIDFactory != nil {
-// 		return s.decisionIDFactory()
-// 	}
-// 	return ""
-// }
+func (s *Server) hasLegacyBundle(br bundleRevisions) bool {
+	bp := bundle.Lookup(s.manager)
+	return br.LegacyRevision != "" || (bp != nil && !bp.Config().IsMultiBundle())
+}
+
+func (s *Server) generateDecisionID() string {
+	if s.decisionIDFactory != nil {
+		return s.decisionIDFactory()
+	}
+	return defaultDecisionIDGenerator()
+}
+
+func defaultDecisionIDGenerator() string {
+	id, _ := uuid.New(rand.Reader)
+	return id
+}
 
 func loadCertPool(tlsCACertFile string) (*x509.CertPool, error) {
 	caCertPEM, err := os.ReadFile(tlsCACertFile)
@@ -652,4 +687,107 @@ func loadCertPool(tlsCACertFile string) (*x509.CertPool, error) {
 		return nil, fmt.Errorf("failed to parse CA cert %q", tlsCACertFile)
 	}
 	return pool, nil
+}
+
+// Note(philip): Lifted verbatim from server/server.go:
+type bundleRevisions struct {
+	LegacyRevision string
+	Revisions      map[string]string
+}
+
+func getRevisions(ctx context.Context, store storage.Store, txn storage.Transaction) (bundleRevisions, error) {
+	var err error
+	var br bundleRevisions
+	br.Revisions = map[string]string{}
+
+	// Check if we still have a legacy bundle manifest in the store
+	br.LegacyRevision, err = bundle.LegacyReadRevisionFromStore(ctx, store, txn)
+	if err != nil && !storage.IsNotFound(err) {
+		return br, err
+	}
+
+	// read all bundle revisions from storage (if any exist)
+	names, err := bundle.ReadBundleNamesFromStore(ctx, store, txn)
+	if err != nil && !storage.IsNotFound(err) {
+		return br, err
+	}
+
+	for _, name := range names {
+		r, err := bundle.ReadBundleRevisionFromStore(ctx, store, txn, name)
+		if err != nil && !storage.IsNotFound(err) {
+			return br, err
+		}
+		br.Revisions[name] = r
+	}
+
+	return br, nil
+}
+
+func (s *Server) getDecisionLogger(br bundleRevisions) (logger decisionLogger) {
+	// For backwards compatibility use `revision` as needed.
+	if s.hasLegacyBundle(br) {
+		logger.revision = br.LegacyRevision
+	} else {
+		logger.revisions = br.Revisions
+	}
+	logger.logger = s.decisionLogger
+	return logger
+}
+
+type decisionLogger struct {
+	revisions map[string]string
+	revision  string // Deprecated: Use `revisions` instead.
+	logger    func(context.Context, *opa_server.Info) error
+}
+
+func (l decisionLogger) Log(ctx context.Context, txn storage.Transaction, decisionID, remoteAddr, path string, query string, goInput *interface{}, astInput ast.Value, goResults *interface{}, err error, m metrics.Metrics) error {
+	bundles := map[string]opa_server.BundleInfo{}
+	for name, rev := range l.revisions {
+		bundles[name] = opa_server.BundleInfo{Revision: rev}
+	}
+
+	info := &opa_server.Info{
+		Txn:        txn,
+		Revision:   l.revision,
+		Bundles:    bundles,
+		Timestamp:  time.Now().UTC(),
+		DecisionID: decisionID,
+		RemoteAddr: remoteAddr,
+		Path:       path,
+		Query:      query,
+		Input:      goInput,
+		InputAST:   astInput,
+		Results:    goResults,
+		Error:      err,
+		Metrics:    m,
+	}
+
+	if l.logger != nil {
+		if err := l.logger(ctx, info); err != nil {
+			return fmt.Errorf("decision_logs: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *Server) defaultDecisionLogger(ctx context.Context, event *opa_server.Info) error {
+	plugin := logs.Lookup(s.manager)
+	if plugin == nil {
+		return nil
+	}
+
+	return plugin.Log(ctx, event)
+}
+
+func remoteAddrFromContext(ctx context.Context) string {
+	p, _ := peer.FromContext(ctx)
+	remoteAddr := "unknown"
+	if p != nil {
+		addr := p.Addr
+		if tcpAddr, ok := addr.(*net.TCPAddr); ok {
+			remoteAddr = tcpAddr.IP.String() + ":" + strconv.FormatInt(int64(tcpAddr.Port), 10)
+		}
+	}
+	return remoteAddr
 }

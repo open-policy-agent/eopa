@@ -16,6 +16,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/storage"
@@ -83,13 +84,19 @@ func (s *Server) createDataFromRequest(ctx context.Context, txn storage.Transact
 }
 
 func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction, req *datav1.GetDataRequest) (*datav1.GetDataResponse, error) {
+	m := metrics.New()
 	path := req.GetPath()
+
+	remoteAddr := remoteAddrFromContext(ctx)
+	decisionID := s.generateDecisionID()
 
 	rawInput := req.GetInput().GetDocument().AsMap()
 	input, err := ast.InterfaceToValue(rawInput)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid input")
 	}
+	// TODO(philip): Resolve this to the correct interface type for DL.
+	var goInput *interface{}
 
 	var ndbCache builtins.NDBCache
 	if s.ndbCacheEnabled {
@@ -101,6 +108,13 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 	if explainMode != types.ExplainOffV1 {
 		buf = topdown.NewBufferTracer()
 	}
+
+	br, err := getRevisions(ctx, s.store, txn)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	logger := s.getDecisionLogger(br)
 
 	includeInstrumentation := false // TODO: Plumb in bool option later.
 	// pretty := false                 // TODO: Plumb in bool option later.
@@ -130,13 +144,13 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 
 		rego, err := s.makeRego(ctx, strictBuiltinErrors, txn, input, path, includeInstrumentation, buf, opts)
 		if err != nil {
-			//_ = logger.Log(ctx, txn, urlPath, "", goInput, input, nil, ndbCache, err)
+			_ = logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, nil, err, m)
 			return nil, status.Errorf(codes.Internal, "failed to create Rego evaluator: %v", err)
 		}
 
 		pq, err := rego.PrepareForEval(ctx)
 		if err != nil {
-			//_ = logger.Log(ctx, txn, urlPath, "", goInput, input, nil, ndbCache, err)
+			_ = logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, nil, err, m)
 			return nil, status.Errorf(codes.Internal, "failed to parse Rego query: %v", err)
 		}
 		preparedQuery = &pq
@@ -146,7 +160,7 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 	evalOpts := []rego.EvalOption{
 		rego.EvalTransaction(txn),
 		rego.EvalParsedInput(input),
-		// rego.EvalMetrics(m),
+		rego.EvalMetrics(m),
 		// rego.EvalQueryTracer(buf),
 		rego.EvalInterQueryBuiltinCache(s.interQueryBuiltinCache),
 		// rego.EvalInstrument(includeInstrumentation),
@@ -160,7 +174,7 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 	// m.Timer(metrics.ServerHandler).Stop()
 	// Handle results.
 	if err != nil {
-		//_ = logger.Log(ctx, txn, urlPath, "", goInput, input, nil, ndbCache, err, m)
+		_ = logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, nil, err, m)
 		return nil, status.Errorf(codes.Internal, "evaluation failed: %v", err)
 	}
 
@@ -170,10 +184,10 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 
 	// TODO: Skip metrics and provenance for now...
 	if len(rs) == 0 {
-		// err = logger.Log(ctx, txn, urlPath, "", goInput, input, nil, ndbCache, nil, m)
-		// if err != nil {
-		// 	return nil, status.Errorf(codes.Internal, "evaluation failed: %v", err)
-		// }
+		err = logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, nil, err, m)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "evaluation failed: %v", err)
+		}
 		return &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: path}}, nil
 	}
 
@@ -191,6 +205,10 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 	bv, err := structpb.NewValue(interfaceHop)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+	// Log successful decision:
+	if err := logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, resultValue, nil, m); err != nil {
+		return nil, status.Errorf(codes.Internal, "evaluation failed: %v", err)
 	}
 	return &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: path, Document: bv}}, nil
 }

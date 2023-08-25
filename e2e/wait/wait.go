@@ -59,3 +59,36 @@ func retrieveMsg(t *testing.T, buf *bytes.Buffer, assert func(string) bool) erro
 	}
 	return errors.New("log not found")
 }
+
+func ForLogFields(t *testing.T, buf *bytes.Buffer, assert func(map[string]any) bool, dur time.Duration) {
+	t.Helper()
+	ForResult(t, nil, func() error { return retrieveField(t, buf, assert) }, 3, dur)
+}
+
+func retrieveField(t *testing.T, buf *bytes.Buffer, assert func(map[string]any) bool) error {
+	t.Helper()
+	if _, err := buf.ReadBytes('{'); err == nil {
+		if err := buf.UnreadByte(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	b := bytes.NewReader(buf.Bytes())
+	scanner := bufio.NewScanner(b)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		var m map[string]interface{}
+		if err := json.NewDecoder(bytes.NewReader(line)).Decode(&m); err != nil {
+			if err == io.EOF {
+				break
+			}
+			t.Fatalf("decode console logs: %v", err)
+		}
+		if assert(m) {
+			return nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("scanner: %v", err)
+	}
+	return errors.New("log not found")
+}

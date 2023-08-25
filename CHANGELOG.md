@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### gRPC plugin Decision Logs Support
+
+The gRPC server plugin now integrates into Enterprise OPA's decision logging!
+This means that gRPC requests are logged in a near-identical format to HTTP requests, allowing deeper insight into the usage and performance of Enterprise OPA deployments in production.
+
 ## v1.8.0
 
 This release updates the OPA version used in Enterprise OPA to

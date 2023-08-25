@@ -9,6 +9,7 @@ import (
 
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/plugins/logs"
 	"github.com/open-policy-agent/opa/storage"
 )
 
@@ -47,6 +48,7 @@ type grpcServerPlugin struct {
 	server           *Server
 	logger           logging.Logger
 	trigger          storage.TriggerHandle
+	dl               *logs.Plugin
 	shutdownComplete chan struct{} // Signal channel for when GracefulShutdwon completes.
 }
 

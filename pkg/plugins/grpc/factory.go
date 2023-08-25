@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/plugins/logs"
 	"github.com/open-policy-agent/opa/util"
 )
 
@@ -23,6 +24,7 @@ func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 		server:           New(m, config.(Config)),
 		logger:           m.Logger(),
 		shutdownComplete: make(chan struct{}),
+		dl:               logs.Lookup(m),
 	}
 
 	m.UpdatePluginStatus(PluginName, &plugins.Status{State: plugins.StateOK})
