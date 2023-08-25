@@ -37,6 +37,10 @@ jobs:
         with:
           name: image
           path: enterprise-opa/local.tar
+      - name: pick up opa version
+        id: enterprise-opa
+        run: echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
+        working-directory: enterprise-opa
       - name: checkout OPA
         uses: actions/checkout@v3
         with:
