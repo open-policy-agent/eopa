@@ -3,10 +3,12 @@ package vm
 import (
 	"fmt"
 	"math/big"
+	"sort"
 	gostrings "strings"
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 
+	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
 )
@@ -121,6 +123,122 @@ func objectGetBuiltinKey(state *State, obj, key, def Value) error {
 	} else {
 		state.SetReturnValue(Unused, def)
 	}
+	return nil
+}
+
+func stringsConcatBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+		return nil
+	}
+
+	join, err := builtinStringOperand(state, args[0], 1)
+	if err != nil {
+		return err
+	}
+
+	switch x := args[1].(type) {
+	case fjson.Array:
+		array := x
+		n := array.Len()
+
+		var strs []string
+		if n <= 4 {
+			strs = make([]string, n, 4)
+		} else {
+			strs = make([]string, n)
+		}
+
+		for i := 0; i < n; i++ {
+			str, ok := array.Iterate(i).(*fjson.String)
+			if !ok {
+				v, err := state.ValueOps().ToAST(state.Globals.Ctx, array)
+				if err != nil {
+					return err
+				}
+
+				state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+					Code:    topdown.TypeErr,
+					Message: builtins.NewOperandTypeErr(2, v, "string").Error(),
+				})
+				return nil
+			}
+
+			strs[i] = str.Value()
+		}
+
+		result := state.ValueOps().MakeString(gostrings.Join(strs, string(join)))
+		state.SetReturnValue(Unused, result)
+
+	case *Set:
+		set := x
+
+		var strs []string
+		if n := set.Len(); n <= 4 {
+			strs = make([]string, 0, 4)
+		} else {
+			strs = make([]string, 0, n)
+		}
+
+		var err2 error
+		if set.Iter(func(vv fjson.Json) bool {
+			v := *noescape(&vv) // nothing below moves the v into heap as ToAST creates a deep copy.
+			str, ok := v.(*fjson.String)
+			if !ok {
+				var v ast.Value
+				v, err2 = state.ValueOps().ToAST(state.Globals.Ctx, v)
+				if err2 != nil {
+					return true
+				}
+
+				state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+					Code:    topdown.TypeErr,
+					Message: builtins.NewOperandTypeErr(2, v, "string").Error(),
+				})
+				return true
+			}
+
+			strs = append(strs, str.Value())
+			return false
+		}) {
+			return err2
+		}
+
+		sort.Strings(*noescape(&strs))
+
+		result := state.ValueOps().MakeString(gostrings.Join(strs, string(join)))
+		state.SetReturnValue(Unused, result)
+
+	default:
+		v, err := state.ValueOps().ToAST(state.Globals.Ctx, args[1])
+		if err != nil {
+			return err
+		}
+
+		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+			Code:    topdown.TypeErr,
+			Message: builtins.NewOperandTypeErr(2, v, "set", "array").Error(),
+		})
+	}
+	return nil
+}
+
+func stringsEndsWithBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+		return nil
+	}
+
+	s, err := builtinStringOperand(state, args[0], 1)
+	if err != nil {
+		return err
+	}
+
+	suffix, err := builtinStringOperand(state, args[1], 2)
+	if err != nil {
+		return err
+	}
+
+	result := state.ValueOps().MakeBoolean(gostrings.HasSuffix(s, suffix))
+	state.SetReturnValue(Unused, result)
 	return nil
 }
 

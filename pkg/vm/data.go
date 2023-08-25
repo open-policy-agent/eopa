@@ -756,6 +756,7 @@ func (s *Set) Get(ctx context.Context, k fjson.Json) (fjson.Json, bool, error) {
 }
 
 func (s *Set) Iter(iter func(v fjson.Json) bool) bool {
+	// Note: this does not return the elements in any sorted order.
 	return s.set.Iter(func(v interface{}) bool {
 		return iter(v.(fjson.Json))
 	})
