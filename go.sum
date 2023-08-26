@@ -92,8 +92,8 @@ github.com/PaesslerAG/jsonpath v0.1.1 h1:c1/AToHQMVsduPAa4Vh6xp2U0evy4t8SWp8imEs
 github.com/ProtonMail/go-crypto v0.0.0-20230717121422-5aa5874ade95 h1:KLq8BE0KwCL+mmXnjLWEAOYO+2l2AE4YMmqG1ZpZHBs=
 github.com/ProtonMail/go-crypto v0.0.0-20230717121422-5aa5874ade95/go.mod h1:EjAoLdwvbIOoOQr3ihjnSoLZRtE8azugULFRteWMNc0=
 github.com/Shopify/toxiproxy/v2 v2.5.0 h1:i4LPT+qrSlKNtQf5QliVjdP08GyAH8+BUIc9gT0eahc=
-github.com/StyraInc/opa v0.55.1-0.20230818072342-0fc4c4a54e67 h1:SaqZCJZ9LnXlr0BNHj3oabSG47ldgE4Ox1CSUVRp/U4=
-github.com/StyraInc/opa v0.55.1-0.20230818072342-0fc4c4a54e67/go.mod h1:2Vh8fj/bXCqSwGMbBiHGrw+O8yrho6T/fdaHt5ROmaQ=
+github.com/StyraInc/opa v0.55.1-0.20230825082730-c1fc34786606 h1:xVyJgBPCkFLlNYFRlcIxYGWqVyDjle/RHUMB4L/Fi5I=
+github.com/StyraInc/opa v0.55.1-0.20230825082730-c1fc34786606/go.mod h1:2Vh8fj/bXCqSwGMbBiHGrw+O8yrho6T/fdaHt5ROmaQ=
 github.com/acomagu/bufpipe v1.0.4 h1:e3H4WUzM3npvo5uv95QuJM3cQspFNtFBzvJ2oNjKIDQ=
 github.com/acomagu/bufpipe v1.0.4/go.mod h1:mxdxdup/WdsKVreO5GpW4+M/1CE2sMG4jeGJ2sYmHc4=
 github.com/agnivade/levenshtein v1.1.1 h1:QY8M92nrzkmr798gCo3kmMyqXFzdQVpxLlGPRBij0P8=
