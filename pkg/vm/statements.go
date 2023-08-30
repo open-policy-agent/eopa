@@ -193,7 +193,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 	if err := func(a *[]*ast.Term, f func(v *ast.Term) error) error {
 		return impl(bctx,
 			*noescape(a),
-			*noescape(&f))
+			f)
 	}(&a, func(value *ast.Term) error {
 		if relation {
 			v, err := state.ValueOps().FromInterface(state.Globals.Ctx, value.Value)
@@ -616,7 +616,7 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 
 	if err := func(args *[]Value, inner *State) error {
 		return state.Func(call.Func()).Execute(
-			noescape(inner),
+			inner,
 			*noescape(args),
 		)
 	}(&args, &inner); err != nil {
