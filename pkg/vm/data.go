@@ -231,6 +231,12 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 		return fjson.NewString(x), nil
 	case ast.String:
 		return fjson.NewString(string(x)), nil
+	case []string:
+		values := make([]fjson.File, 0, len(x))
+		for _, v := range x {
+			values = append(values, fjson.NewString(v))
+		}
+		return fjson.NewArray(values...), nil
 	case []interface{}:
 		values := make([]fjson.File, 0, len(x))
 		for _, v := range x {
