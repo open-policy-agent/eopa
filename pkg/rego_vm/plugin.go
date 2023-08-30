@@ -74,14 +74,14 @@ func (*vmp) PrepareForEval(_ context.Context, policy *ir.Policy, opts ...rego.Pr
 	}
 
 	return &vme{
-		vm:           vm.NewVM().WithExecutable(executable),
 		builtinFuncs: bis,
+		e:            executable,
 	}, nil
 }
 
 type vme struct {
-	vm           *vm.VM
 	builtinFuncs map[string]*topdown.Builtin
+	e            vm.Executable
 }
 
 var tracer = otel.Tracer(Name)
@@ -95,6 +95,7 @@ func spanFromContext(ctx context.Context, query string) (ctx0 context.Context, s
 }
 
 func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (ast.Value, error) {
+	v := vm.NewVM().WithExecutable(t.e)
 	var span trace.Span
 	ctx, span = spanFromContext(ctx, ectx.CompiledQuery().String())
 	defer span.End()
@@ -116,10 +117,9 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 
 	// NOTE(sr): We're peeking into the transaction to cover cases where we've been fed a
 	// default OPA inmem store, not an EOPA one. If that's the case, we'll read it in full,
-	// and feed its data to the VM. That will have sublte differences in behavior; but it
+	// and feed its data to the VM. That will have subtle differences in behavior; but it
 	// is good enough for the remaining cases where this is allowed to happen: discovery
 	// document evaluation.
-	var v *vm.VM
 	txn := ectx.Transaction()
 	if txn0, ok := txn.(interface {
 		Write(storage.PatchOp, storage.Path, any) error // only OPA's inmem txn has that
@@ -133,9 +133,9 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		if err != nil {
 			return nil, err
 		}
-		v = t.vm.WithDataJSON(y)
+		v = v.WithDataJSON(y)
 	} else {
-		v = t.vm.WithDataNamespace(txn)
+		v = v.WithDataNamespace(txn)
 	}
 
 	result, err := v.Eval(ctx, "eval", vm.EvalOpts{

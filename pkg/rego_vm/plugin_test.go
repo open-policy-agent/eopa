@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -131,4 +132,31 @@ p := regal.last(numbers.range(0, 10))
 	if exp, act := json.Number("10"), res[0].Bindings["x"]; exp != act {
 		t.Errorf("expected x bound to %v %[1]T, got %v %[2]T", exp, act)
 	}
+}
+
+func TestPrepareForEvalRace(t *testing.T) {
+	ctx := context.Background()
+	const count = 100
+	r := rego.New(
+		rego.Target(rego_vm.Target),
+		rego.Query("data.x.p = x"),
+		rego.Module("test.rego", `package x
+p := numbers.range(0, 10)
+`))
+	pr, err := r.PrepareForEval(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wg := sync.WaitGroup{}
+	wg.Add(count)
+	for i := 0; i < count; i++ {
+		go func() {
+			defer wg.Done()
+			_, err := pr.Eval(ctx)
+			if err != nil {
+				panic(err)
+			}
+		}()
+	}
+	wg.Wait()
 }
