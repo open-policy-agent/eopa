@@ -12,6 +12,7 @@ type (
 	Compiler struct {
 		policy        *ir.Policy
 		functionIndex map[string]int
+		builtinFuncs  map[string]*topdown.Builtin
 	}
 )
 
@@ -21,6 +22,11 @@ func NewCompiler() *Compiler {
 
 func (c *Compiler) WithPolicy(policy *ir.Policy) *Compiler {
 	c.policy = policy
+	return c
+}
+
+func (c *Compiler) WithBuiltins(bis map[string]*topdown.Builtin) *Compiler {
+	c.builtinFuncs = bis
 	return c
 }
 
@@ -87,17 +93,23 @@ func (c *Compiler) compileFuncs() ([]byte, error) {
 	functions = appendOffsetIndex(functions, n)
 
 	for i, decl := range c.policy.Static.BuiltinFuncs {
-		builtinImpl := topdown.GetBuiltin(decl.Name)
-		if builtinImpl == nil {
-			return nil, fmt.Errorf("builtin not found: %s", decl.Name)
-		}
-
+		var builtinImpl topdown.BuiltinFunc
 		var relation bool
 
-		for _, f := range ast.Builtins {
-			if f.Name == decl.Name {
-				relation = f.Relation
+		tbi, ok := c.builtinFuncs[decl.Name]
+		if ok {
+			builtinImpl = tbi.Func
+			relation = tbi.Decl.Relation
+		} else {
+			builtinImpl = topdown.GetBuiltin(decl.Name)
+			for _, f := range ast.Builtins {
+				if f.Name == decl.Name {
+					relation = f.Relation
+				}
 			}
+		}
+		if builtinImpl == nil {
+			return nil, fmt.Errorf("builtin not found: %s", decl.Name)
 		}
 
 		c.functionIndex[decl.Name] = i

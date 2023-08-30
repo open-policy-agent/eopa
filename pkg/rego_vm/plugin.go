@@ -54,19 +54,34 @@ func (*vmp) IsTarget(t string) bool {
 	return t == Target || defaultTgt
 }
 
-func (*vmp) PrepareForEval(_ context.Context, policy *ir.Policy, _ ...rego.PrepareOption) (rego.TargetPluginEval, error) {
-	executable, err := vm.NewCompiler().WithPolicy(policy).Compile()
+func (*vmp) PrepareForEval(_ context.Context, policy *ir.Policy, opts ...rego.PrepareOption) (rego.TargetPluginEval, error) {
+	po := &rego.PrepareConfig{}
+	for _, o := range opts {
+		o(po)
+	}
+
+	var bis map[string]*topdown.Builtin
+	bi, ok := any(po).(interface {
+		BuiltinFuncs() map[string]*topdown.Builtin
+	})
+	if ok {
+		bis = bi.BuiltinFuncs()
+	}
+
+	executable, err := vm.NewCompiler().WithPolicy(policy).WithBuiltins(bis).Compile()
 	if err != nil {
 		return nil, err
 	}
 
 	return &vme{
-		vm: vm.NewVM().WithExecutable(executable),
+		vm:           vm.NewVM().WithExecutable(executable),
+		builtinFuncs: bis,
 	}, nil
 }
 
 type vme struct {
-	vm *vm.VM
+	vm           *vm.VM
+	builtinFuncs map[string]*topdown.Builtin
 }
 
 var tracer = otel.Tracer(Name)
@@ -137,6 +152,7 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		Capabilities:           ectx.Capabilities(),
 		TracingOpts:            tracingOpts(ectx),
 		Limits:                 limits,
+		BuiltinFuncs:           t.builtinFuncs,
 	})
 	ectx.Metrics().Timer(evalTimer).Stop()
 	if err != nil {

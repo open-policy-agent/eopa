@@ -159,15 +159,24 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		state.SetReturnValue(Unused, state.ValueOps().MakeArray(0))
 	}
 
-	impl := topdown.GetBuiltin(name)
-	if impl == nil {
-		return fmt.Errorf("builtin not found: %s", name)
+	var bi *ast.Builtin
+	var impl topdown.BuiltinFunc
+
+	tbi, ok := state.Globals.BuiltinFuncs[name]
+	if ok {
+		impl = tbi.Func
+		bi = tbi.Decl
+	} else {
+		impl = topdown.GetBuiltin(name)
+		if impl == nil {
+			return fmt.Errorf("builtin not found: %s", name)
+		}
+		bi, ok = ast.BuiltinMap[name]
+		if !ok {
+			return fmt.Errorf("builtin not found: %s", name)
+		}
 	}
 
-	bi, ok := ast.BuiltinMap[name]
-	if !ok {
-		return fmt.Errorf("builtin not found: %s", name)
-	}
 	if bi.IsNondeterministic() && state.Globals.NDBCache != nil {
 		value, ok := state.Globals.NDBCache.Get(bi.Name, ast.NewArray(a...))
 		// NOTE(sr): Nondet builtins currently aren't relations, and don't return void.

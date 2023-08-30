@@ -13,6 +13,7 @@ import (
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/metrics"
+	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
 	"github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/open-policy-agent/opa/topdown/print"
@@ -56,6 +57,7 @@ type (
 		NDBCache               builtins.NDBCache
 		Capabilities           *ast.Capabilities
 		TracingOpts            tracing.Options
+		BuiltinFuncs           map[string]*topdown.Builtin
 	}
 
 	// State holds all the evaluation state and is passed along the statements as the evaluation progresses.
@@ -86,6 +88,7 @@ type (
 		registersPool          sync.Pool
 		Capabilities           *ast.Capabilities
 		TracingOpts            tracing.Options
+		BuiltinFuncs           map[string]*topdown.Builtin
 	}
 
 	Limits struct {
@@ -145,6 +148,7 @@ func newGlobals(ctx context.Context, vm *VM, opts EvalOpts, cancel *cancel, runt
 		NDBCache:            opts.NDBCache,
 		Capabilities:        opts.Capabilities,
 		TracingOpts:         opts.TracingOpts,
+		BuiltinFuncs:        opts.BuiltinFuncs,
 		registersPool: sync.Pool{
 			New: func() any {
 				l := new(registersList)

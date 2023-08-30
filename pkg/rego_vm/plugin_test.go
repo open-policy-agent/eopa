@@ -3,14 +3,17 @@ package rego_vm_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	opa_storage "github.com/open-policy-agent/opa/storage"
 	opa_inmem "github.com/open-policy-agent/opa/storage/inmem"
-
 	"github.com/open-policy-agent/opa/topdown/builtins"
+	"github.com/open-policy-agent/opa/types"
+
+	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
@@ -81,5 +84,51 @@ func TestStorageTransactionRead(t *testing.T) {
 				t.Errorf("expected x bound to %v %[1]T, got %v %[2]T", exp, act)
 			}
 		})
+	}
+}
+
+var RegalLastMeta = &rego.Function{
+	Name: "regal.last",
+	Decl: types.NewFunction(
+		types.Args(
+			types.Named("array", types.NewArray(nil, types.A)).
+				Description("performance optimized last index retrieval"),
+		),
+		types.Named("element", types.A),
+	),
+}
+
+// RegalLast regal.last returns the last element of an array.
+func RegalLast(_ rego.BuiltinContext, arr *ast.Term) (*ast.Term, error) {
+	arrOp, err := builtins.ArrayOperand(arr.Value, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	if arrOp.Len() == 0 {
+		return nil, errors.New("out of bounds")
+	}
+
+	return arrOp.Elem(arrOp.Len() - 1), nil
+}
+
+func TestRegoFunction(t *testing.T) {
+	r := rego.New(
+		rego.Target(rego_vm.Target),
+		rego.Query("data.x.p = x"),
+		rego.Module("test.rego", `package x
+p := regal.last(numbers.range(0, 10))
+`),
+		rego.Function1(RegalLastMeta, RegalLast),
+	)
+	res, err := r.Eval(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exp, act := 1, len(res); exp != act {
+		t.Errorf("expected %d results, got %d", exp, act)
+	}
+	if exp, act := json.Number("10"), res[0].Bindings["x"]; exp != act {
+		t.Errorf("expected x bound to %v %[1]T, got %v %[2]T", exp, act)
 	}
 }
