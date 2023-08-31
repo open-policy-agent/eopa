@@ -1793,20 +1793,20 @@ const (
 func appendLocalOrConst(d []byte, lc LocalOrConst) []byte {
 	var t, w uint32
 
-	switch v := lc.(type) {
-	case Local:
+	switch lc.Type() {
+	case localType:
 		t = localType
-		w = uint32(v)
+		w = uint32(lc.Local())
 
-	case BoolConst:
+	case boolConstType:
 		t = boolConstType
-		if v {
+		if lc.BoolConst() {
 			w = 1
 		}
 
-	case StringIndexConst:
+	case stringIndexConstType:
 		t = stringIndexConstType
-		w = uint32(v)
+		w = uint32(lc.StringIndexConst())
 
 	default:
 		panic("unsupported local or const")
@@ -1822,16 +1822,16 @@ func getLocalOrConst(data []byte, offset uint32) LocalOrConst {
 
 	switch t {
 	case localType:
-		return Local(v)
+		return NewLocal(int(v))
 
 	case boolConstType:
 		if v == 0 {
-			return BoolConst(false)
+			return NewBoolConst(false)
 		}
-		return BoolConst(true)
+		return NewBoolConst(true)
 
 	case stringIndexConstType:
-		return StringIndexConst(v)
+		return NewStringIndexConst(int(v))
 
 	default:
 		panic("unsupported local or const")

@@ -109,8 +109,9 @@ type (
 	Value interface{}
 
 	Local        int
-	LocalOrConst interface {
-		localOrConst()
+	LocalOrConst struct {
+		t int
+		v int
 	}
 
 	BoolConst        bool
@@ -120,6 +121,38 @@ type (
 		value int32
 	}
 )
+
+func NewLocal(v int) LocalOrConst {
+	return LocalOrConst{localType, v}
+}
+
+func NewBoolConst(v bool) LocalOrConst {
+	if v {
+		return LocalOrConst{boolConstType, 1}
+	}
+
+	return LocalOrConst{boolConstType, 0}
+}
+
+func NewStringIndexConst(v int) LocalOrConst {
+	return LocalOrConst{stringIndexConstType, v}
+}
+
+func (l *LocalOrConst) Type() int {
+	return l.t
+}
+
+func (l *LocalOrConst) Local() Local {
+	return Local(l.v)
+}
+
+func (l *LocalOrConst) BoolConst() BoolConst {
+	return BoolConst(l.v != 0)
+}
+
+func (l *LocalOrConst) StringIndexConst() StringIndexConst {
+	return StringIndexConst(l.v)
+}
 
 const (
 	// Input is the local variable that refers to the global input document.
@@ -330,7 +363,7 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				return nil, false, true, nil
 			}
 
-			return state.Value(result), true, true, nil
+			return state.Local(result), true, true, nil
 		}
 	}
 
@@ -548,25 +581,39 @@ next:
 }
 
 func (s *State) IsDefined(v LocalOrConst) bool {
-	switch v := v.(type) {
-	case Local:
+	switch v.Type() {
+	case localType:
+		v := v.Local()
 		return !isUndefinedType(s.findReg(v).registers[int(v)%registersSize])
 	default:
 		return true
 	}
 }
 
+func (s *State) IsLocalDefined(v Local) bool {
+	return !isUndefinedType(s.findReg(v).registers[int(v)%registersSize])
+}
+
 func (s *State) Value(v LocalOrConst) Value {
-	switch v := v.(type) {
-	case Local:
+	switch v.Type() {
+	case localType:
+		v := v.Local()
 		return s.findReg(v).registers[int(v)%registersSize]
-	case BoolConst:
-		return s.ValueOps().MakeBoolean(bool(v))
-	case StringIndexConst:
-		return s.Globals.vm.executable.Strings().String(s.Globals.vm, v)
+	case boolConstType:
+		return s.ValueOps().MakeBoolean(bool(v.BoolConst()))
+	case stringIndexConstType:
+		return s.Globals.vm.executable.Strings().String(s.Globals.vm, v.StringIndexConst())
 	}
 
 	return nil
+}
+
+func (s *State) Local(v Local) Value {
+	return s.findReg(v).registers[int(v)%registersSize]
+}
+
+func (s *State) String(v StringIndexConst) Value {
+	return s.Globals.vm.executable.Strings().String(s.Globals.vm, v)
 }
 
 // Return returns the variable holding the function result.
@@ -576,17 +623,26 @@ func (s *State) Return() (Local, bool) {
 }
 
 func (s *State) Set(target Local, source LocalOrConst) {
-	switch v := source.(type) {
-	case Local:
+	switch source.Type() {
+	case localType:
+		v := source.Local()
 		r1, r2 := s.find2Regs(target, v)
 		r1.registers[int(target)%registersSize] = r2.registers[int(v)%registersSize]
 
-	case BoolConst:
+	case boolConstType:
+		v := source.BoolConst()
 		s.findReg(target).registers[int(target)%registersSize] = s.Globals.vm.ops.MakeBoolean(bool(v))
 
-	case StringIndexConst:
+	case stringIndexConstType:
+		v := source.StringIndexConst()
 		s.findReg(target).registers[int(target)%registersSize] = s.Globals.vm.executable.Strings().String(s.Globals.vm, v)
 	}
+}
+
+func (s *State) SetLocal(target Local, source Local) {
+	v := source
+	r1, r2 := s.find2Regs(target, v)
+	r1.registers[int(target)%registersSize] = r2.registers[int(v)%registersSize]
 }
 
 func (s *State) SetReturn(source Local) {
@@ -713,10 +769,6 @@ func (s *State) find2Regs(v1, v2 Local) (*registersList, *registersList) {
 
 	return r1, r2
 }
-
-func (Local) localOrConst()            {}
-func (BoolConst) localOrConst()        {}
-func (StringIndexConst) localOrConst() {}
 
 func watchContext(ctx context.Context) (*cancel, context.CancelFunc) {
 	var c cancel

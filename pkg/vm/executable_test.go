@@ -100,7 +100,7 @@ func test(t testing.TB) {
 	// ArrayAppend
 
 	{
-		value, array := StringIndexConst(1), Local(2)
+		value, array := NewStringIndexConst(1), Local(2)
 		s := arrayAppend(arrayAppend{}.Write(value, array))
 
 		check(t, "size", size(s), len(s))
@@ -124,7 +124,7 @@ func test(t testing.TB) {
 	// AssignVar
 
 	{
-		ssource, target := StringIndexConst(1), Local(2)
+		ssource, target := NewStringIndexConst(1), Local(2)
 		s := assignVar(assignVar{}.Write(ssource, target))
 
 		check(t, "size", size(s), len(s))
@@ -132,12 +132,12 @@ func test(t testing.TB) {
 		check(t, "source", s.Source(), ssource)
 		check(t, "target", s.Target(), target)
 
-		bsource, target := BoolConst(true), Local(2)
+		bsource, target := NewBoolConst(true), Local(2)
 		s = assignVar(assignVar{}.Write(bsource, target))
 
 		check(t, "source", s.Source(), bsource)
 
-		lsource, target := Local(1), Local(2)
+		lsource, target := NewLocal(1), Local(2)
 		s = assignVar(assignVar{}.Write(lsource, target))
 
 		check(t, "source", s.Source(), lsource)
@@ -146,7 +146,7 @@ func test(t testing.TB) {
 	// AssignVarOnce
 
 	{
-		source, target := StringIndexConst(1), Local(2)
+		source, target := NewStringIndexConst(1), Local(2)
 		s := assignVarOnce(assignVarOnce{}.Write(source, target))
 
 		check(t, "size", size(s), len(s))
@@ -180,7 +180,7 @@ func test(t testing.TB) {
 	// CallDynamic
 
 	{
-		args, result, path := []Local{Local(0), Local(1)}, Local(2), []LocalOrConst{Local(3), StringIndexConst(1), BoolConst(false)}
+		args, result, path := []Local{Local(0), Local(1)}, Local(2), []LocalOrConst{NewLocal(3), NewStringIndexConst(1), NewBoolConst(false)}
 		s := callDynamic(callDynamic{}.Write(args, result, path))
 
 		check(t, "size", size(s), len(s))
@@ -195,7 +195,7 @@ func test(t testing.TB) {
 	// Call
 
 	{
-		index, args, result := 1, []LocalOrConst{Local(1), Local(2), StringIndexConst(1), BoolConst(false)}, Local(3)
+		index, args, result := 1, []LocalOrConst{NewLocal(1), NewLocal(2), NewStringIndexConst(1), NewBoolConst(false)}, Local(3)
 		s := call(call{}.Write(index, args, result))
 
 		check(t, "size", size(s), len(s))
@@ -209,7 +209,7 @@ func test(t testing.TB) {
 	// Dot
 
 	{
-		source, key, target := StringIndexConst(1), StringIndexConst(2), Local(3)
+		source, key, target := NewStringIndexConst(1), NewStringIndexConst(2), Local(3)
 		s := dot(dot{}.Write(source, key, target))
 
 		check(t, "size", size(s), len(s))
@@ -222,7 +222,7 @@ func test(t testing.TB) {
 	// Equal
 
 	{
-		a, b := StringIndexConst(1), StringIndexConst(2)
+		a, b := NewStringIndexConst(1), NewStringIndexConst(2)
 		s := equal(equal{}.Write(a, b))
 
 		check(t, "size", size(s), len(s))
@@ -234,7 +234,7 @@ func test(t testing.TB) {
 	// IsArray
 
 	{
-		source := Local(1)
+		source := NewLocal(1)
 		s := isArray(isArray{}.Write(source))
 
 		check(t, "size", size(s), len(s))
@@ -256,7 +256,7 @@ func test(t testing.TB) {
 	// IsObject
 
 	{
-		source := Local(1)
+		source := NewLocal(1)
 		s := isObject(isObject{}.Write(source))
 
 		check(t, "size", size(s), len(s))
@@ -278,7 +278,7 @@ func test(t testing.TB) {
 	// Len
 
 	{
-		source, target := StringIndexConst(1), Local(2)
+		source, target := NewStringIndexConst(1), Local(2)
 		s := lenStmt(lenStmt{}.Write(source, target))
 
 		check(t, "size", size(s), len(s))
@@ -379,7 +379,7 @@ func test(t testing.TB) {
 	// NotEqual
 
 	{
-		a, b := StringIndexConst(1), StringIndexConst(2)
+		a, b := NewStringIndexConst(1), NewStringIndexConst(2)
 		s := notEqual(notEqual{}.Write(a, b))
 
 		check(t, "size", size(s), len(s))
@@ -391,7 +391,7 @@ func test(t testing.TB) {
 	// ObjectInsertOnce
 
 	{
-		key, value, object := StringIndexConst(1), StringIndexConst(2), Local(3)
+		key, value, object := NewStringIndexConst(1), NewStringIndexConst(2), Local(3)
 		s := objectInsertOnce(objectInsertOnce{}.Write(key, value, object))
 
 		check(t, "size", size(s), len(s))
@@ -404,7 +404,7 @@ func test(t testing.TB) {
 	// ObjectInsert
 
 	{
-		key, value, object := StringIndexConst(1), StringIndexConst(2), Local(3)
+		key, value, object := NewStringIndexConst(1), NewStringIndexConst(2), Local(3)
 		s := objectInsert(objectInsert{}.Write(key, value, object))
 
 		check(t, "size", size(s), len(s))
@@ -477,7 +477,7 @@ func test(t testing.TB) {
 	// SetAdd
 
 	{
-		value, set := StringIndexConst(1), Local(2)
+		value, set := NewStringIndexConst(1), Local(2)
 		s := setAdd(setAdd{}.Write(value, set))
 
 		check(t, "size", size(s), len(s))
@@ -489,7 +489,7 @@ func test(t testing.TB) {
 	// With
 
 	{
-		local, path, value, block := Local(1), []int{0, 1}, StringIndexConst(2), block("block")
+		local, path, value, block := Local(1), []int{0, 1}, NewStringIndexConst(2), block("block")
 		s := with(with{}.Write(local, path, value, block))
 
 		check(t, "size", size(s), len(s))

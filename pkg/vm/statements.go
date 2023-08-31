@@ -75,7 +75,7 @@ func (f function) execute(state *State, args []Value) error {
 	if memoize {
 		var value Value
 		if local, defined := state.Return(); defined {
-			value = state.Value(local)
+			value = state.Local(local)
 		} else {
 			value = undefined()
 		}
@@ -189,18 +189,18 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		}
 	}
 
-	if err := func(a *[]*ast.Term, f func(v *ast.Term) error) error {
+	if err := func(a []*ast.Term, f func(v *ast.Term) error) error {
 		return impl(bctx,
-			*a,
+			a,
 			f)
-	}(&a, func(value *ast.Term) error {
+	}(a, func(value *ast.Term) error {
 		if relation {
 			v, err := state.ValueOps().FromInterface(state.Globals.Ctx, value.Value)
 			if err != nil {
 				return err
 			}
 
-			newArray, ok, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(Unused), v)
+			newArray, ok, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Local(Unused), v)
 			if err != nil {
 				return err
 			}
@@ -378,7 +378,7 @@ func (a assignInt) Execute(state *State) (bool, uint32, error) {
 func (a assignVarOnce) Execute(state *State) (bool, uint32, error) {
 	target, source := a.Target(), a.Source()
 
-	targetValue := state.Value(target)
+	targetValue := state.Local(target)
 	if !isUndefinedType(targetValue) {
 		sourceValue := state.Value(source)
 		if isUndefinedType(sourceValue) {
@@ -414,7 +414,7 @@ func (s scan) Execute(state *State) (bool, uint32, error) {
 	block := s.Block()
 
 	if err2 := func(f func(key, value interface{}) bool) error {
-		return state.ValueOps().Iter(state.Globals.Ctx, state.Value(source), *noescape(&f))
+		return state.ValueOps().Iter(state.Globals.Ctx, state.Local(source), *noescape(&f))
 	}(func(key, value interface{}) bool {
 		state.SetValue(skey, key)
 		state.SetValue(svalue, value)
@@ -499,7 +499,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 
 	args := make([]Value, call.ArgsLen())
 	call.ArgsIter(func(i uint32, arg Local) error {
-		args[i] = state.Value(arg)
+		args[i] = state.Local(arg)
 		return nil
 	})
 
@@ -543,7 +543,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 		return true, 3, nil
 	}
 
-	resultValue := inner.Value(result)
+	resultValue := inner.Local(result)
 	state.SetValue(call.Result(), resultValue)
 	return false, 0, nil
 }
@@ -553,11 +553,11 @@ func externalCall(state *State, path []string, args []Value) (interface{}, bool,
 		path = path[1:]
 	}
 
-	if !state.IsDefined(Data) {
+	if !state.IsLocalDefined(Data) {
 		return nil, false, false, nil
 	}
 
-	data := state.Value(Data)
+	data := state.Local(Data)
 	a := make([]*interface{}, len(args))
 	for i := range a {
 		if !isUndefinedType(args[i]) {
@@ -627,7 +627,7 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 		return true, 0, nil
 	}
 
-	resultValue := inner.Value(result)
+	resultValue := inner.Local(result)
 	state.SetValue(call.Result(), resultValue)
 	return false, 0, nil
 }
@@ -635,12 +635,13 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 func (d dot) Execute(state *State) (bool, uint32, error) {
 	source := d.Source()
 
-	switch source.(type) {
-	case BoolConst, StringIndexConst: // can't dot these
+	switch source.Type() {
+	case boolConstType, stringIndexConstType: // can't dot these
 		return true, 0, nil
 	}
 
-	sourceValue := state.Value(source)
+	src := source.Local()
+	sourceValue := state.Local(src)
 	target := d.Target()
 
 	if isUndefinedType(sourceValue) {
@@ -654,7 +655,6 @@ func (d dot) Execute(state *State) (bool, uint32, error) {
 		return true, 0, nil
 	}
 
-	src := source.(Local)
 	get := state.ValueOps().Get
 	data := state.IsData(src)
 	if data {
@@ -733,11 +733,11 @@ func (i isObject) Execute(state *State) (bool, uint32, error) {
 }
 
 func (i isDefined) Execute(state *State) (bool, uint32, error) {
-	return !state.IsDefined(i.Source()), 0, nil
+	return !state.IsLocalDefined(i.Source()), 0, nil
 }
 
 func (i isUndefined) Execute(state *State) (bool, uint32, error) {
-	return state.IsDefined(i.Source()), 0, nil
+	return state.IsLocalDefined(i.Source()), 0, nil
 }
 
 func (m makeNull) Execute(state *State) (bool, uint32, error) {
@@ -751,7 +751,7 @@ func (m makeNumberInt) Execute(state *State) (bool, uint32, error) {
 }
 
 func (m makeNumberRef) Execute(state *State) (bool, uint32, error) {
-	state.SetValue(m.Target(), state.ValueOps().MakeNumberRef(state.Value(StringIndexConst(m.Index()))))
+	state.SetValue(m.Target(), state.ValueOps().MakeNumberRef(state.String(StringIndexConst(m.Index()))))
 	return false, 0, nil
 }
 
@@ -781,7 +781,7 @@ func (l lenStmt) Execute(state *State) (bool, uint32, error) {
 
 func (a arrayAppend) Execute(state *State) (bool, uint32, error) {
 	array, value := a.Array(), a.Value()
-	newArray, ok, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Value(array), state.Value(value))
+	newArray, ok, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Local(array), state.Value(value))
 	if err != nil {
 		return false, 0, err
 	} else if ok {
@@ -791,14 +791,14 @@ func (a arrayAppend) Execute(state *State) (bool, uint32, error) {
 }
 
 func (s setAdd) Execute(state *State) (bool, uint32, error) {
-	err := state.ValueOps().SetAdd(state.Globals.Ctx, state.Value(s.Set()), state.Value(s.Value()))
+	err := state.ValueOps().SetAdd(state.Globals.Ctx, state.Local(s.Set()), state.Value(s.Value()))
 	return false, 0, err
 }
 
 func (o objectInsertOnce) Execute(state *State) (bool, uint32, error) {
 	ops := state.ValueOps()
 
-	key, value, object := state.Value(o.Key()), state.Value(o.Value()), state.Value(o.Object())
+	key, value, object := state.Value(o.Key()), state.Value(o.Value()), state.Local(o.Object())
 	existing, ok, err := ops.ObjectGet(state.Globals.Ctx, object, key)
 	if err != nil {
 		return false, 0, err
@@ -818,7 +818,7 @@ func (o objectInsertOnce) Execute(state *State) (bool, uint32, error) {
 }
 
 func (o objectInsert) Execute(state *State) (bool, uint32, error) {
-	key, value, object := state.Value(o.Key()), state.Value(o.Value()), state.Value(o.Object())
+	key, value, object := state.Value(o.Key()), state.Value(o.Value()), state.Local(o.Object())
 	object, ok, err := state.ValueOps().ObjectInsert(state.Globals.Ctx, object, key, value)
 	if ok && err == nil {
 		state.SetValue(o.Object(), object)
@@ -828,15 +828,15 @@ func (o objectInsert) Execute(state *State) (bool, uint32, error) {
 
 func (o objectMerge) Execute(state *State) (bool, uint32, error) {
 	ca, cb, target := o.A(), o.B(), o.Target()
-	a, b := state.Value(ca), state.Value(cb)
+	a, b := state.Local(ca), state.Local(cb)
 
 	if isUndefinedType(a) {
-		state.Set(target, cb)
+		state.SetLocal(target, cb)
 		return false, 0, nil
 	}
 
 	if isUndefinedType(b) {
-		state.Set(target, ca)
+		state.SetLocal(target, ca)
 		return false, 0, nil
 	}
 
@@ -870,7 +870,7 @@ func (r resetLocal) Execute(state *State) (bool, uint32, error) {
 
 func (r resultSetAdd) Execute(state *State) (bool, uint32, error) {
 	value := r.Value()
-	valueValue := state.Value(value)
+	valueValue := state.Local(value)
 	if isUndefinedType(valueValue) {
 		return false, 0, nil
 	}
@@ -885,7 +885,7 @@ func (with with) Execute(state *State) (bool, uint32, error) {
 
 	local, wvalue := with.Local(), with.Value()
 
-	value := state.Value(local)
+	value := state.Local(local)
 	defer state.SetValue(local, value)
 
 	pathLen := with.PathLen()
@@ -922,7 +922,7 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 	ops := state.ValueOps()
 
 	var ok bool
-	originalValue := state.Value(original)
+	originalValue := state.Local(original)
 	if !isUndefinedType(originalValue) {
 		var err error
 		ok, err = ops.IsObject(state.Globals.Ctx, originalValue)
@@ -951,7 +951,7 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 			last = arg
 			return nil
 		}
-		key := state.Value(StringIndexConst(arg))
+		key := state.String(StringIndexConst(arg))
 		next, ok, err := ops.Get(state.Globals.Ctx, nested, key)
 		if err != nil {
 			return err
@@ -989,7 +989,7 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 	}
 
 	nestedBefore := nested
-	nested, _, err = ops.ObjectInsert(state.Globals.Ctx, nested, state.Value(StringIndexConst(last)), state.Value(value))
+	nested, _, err = ops.ObjectInsert(state.Globals.Ctx, nested, state.String(StringIndexConst(last)), state.Value(value))
 	if nested != nestedBefore {
 		panic("not reached")
 	}

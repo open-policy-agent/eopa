@@ -393,17 +393,17 @@ func (c *Compiler) local(l ir.Local) Local {
 func (c *Compiler) localOrConst(l ir.Operand) LocalOrConst {
 	switch v := l.Value.(type) {
 	case ir.Local:
-		return Local(v)
+		return NewLocal(int(v))
 	case *ir.Local:
-		return Local(*v)
+		return NewLocal(int(*v))
 	case ir.Bool:
-		return BoolConst(v)
+		return NewBoolConst(bool(v))
 	case *ir.Bool:
-		return BoolConst(*v)
+		return NewBoolConst(bool(*v))
 	case ir.StringIndex:
-		return StringIndexConst(v)
+		return NewStringIndexConst(int(v))
 	case *ir.StringIndex:
-		return StringIndexConst(*v)
+		return NewStringIndexConst(int(*v))
 	}
 
 	panic(fmt.Sprintf("unsupported local or const: %T", l.Value))
