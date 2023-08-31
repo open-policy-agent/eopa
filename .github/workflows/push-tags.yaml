@@ -133,3 +133,72 @@ jobs:
       - name: Manually publish to BSR
         run:
           buf push proto --tag ${{ github.ref_name }}
+
+  pr-artifacts:
+    name: Publish proto defs and capabilities.json using a PR
+    runs-on: ubuntu-22.04
+    environment: ci
+    env:
+      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
+    steps:
+      - name: (Dependabot Only) Generate GitHub App Token
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: (Dependabot Only) Override GH Token Env Var
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        id: override_gh_api_token
+        run:
+          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Setup Github API token
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+      - name: Check out code for EOPA
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check out code for the public repo
+        uses: actions/checkout@v3
+        with:
+          path: _public
+          repository: https://github.com/StyraInc/enterprise-opa
+      # Copy files, generate commit on local branch, then push branch to remote.
+      - name: Copy over files from private -> public repo
+        run: |
+          # Copy protobuf files over.
+          mkdir -p _public/proto/eopa
+          cp -r proto/eopa/ _public/proto/eopa/
+          # Copy capabilities.json files over.
+          mkdir -p _public/capabilities
+          cp capabilities/*.json _public/capabilities/
+          # Ensure the changes are picked up, especially if we added new files/folders.
+          cd _public
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add .
+          # Ensure branch exists on remote for the 'gh pr create' command later.
+          git checkout -b ${{ github.ref_name }} origin/main
+          git commit -am "Update proto defs and capabilities JSON files for ${{ github.ref_name }} release"
+          git push -u origin ${{ github.ref_name }}
+      # Do a pre-flight check to ensure we don't make a needless PR.
+      - name: Check for proto/ file changes in git diffs for public repo
+        id: changes
+        run: |
+          cd _public;
+          if git diff --name-only -r main ${{ github.ref_name }} | grep -q 'proto/';
+          then
+            echo "proto=true" >> $GITHUB_OUTPUT
+          fi
+          if git diff --name-only -r main ${{ github.ref_name }} | grep -q 'capabilities/';
+          then
+            echo "capabilities=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Create PR if changes detected
+        if: steps.changes.outputs.proto == 'true' || steps.changes.outputs.capabilities == 'true'
+        run: |
+          cd _public
+          gh pr create -B main --head ${{ github.ref_name }} --title 'Update proto defs and capabilities JSON files for ${{ github.ref_name }} release' --body 'Created by Github action'
+        env:
+          GITHUB_TOKEN: ${{ secrets.PUBLIC_GH_TOKEN }}
