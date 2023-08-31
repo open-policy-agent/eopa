@@ -138,6 +138,9 @@ jobs:
           OPA_ROOT: ${{ steps.opa.outputs.dir }}
       - run: make test-examples-sdk test-examples-rego
         working-directory: enterprise-opa
+      - name: smoke test regal build
+        run: go build -o regal main.go
+        working-directory: enterprise-opa/examples/regal
       - run: make benchmark
         working-directory: enterprise-opa
       - name: gobenchdata check

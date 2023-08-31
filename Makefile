@@ -103,7 +103,7 @@ test:
 
 test-examples-%:
 	cd examples/$* && \
-	  GOPRIVATE=github.com/StyraInc go mod tidy && \
+	  GOPRIVATE=github.com/styrainc/enterprise-opa-private go mod tidy && \
 	  go test .
 
 test-race:
