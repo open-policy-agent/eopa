@@ -1,6 +1,6 @@
 //go:build e2e
 
-package cli
+package grpc
 
 import (
 	"bytes"
@@ -75,6 +75,11 @@ import future.keywords
 p if rand.intn("coin", 2) == 0
 `
 	config := `
+distributed_tracing:
+  type: grpc
+  address: 127.0.0.1:4317
+  sample_percentage: 100
+
 decision_logs:
   console: true
 
@@ -126,7 +131,9 @@ plugins:
 			return fieldContainsString(m, "msg", "Decision Log") &&
 				fieldContainsString(m, "path", "/foo") &&
 				fieldRegexMatch(m, "decision_id", `[[:alnum:]]{8}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{12}`) &&
-				fieldContainsString(m, "type", "openpolicyagent.org/decision_logs")
+				fieldContainsString(m, "type", "openpolicyagent.org/decision_logs") &&
+				fieldRegexMatch(m, "trace_id", `[0-9a-f]{32}`) &&
+				fieldRegexMatch(m, "span_id", `[0-9a-f]{16}`)
 		}, time.Second)
 		// "msg":"Sent response.", "req_id":7, "req_method":"/eopa.data.v1.DataService/GetData"
 		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {

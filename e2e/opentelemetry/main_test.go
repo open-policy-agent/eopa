@@ -85,7 +85,7 @@ p if http.send({"url":"%[1]s", "method":"GET"})
 
 	expectedLines := []string{
 		`service.name: Str(opa)`,
-		` Name           : v1/data`,
+		`Name           : v1/data`,
 		`InstrumentationScope rego_target_vm`,
 		`Name           : HTTP GET`,
 		`InstrumentationScope benthos`,

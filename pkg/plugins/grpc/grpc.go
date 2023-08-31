@@ -741,7 +741,11 @@ type decisionLogger struct {
 }
 
 func (l decisionLogger) Log(ctx context.Context, txn storage.Transaction, decisionID, remoteAddr, path string, query string, goInput *interface{}, astInput ast.Value, goResults *interface{}, err error, m metrics.Metrics) error {
-	bundles := map[string]opa_server.BundleInfo{}
+	if l.logger == nil {
+		return nil
+	}
+
+	bundles := make(map[string]opa_server.BundleInfo, len(l.revisions))
 	for name, rev := range l.revisions {
 		bundles[name] = opa_server.BundleInfo{Revision: rev}
 	}
@@ -762,12 +766,14 @@ func (l decisionLogger) Log(ctx context.Context, txn storage.Transaction, decisi
 		Metrics:    m,
 	}
 
-	if l.logger != nil {
-		if err := l.logger(ctx, info); err != nil {
-			return fmt.Errorf("decision_logs: %w", err)
-		}
+	if sctx := trace.SpanFromContext(ctx).SpanContext(); sctx.IsValid() {
+		info.TraceID = sctx.TraceID().String()
+		info.SpanID = sctx.SpanID().String()
 	}
 
+	if err := l.logger(ctx, info); err != nil {
+		return fmt.Errorf("decision_logs: %w", err)
+	}
 	return nil
 }
 
