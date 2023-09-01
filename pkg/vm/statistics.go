@@ -6,10 +6,8 @@ import (
 )
 
 type (
-	contextKey string
+	statisticsKey struct{}
 )
-
-var statisticsKey = contextKey("statistics")
 
 type (
 	Statistics struct {
@@ -18,7 +16,7 @@ type (
 )
 
 func StatisticsGet(ctx context.Context) *Statistics {
-	s := ctx.Value(statisticsKey)
+	s := ctx.Value(statisticsKey{})
 	if s == nil {
 		panic("statistics")
 	}
@@ -32,5 +30,5 @@ func (s *Statistics) String() string {
 
 func WithStatistics(ctx context.Context) (*Statistics, context.Context) {
 	s := &Statistics{}
-	return s, context.WithValue(ctx, statisticsKey, s)
+	return s, context.WithValue(ctx, statisticsKey{}, s)
 }
