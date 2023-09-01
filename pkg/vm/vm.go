@@ -403,18 +403,12 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 			}
 
 			var m interface{}
-			if err := vm.ops.Iter(ctx, result, func(_, v interface{}) bool {
+			result.Iter(func(v fjson.Json) bool {
 				m = v
 				return true
-			}); err != nil {
-				return nil, false, false, err
-			}
+			})
 
-			v, err := vm.ops.FromInterface(ctx, "result")
-			if err != nil {
-				return nil, false, false, err
-			}
-			r, defined, err := vm.ops.Get(ctx, m, v)
+			r, defined, err := vm.ops.Get(ctx, m, vm.ops.MakeString("result"))
 			return r, defined, true, err
 		}
 	}
