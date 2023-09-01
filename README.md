@@ -1,6 +1,6 @@
 # Styra Enterprise OPA Private
 
-![OPA v0.55.0](https://openpolicyagent.org/badge/v0.55.0)
+![OPA v0.56.0](https://openpolicyagent.org/badge/v0.56.0)
 
 ## Github Source and Project
 
@@ -109,6 +109,8 @@ First, we update the fork:
 Then we update the reference in Enterprise OPA:
 
 1. Update it in `go.mod`: `GOPRIVATE=github.com/StyraInc go get github.com/open-policy-agent/opa@v0.50.0` (NB: this has no consequences except for version-tag bookkeeping)
+   - You will need to do this step for the `e2e/` folder as well, since it's dependencies are managed as a separate Go workspace.
+   - This step should also be repeated for each subfolder under `examples/`, along with a `go mod tidy` run for each example.
 2. Update `eopa-xx` in the `update` target of the Makefile
 3. Run `make update`.
 4. Bump the OPA version number in the `README.md` badge at the top

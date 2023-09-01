@@ -1,6 +1,28 @@
 # Changelog
 
-## Unreleased
+## v1.9.0
+
+This release updates the OPA version used in Enterprise OPA to [v0.56.0](https://github.com/open-policy-agent/opa/releases/tag/v0.56.0), and integrates several bugfixes and new features.
+
+### `mongodb.find`, `mongodb.find_one`: query MongoDB databases during policy evaluation
+
+Enterprise OPA now supports querying MongoDB databases!
+
+Two new builtins are dedicated for this purpose: `mongodb.find`, and `mongodb.find_one`. These correspond approximately to MongoDB's [`db.collection.find()`](https://www.mongodb.com/docs/manual/reference/method/db.collection.find/) and [`db.collection.findOne()`](https://www.mongodb.com/docs/manual/reference/method/db.collection.findOne/) operations, respectively. These operations make it possible to integrate MongoDB databases efficiently into policies, depending on whether a single or multiple document lookup is needed.
+
+Find out more in the new [Tutorial](https://docs.styra.com/enterprise-opa/tutorials/querying-mongodb), or see the [Reference documentation](https://docs.styra.com/enterprise-opa/reference/built-in-functions/mongodb) for more details.
+
+### `dyanmodb.send`: query DynamoDB during policy evaluation
+
+This builtin currently supports sending [GetItem](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html) and [Query](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html) requests to a DynamoDB endpoint, allowing direct integration of DynamoDB into policies.
+
+Find out more in the new [Tutorial](https://docs.styra.com/enterprise-opa/tutorials/dynamodb-send), or see the [Reference documentation](https://docs.styra.com/enterprise-opa/reference/built-in-functions/dynamodb) for more details.
+
+### `vault.send` for interacting directly with Hashicorp Vault in policies.
+
+This new builtin provides support for more direct, request-oriented Hashicorp Vault integrations in policies than was previously possible through the [EKM Plugin](https://docs.styra.com/enterprise-opa/reference/configuration/using-secrets/from-hashicorp-vault).
+
+See the [Reference documentation](https://docs.styra.com/enterprise-opa/reference/built-in-functions/vault) for more details.
 
 ### gRPC plugin Decision Logs Support
 
