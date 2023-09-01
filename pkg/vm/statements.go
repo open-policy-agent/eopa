@@ -503,7 +503,12 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 		return nil
 	})
 
-	path := make([]string, call.PathLen())
+	var path []string
+	if n := call.PathLen(); n <= 4 {
+		path = make([]string, n, 4)
+	} else {
+		path = make([]string, n)
+	}
 	if err := call.PathIter(func(i uint32, arg LocalOrConst) error {
 		s, err := state.ValueOps().ToAST(state.Globals.Ctx, state.Value(arg))
 		if err != nil {
