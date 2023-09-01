@@ -36,6 +36,7 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
 	"github.com/styrainc/enterprise-opa-private/pkg/preview"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage"
+	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
 // default bind address if --addr (-a) was not provided in CLI args
@@ -316,7 +317,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 
 	ekmHook := ekm.NewEKM(lic, lparams)
 	previewHook := preview.NewHook()
-	hs := hooks.New(ekmHook, previewHook)
+	evalCacheHook := vm.NewCacheHook()
+	hs := hooks.New(ekmHook, previewHook, evalCacheHook)
 	params.rt.Hooks = hs
 
 	params.rt.Router = loadRouter()

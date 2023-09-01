@@ -233,6 +233,13 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 			opts.Time = time.Now()
 		}
 
+		cacheKey, err := vm.getEvalCacheKey(ctx, i, input)
+		if err != nil {
+			return nil, err
+		} else if result, ok := vm.checkEvalCache(opts.InterQueryBuiltinCache, cacheKey, opts.Time); ok {
+			return result, nil
+		}
+
 		if opts.Limits == nil {
 			opts.Limits = &DefaultLimits
 		}
@@ -295,7 +302,14 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 			return nil, globals.BuiltinErrors[0]
 		}
 
-		return vm.ops.ToAST(ctx, &globals.ResultSet)
+		r, err := vm.ops.ToAST(ctx, &globals.ResultSet)
+		if err != nil {
+			return nil, err
+		}
+
+		vm.putEvalCache(opts.InterQueryBuiltinCache, cacheKey, r, globals.Time)
+
+		return r, nil
 	}
 
 	return nil, ErrQueryNotFound
