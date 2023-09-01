@@ -89,12 +89,9 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.XXHash64) e
 			if err2 == nil {
 				err2 = hashImpl(ctx, v, hasher)
 			}
-			if err2 != nil {
-				return true
-			}
 
 			m += hasher.Sum64()
-			return false
+			return err2 != nil
 		}); err != nil {
 			return err
 		} else if err2 != nil {
@@ -135,11 +132,8 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.XXHash64) e
 		value.Iter(func(v fjson.Json) bool {
 			hasher := xxhash.New64()
 			err = hashImpl(ctx, v, hasher)
-			if err != nil {
-				return true
-			}
 			m += hasher.Sum64()
-			return false
+			return err != nil
 		})
 		if err != nil {
 			return err
