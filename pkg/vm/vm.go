@@ -183,15 +183,17 @@ func newGlobals(ctx context.Context, vm *VM, opts EvalOpts, cancel *cancel, runt
 		TracingOpts:         opts.TracingOpts,
 		BuiltinFuncs:        opts.BuiltinFuncs,
 		registersPool: sync.Pool{
-			New: func() any {
-				l := new(registersList)
-				for i := range l.registers {
-					l.registers[i] = undefined()
-				}
-				return l
-			},
+			New: newRegisterPoolElement,
 		},
 	}
+}
+
+func newRegisterPoolElement() any {
+	l := new(registersList)
+	for i := range l.registers {
+		l.registers[i] = undefined()
+	}
+	return l
 }
 
 func NewVM() *VM {
