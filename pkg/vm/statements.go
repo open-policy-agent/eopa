@@ -567,10 +567,7 @@ func externalCall(state *State, path []string, args []Value) (interface{}, bool,
 	}
 
 	for _, seg := range path {
-		s, err := state.ValueOps().FromInterface(state.Globals.Ctx, seg)
-		if err != nil {
-			return nil, false, false, err
-		}
+		s := state.ValueOps().MakeString(seg)
 		value, defined, err := state.ValueOps().GetCall(state.Globals.Ctx, data, s)
 		if err != nil || !defined {
 			return nil, false, false, err
