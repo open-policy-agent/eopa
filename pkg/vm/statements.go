@@ -2,7 +2,6 @@ package vm
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"unsafe"
 
@@ -169,11 +168,11 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 	} else {
 		impl = topdown.GetBuiltin(name)
 		if impl == nil {
-			return fmt.Errorf("builtin not found: %s", name)
+			return errors.New("builtin not found: " + name)
 		}
 		bi, ok = ast.BuiltinMap[name]
 		if !ok {
-			return fmt.Errorf("builtin not found: %s", name)
+			return errors.New("builtin not found: " + name)
 		}
 	}
 
@@ -192,7 +191,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 
 	if err := func(a *[]*ast.Term, f func(v *ast.Term) error) error {
 		return impl(bctx,
-			*noescape(a),
+			*a,
 			f)
 	}(&a, func(value *ast.Term) error {
 		if relation {
