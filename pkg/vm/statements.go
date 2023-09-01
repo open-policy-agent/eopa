@@ -217,7 +217,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 					return err
 				}
 				if state.Globals.NDBCache != nil && bi.IsNondeterministic() {
-					state.Globals.NDBCache.Put(name, ast.NewArray(a...), value.Value)
+					state.Globals.NDBCache.Put(bi.Name, ast.NewArray(a...), value.Value)
 				}
 			} else {
 				ret = state.ValueOps().MakeArray(0)
