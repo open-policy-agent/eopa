@@ -76,7 +76,6 @@ type (
 		Ctx                    context.Context
 		Seed                   io.Reader
 		Runtime                *ast.Term
-		cancel                 *cancel
 		ResultSet              *Set
 		vm                     *VM
 		Cache                  builtins.Cache
@@ -89,6 +88,7 @@ type (
 		memoize                []map[int]Value
 		Limits                 Limits
 		StrictBuiltinErrors    bool
+		cancel                 cancel
 	}
 
 	Limits struct {
@@ -119,6 +119,7 @@ type (
 
 	cancel struct {
 		value int32
+		exit  chan struct{}
 	}
 )
 
@@ -164,11 +165,10 @@ const (
 // registersSize: tradeoff between pre-allocating too much and not enough; tested values 4, 8 and 16
 const registersSize int = 32
 
-func newGlobals(ctx context.Context, vm *VM, opts EvalOpts, cancel *cancel, runtime *ast.Term, input *interface{}) *Globals {
-	return &Globals{
+func newGlobals(ctx context.Context, vm *VM, opts EvalOpts, runtime *ast.Term, input *interface{}) (*Globals, *cancel) {
+	g := &Globals{
 		vm:                  vm,
 		Limits:              *opts.Limits,
-		cancel:              cancel,
 		memoize:             []map[int]Value{{}},
 		Ctx:                 ctx,
 		Input:               input,
@@ -186,6 +186,9 @@ func newGlobals(ctx context.Context, vm *VM, opts EvalOpts, cancel *cancel, runt
 			New: newRegisterPoolElement,
 		},
 	}
+
+	g.cancel.Init(ctx)
+	return g, &g.cancel
 }
 
 func newRegisterPoolElement() any {
@@ -230,9 +233,6 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 	plans := vm.executable.Plans()
 	n := plans.Len()
 
-	cancel, exit := watchContext(ctx)
-	defer exit()
-
 	for i := 0; i < n; i++ {
 		if plan := plans.Plan(i); plan.Name() == name {
 
@@ -262,7 +262,9 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 
 			result := vm.ops.MakeSet()
 
-			globals := newGlobals(ctx, vm, opts, cancel, runtime, input)
+			globals, cancel := newGlobals(ctx, vm, opts, runtime, input)
+			defer cancel.Exit()
+
 			globals.ResultSet = result
 			globals.Cache = opts.Cache
 			globals.InterQueryBuiltinCache = opts.InterQueryBuiltinCache
@@ -303,9 +305,6 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 		return nil, false, false, ErrInvalidExecutable
 	}
 
-	cancel, exit := watchContext(ctx)
-	defer exit()
-
 	fname := "g0.data"
 	if len(path) > 0 {
 		fname += "." + gstrings.Join(path, ".")
@@ -332,7 +331,8 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				return nil, false, false, err
 			}
 
-			globals := newGlobals(ctx, vm, opts, cancel, runtime, opts.Input)
+			globals, cancel := newGlobals(ctx, vm, opts, runtime, opts.Input)
+			defer cancel.Exit()
 
 			args := make([]Value, 2)
 			if opts.Input != nil {
@@ -390,7 +390,9 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 
 			result := vm.ops.MakeSet()
 
-			globals := newGlobals(ctx, vm, opts, cancel, runtime, opts.Input)
+			globals, cancel := newGlobals(ctx, vm, opts, runtime, opts.Input)
+			defer cancel.Exit()
+
 			globals.ResultSet = result
 
 			state := newState(globals, StatisticsGet(ctx))
@@ -766,20 +768,11 @@ func (s *State) find2Regs(v1, v2 Local) (*registersList, *registersList) {
 	return r1, r2
 }
 
-func watchContext(ctx context.Context) (*cancel, context.CancelFunc) {
-	var c cancel
-
+func (c *cancel) Init(ctx context.Context) {
 	exit := make(chan struct{})
-	go func() {
-		select {
-		case <-ctx.Done():
-		case <-exit:
-		}
+	c.exit = exit
 
-		c.Cancel()
-	}()
-
-	return &c, func() { close(exit) }
+	go c.wait(ctx, exit)
 }
 
 func (c *cancel) Cancel() {
@@ -788,6 +781,19 @@ func (c *cancel) Cancel() {
 
 func (c *cancel) Cancelled() bool { // nolint:misspell // opa Cancel interface contains Cancelled function
 	return atomic.LoadInt32(&c.value) != 0
+}
+
+func (c *cancel) Exit() {
+	close(c.exit)
+}
+
+func (c *cancel) wait(ctx context.Context, exit chan struct{}) {
+	select {
+	case <-ctx.Done():
+	case <-exit:
+	}
+
+	c.Cancel()
 }
 
 func EvalOptsFromContext(ctx context.Context) EvalOpts {

@@ -117,7 +117,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		Metrics:                state.Globals.Metrics,
 		Seed:                   state.Globals.Seed,
 		Time:                   ast.UIntNumberTerm(uint64(state.Globals.Time.UnixNano())),
-		Cancel:                 state.Globals.cancel,
+		Cancel:                 &state.Globals.cancel,
 		Runtime:                state.Globals.Runtime,
 		Cache:                  state.Globals.Cache,
 		NDBuiltinCache:         state.Globals.NDBCache,
