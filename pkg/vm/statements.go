@@ -566,8 +566,7 @@ func externalCall(state *State, path []string, args []Value) (interface{}, bool,
 	a := make([]*interface{}, len(args))
 	for i := range a {
 		if !isUndefinedType(args[i]) {
-			var v interface{} = args[i]
-			a[i] = &v
+			a[i] = (*interface{})(&args[i])
 		}
 	}
 
