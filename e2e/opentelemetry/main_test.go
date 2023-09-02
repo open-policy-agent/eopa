@@ -16,34 +16,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
-	"github.com/ory/dockertest/v3/docker/pkg/stdcopy"
+	"github.com/testcontainers/testcontainers-go"
+	tc_wait "github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/styrainc/enterprise-opa-private/e2e/retry"
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
-const defaultImage = "ko.local/enterprise-opa-private:edge" // built via `make build-local`
-
-var dockerPool = func() *dockertest.Pool {
-	p, err := dockertest.NewPool("")
-	if err != nil {
-		panic(err)
-	}
-	if err := p.Client.Ping(); err != nil {
-		panic(err)
-	}
-	return p
-}()
-
 func TestSpansEmitted(t *testing.T) {
-	cleanupPrevious(t)
-	coll := collector(t)
+	ctx := context.Background()
+	coll, collectorPort := collector(t, ctx)
 	ts := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	config := fmt.Sprintf(`
 distributed_tracing:
   type: grpc
+  address: "127.0.0.1:%[2]s"
 decision_logs:
   plugin: eopa_dl
 plugins:
@@ -54,7 +41,7 @@ plugins:
     - type: console
     - type: http
       url: "%[1]s"
-`, ts.URL)
+`, ts.URL, collectorPort)
 	policy := fmt.Sprintf(`
 package test
 import future.keywords.if
@@ -96,7 +83,7 @@ p if http.send({"url":"%[1]s", "method":"GET"})
 	}
 
 	retry.Run(t, func(t *retry.R) {
-		collectorOutput := output(t, coll)
+		collectorOutput := output(t, ctx, coll)
 		found := findAllOccurrences(collectorOutput, expectedLines)
 		for _, k := range expectedLines {
 			if act, exp := len(found[k]), 1; exp != act {
@@ -106,27 +93,17 @@ p if http.send({"url":"%[1]s", "method":"GET"})
 	})
 }
 
-func output(t *retry.R, coll *dockertest.Resource) []byte {
-	collBuf := bytes.Buffer{}
-
-	opts := docker.LogsOptions{
-		Context:      context.Background(),
-		Stderr:       true,
-		Stdout:       true,
-		Follow:       false,
-		RawTerminal:  true,
-		Container:    coll.Container.ID,
-		OutputStream: &collBuf,
-	}
-	if err := dockerPool.Client.Logs(opts); err != nil {
+func output(t *retry.R, ctx context.Context, coll testcontainers.Container) []byte {
+	r, err := coll.Logs(ctx)
+	if err != nil {
 		t.Fatal(err)
 	}
-
-	collErr := bytes.Buffer{}
-	if _, err := stdcopy.StdCopy(io.Discard, &collErr, &collBuf); err != nil {
+	defer r.Close()
+	b, err := io.ReadAll(r)
+	if err != nil {
 		t.Fatal(err)
 	}
-	return collErr.Bytes()
+	return b
 }
 
 func findAllOccurrences(data []byte, searches []string) map[string][]int { // https://stackoverflow.com/a/52684989/993018
@@ -197,35 +174,25 @@ func binary() string {
 	return bin
 }
 
-func collector(t *testing.T) *dockertest.Resource {
-	res, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
-		Name:       "collector",
-		Repository: "otel/opentelemetry-collector-contrib",
-		Tag:        "0.81.0",
-		Hostname:   "collector",
-		PortBindings: map[docker.Port][]docker.PortBinding{
-			"4317/tcp": {{HostIP: "localhost", HostPort: "4317/tcp"}},
-		},
+func collector(t *testing.T, ctx context.Context) (testcontainers.Container, string) {
+	req := testcontainers.ContainerRequest{
+		Image:        "otel/opentelemetry-collector-contrib:0.81.0",
 		ExposedPorts: []string{"4317/tcp"},
+		WaitingFor:   tc_wait.ForLog("Everything is ready. Begin running and processing data."),
+	}
+
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Logger:           testcontainers.TestLogger(t),
+		Started:          true,
 	})
 	if err != nil {
-		t.Fatalf("could not start collector: %s", err)
+		t.Fatal(err)
 	}
 
-	t.Cleanup(func() {
-		if err := dockerPool.Purge(res); err != nil {
-			t.Fatalf("could not purge collector: %s", err)
-		}
-	})
-
-	return res
-}
-
-func cleanupPrevious(t *testing.T) {
-	t.Helper()
-	for _, n := range []string{"collector"} {
-		if err := dockerPool.RemoveContainerByName(n); err != nil {
-			t.Fatalf("remove %s: %v", n, err)
-		}
+	mappedPort, err := c.MappedPort(ctx, "4317/tcp")
+	if err != nil {
+		t.Fatal(err)
 	}
+	return c, mappedPort.Port()
 }
