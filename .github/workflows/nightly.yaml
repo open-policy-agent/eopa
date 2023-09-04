@@ -193,6 +193,7 @@ jobs:
         with:
           repository: styrainc/regal
           path: regal
+          fetch-depth: 0
       - run: git checkout ${{ steps.regal.outputs.ref }}
         working-directory: regal
       - run: go test -tags e2e ./e2e -v
