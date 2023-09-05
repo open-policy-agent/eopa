@@ -180,8 +180,12 @@ jobs:
           cache-dependency-path: enterprise-opa/go.sum
           check-latest: true
       - name: Build
-        run: go build -o regal main.go
+        run: |
+          go mod tidy
+          go build -o regal main.go
         working-directory: enterprise-opa/examples/regal
+        env:
+          GOPRIVATE: github.com/styrainc/
       - name: pick up regal path and ref
         id: regal
         run: |
