@@ -86,7 +86,7 @@ release:
     name: enterprise-opa
 
 brews:
-  - tap:
+  - repository:
       owner: StyraInc
       name: homebrew-packages
       token: "{{ .Env.TAP_GITHUB_TOKEN }}"
