@@ -127,14 +127,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		DistributedTracingOpts: state.Globals.TracingOpts,
 	}
 
-	// Prefer allocating a fixed size slice, to keep it in stack.
-
-	var a []*ast.Term
-	if n := len(args); n <= 4 {
-		a = make([]*ast.Term, n, 4)
-	} else {
-		a = make([]*ast.Term, n)
-	}
+	a := make([]*ast.Term, len(args))
 
 	for i := range args {
 		if isUndefinedType(args[i]) {
@@ -189,43 +182,40 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		}
 	}
 
-	if err := func(a []*ast.Term, f func(v *ast.Term) error) error {
-		return impl(bctx,
-			a,
-			f)
-	}(a, func(value *ast.Term) error {
-		if relation {
-			v, err := state.ValueOps().FromInterface(state.Globals.Ctx, value.Value)
-			if err != nil {
-				return err
-			}
-
-			newArray, ok, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Local(Unused), v)
-			if err != nil {
-				return err
-			}
-			if ok {
-				state.SetValue(Unused, newArray)
-			}
-		} else {
-			// topdown print returns iter(nil)
-			var ret Value
-			if value != nil {
-				var err error
-				ret, err = state.ValueOps().FromInterface(state.Globals.Ctx, value.Value)
+	if err := impl(bctx, a,
+		func(value *ast.Term) error {
+			if relation {
+				v, err := state.ValueOps().FromInterface(state.Globals.Ctx, value.Value)
 				if err != nil {
 					return err
 				}
-				if state.Globals.NDBCache != nil && bi.IsNondeterministic() {
-					state.Globals.NDBCache.Put(bi.Name, ast.NewArray(a...), value.Value)
+
+				newArray, ok, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.Local(Unused), v)
+				if err != nil {
+					return err
+				}
+				if ok {
+					state.SetValue(Unused, newArray)
 				}
 			} else {
-				ret = state.ValueOps().MakeArray(0)
+				// topdown print returns iter(nil)
+				var ret Value
+				if value != nil {
+					var err error
+					ret, err = state.ValueOps().FromInterface(state.Globals.Ctx, value.Value)
+					if err != nil {
+						return err
+					}
+					if state.Globals.NDBCache != nil && bi.IsNondeterministic() {
+						state.Globals.NDBCache.Put(bi.Name, ast.NewArray(a...), value.Value)
+					}
+				} else {
+					ret = state.ValueOps().MakeArray(0)
+				}
+				state.SetReturnValue(Unused, ret)
 			}
-			state.SetReturnValue(Unused, ret)
-		}
-		return nil
-	}); err != nil {
+			return nil
+		}); err != nil {
 		var t topdown.Halt
 		if errors.As(err, &t) {
 			return err
