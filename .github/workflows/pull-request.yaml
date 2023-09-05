@@ -37,7 +37,7 @@ jobs:
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -108,7 +108,7 @@ jobs:
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: checkout Enterprise OPA
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: enterprise-opa
       - uses: actions/setup-go@v4
@@ -121,7 +121,7 @@ jobs:
         run: echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
         working-directory: enterprise-opa
       - name: checkout OPA
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: open-policy-agent/opa
           ref: ${{ steps.enterprise-opa.outputs.opa_version }}
@@ -182,7 +182,7 @@ jobs:
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/setup-go@v4
@@ -224,7 +224,7 @@ jobs:
           GIT_AZURE_TOKEN: ${{ secrets.E2E_GIT_AZURE_TOKEN }}
           GIT_GITLAB_TOKEN: ${{ secrets.E2E_GIT_GITLAB_TOKEN }}
       - name: checkout opa-testing-e2e
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: StyraInc/opa-testing-e2e
           path: _e2e
@@ -241,7 +241,7 @@ jobs:
           NUM_INPUT_BUNDLES: 2
           BUNDLE_HOST: 172.17.0.1
       - name: Check out fetchdb code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: _fetchdb
           repository: StyraInc/fetchdb
@@ -274,7 +274,7 @@ jobs:
         run:
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       # Do a pre-flight check to ensure we don't push up a BSR draft for
@@ -321,7 +321,7 @@ jobs:
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/setup-go@v4
@@ -358,7 +358,7 @@ jobs:
         run:
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Download image tarball
         uses: actions/download-artifact@v3
         with:

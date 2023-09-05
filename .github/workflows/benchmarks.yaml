@@ -20,7 +20,7 @@ jobs:
       - name: Setup github api token
         run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           path: eopa
@@ -30,7 +30,7 @@ jobs:
           cache-dependency-path: eopa/go.sum
           check-latest: true
       - name: Check out "benchmarks" branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: benchmarks
