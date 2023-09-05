@@ -25,6 +25,7 @@ KO_BUILD_DEPLOY := $(KO_BUILD) --bare --platform=linux/amd64,linux/arm64
 
 BUILD_DIR := $(shell echo `pwd`)
 FUZZ_TIME ?= 30m
+RELEASE_NOTES ?= "release-notes.md"
 
 # EOPA_VERSION: strip 'v' from tag
 export EOPA_VERSION := $(shell git describe --abbrev=0 --tags | sed s/^v//)
@@ -89,7 +90,8 @@ release-single:
 	HOSTNAME=$(HOSTNAME) goreleaser build --snapshot --clean --single-target --id linux-windows-build
 
 release-ci:
-	HOSTNAME=$(HOSTNAME) goreleaser release --clean --release-notes CHANGELOG.md
+	./build/latest-release-notes.sh --output="${RELEASE_NOTES}"
+	HOSTNAME=$(HOSTNAME) goreleaser release --clean --release-notes "${RELEASE_NOTES}"
 
 # enterprise OPA docker image ghcr.io/goreleaser/goreleaser-cross:v1.19 and run goreleaser (build eopa and eopa_wasm)
 release-wasm:
