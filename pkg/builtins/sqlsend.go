@@ -76,8 +76,8 @@ var (
 
 type (
 	databasePool struct {
-		mu  sync.Mutex
 		dbs map[databaseKey]*databaseConnection
+		mu  sync.Mutex
 	}
 
 	databaseKey struct {
@@ -96,10 +96,10 @@ type (
 	}
 
 	databaseStmt struct {
+		stmt   *sql.Stmt
+		active int
 		mu     sync.Mutex
 		closed bool
-		active int
-		stmt   *sql.Stmt
 	}
 
 	intraQueryCache struct {

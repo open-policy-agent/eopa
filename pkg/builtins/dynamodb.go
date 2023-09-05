@@ -71,8 +71,8 @@ var (
 
 type (
 	dynamoDBClientPool struct {
-		mu      sync.Mutex
 		clients map[dynamoDBClientKey]dynamodbiface.DynamoDBAPI
+		mu      sync.Mutex
 	}
 
 	dynamoDBClientKey struct {

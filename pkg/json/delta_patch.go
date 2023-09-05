@@ -14,12 +14,12 @@ import (
 
 // deltaPatch transforms a JSON patch to a delta to apply over a snapshot or merges the JSON patch to an existing delta.
 type deltaPatch struct {
+	dependency interface{}        // Storage level object
 	snapshot   *utils.MultiReader // Content without any deltas. Not modified.
-	slen       int64
 	delta      *utils.MultiReader // Plain deltas. As patches are applied, this is appended with new patches.
 	content    *utils.MultiReader // Entire content, a mere facade over the snapshot and deltas.
 	patches    map[int64]int64
-	dependency interface{} // Storage level object
+	slen       int64
 }
 
 func newDeltaPatch(snapshot *utils.MultiReader, slen int64, delta *utils.MultiReader, objects []interface{}) *deltaPatch {

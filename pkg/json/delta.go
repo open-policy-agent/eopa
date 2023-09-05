@@ -163,8 +163,8 @@ func (d *deltaReader) WriteTo(w io.Writer) (int64, error) {
 }
 
 type deltaArrayReader struct {
-	deltaReader
 	impl arrayReader
+	deltaReader
 }
 
 func newDeltaArrayReader(dr *deltaReader, offset int64) (arrayReader, error) {
@@ -185,8 +185,8 @@ func (d *deltaArrayReader) ArrayValueOffset(i int) (int64, error) {
 }
 
 type deltaObjectReader struct {
-	deltaReader
 	impl objectReader
+	deltaReader
 }
 
 func newDeltaObjectReader(d *deltaReader, offset int64) (objectReader, error) {
@@ -513,7 +513,7 @@ func (d *deltaObjectReaderImpl) objectNameValueOffsets() ([]objectEntry, []int64
 	entries, offsets := make([]objectEntry, len(names)), make([]int64, len(names))
 
 	for i, name := range names {
-		entries[i] = objectEntry{name, nil}
+		entries[i] = objectEntry{name: name}
 		offsets[i] = m[name]
 	}
 
@@ -571,7 +571,7 @@ func (d *deltaObjectReaderImpl) objectNameOffsetsValueOffsets() ([]objectEntry, 
 	entries, noffsets, voffsets := make([]objectEntry, len(names)), make([]int64, len(names)), make([]int64, len(names))
 
 	for i, name := range names {
-		entries[i] = objectEntry{name, nil}
+		entries[i] = objectEntry{name: name}
 		o := m[name]
 		noffsets[i] = o.name
 		voffsets[i] = o.value

@@ -28,9 +28,9 @@ func Debug(c Collections) Object {
 // Internally, it is a hierarchical namespace of resources, organized around nested maps. A leaf map represents a resource and holds the meta data for the particular resource.
 type snapshot struct {
 	ObjectBinary
-	slen    int64
-	blen    int64         // Length in bytes for the entire snapshot.
 	objects []interface{} // Storage objects used to construct the collection, if any.
+	slen    int64
+	blen    int64 // Length in bytes for the entire snapshot.
 }
 
 func NewCollectionsFromReaders(snapshotReader *utils.MultiReader, slen int64, dr *utils.MultiReader, dlen int64, objects ...interface{}) (collections Collections, err error) {
@@ -168,8 +168,8 @@ func (s snapshot) find(name string) Resource {
 }
 
 type resourceImpl struct {
-	name string
 	obj  Object
+	name string
 }
 
 func findImpl(obj Object, name string) Resource {
@@ -178,7 +178,7 @@ func findImpl(obj Object, name string) Resource {
 
 func findImpl2(obj Object, segs []string, i int) Resource {
 	if len(segs) == i {
-		return &resourceImpl{strings.Join(segs, "/"), obj}
+		return &resourceImpl{name: strings.Join(segs, "/"), obj: obj}
 	}
 
 	if kindImpl(obj) != Directory {
@@ -192,7 +192,7 @@ func findImpl2(obj Object, segs []string, i int) Resource {
 
 	cobj, ok := child.(Object)
 	if !ok {
-		return &resourceImpl{strings.Join(segs[:i+1], "/"), obj}
+		return &resourceImpl{name: strings.Join(segs[:i+1], "/"), obj: obj}
 	}
 	return findImpl2(cobj, segs, i+1)
 }
@@ -235,7 +235,7 @@ func createImpl2(obj Object, segs []string, i int) (Object, *resourceImpl) {
 			obj = o.clone()
 		}
 
-		return obj, &resourceImpl{strings.Join(segs, "/"), obj}
+		return obj, &resourceImpl{name: strings.Join(segs, "/"), obj: obj}
 	}
 
 	// Remove any non-directory contents.
@@ -593,7 +593,7 @@ func serialize(data interface{}, cache *encodingCache, buffer *bytes.Buffer, bas
 	case map[string]interface{}:
 		properties := make([]objectEntry, 0, len(v))
 		for name, value := range v {
-			properties = append(properties, objectEntry{name, value})
+			properties = append(properties, objectEntry{name: name, value: value})
 		}
 
 		sort.Slice(properties, func(i, j int) bool { return properties[i].name < properties[j].name })
@@ -1234,7 +1234,7 @@ func (s *snapshotObjectReader) objectNameValueOffsets() ([]objectEntry, []int64,
 			return nil, nil, fmt.Errorf("object value offset not read: %w", err)
 		}
 
-		properties[i] = objectEntry{name, nil}
+		properties[i] = objectEntry{name: name}
 		offsets[i] = int64(int32(order.Uint32(boffset)))
 	}
 
@@ -1264,7 +1264,7 @@ func (s *snapshotObjectReader) objectNameOffsetsValueOffsets() ([]objectEntry, [
 			return nil, nil, nil, fmt.Errorf("object value offset not read: %w", err)
 		}
 
-		properties[i] = objectEntry{name, nil}
+		properties[i] = objectEntry{name: name}
 		voffsets[i] = int64(int32(order.Uint32(boffset)))
 	}
 

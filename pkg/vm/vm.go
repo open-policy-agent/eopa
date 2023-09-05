@@ -44,51 +44,51 @@ type (
 	}
 
 	EvalOpts struct {
-		Input                  *interface{} // Input as golang native data.
-		Metrics                metrics.Metrics
 		Time                   time.Time
+		PrintHook              print.Hook
+		Metrics                metrics.Metrics
 		Seed                   io.Reader
 		Runtime                interface{}
 		InterQueryBuiltinCache cache.InterQueryCache
-		PrintHook              print.Hook
-		StrictBuiltinErrors    bool
+		Input                  *interface{} // Input as golang native data.
 		Limits                 *Limits
 		Cache                  builtins.Cache
 		NDBCache               builtins.NDBCache
 		Capabilities           *ast.Capabilities
-		TracingOpts            tracing.Options
 		BuiltinFuncs           map[string]*topdown.Builtin
+		TracingOpts            tracing.Options
+		StrictBuiltinErrors    bool
 	}
 
 	// State holds all the evaluation state and is passed along the statements as the evaluation progresses.
 	State struct {
 		Globals *Globals
-		locals  Locals
 		stats   *Statistics
+		locals  Locals
 	}
 
 	Globals struct {
-		vm                     *VM
-		cancel                 *cancel
-		Limits                 Limits
-		memoize                []map[int]Value
-		Ctx                    context.Context
-		ResultSet              *Set
-		Input                  *interface{}
-		Metrics                metrics.Metrics
+		registersPool          sync.Pool
 		Time                   time.Time
+		Metrics                metrics.Metrics
+		PrintHook              print.Hook
+		InterQueryBuiltinCache cache.InterQueryCache
+		Ctx                    context.Context
 		Seed                   io.Reader
 		Runtime                *ast.Term
+		cancel                 *cancel
+		ResultSet              *Set
+		vm                     *VM
 		Cache                  builtins.Cache
-		InterQueryBuiltinCache cache.InterQueryCache
-		PrintHook              print.Hook
-		StrictBuiltinErrors    bool
-		BuiltinErrors          []error
-		NDBCache               builtins.NDBCache
-		registersPool          sync.Pool
-		Capabilities           *ast.Capabilities
-		TracingOpts            tracing.Options
 		BuiltinFuncs           map[string]*topdown.Builtin
+		Capabilities           *ast.Capabilities
+		Input                  *interface{}
+		NDBCache               builtins.NDBCache
+		BuiltinErrors          []error
+		TracingOpts            tracing.Options
+		memoize                []map[int]Value
+		Limits                 Limits
+		StrictBuiltinErrors    bool
 	}
 
 	Limits struct {
@@ -433,8 +433,8 @@ func (vm *VM) setCachedString(i StringIndexConst, value *fjson.String) {
 }
 
 type bitset struct {
-	base uint64
 	rest []bool
+	base uint64
 }
 
 const baseBits = 64

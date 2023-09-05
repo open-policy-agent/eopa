@@ -1067,8 +1067,8 @@ type ObjectMap struct {
 }
 
 type objectEntry struct {
-	name  string
 	value interface{}
+	name  string
 }
 
 func NewObject(properties map[string]File) Object {

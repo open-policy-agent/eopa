@@ -36,13 +36,13 @@ type (
 	}
 
 	intraQueryCacheEntry struct {
-		Executable Executable
 		Error      error
+		Executable Executable
 	}
 
 	interQueryCacheEntry struct {
-		Executable Executable
 		ExpiresAt  time.Time
+		Executable Executable
 	}
 
 	regoEvalKey string

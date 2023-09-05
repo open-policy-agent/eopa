@@ -138,7 +138,7 @@ func (objectMapBase[T]) Serialize(o T, cache *encodingCache, buffer *bytes.Buffe
 	properties := make([]objectEntry, o.Len())
 
 	for i, key := range o.Names() {
-		properties[i] = objectEntry{key, o.iterate(i)}
+		properties[i] = objectEntry{name: key, value: o.iterate(i)}
 	}
 
 	return serializeObject(properties, cache, buffer, base)
@@ -317,15 +317,15 @@ func newObjectMapCompact[T indexable](properties map[string]File, interning map[
 		i++
 	}
 
-	sort.Sort(&keyValueSlicesCompact[T]{keys, &obj.values})
+	sort.Sort(&keyValueSlicesCompact[T]{keys: keys, values: &obj.values})
 
 	obj.internedKeys = obj.intern(keys, interning)
 	return &obj
 }
 
 type keyValueSlicesCompact[T indexable] struct {
-	keys   []string
 	values *T
+	keys   []string
 }
 
 func (kv *keyValueSlicesCompact[T]) Len() int {

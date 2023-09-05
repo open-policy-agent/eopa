@@ -84,8 +84,8 @@ var (
 
 type (
 	mongoDBClientPool struct {
-		mu      sync.Mutex
 		clients map[mongoDBClientKey]*mongo.Client
+		mu      sync.Mutex
 	}
 
 	mongoDBClientKey struct {

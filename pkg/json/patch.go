@@ -21,11 +21,11 @@ const (
 )
 
 type Op struct {
+	Value       Json    `json:"value,omitempty"`
+	valueBinary File    // For package internal use only.
 	Op          PatchOp `json:"op"`
 	Path        string  `json:"path"`
-	Value       Json    `json:"value,omitempty"`
 	From        string  `json:"from"` // Note, only marshaled if operation is either copy or move.
-	valueBinary File    // For package internal use only.
 }
 
 type JsonPatchSpec []map[string]interface{}

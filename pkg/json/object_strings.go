@@ -145,15 +145,15 @@ func newObjectMapCompactStrings[T indexableStrings](properties map[string]File, 
 		i++
 	}
 
-	sort.Sort(&keyValueSlicesCompactStrings[T]{keys, &obj.values})
+	sort.Sort(&keyValueSlicesCompactStrings[T]{keys: keys, values: &obj.values})
 
 	obj.internedKeys = obj.intern(keys, interning)
 	return &obj
 }
 
 type keyValueSlicesCompactStrings[T indexableStrings] struct {
-	keys   []string
 	values *T
+	keys   []string
 }
 
 func (kv *keyValueSlicesCompactStrings[T]) Len() int {

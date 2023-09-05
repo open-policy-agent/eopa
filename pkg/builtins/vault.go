@@ -55,8 +55,8 @@ var (
 
 type (
 	vaultPool struct {
-		mu      sync.Mutex
 		clients map[vaultKey]*vaultClient
+		mu      sync.Mutex
 	}
 
 	vaultClient struct {
