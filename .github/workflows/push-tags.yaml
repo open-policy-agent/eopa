@@ -40,9 +40,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          path: enterprise-opa
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: enterprise-opa/go.sum
           check-latest: true
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
@@ -56,10 +58,12 @@ jobs:
           sh -s -- -b /usr/local/bin
       - name: Run GoReleaser
         run: make release-ci
+        working-directory: enterprise-opa
         env:
           HOSTNAME: github.actions.local
           TAP_GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          RELEASE_NOTES: ../release-notes.md
 
   kopush:
     name: Ko Push
