@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.9.1
+
+ * This release is a release engineering fix to sort out automated publishing of this changelog, capabilities JSON files, and gRPC protobuf definitions.
+
 ## v1.9.0
 
 This release updates the OPA version used in Enterprise OPA to [v0.56.0](https://github.com/open-policy-agent/opa/releases/tag/v0.56.0), and integrates several bugfixes and new features.
