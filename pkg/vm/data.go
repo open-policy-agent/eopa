@@ -739,11 +739,11 @@ func (o *DataOperations) ToInterface(ctx context.Context, v interface{}) (interf
 
 type Set struct {
 	fjson.Json
-	set *HashSet
+	set HashSet
 }
 
 func NewSet() *Set {
-	return &Set{set: NewHashSet()}
+	return &Set{set: *NewHashSet()}
 }
 
 func (s *Set) Add(ctx context.Context, v fjson.Json) error {
@@ -799,11 +799,11 @@ func (s *Set) Equal(ctx context.Context, y *Set) (bool, error) {
 
 type Object struct {
 	fjson.Json
-	obj *HashMap
+	obj HashMap
 }
 
 func NewObject() *Object {
-	return &Object{obj: NewHashMap()}
+	return &Object{obj: *NewHashMap()}
 }
 
 func (o *Object) Insert(ctx context.Context, k, v interface{}) error {

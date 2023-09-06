@@ -76,7 +76,6 @@ type (
 		Ctx                    context.Context
 		Seed                   io.Reader
 		Runtime                *ast.Term
-		ResultSet              *Set
 		vm                     *VM
 		Cache                  builtins.Cache
 		BuiltinFuncs           map[string]*topdown.Builtin
@@ -89,6 +88,7 @@ type (
 		Limits                 Limits
 		StrictBuiltinErrors    bool
 		cancel                 cancel
+		ResultSet              Set
 	}
 
 	Limits struct {
@@ -260,12 +260,10 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 				return nil, err
 			}
 
-			result := vm.ops.MakeSet()
-
 			globals, cancel := newGlobals(ctx, vm, opts, runtime, input)
 			defer cancel.Exit()
 
-			globals.ResultSet = result
+			globals.ResultSet = *vm.ops.MakeSet()
 			globals.Cache = opts.Cache
 			globals.InterQueryBuiltinCache = opts.InterQueryBuiltinCache
 
@@ -293,7 +291,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 				return nil, globals.BuiltinErrors[0]
 			}
 
-			return vm.ops.ToAST(ctx, result)
+			return vm.ops.ToAST(ctx, &globals.ResultSet)
 		}
 	}
 
@@ -388,12 +386,10 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 				return nil, false, false, err
 			}
 
-			result := vm.ops.MakeSet()
-
 			globals, cancel := newGlobals(ctx, vm, opts, runtime, opts.Input)
 			defer cancel.Exit()
 
-			globals.ResultSet = result
+			globals.ResultSet = *vm.ops.MakeSet()
 
 			state := newState(globals, StatisticsGet(ctx))
 			if err := plan.Execute(&state); err != nil {
@@ -405,7 +401,7 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 			}
 
 			var m interface{}
-			result.Iter(func(v fjson.Json) bool {
+			globals.ResultSet.Iter(func(v fjson.Json) bool {
 				m = v
 				return true
 			})

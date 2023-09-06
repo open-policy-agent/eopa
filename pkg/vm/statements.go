@@ -9,15 +9,12 @@ import (
 	"github.com/open-policy-agent/opa/topdown"
 )
 
-type undefinedValue struct{}
-
 func isUndefinedType(v Value) bool {
-	_, ok := v.(undefinedValue)
-	return ok
+	return v == nil
 }
 
 func undefined() Value {
-	return undefinedValue{}
+	return nil
 }
 
 func (p plan) Execute(state *State) error {
@@ -866,7 +863,7 @@ func (r resultSetAdd) Execute(state *State) (bool, uint32, error) {
 		return false, 0, nil
 	}
 
-	err := state.ValueOps().SetAdd(state.Globals.Ctx, state.Globals.ResultSet, valueValue)
+	err := state.ValueOps().SetAdd(state.Globals.Ctx, &state.Globals.ResultSet, valueValue)
 	return false, 0, err
 }
 

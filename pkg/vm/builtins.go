@@ -3,7 +3,6 @@ package vm
 import (
 	"fmt"
 	"math/big"
-	"sort"
 	gostrings "strings"
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
@@ -11,6 +10,7 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
+	"golang.org/x/exp/slices"
 )
 
 func memberBuiltin(state *State, args []Value) error {
@@ -203,7 +203,7 @@ func stringsConcatBuiltin(state *State, args []Value) error {
 			return err2
 		}
 
-		sort.Strings(*noescape(&strs))
+		slices.Sort(strs)
 
 		result := state.ValueOps().MakeString(gostrings.Join(strs, string(join)))
 		state.SetReturnValue(Unused, result)
