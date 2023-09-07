@@ -164,6 +164,7 @@ jobs:
         with:
           repository: StyraInc/enterprise-opa
           path: _public
+          persist-credentials: false
       # Copy files, generate commit on local branch, then push branch to remote.
       - name: Copy over files from private -> public repo
         run: |
