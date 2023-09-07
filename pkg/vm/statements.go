@@ -85,7 +85,8 @@ func (f function) execute(state *State, args []Value) error {
 
 func (builtin builtin) Execute(state *State, args []Value) error {
 	// Try to use a builtin implementation operating directly with
-	// the internal data types.
+	// the internal data types. The conversions to AST data type
+	// is an expensive (heap heavy) operation.
 
 	name := builtin.Name()
 
@@ -104,6 +105,8 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return stringsStartsWithBuiltin(state, args)
 	case ast.Sprintf.Name:
 		return stringsSprintfBuiltin(state, args)
+	case ast.Count.Name:
+		return countBuiltin(state, args)
 	}
 
 	// If none available, revert to standard OPA builtin

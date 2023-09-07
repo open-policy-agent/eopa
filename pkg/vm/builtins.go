@@ -331,6 +331,41 @@ func stringsSprintfBuiltin(state *State, args []Value) error {
 	return nil
 }
 
+func countBuiltin(state *State, args []Value) error {
+	switch a := args[0].(type) {
+	case fjson.Array:
+		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(a.Len())))
+		return nil
+	case fjson.Object:
+		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(a.Len())))
+		return nil
+	case IterableObject:
+		n, err := a.Len(state.Globals.Ctx)
+		if err != nil {
+			return err
+		}
+		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(n)))
+		return nil
+	case *Set:
+		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(a.Len())))
+		return nil
+	case *fjson.String:
+		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(len([]rune(*a)))))
+		return nil
+	}
+
+	v, err := state.ValueOps().ToAST(state.Globals.Ctx, args[0])
+	if err != nil {
+		return err
+	}
+
+	state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+		Code:    topdown.TypeErr,
+		Message: builtins.NewOperandTypeErr(1, v, "array", "object", "set", "string").Error(),
+	})
+	return nil
+}
+
 func builtinStringOperand(state *State, value Value, pos int) (string, error) {
 	s, ok := value.(*fjson.String)
 	if !ok {
