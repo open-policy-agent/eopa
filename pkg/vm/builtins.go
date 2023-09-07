@@ -332,6 +332,10 @@ func stringsSprintfBuiltin(state *State, args []Value) error {
 }
 
 func countBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[0]) {
+		return nil
+	}
+
 	switch a := args[0].(type) {
 	case fjson.Array:
 		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(a.Len())))
@@ -433,4 +437,30 @@ func do(state *State, path Value, val Value, record func(*State, Value, Value) e
 	}
 
 	return innerErr
+}
+
+func equalBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+		return nil
+	}
+
+	ret, err := equalOp(state.Globals.Ctx, args[0], args[1])
+	if err == nil {
+		state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(ret))
+	}
+
+	return err
+}
+
+func notEqualBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+		return nil
+	}
+
+	ret, err := equalOp(state.Globals.Ctx, args[0], args[1])
+	if err == nil {
+		state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(!ret))
+	}
+
+	return err
 }

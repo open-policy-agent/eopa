@@ -109,6 +109,10 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return countBuiltin(state, args)
 	case ast.WalkBuiltin.Name:
 		return walkBuiltin(state, args)
+	case ast.Equal.Name:
+		return equalBuiltin(state, args)
+	case ast.NotEqual.Name:
+		return notEqualBuiltin(state, args)
 	}
 
 	// If none available, revert to standard OPA builtin
