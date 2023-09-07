@@ -1,8 +1,8 @@
 # Changelog
 
-## v1.9.1
+## v1.9.1, v1.9.2
 
- * This release is a release engineering fix to sort out automated publishing of this changelog, capabilities JSON files, and gRPC protobuf definitions.
+These releases have been release engineering fixes to sort out automated publishing of this changelog, capabilities JSON files, and gRPC protobuf definitions.
 
 ## v1.9.0
 
