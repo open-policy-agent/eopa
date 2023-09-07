@@ -383,3 +383,54 @@ func builtinStringOperand(state *State, value Value, pos int) (string, error) {
 
 	return s.Value(), nil
 }
+
+func walkBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[0]) {
+		return nil
+	}
+
+	var arr Value = state.ValueOps().MakeArray(0)
+	state.SetReturnValue(Unused, arr)
+
+	return do(state, state.ValueOps().MakeArray(0), args[0], func(state *State, path, val Value) error {
+		tuple, _, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.ValueOps().MakeArray(0), path)
+		if err != nil {
+			return err
+		}
+		tuple, _, err = state.ValueOps().ArrayAppend(state.Globals.Ctx, tuple, val)
+		if err != nil {
+			return err
+		}
+		arr, _, err = state.ValueOps().ArrayAppend(state.Globals.Ctx, arr, tuple)
+		return err
+	})
+}
+
+func do(state *State, path Value, val Value, record func(*State, Value, Value) error) error {
+	if err := record(state, path, val); err != nil {
+		return err
+	}
+
+	var innerErr error
+	if err := state.ValueOps().Iter(state.Globals.Ctx, val, func(k, v any) bool {
+		innerErr = func(state *State, k, v Value) error {
+			p, err := state.ValueOps().CopyShallow(state.Globals.Ctx, path)
+			if err != nil {
+				return err
+			}
+			p, _, err = state.ValueOps().ArrayAppend(state.Globals.Ctx, p, k)
+			if err != nil {
+				return err
+			}
+			if err := record(state, p, v); err != nil {
+				return err
+			}
+			return do(state, p, v, record) // recurse
+		}(state, k, v)
+		return innerErr != nil
+	}); err != nil {
+		return err
+	}
+
+	return innerErr
+}

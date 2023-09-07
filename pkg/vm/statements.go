@@ -107,6 +107,8 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return stringsSprintfBuiltin(state, args)
 	case ast.Count.Name:
 		return countBuiltin(state, args)
+	case ast.WalkBuiltin.Name:
+		return walkBuiltin(state, args)
 	}
 
 	// If none available, revert to standard OPA builtin
