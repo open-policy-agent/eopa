@@ -388,6 +388,24 @@ func builtinStringOperand(state *State, value Value, pos int) (string, error) {
 	return s.Value(), nil
 }
 
+func builtinSetOperand(state *State, value Value, pos int) (*Set, error) {
+	s, ok := value.(*Set)
+	if !ok {
+		v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
+		if err != nil {
+			return NewSet(), err
+		}
+
+		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+			Code:    topdown.TypeErr,
+			Message: builtins.NewOperandTypeErr(pos, v, "set").Error(),
+		})
+		return nil, nil
+	}
+
+	return s, nil
+}
+
 func walkBuiltin(state *State, args []Value) error {
 	if isUndefinedType(args[0]) {
 		return nil
@@ -463,4 +481,35 @@ func notEqualBuiltin(state *State, args []Value) error {
 	}
 
 	return err
+}
+
+func binaryOrBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+		return nil
+	}
+
+	a, err := builtinSetOperand(state, args[0], 1)
+	if a == nil {
+		return err
+	}
+
+	b, err := builtinSetOperand(state, args[1], 2)
+	if b == nil {
+		return err
+	}
+
+	result := NewSet()
+
+	a.Iter(func(x fjson.Json) bool {
+		result.Add(state.Globals.Ctx, x)
+		return false
+	})
+
+	b.Iter(func(x fjson.Json) bool {
+		result.Add(state.Globals.Ctx, x)
+		return false
+	})
+
+	state.SetReturnValue(Unused, result)
+	return nil
 }

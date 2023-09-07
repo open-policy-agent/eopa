@@ -113,6 +113,8 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return equalBuiltin(state, args)
 	case ast.NotEqual.Name:
 		return notEqualBuiltin(state, args)
+	case ast.Or.Name:
+		return binaryOrBuiltin(state, args)
 	}
 
 	// If none available, revert to standard OPA builtin
