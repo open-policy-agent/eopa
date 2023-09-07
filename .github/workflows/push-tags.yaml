@@ -170,7 +170,7 @@ jobs:
         run: |
           # Copy protobuf files over.
           mkdir -p _public/proto/eopa
-          cp -r proto/eopa/ _public/proto/eopa/
+          cp -r proto/eopa/ _public/proto/
           # Copy capabilities.json files over.
           mkdir -p _public/capabilities
           cp capabilities/*.json _public/capabilities/
@@ -180,19 +180,19 @@ jobs:
           git config user.email "actions@github.com"
           git add .
           # Ensure branch exists on remote for the 'gh pr create' command later.
-          git checkout -b ${{ github.ref_name }} origin/main
+          git checkout -b artifacts-${{ github.ref_name }} origin/main
           git commit -am "Update proto defs and capabilities JSON files for ${{ github.ref_name }} release"
-          git push -u origin ${{ github.ref_name }}
+          git push -u origin artifacts-${{ github.ref_name }}
       # Do a pre-flight check to ensure we don't make a needless PR.
       - name: Check for proto/ file changes in git diffs for public repo
         id: changes
         run: |
           cd _public;
-          if git diff --name-only -r main ${{ github.ref_name }} | grep -q 'proto/';
+          if git diff --name-only -r main artifacts-${{ github.ref_name }} | grep -q 'proto/';
           then
             echo "proto=true" >> $GITHUB_OUTPUT
           fi
-          if git diff --name-only -r main ${{ github.ref_name }} | grep -q 'capabilities/';
+          if git diff --name-only -r main artifacts-${{ github.ref_name }} | grep -q 'capabilities/';
           then
             echo "capabilities=true" >> $GITHUB_OUTPUT
           fi
@@ -200,6 +200,6 @@ jobs:
         if: steps.changes.outputs.proto == 'true' || steps.changes.outputs.capabilities == 'true'
         run: |
           cd _public
-          gh pr create -B main --head ${{ github.ref_name }} --title 'Update proto defs and capabilities JSON files for ${{ github.ref_name }} release' --body 'Created by Github action'
+          gh pr create -B main --head artifacts-${{ github.ref_name }} --title 'Update proto defs and capabilities JSON files for ${{ github.ref_name }} release' --body 'Created by Github action'
         env:
           GITHUB_TOKEN: ${{ env.GH_API_TOKEN }}
