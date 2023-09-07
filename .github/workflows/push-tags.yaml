@@ -142,8 +142,6 @@ jobs:
     name: Publish proto defs and capabilities.json using a PR
     runs-on: ubuntu-22.04
     environment: ci
-    env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
       - name: (Dependabot Only) Generate GitHub App Token
         if: ${{ github.actor == 'dependabot[bot]' }}
@@ -152,8 +150,7 @@ jobs:
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Dependabot Only) Override GH Token Env Var
-        if: ${{ github.actor == 'dependabot[bot]' }}
+      - name: (Everyone, including Dependabot) Override GH Token Env Var
         id: override_gh_api_token
         run:
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
@@ -205,4 +202,4 @@ jobs:
           cd _public
           gh pr create -B main --head ${{ github.ref_name }} --title 'Update proto defs and capabilities JSON files for ${{ github.ref_name }} release' --body 'Created by Github action'
         env:
-          GITHUB_TOKEN: ${{ secrets.PUBLIC_GH_TOKEN }}
+          GITHUB_TOKEN: ${{ env.GH_API_TOKEN }}
