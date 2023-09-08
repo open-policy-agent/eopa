@@ -97,6 +97,8 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return memberWithKeyBuiltin(state, args)
 	case ast.ObjectGet.Name:
 		return objectGetBuiltin(state, args)
+	case ast.ObjectUnion.Name:
+		return objectUnionBuiltin(state, args)
 	case ast.Concat.Name:
 		return stringsConcatBuiltin(state, args)
 	case ast.EndsWith.Name:
