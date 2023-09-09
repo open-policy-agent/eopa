@@ -130,8 +130,6 @@ jobs:
         id: opa
         working-directory: opa
         run: echo "dir=$(pwd)" >> $GITHUB_OUTPUT
-      - name: setup github api token
-        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - run: make test
         working-directory: enterprise-opa
         env:
@@ -148,6 +146,7 @@ jobs:
       - run: make benchmark
         working-directory: enterprise-opa
       - name: gobenchdata check
+        if: ${{ github.ref != 'refs/heads/main' && github.actor != 'dependabot[bot]' }}
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
           INPUT_GO_TEST_FLAGS: -timeout=10m
@@ -155,9 +154,8 @@ jobs:
           INPUT_CHECKS: true
           INPUT_CHECKS_CONFIG: enterprise-opa/gobenchdata-checks.yml
           INPUT_PUBLISH_BRANCH: benchmarks
-          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         timeout-minutes: 10
-        if: github.ref != 'refs/heads/main' && github.actor != 'dependabot[bot]'
 
   test-e2e:
     name: Test E2E
