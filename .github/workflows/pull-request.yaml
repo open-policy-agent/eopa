@@ -221,36 +221,36 @@ jobs:
           GIT_GITHUB_TOKEN: ${{ secrets.E2E_GIT_GITHUB_TOKEN }}
           GIT_AZURE_TOKEN: ${{ secrets.E2E_GIT_AZURE_TOKEN }}
           GIT_GITLAB_TOKEN: ${{ secrets.E2E_GIT_GITLAB_TOKEN }}
-      - name: checkout opa-testing-e2e
-        uses: actions/checkout@v4
-        with:
-          repository: StyraInc/opa-testing-e2e
-          path: _e2e
-          token: ${{ github.actor == 'dependabot[bot]' && env.GH_API_TOKEN || secrets.GH_API_TOKEN }}
-          persist-credentials: false
-      - name: run "opa-testing-e2e"
-        run: make test
-        working-directory: _e2e
-        env:
-          EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
-          IMAGE: ${{ steps.enterprise-opa.outputs.image }}
-          BUNDLES: ${{ steps.enterprise-opa.outputs.bundles }}
-          BUNDLE_FILE_PATH: bundles/systems/bc01d50d17d7446684c4e6c34a1ad07f
-          NUM_INPUT_BUNDLES: 2
-          BUNDLE_HOST: 172.17.0.1
-      - name: Check out fetchdb code
-        uses: actions/checkout@v4
-        with:
-          path: _fetchdb
-          repository: StyraInc/fetchdb
-          token: ${{ github.actor == 'dependabot[bot]' && env.GH_API_TOKEN || secrets.GH_API_TOKEN }}
-          persist-credentials: false
-      - name: Run enterprise-opa-test (fetchdb)
-        run: |
-          sed -i 's#ghcr.io/styrainc/.*:latest#${{ steps.enterprise-opa.outputs.image }}#' ${{ steps.enterprise-opa.outputs.fetchdb}}/Makefile
-          cd e2e && go test -tags e2e_fetchdb ./fetchdb
-        env:
-          FETCHDB_DIRECTORY: ${{ steps.enterprise-opa.outputs.fetchdb }}
+      # - name: checkout opa-testing-e2e
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: StyraInc/opa-testing-e2e
+      #     path: _e2e
+      #     token: ${{ github.actor == 'dependabot[bot]' && env.GH_API_TOKEN || secrets.GH_API_TOKEN }}
+      #     persist-credentials: false
+      # - name: run "opa-testing-e2e"
+      #   run: make test
+      #   working-directory: _e2e
+      #   env:
+      #     EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
+      #     IMAGE: ${{ steps.enterprise-opa.outputs.image }}
+      #     BUNDLES: ${{ steps.enterprise-opa.outputs.bundles }}
+      #     BUNDLE_FILE_PATH: bundles/systems/bc01d50d17d7446684c4e6c34a1ad07f
+      #     NUM_INPUT_BUNDLES: 2
+      #     BUNDLE_HOST: 172.17.0.1
+      # - name: Check out fetchdb code
+      #   uses: actions/checkout@v4
+      #   with:
+      #     path: _fetchdb
+      #     repository: StyraInc/fetchdb
+      #     token: ${{ github.actor == 'dependabot[bot]' && env.GH_API_TOKEN || secrets.GH_API_TOKEN }}
+      #     persist-credentials: false
+      # - name: Run enterprise-opa-test (fetchdb)
+      #   run: |
+      #     sed -i 's#ghcr.io/styrainc/.*:latest#${{ steps.enterprise-opa.outputs.image }}#' ${{ steps.enterprise-opa.outputs.fetchdb}}/Makefile
+      #     cd e2e && go test -tags e2e_fetchdb ./fetchdb
+      #   env:
+      #     FETCHDB_DIRECTORY: ${{ steps.enterprise-opa.outputs.fetchdb }}
 
   proto-docs-push:
     name: Push Protobuf docs to BSR

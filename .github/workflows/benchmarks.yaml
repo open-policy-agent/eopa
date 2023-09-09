@@ -43,5 +43,5 @@ jobs:
           INPUT_SUBDIRECTORY: eopa
           INPUT_PUBLISH: true
           INPUT_PUBLISH_BRANCH: benchmarks
-          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         timeout-minutes: 120
