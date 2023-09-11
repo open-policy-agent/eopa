@@ -497,7 +497,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 	inner := state.New()
 	defer inner.Release()
 
-	args := make([]Value, call.ArgsLen())
+	args := inner.Args(int(call.ArgsLen()))
 	call.ArgsIter(func(i uint32, arg Local) error {
 		args[i] = state.Local(arg)
 		return nil
@@ -538,7 +538,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 		return false, 0, nil
 	}
 
-	if err := f.Execute(noescape(inner), args); err != nil {
+	if err := f.Execute(inner, args); err != nil {
 		return false, 0, err
 	}
 
@@ -598,28 +598,16 @@ func externalCall(state *State, path []string, args []Value) (interface{}, bool,
 }
 
 func (call call) Execute(state *State) (bool, uint32, error) {
-	// Prefer allocating a fixed size slice, to keep it in stack.
+	inner := state.New()
+	defer inner.Release()
 
-	var args []Value
-	if n := call.ArgsLen(); n <= 4 {
-		args = make([]Value, n, 4)
-	} else {
-		args = make([]Value, n)
-	}
+	args := inner.Args(int(call.ArgsLen()))
 	call.ArgsIter(func(i uint32, arg LocalOrConst) error {
 		args[i] = state.Value(arg)
 		return nil
 	})
 
-	inner := state.New()
-	defer inner.Release()
-
-	if err := func(args *[]Value, inner *State) error {
-		return state.Func(call.Func()).Execute(
-			inner,
-			*noescape(args),
-		)
-	}(&args, inner); err != nil {
+	if err := state.Func(call.Func()).Execute(inner, args); err != nil {
 		return false, 0, err
 	}
 

@@ -65,6 +65,7 @@ type (
 		Globals *Globals
 		stats   *Statistics
 		locals  Locals
+		args    [4]Value
 	}
 
 	Globals struct {
@@ -723,6 +724,14 @@ func (s *State) Instr(i int64) error {
 	s.stats.EvalInstructions = instructions + i
 
 	return nil
+}
+
+func (s *State) Args(n int) []Value {
+	if cap(s.args) >= n {
+		return s.args[0:n]
+	}
+
+	return make([]Value, n)
 }
 
 func (l *Locals) SetReturn(source Local, defined bool) {
