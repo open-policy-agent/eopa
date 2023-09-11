@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: Generate GitHub App Token
         id: generate_token
-        uses: tibdex/github-app-token@v1
+        uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
@@ -75,7 +75,7 @@ jobs:
       - name: (Dependabot Only) Generate GitHub App Token
         if: ${{ github.actor == 'dependabot[bot]' }}
         id: generate_token
-        uses: tibdex/github-app-token@v1
+        uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
@@ -112,7 +112,7 @@ jobs:
       - name: (Dependabot Only) Generate GitHub App Token
         if: ${{ github.actor == 'dependabot[bot]' }}
         id: generate_token
-        uses: tibdex/github-app-token@v1
+        uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
@@ -145,7 +145,7 @@ jobs:
     steps:
       - name: (Everyone, including Dependabot) Generate GitHub App Token
         id: generate_token
-        uses: tibdex/github-app-token@v1
+        uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
