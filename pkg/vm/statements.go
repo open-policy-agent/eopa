@@ -538,7 +538,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 		return false, 0, nil
 	}
 
-	if err := f.Execute(noescape(&inner), args); err != nil {
+	if err := f.Execute(noescape(inner), args); err != nil {
 		return false, 0, err
 	}
 
@@ -619,7 +619,7 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 			inner,
 			*noescape(args),
 		)
-	}(&args, &inner); err != nil {
+	}(&args, inner); err != nil {
 		return false, 0, err
 	}
 

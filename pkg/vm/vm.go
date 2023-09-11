@@ -69,6 +69,7 @@ type (
 
 	Globals struct {
 		registersPool          sync.Pool
+		statePool              sync.Pool
 		Time                   time.Time
 		Metrics                metrics.Metrics
 		PrintHook              print.Hook
@@ -96,7 +97,7 @@ type (
 	}
 
 	Locals struct {
-		registers *registersList
+		registers registersList
 		data      bitset
 		ret       Local // function return value
 	}
@@ -185,6 +186,9 @@ func newGlobals(ctx context.Context, vm *VM, opts EvalOpts, runtime *ast.Term, i
 		registersPool: sync.Pool{
 			New: newRegisterPoolElement,
 		},
+		statePool: sync.Pool{
+			New: newStateElement,
+		},
 	}
 
 	g.cancel.Init(ctx)
@@ -197,6 +201,10 @@ func newRegisterPoolElement() any {
 		l.registers[i] = undefined()
 	}
 	return l
+}
+
+func newStateElement() any {
+	return &State{}
 }
 
 func NewVM() *VM {
@@ -283,7 +291,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 			})
 			globals.Ctx = context.WithValue(globals.Ctx, regoEvalNamespaceContextKey{}, vm.data)
 
-			if err := plan.Execute(&state); err != nil {
+			if err := plan.Execute(state); err != nil {
 				return nil, err
 			}
 
@@ -349,7 +357,7 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 
 			state := newState(globals, StatisticsGet(ctx))
 			defer state.Release()
-			if err := f.Execute(&state, args); err != nil {
+			if err := f.Execute(state, args); err != nil {
 				return nil, false, false, err
 			}
 
@@ -392,7 +400,8 @@ func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value
 			globals.ResultSet = *vm.ops.MakeSet()
 
 			state := newState(globals, StatisticsGet(ctx))
-			if err := plan.Execute(&state); err != nil {
+			defer state.Release()
+			if err := plan.Execute(state); err != nil {
 				return nil, false, false, err
 			}
 
@@ -503,14 +512,14 @@ func (b *bitset) isSet(i int) bool {
 	return b.rest[i]
 }
 
-func newState(globals *Globals, stats *Statistics) State {
-	s := State{
-		Globals: globals,
-		locals:  Locals{ret: -1},
-		stats:   stats,
-	}
+func newState(globals *Globals, stats *Statistics) *State {
+	s := globals.statePool.Get().(*State)
+
+	s.Globals = globals
+	s.locals = Locals{ret: -1}
+	s.stats = stats
+
 	s.locals.data.set(int(Data), true)
-	s.locals.registers = s.Globals.registersPool.Get().(*registersList)
 
 	if globals.Input != nil {
 		s.SetValue(Input, *globals.Input)
@@ -523,7 +532,7 @@ func newState(globals *Globals, stats *Statistics) State {
 }
 
 func (s *State) Release() {
-	p := s.locals.registers
+	p := s.locals.registers.next
 	var next *registersList
 	for ; p != nil; p = next {
 		for i := range p.registers {
@@ -533,9 +542,11 @@ func (s *State) Release() {
 		p.next = nil
 		s.Globals.registersPool.Put(p) //nolint: staticcheck
 	}
+
+	s.Globals.statePool.Put(s)
 }
 
-func (s *State) New() State {
+func (s *State) New() *State {
 	return newState(s.Globals, s.stats)
 }
 
@@ -724,7 +735,7 @@ func (l *Locals) SetReturn(source Local, defined bool) {
 
 func (s *State) findReg(v Local) *registersList {
 	buckets := int(v) / registersSize
-	r := s.locals.registers
+	r := &s.locals.registers
 	for i := 0; i < buckets; i++ {
 		if r.next == nil {
 			r.next = s.Globals.registersPool.Get().(*registersList)
@@ -739,7 +750,7 @@ func (s *State) find2Regs(v1, v2 Local) (*registersList, *registersList) {
 	buckets1 := int(v1) / registersSize
 	buckets2 := int(v2) / registersSize
 
-	r := s.locals.registers
+	r := &s.locals.registers
 	r1, r2 := r, r
 
 	for i := 0; i < buckets1 || i < buckets2; {
