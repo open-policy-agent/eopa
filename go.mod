@@ -25,7 +25,7 @@ require (
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/jarcoal/httpmock v1.2.0
 	github.com/json-iterator/go v1.1.12
-	github.com/keygen-sh/keygen-go/v2 v2.6.1
+	github.com/keygen-sh/keygen-go/v2 v2.7.0
 	github.com/lib/pq v1.10.9
 	github.com/mithrandie/csvq v1.18.1
 	github.com/mithrandie/csvq-driver v1.7.0
