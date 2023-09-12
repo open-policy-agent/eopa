@@ -17,7 +17,6 @@ jobs:
     - kopush
     environment: ci
     env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
       QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }} # base64 encoded contents
       QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }} # p12 password
       QUILL_NOTARY_KEY: ${{ secrets.QUILL_NOTARY_KEY }}
@@ -30,11 +29,8 @@ jobs:
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Dependabot Only) Override GH Token Env Var
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        id: override_gh_api_token
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v4
@@ -62,28 +58,22 @@ jobs:
         env:
           HOSTNAME: github.actions.local
           TAP_GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
-          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
           RELEASE_NOTES: ../release-notes.md
 
   kopush:
     name: Ko Push
     runs-on: ubuntu-22.04
     environment: ci
-    env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - name: (Dependabot Only) Generate GitHub App Token
-        if: ${{ github.actor == 'dependabot[bot]' }}
+      - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Dependabot Only) Override GH Token Env Var
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        id: override_gh_api_token
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v4
@@ -106,21 +96,16 @@ jobs:
     runs-on: ubuntu-22.04
     environment: ci
     env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
       BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
     steps:
-      - name: (Dependabot Only) Generate GitHub App Token
-        if: ${{ github.actor == 'dependabot[bot]' }}
+      - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Dependabot Only) Override GH Token Env Var
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        id: override_gh_api_token
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@v4
         with:
@@ -143,16 +128,14 @@ jobs:
     runs-on: ubuntu-22.04
     environment: ci
     steps:
-      - name: (Everyone, including Dependabot) Generate GitHub App Token
+      - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Everyone, including Dependabot) Override GH Token Env Var
-        id: override_gh_api_token
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Setup Github API token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Check out code for EOPA
@@ -202,4 +185,4 @@ jobs:
           cd _public
           gh pr create -B main --head artifacts-${{ github.ref_name }} --title 'Update proto defs and capabilities JSON files for ${{ github.ref_name }} release' --body 'Created by Github action'
         env:
-          GITHUB_TOKEN: ${{ env.GH_API_TOKEN }}
+          GITHUB_TOKEN: ${{steps.generate_token.outputs.token }}

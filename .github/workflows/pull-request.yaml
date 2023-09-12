@@ -20,21 +20,15 @@ jobs:
     name: Analysis & Linting
     runs-on: ubuntu-22.04
     environment: ci
-    env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - name: (Dependabot Only) Generate GitHub App Token
-        if: ${{ github.actor == 'dependabot[bot]' }}
+      - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Dependabot Only) Override GH Token Env Var
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        id: override_gh_api_token
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: actions/checkout@v4
@@ -91,26 +85,23 @@ jobs:
     name: Test
     runs-on: ubuntu-22.04
     environment: ci
-    env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - name: (Dependabot Only) Generate GitHub App Token
-        if: ${{ github.actor == 'dependabot[bot]' }}
+      - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Dependabot Only) Override GH Token Env Var
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        id: override_gh_api_token
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Setup github api token
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: open-policy-agent/setup-opa@v2
       - name: checkout Enterprise OPA
         uses: actions/checkout@v4
         with:
           path: enterprise-opa
+          persist-credentials: false
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -126,6 +117,7 @@ jobs:
           repository: open-policy-agent/opa
           ref: ${{ steps.enterprise-opa.outputs.opa_version }}
           path: opa
+          persist-credentials: false
       - name: pick up opa directory
         id: opa
         working-directory: opa
@@ -146,15 +138,16 @@ jobs:
       - run: make benchmark
         working-directory: enterprise-opa
       - name: gobenchdata check
+        id: gobenchdata
         if: ${{ github.ref != 'refs/heads/main' && github.actor != 'dependabot[bot]' }}
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
-          INPUT_GO_TEST_FLAGS: -timeout=10m
+          INPUT_GO_TEST_FLAGS: -tags use_opa_fork -timeout=10m
           INPUT_SUBDIRECTORY: enterprise-opa
           INPUT_CHECKS: true
           INPUT_CHECKS_CONFIG: enterprise-opa/gobenchdata-checks.yml
           INPUT_PUBLISH_BRANCH: benchmarks
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
         timeout-minutes: 10
 
   test-e2e:
@@ -164,21 +157,15 @@ jobs:
     - build
     - goreleaser
     environment: ci
-    env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - name: (Dependabot Only) Generate GitHub App Token
-        if: ${{ github.actor == 'dependabot[bot]' }}
+      - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Dependabot Only) Override GH Token Env Var
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        id: override_gh_api_token
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v4
@@ -216,56 +203,50 @@ jobs:
           GIT_GITHUB_TOKEN: ${{ secrets.E2E_GIT_GITHUB_TOKEN }}
           GIT_AZURE_TOKEN: ${{ secrets.E2E_GIT_AZURE_TOKEN }}
           GIT_GITLAB_TOKEN: ${{ secrets.E2E_GIT_GITLAB_TOKEN }}
-      # - name: checkout opa-testing-e2e
-      #   uses: actions/checkout@v4
-      #   with:
-      #     repository: StyraInc/opa-testing-e2e
-      #     path: _e2e
-      #     token: ${{ github.actor == 'dependabot[bot]' && env.GH_API_TOKEN || secrets.GH_API_TOKEN }}
-      #     persist-credentials: false
-      # - name: run "opa-testing-e2e"
-      #   run: make test
-      #   working-directory: _e2e
-      #   env:
-      #     EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
-      #     IMAGE: ${{ steps.enterprise-opa.outputs.image }}
-      #     BUNDLES: ${{ steps.enterprise-opa.outputs.bundles }}
-      #     BUNDLE_FILE_PATH: bundles/systems/bc01d50d17d7446684c4e6c34a1ad07f
-      #     NUM_INPUT_BUNDLES: 2
-      #     BUNDLE_HOST: 172.17.0.1
-      # - name: Check out fetchdb code
-      #   uses: actions/checkout@v4
-      #   with:
-      #     path: _fetchdb
-      #     repository: StyraInc/fetchdb
-      #     token: ${{ github.actor == 'dependabot[bot]' && env.GH_API_TOKEN || secrets.GH_API_TOKEN }}
-      #     persist-credentials: false
-      # - name: Run enterprise-opa-test (fetchdb)
-      #   run: |
-      #     sed -i 's#ghcr.io/styrainc/.*:latest#${{ steps.enterprise-opa.outputs.image }}#' ${{ steps.enterprise-opa.outputs.fetchdb}}/Makefile
-      #     cd e2e && go test -tags e2e_fetchdb ./fetchdb
-      #   env:
-      #     FETCHDB_DIRECTORY: ${{ steps.enterprise-opa.outputs.fetchdb }}
+      - name: checkout opa-testing-e2e
+        uses: actions/checkout@v4
+        with:
+          repository: StyraInc/opa-testing-e2e
+          path: _e2e
+          token: ${{ steps.generate_token.outputs.token }}
+          persist-credentials: false
+      - name: run "opa-testing-e2e"
+        run: make test
+        working-directory: _e2e
+        env:
+          EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
+          IMAGE: ${{ steps.enterprise-opa.outputs.image }}
+          BUNDLES: ${{ steps.enterprise-opa.outputs.bundles }}
+          BUNDLE_FILE_PATH: bundles/systems/bc01d50d17d7446684c4e6c34a1ad07f
+          NUM_INPUT_BUNDLES: 2
+          BUNDLE_HOST: 172.17.0.1
+      - name: Check out fetchdb code
+        uses: actions/checkout@v4
+        with:
+          path: _fetchdb
+          repository: StyraInc/fetchdb
+          token: ${{ steps.generate_token.outputs.token }}
+          persist-credentials: false
+      - name: Run enterprise-opa-test (fetchdb)
+        run: |
+          sed -i 's#ghcr.io/styrainc/.*:latest#${{ steps.enterprise-opa.outputs.image }}#' ${{ steps.enterprise-opa.outputs.fetchdb}}/Makefile
+          cd e2e && go test -tags e2e_fetchdb ./fetchdb
+        env:
+          FETCHDB_DIRECTORY: ${{ steps.enterprise-opa.outputs.fetchdb }}
 
   proto-docs-push:
     name: Push Protobuf docs to BSR
     runs-on: ubuntu-22.04
     environment: ci
-    env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - name: (Dependabot Only) Generate GitHub App Token
-        if: ${{ github.actor == 'dependabot[bot]' }}
+      - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Dependabot Only) Override GH Token Env Var
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        id: override_gh_api_token
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@v4
         with:
@@ -285,7 +266,7 @@ jobs:
       - uses: bufbuild/buf-setup-action@v1
         if: steps.changes.outputs.proto == 'true'
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ steps.generate_token.outputs.token }}
       - uses: bufbuild/buf-push-action@v1
         if: steps.changes.outputs.proto == 'true'
         with:
@@ -297,21 +278,15 @@ jobs:
     name: Ko Build
     runs-on: ubuntu-22.04
     environment: ci
-    env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - name: (Dependabot Only) Generate GitHub App Token
-        if: ${{ github.actor == 'dependabot[bot]' }}
+      - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Dependabot Only) Override GH Token Env Var
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        id: override_gh_api_token
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v4
@@ -336,21 +311,15 @@ jobs:
     name: Goreleaser build
     runs-on: ubuntu-22.04
     environment: ci
-    env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
-      - name: (Dependabot Only) Generate GitHub App Token
-        if: ${{ github.actor == 'dependabot[bot]' }}
+      - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Dependabot Only) Override GH Token Env Var
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        id: override_gh_api_token
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v4
@@ -383,18 +352,14 @@ jobs:
     needs: build
     environment: ci
     steps:
-      - name: (Dependabot Only) Generate GitHub App Token
-        if: ${{ github.actor == 'dependabot[bot]' }}
+      - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Dependabot Only) Override GH Token Env Var
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        id: override_gh_api_token
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@v4
       - name: Download image tarball
@@ -414,9 +379,15 @@ jobs:
     name: diff heap output
     runs-on: ubuntu-22.04
     environment: ci
-    env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: actions/checkout@v4

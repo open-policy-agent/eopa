@@ -12,9 +12,15 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-22.04
     environment: ci
-    env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     steps:
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: checkout Enterprise OPA
         uses: actions/checkout@v4
@@ -27,7 +33,7 @@ jobs:
           cache-dependency-path: enterprise-opa/go.sum
           check-latest: true
       - name: Setup github api token
-        run: git config --global url.https://$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/StyraInc.insteadOf https://github.com/StyraInc
       - uses: ko-build/setup-ko@v0.6
       - name: Build
         run: make build
@@ -61,25 +67,20 @@ jobs:
     runs-on: ubuntu-22.04
     environment: ci
     env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
       QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }} # base64 encoded contents
       QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }} # p12 password
       QUILL_NOTARY_KEY: ${{ secrets.QUILL_NOTARY_KEY }}
       QUILL_NOTARY_KEY_ID: ${{ secrets.QUILL_NOTARY_KEY_ID }}
       QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
     steps:
-      - name: (Dependabot Only) Generate GitHub App Token
-        if: ${{ github.actor == 'dependabot[bot]' }}
+      - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Dependabot Only) Override GH Token Env Var
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        id: override_gh_api_token
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@v4
@@ -103,7 +104,7 @@ jobs:
         run: make release
         env:
           HOSTNAME: github.actions.local
-          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
       - name: Upload release artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -117,8 +118,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: goreleaser
     environment: ci
-    env:
-      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -134,18 +133,14 @@ jobs:
             exec: dist/linux-windows-build_windows_amd64_v1/eopa.exe
 
     steps:
-      - name: (Dependabot Only) Generate GitHub App Token
-        if: ${{ github.actor == 'dependabot[bot]' }}
+      - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: (Dependabot Only) Override GH Token Env Var
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        id: override_gh_api_token
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
         with:
@@ -255,12 +250,21 @@ jobs:
     name: Go vulnerability check
     runs-on: ubuntu-22.04
     steps:
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
-
+      - name: setup github token
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/StyraInc.insteadOf https://github.com/StyraInc
       - run: go install golang.org/x/vuln/cmd/govulncheck@latest
       - run: govulncheck -tags use_opa_fork ./...
 
@@ -268,12 +272,22 @@ jobs:
     name: Go Fuzzer
     runs-on: ubuntu-22.04
     steps:
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
+      - name: setup github token
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/StyraInc.insteadOf https://github.com/StyraInc
       - run: make fuzz
       - name: Dump crashers
         if: ${{ failure() }}
