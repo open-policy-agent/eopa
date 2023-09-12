@@ -135,20 +135,6 @@ jobs:
         working-directory: enterprise-opa/examples/regal
         env:
           GOPRIVATE: github.com/styrainc/
-      - run: make benchmark
-        working-directory: enterprise-opa
-      - name: gobenchdata check
-        id: gobenchdata
-        if: ${{ github.ref != 'refs/heads/main' && github.actor != 'dependabot[bot]' }}
-        run: go run go.bobheadxi.dev/gobenchdata@v1 action
-        env:
-          INPUT_GO_TEST_FLAGS: -tags use_opa_fork -timeout=10m
-          INPUT_SUBDIRECTORY: enterprise-opa
-          INPUT_CHECKS: true
-          INPUT_CHECKS_CONFIG: enterprise-opa/gobenchdata-checks.yml
-          INPUT_PUBLISH_BRANCH: benchmarks
-          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
-        timeout-minutes: 10
 
   test-e2e:
     name: Test E2E
@@ -203,36 +189,6 @@ jobs:
           GIT_GITHUB_TOKEN: ${{ secrets.E2E_GIT_GITHUB_TOKEN }}
           GIT_AZURE_TOKEN: ${{ secrets.E2E_GIT_AZURE_TOKEN }}
           GIT_GITLAB_TOKEN: ${{ secrets.E2E_GIT_GITLAB_TOKEN }}
-      - name: checkout opa-testing-e2e
-        uses: actions/checkout@v4
-        with:
-          repository: StyraInc/opa-testing-e2e
-          path: _e2e
-          token: ${{ steps.generate_token.outputs.token }}
-          persist-credentials: false
-      - name: run "opa-testing-e2e"
-        run: make test
-        working-directory: _e2e
-        env:
-          EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
-          IMAGE: ${{ steps.enterprise-opa.outputs.image }}
-          BUNDLES: ${{ steps.enterprise-opa.outputs.bundles }}
-          BUNDLE_FILE_PATH: bundles/systems/bc01d50d17d7446684c4e6c34a1ad07f
-          NUM_INPUT_BUNDLES: 2
-          BUNDLE_HOST: 172.17.0.1
-      - name: Check out fetchdb code
-        uses: actions/checkout@v4
-        with:
-          path: _fetchdb
-          repository: StyraInc/fetchdb
-          token: ${{ steps.generate_token.outputs.token }}
-          persist-credentials: false
-      - name: Run enterprise-opa-test (fetchdb)
-        run: |
-          sed -i 's#ghcr.io/styrainc/.*:latest#${{ steps.enterprise-opa.outputs.image }}#' ${{ steps.enterprise-opa.outputs.fetchdb}}/Makefile
-          cd e2e && go test -tags e2e_fetchdb ./fetchdb
-        env:
-          FETCHDB_DIRECTORY: ${{ steps.enterprise-opa.outputs.fetchdb }}
 
   proto-docs-push:
     name: Push Protobuf docs to BSR
@@ -375,8 +331,8 @@ jobs:
           EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
           IMAGE: ${{ steps.enterprise-opa.outputs.image }}
 
-  heapdiff:
-    name: diff heap output
+  performance-related:
+    name: Performance
     runs-on: ubuntu-22.04
     environment: ci
     steps:
@@ -389,10 +345,12 @@ jobs:
       - name: Override GH Token Env Var
         run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Setup github api token
-        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/StyraInc.insteadOf https://github.com/StyraInc
       - uses: actions/checkout@v4
         with:
-          path: branch
+          path: enterprise-opa
+
+        # diffheap
       - uses: actions/checkout@v4
         with:
           path: main
@@ -405,7 +363,7 @@ jobs:
       - name: Set up diffheap util
         run: go install github.com/srenatus/diffheap@latest
       - run: diffheap ./pkg/vm > ../branch.out
-        working-directory: branch
+        working-directory: enterprise-opa
       - run: diffheap ./pkg/vm > ../main.out
         working-directory: main
       - uses: int128/diff-action@v1
@@ -414,3 +372,18 @@ jobs:
           head: branch.out
           comment-header: "escape analysis differences"
           comment-footer: "This is informational. I does not indicate a problem with the code change."
+
+        # benchmark, gobenchdata
+      - run: make benchmark
+        working-directory: enterprise-opa
+      - name: gobenchdata check
+        if: ${{ github.ref != 'refs/heads/main' && github.actor != 'dependabot[bot]' }}
+        run: go run go.bobheadxi.dev/gobenchdata@v1 action
+        env:
+          INPUT_GO_TEST_FLAGS: -tags use_opa_fork -timeout=10m
+          INPUT_SUBDIRECTORY: enterprise-opa
+          INPUT_CHECKS: true
+          INPUT_CHECKS_CONFIG: enterprise-opa/gobenchdata-checks.yml
+          INPUT_PUBLISH_BRANCH: benchmarks
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+        timeout-minutes: 10
