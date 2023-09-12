@@ -107,6 +107,8 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return stringsStartsWithBuiltin(state, args)
 	case ast.Sprintf.Name:
 		return stringsSprintfBuiltin(state, args)
+	case ast.ArrayConcat.Name:
+		return arrayConcatBuiltin(state, args)
 	case ast.Count.Name:
 		return countBuiltin(state, args)
 	case ast.WalkBuiltin.Name:

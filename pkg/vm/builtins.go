@@ -425,6 +425,23 @@ func builtinObjectOperand(state *State, value Value, pos int) (bool, error) {
 	}
 }
 
+func builtinArrayOperand(state *State, value Value, pos int) (fjson.Array, error) {
+	a, ok := value.(fjson.Array)
+	if ok {
+		return a, nil
+	}
+	v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
+	if err != nil {
+		return nil, err
+	}
+
+	state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+		Code:    topdown.TypeErr,
+		Message: builtins.NewOperandTypeErr(pos, v, "array").Error(),
+	})
+	return nil, nil
+}
+
 func walkBuiltin(state *State, args []Value) error {
 	if isUndefinedType(args[0]) {
 		return nil
@@ -476,11 +493,49 @@ func do(state *State, path Value, val Value, record func(*State, Value, Value) e
 	return innerErr
 }
 
+func arrayConcatBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+		return nil
+	}
+	a, err := builtinArrayOperand(state, args[0], 1)
+	if err != nil || a == nil {
+		return err
+	}
+	b, err := builtinArrayOperand(state, args[1], 2)
+	if err != nil || b == nil {
+		return err
+	}
+
+	var ret Value = state.ValueOps().MakeArray(0)
+	state.SetReturnValue(Unused, ret)
+	arrays := []any{a, b}
+	for i := range arrays {
+		var innerErr error
+		if err := state.ValueOps().Iter(state.Globals.Ctx, arrays[i], func(_, v any) bool {
+			innerErr = func(state *State, v Value) error {
+				v, err := state.ValueOps().CopyShallow(state.Globals.Ctx, v)
+				if err != nil {
+					return err
+				}
+				ret, _, err = state.ValueOps().ArrayAppend(state.Globals.Ctx, ret, v)
+				return err
+			}(state, v)
+			return innerErr != nil
+		}); err != nil {
+			return err
+		}
+		if innerErr != nil {
+			return innerErr
+		}
+	}
+
+	return nil
+}
+
 func equalBuiltin(state *State, args []Value) error {
 	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
 		return nil
 	}
-
 	ret, err := equalOp(state.Globals.Ctx, args[0], args[1])
 	if err == nil {
 		state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(ret))
