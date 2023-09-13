@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/rego"
 	opaTypes "github.com/open-policy-agent/opa/server/types"
@@ -17,7 +18,6 @@ import (
 	"github.com/open-policy-agent/opa/topdown/print"
 	"github.com/open-policy-agent/opa/version"
 	"github.com/styrainc/enterprise-opa-private/pkg/json"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/preview/types"
 )
 

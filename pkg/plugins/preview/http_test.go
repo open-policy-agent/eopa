@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/open-policy-agent/opa/storage"
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
@@ -311,6 +312,72 @@ func TestProvenance(t *testing.T) {
 
 	if _, ok := value["provenance"]; !ok {
 		t.Fatalf("Provenance was requested but the response did not contain it")
+	}
+}
+
+func TestProvenanceWithBundleData(t *testing.T) {
+	expectedBundle := "testBundle"
+	expectedRevision := "dGVzdFJldmlzaW9u" // base64 "testRevision"
+	ctx := context.Background()
+	manager := pluginMgr(ctx, t, testPolicy, testData, previewConfig)
+	// set up a dummy bundle
+	txn, err := manager.Store.NewTransaction(ctx, storage.WriteParams)
+	if err != nil {
+		t.Fatalf("could not create storage transaction to write bundle data: %v", err)
+	}
+	err = manager.Store.Write(ctx, txn, storage.AddOp, storage.MustParsePath("/system"), map[string]interface{}{
+		"bundles": map[string]interface{}{
+			expectedBundle: map[string]interface{}{
+				"manifest": map[string]interface{}{
+					"revision": expectedRevision,
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("could not write bundle data: %v", err)
+	}
+	err = manager.Store.Commit(ctx, txn)
+	if err != nil {
+		t.Fatalf("could not commit bundle data: %v", err)
+	}
+
+	manager.Start(ctx)
+	router := manager.GetRouter()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/v0/preview/test?provenance", nil)
+
+	router.ServeHTTP(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected http status %d but received %d", http.StatusOK, w.Code)
+	}
+
+	var value map[string]any
+	json.NewDecoder(w.Body).Decode(&value)
+
+	// var provenanceReturn map[string]any
+	if p, ok := value["provenance"]; !ok {
+		t.Fatalf("Provenance was requested but the response did not contain it")
+	} else {
+		for _, k := range []string{"bundles", expectedBundle, "revision"} {
+			pMap, ok := p.(map[string]any)
+			if !ok {
+				t.Fatalf("could not assert type for %q map: %#v", k, p)
+			}
+			p, ok = pMap[k]
+			if !ok {
+				t.Fatalf("%q key missing from provenance map: %#v", k, p)
+			}
+		}
+		revision, ok := p.(string)
+		if !ok {
+			t.Fatalf("could not assert revision string: %#v", revision)
+		}
+		if revision != expectedRevision {
+			t.Errorf("revision %q does not match expected revision %q", revision, expectedRevision)
+		}
 	}
 }
 
