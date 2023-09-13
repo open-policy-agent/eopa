@@ -10,6 +10,7 @@ import (
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 
+	"github.com/OneOfOne/xxhash"
 	"github.com/open-policy-agent/opa/ast"
 )
 
@@ -43,6 +44,7 @@ type (
 		Get(ctx context.Context, key interface{}) (interface{}, bool, error)
 		Iter(ctx context.Context, f func(key, value interface{}) bool) error
 		Len(ctx context.Context) (int, error)
+		Hash(ctx context.Context) (uint64, error)
 	}
 
 	GetCallNamespace interface {
@@ -797,6 +799,21 @@ func (s *Set) Equal(ctx context.Context, y *Set) (bool, error) {
 	return match, nil
 }
 
+func (s *Set) Hash(ctx context.Context) (uint64, error) {
+	var (
+		m   uint64
+		err error
+	)
+	s.set.Iter(func(v interface{}) bool {
+		h := xxhash.New64()
+		err = hashImpl(ctx, v, h)
+		m += h.Sum64()
+		return err != nil
+	})
+
+	return m, err
+}
+
 type Object struct {
 	fjson.Json
 	obj HashMap
@@ -823,6 +840,19 @@ func (o *Object) Iter(_ context.Context, iter func(key, value interface{}) bool)
 
 func (o *Object) Len(context.Context) (int, error) {
 	return o.obj.Len(), nil
+}
+
+func (o *Object) Hash(ctx context.Context) (uint64, error) {
+	var (
+		err error
+		h   uint64
+	)
+	o.obj.Iter(func(k, v T) bool {
+		h, err = ObjectHashEntry(ctx, h, k, v)
+		return err != nil
+	})
+
+	return h, err
 }
 
 func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {

@@ -114,6 +114,21 @@ func (n *tree) Len(ctx context.Context) (int, error) {
 	return i, err
 }
 
+func (n *tree) Hash(ctx context.Context) (uint64, error) {
+	var h uint64
+	var err2 error
+	if err := n.Iter(ctx, func(k, v interface{}) bool {
+		h, err2 = vm.ObjectHashEntry(ctx, h, k, v)
+		return err2 != nil
+	}); err != nil {
+		return 0, err
+	} else if err2 != nil {
+		return 0, err2
+	}
+
+	return h, nil
+}
+
 // Find returns the store corresping the path.
 func (n *tree) Find(path storage.Path) (storage.Store, error) {
 	if len(path) == 0 {
@@ -205,6 +220,21 @@ func (t *lazyTree) Len(ctx context.Context) (int, error) {
 		return false
 	})
 	return n, err
+}
+
+func (t *lazyTree) Hash(ctx context.Context) (uint64, error) {
+	var h uint64
+	var err2 error
+	if err := t.Iter(ctx, func(k, v interface{}) bool {
+		h, err2 = vm.ObjectHashEntry(ctx, h, k, v)
+		return err2 != nil
+	}); err != nil {
+		return 0, err
+	} else if err2 != nil {
+		return 0, err2
+	}
+
+	return h, nil
 }
 
 func (t *lazyTree) Insert(storage.Path, node) error {

@@ -81,25 +81,13 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.XXHash64) e
 		// hash implementation
 		hasher.Write([]byte{typeHashObject})
 
-		var m uint64
-		var err2 error
-		if err := value.Iter(ctx, func(k, v interface{}) bool {
-			hasher := xxhash.New64()
-			err2 = hashImpl(ctx, k, hasher)
-			if err2 == nil {
-				err2 = hashImpl(ctx, v, hasher)
-			}
-
-			m += hasher.Sum64()
-			return err2 != nil
-		}); err != nil {
+		h, err := value.Hash(ctx)
+		if err != nil {
 			return err
-		} else if err2 != nil {
-			return err2
 		}
 
 		b := make([]byte, 8)
-		binary.BigEndian.PutUint64(b, m)
+		binary.BigEndian.PutUint64(b, h)
 		hasher.Write(b)
 
 	case fjson.Object:
@@ -109,11 +97,7 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.XXHash64) e
 		names := value.Names()
 		var err error
 		for i := 0; i < len(names) && err == nil; i++ {
-			hasher := xxhash.New64()
-			key := fjson.NewString(names[i])
-			hashString(key, hasher)
-			err = hashImpl(ctx, value.Iterate(i), hasher)
-			m += hasher.Sum64()
+			m, err = ObjectHashEntry(ctx, m, fjson.NewString(names[i]), value.Iterate(i))
 		}
 
 		if err != nil {
@@ -127,14 +111,7 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.XXHash64) e
 	case *Set:
 		hasher.Write([]byte{typeHashSet})
 
-		var m uint64
-		var err error
-		value.Iter(func(v fjson.Json) bool {
-			hasher := xxhash.New64()
-			err = hashImpl(ctx, v, hasher)
-			m += hasher.Sum64()
-			return err != nil
-		})
+		m, err := value.Hash(ctx)
 		if err != nil {
 			return err
 		}
@@ -164,4 +141,17 @@ func hashString(value *fjson.String, hasher *xxhash.XXHash64) {
 
 	ss := (*reflect.StringHeader)(unsafe.Pointer(value))
 	hasher.Write((*[maxInt32]byte)(unsafe.Pointer(ss.Data))[:len(*value):len(*value)])
+}
+
+// ObjectHashEntry hashes an object key-value pair. To be used with
+// any object implementation, to guarantee identical hashing across
+// different object implementations.
+func ObjectHashEntry(ctx context.Context, h uint64, k, v interface{}) (uint64, error) {
+	hasher := xxhash.New64()
+	err := hashImpl(ctx, k, hasher)
+	if err == nil {
+		err = hashImpl(ctx, v, hasher)
+	}
+
+	return h + hasher.Sum64(), err
 }

@@ -104,6 +104,21 @@ func (t *PreviewTransaction) Len(ctx context.Context) (int, error) {
 	return final, nil
 }
 
+func (t *PreviewTransaction) Hash(ctx context.Context) (uint64, error) {
+	var h uint64
+	var err2 error
+	if err := t.Iter(ctx, func(k, v interface{}) bool {
+		h, err2 = vm.ObjectHashEntry(ctx, h, k, v)
+		return err2 != nil
+	}); err != nil {
+		return 0, err
+	} else if err2 != nil {
+		return 0, err2
+	}
+
+	return h, nil
+}
+
 // asIterable type asserts the provided transaction matches the vm.IterableObject interface,
 // and if it does, it will call `f` supplying the transaction as a vm.IterableObject.
 func (t *PreviewTransaction) asIterable(txn storage.Transaction, f func(vm.IterableObject) error) error {
