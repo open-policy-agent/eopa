@@ -114,6 +114,39 @@ func objectGetBuiltin(state *State, args []Value) error {
 	return nil
 }
 
+func objectKeysBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[0]) {
+		return nil
+	}
+	obj := args[0]
+	if ok, err := builtinObjectOperand(state, obj, 1); err != nil || !ok {
+		return err
+	}
+
+	var set Value = state.ValueOps().MakeSet()
+	switch o := obj.(type) {
+	case fjson.Object:
+		keys := o.Names()
+		for _, k := range keys {
+			if err := state.ValueOps().SetAdd(state.Globals.Ctx, set, state.ValueOps().MakeString(k)); err != nil {
+				return err
+			}
+		}
+	case IterableObject:
+		var innerErr error
+		o.Iter(state.Globals.Ctx, func(key any, _ any) bool {
+			innerErr = state.ValueOps().SetAdd(state.Globals.Ctx, set, key)
+			return innerErr != nil
+		})
+		if innerErr != nil {
+			return innerErr
+		}
+	}
+
+	state.SetReturnValue(Unused, set)
+	return nil
+}
+
 func objectGetBuiltinKey(state *State, obj, key, def Value) error {
 	val, found, err := state.ValueOps().ObjectGet(state.Globals.Ctx, obj, key)
 	if err != nil {
