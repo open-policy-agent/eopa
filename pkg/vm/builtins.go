@@ -442,6 +442,39 @@ func builtinArrayOperand(state *State, value Value, pos int) (fjson.Array, error
 	return nil, nil
 }
 
+func builtinNumberOperand(state *State, value Value, pos int) (*fjson.Float, error) {
+	a, ok := value.(fjson.Float)
+	if ok {
+		return &a, nil
+	}
+	v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
+	if err != nil {
+		return nil, err
+	}
+
+	state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+		Code:    topdown.TypeErr,
+		Message: builtins.NewOperandTypeErr(pos, v, "number").Error(),
+	})
+	return nil, nil
+}
+
+func builtinIntegerOperand(state *State, value Value, pos int) (int, bool, error) {
+	f, err := builtinNumberOperand(state, value, pos)
+	if err != nil || f == nil {
+		return 0, false, err
+	}
+	i, err := f.Value().Int64()
+	if err != nil {
+		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+			Code:    topdown.TypeErr,
+			Message: builtins.NewOperandErr(pos, "must be integer number but got floating-point number").Error(),
+		})
+		return 0, false, err
+	}
+	return int(i), true, nil
+}
+
 func walkBuiltin(state *State, args []Value) error {
 	if isUndefinedType(args[0]) {
 		return nil
@@ -529,6 +562,41 @@ func arrayConcatBuiltin(state *State, args []Value) error {
 		}
 	}
 
+	return nil
+}
+
+func arraySliceBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[0]) || isUndefinedType(args[1]) || isUndefinedType(args[2]) {
+		return nil
+	}
+
+	start, ok, err := builtinIntegerOperand(state, args[1], 2)
+	if err != nil || !ok {
+		return err
+	}
+
+	stop, ok, err := builtinIntegerOperand(state, args[2], 3)
+	if err != nil || !ok {
+		return err
+	}
+
+	arr, err := builtinArrayOperand(state, args[0], 1)
+	if err != nil || arr == nil {
+		return err
+	}
+
+	if start < 0 {
+		start = 0
+	}
+	if stop > arr.Len() {
+		stop = arr.Len()
+	}
+	if stop < start {
+		state.SetReturnValue(Unused, state.ValueOps().MakeArray(0))
+		return nil
+	}
+
+	state.SetReturnValue(Unused, arr.Slice(start, stop))
 	return nil
 }
 
