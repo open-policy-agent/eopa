@@ -99,6 +99,10 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return objectGetBuiltin(state, args)
 	case ast.ObjectKeys.Name:
 		return objectKeysBuiltin(state, args)
+	case ast.ObjectRemove.Name:
+		return objectRemoveBuiltin(state, args)
+	case ast.ObjectFilter.Name:
+		return objectFilterBuiltin(state, args)
 	case ast.ObjectUnion.Name:
 		return objectUnionBuiltin(state, args)
 	case ast.Concat.Name:

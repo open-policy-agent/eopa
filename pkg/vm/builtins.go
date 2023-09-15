@@ -147,6 +147,93 @@ func objectKeysBuiltin(state *State, args []Value) error {
 	return nil
 }
 
+func objectRemoveBuiltin(state *State, args []Value) error {
+	return objectSelect(state, args, false)
+}
+
+func objectFilterBuiltin(state *State, args []Value) error {
+	return objectSelect(state, args, true)
+}
+
+func objectSelect(state *State, args []Value, keep bool) error {
+	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
+		return nil
+	}
+	obj, coll := args[0], args[1]
+
+	if ok, err := builtinObjectOperand(state, args[0], 1); err != nil || !ok {
+		return err
+	}
+
+	result := NewObject()
+	var selected func(key fjson.Json) (bool, error)
+
+	switch coll := coll.(type) {
+	case IterableObject:
+		selected = func(key fjson.Json) (bool, error) {
+			_, ok, err := coll.Get(state.Globals.Ctx, key)
+			return err == nil && ok, err
+		}
+	case fjson.Object:
+		selected = func(key fjson.Json) (bool, error) {
+			skey, ok := key.(*fjson.String)
+			return ok && coll.Value(skey.Value()) != nil, nil
+		}
+	case *Set:
+		selected = func(key fjson.Json) (bool, error) {
+			_, ok, err := coll.Get(state.Globals.Ctx, key)
+			return err == nil && ok, err
+		}
+	case fjson.Array:
+		s := NewSet()
+		for i := 0; i < coll.Len(); i++ {
+			if err := s.Add(state.Globals.Ctx, coll.Iterate(i)); err != nil {
+				return err
+			}
+		}
+		selected = func(key fjson.Json) (bool, error) {
+			_, ok, err := s.Get(state.Globals.Ctx, key)
+			return err == nil && ok, err
+		}
+	default:
+		v, err := state.ValueOps().ToAST(state.Globals.Ctx, coll)
+		if err != nil {
+			return err
+		}
+
+		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+			Code:    topdown.TypeErr,
+			Message: builtins.NewOperandTypeErr(2, v, "object", "set", "array").Error(),
+		})
+		return nil
+	}
+
+	var innerErr error
+	if err := state.ValueOps().Iter(state.Globals.Ctx, obj, func(k, v any) bool {
+		key := k.(fjson.Json)
+		ok, err := selected(key)
+		if err != nil {
+			innerErr = err
+			return true // abort
+		}
+		if !ok && !keep {
+			result.Insert(state.Globals.Ctx, k, v)
+		}
+		if ok && keep {
+			result.Insert(state.Globals.Ctx, k, v)
+		}
+		return false // continue
+	}); err != nil {
+		return err
+	}
+	if innerErr != nil {
+		return innerErr
+	}
+
+	state.SetReturnValue(Unused, result)
+	return nil
+}
+
 func objectGetBuiltinKey(state *State, obj, key, def Value) error {
 	val, found, err := state.ValueOps().ObjectGet(state.Globals.Ctx, obj, key)
 	if err != nil {
