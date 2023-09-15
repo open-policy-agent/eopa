@@ -856,3 +856,77 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 
 	return result, nil
 }
+
+func typeArray(v Value) bool {
+	_, ok := v.(fjson.Array)
+	return ok
+}
+
+func typeString(v Value) bool {
+	_, ok := v.(*fjson.String)
+	return ok
+}
+
+func typeBoolean(v Value) bool {
+	_, ok := v.(fjson.Bool)
+	return ok
+}
+
+func typeObject(v Value) bool {
+	switch v.(type) {
+	case fjson.Object, IterableObject:
+		return true
+	}
+	return false
+}
+
+func typeSet(v Value) bool {
+	_, ok := v.(*Set)
+	return ok
+}
+
+func typeNumber(v Value) bool {
+	_, ok := v.(fjson.Float)
+	return ok
+}
+
+func typeNull(v Value) bool {
+	_, ok := v.(fjson.Null)
+	return ok
+}
+
+func isTypeBuiltin(state *State, args []Value, chk func(Value) bool) error {
+	if isUndefinedType(args[0]) {
+		return nil
+	}
+	state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(chk(args[0])))
+	return nil
+}
+
+func typename(v Value) string {
+	switch v.(type) {
+	case fjson.Array:
+		return "array"
+	case *fjson.String:
+		return "string"
+	case fjson.Bool:
+		return "boolean"
+	case fjson.Null:
+		return "null"
+	case fjson.Float:
+		return "number"
+	case fjson.Object, IterableObject:
+		return "object"
+	case *Set:
+		return "set"
+	}
+	panic("unreachable")
+}
+
+func typenameBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[0]) {
+		return nil
+	}
+	state.SetReturnValue(Unused, state.ValueOps().MakeString(typename(args[0])))
+	return nil
+}

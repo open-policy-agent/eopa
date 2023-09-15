@@ -123,6 +123,22 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return notEqualBuiltin(state, args)
 	case ast.Or.Name:
 		return binaryOrBuiltin(state, args)
+	case ast.IsArray.Name:
+		return isTypeBuiltin(state, args, typeArray)
+	case ast.IsString.Name:
+		return isTypeBuiltin(state, args, typeString)
+	case ast.IsBoolean.Name:
+		return isTypeBuiltin(state, args, typeBoolean)
+	case ast.IsObject.Name:
+		return isTypeBuiltin(state, args, typeObject)
+	case ast.IsSet.Name:
+		return isTypeBuiltin(state, args, typeSet)
+	case ast.IsNumber.Name:
+		return isTypeBuiltin(state, args, typeNumber)
+	case ast.IsNull.Name:
+		return isTypeBuiltin(state, args, typeNull)
+	case ast.TypeNameBuiltin.Name:
+		return typenameBuiltin(state, args)
 	}
 
 	// If none available, revert to standard OPA builtin
