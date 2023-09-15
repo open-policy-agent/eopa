@@ -15,7 +15,7 @@ import (
 )
 
 func memberBuiltin(state *State, args []Value) error {
-	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
 
@@ -35,7 +35,7 @@ func memberBuiltin(state *State, args []Value) error {
 }
 
 func memberWithKeyBuiltin(state *State, args []Value) error {
-	if isUndefinedType(args[0]) || isUndefinedType(args[1]) || isUndefinedType(args[2]) {
+	if isUndefinedType(args[2]) || isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
 
@@ -57,7 +57,7 @@ func memberWithKeyBuiltin(state *State, args []Value) error {
 }
 
 func objectGetBuiltin(state *State, args []Value) error {
-	if isUndefinedType(args[0]) || isUndefinedType(args[1]) || isUndefinedType(args[2]) {
+	if isUndefinedType(args[2]) || isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
 	obj, path, def := args[0], args[1], args[2]
@@ -161,7 +161,7 @@ func objectGetBuiltinKey(state *State, obj, key, def Value) error {
 }
 
 func stringsConcatBuiltin(state *State, args []Value) error {
-	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
 
@@ -257,7 +257,7 @@ func stringsConcatBuiltin(state *State, args []Value) error {
 }
 
 func stringsEndsWithBuiltin(state *State, args []Value) error {
-	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
 
@@ -277,7 +277,7 @@ func stringsEndsWithBuiltin(state *State, args []Value) error {
 }
 
 func stringsStartsWithBuiltin(state *State, args []Value) error {
-	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
 
@@ -560,7 +560,7 @@ func do(state *State, path Value, val Value, record func(*State, Value, Value) e
 }
 
 func arrayConcatBuiltin(state *State, args []Value) error {
-	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
 	a, err := builtinArrayOperand(state, args[0], 1)
@@ -599,7 +599,7 @@ func arrayConcatBuiltin(state *State, args []Value) error {
 }
 
 func arraySliceBuiltin(state *State, args []Value) error {
-	if isUndefinedType(args[0]) || isUndefinedType(args[1]) || isUndefinedType(args[2]) {
+	if isUndefinedType(args[2]) || isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
 
@@ -634,7 +634,7 @@ func arraySliceBuiltin(state *State, args []Value) error {
 }
 
 func equalBuiltin(state *State, args []Value) error {
-	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
 	ret, err := equalOp(state.Globals.Ctx, args[0], args[1])
@@ -646,7 +646,7 @@ func equalBuiltin(state *State, args []Value) error {
 }
 
 func notEqualBuiltin(state *State, args []Value) error {
-	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
 
@@ -659,7 +659,7 @@ func notEqualBuiltin(state *State, args []Value) error {
 }
 
 func binaryOrBuiltin(state *State, args []Value) error {
-	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
 
@@ -690,7 +690,7 @@ func binaryOrBuiltin(state *State, args []Value) error {
 }
 
 func objectUnionBuiltin(state *State, args []Value) error {
-	if isUndefinedType(args[0]) || isUndefinedType(args[1]) {
+	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
 
