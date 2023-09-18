@@ -56,33 +56,34 @@ func loadBundle(tb testing.TB, buffer []byte) *bundle.Bundle {
 	return &b
 }
 
-func testCompiler(tb testing.TB, policy ir.Policy, input string, query string, result string, data any) {
+func testCompiler(tb testing.TB, policy ir.Policy, input string, query string, result string, data any) func(testing.TB) {
 	executable, err := vm.NewCompiler().WithPolicy(&policy).Compile()
 	if err != nil {
 		tb.Fatal(err)
 	}
 
-	s, ctx := vm.WithStatistics(context.Background())
-
 	var inp interface{} = ast.MustParseTerm(input)
-
 	bdata := bjson.MustNew(data)
 	nvm := vm.NewVM().WithExecutable(executable).WithDataJSON(bdata)
-	v, err := nvm.Eval(ctx, query, vm.EvalOpts{
-		Input: &inp,
-		Time:  time.Now(),
-	})
-	if err != nil {
-		tb.Fatal(err)
-	}
-	if b, ok := tb.(*testing.B); ok {
-		b.ReportMetric(float64(s.EvalInstructions), "instr/op")
-	}
-	if result == "" {
-		return
-	}
 
-	matchResult(tb, result, v)
+	return func(tb testing.TB) {
+		s, ctx := vm.WithStatistics(context.Background())
+		v, err := nvm.Eval(ctx, query, vm.EvalOpts{
+			Input: &inp,
+			Time:  time.Now(),
+		})
+		if err != nil {
+			tb.Fatal(err)
+		}
+		if b, ok := tb.(*testing.B); ok {
+			b.ReportMetric(float64(s.EvalInstructions), "instr/op")
+		}
+		if result == "" {
+			return
+		}
+
+		matchResult(tb, result, v)
+	}
 }
 
 func matchResult(tb testing.TB, result string, v vm.Value) {
@@ -104,16 +105,25 @@ const simpleResult = `{{"result": true}}`
 func TestCompiler(t *testing.T) {
 	bundle := createBundle(t, simpleRego)
 	policy := setup(t, bundle, simpleQuery)
-	testCompiler(t, policy, simpleInput, simpleQuery, simpleResult, bundle.Data)
+	testCompiler(t, policy, simpleInput, simpleQuery, simpleResult, bundle.Data)(t)
 }
 
 func BenchmarkCompiler(b *testing.B) {
 	bundle := createBundle(b, simpleRego)
 	policy := setup(b, bundle, simpleQuery)
 	b.ResetTimer()
-
 	for i := 0; i < b.N; i++ {
-		testCompiler(b, policy, simpleInput, simpleQuery, "", bundle.Data)
+		testCompiler(b, policy, simpleInput, simpleQuery, "", bundle.Data)(b)
+	}
+}
+
+func BenchmarkCompilerEval(b *testing.B) {
+	bundle := createBundle(b, simpleRego)
+	policy := setup(b, bundle, simpleQuery)
+	f := testCompiler(b, policy, simpleInput, simpleQuery, "", bundle.Data)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		f(b)
 	}
 }
 
@@ -130,7 +140,7 @@ func TestMonster(t *testing.T) {
 	query := "play"
 	bundle := createBundle(t, benchMonsterRego)
 	policy := setup(t, bundle, query)
-	testCompiler(t, policy, benchMonsterInput, query, benchMonsterResult, bundle.Data)
+	testCompiler(t, policy, benchMonsterInput, query, benchMonsterResult, bundle.Data)(t)
 }
 
 func BenchmarkMonster(b *testing.B) {
@@ -138,9 +148,19 @@ func BenchmarkMonster(b *testing.B) {
 	bundle := createBundle(b, benchMonsterRego)
 	policy := setup(b, bundle, query)
 	b.ResetTimer()
-
 	for i := 0; i < b.N; i++ {
-		testCompiler(b, policy, benchMonsterInput, query, "", bundle.Data)
+		testCompiler(b, policy, benchMonsterInput, query, "", bundle.Data)(b)
+	}
+}
+
+func BenchmarkMonsterEval(b *testing.B) {
+	query := "play"
+	bundle := createBundle(b, benchMonsterRego)
+	policy := setup(b, bundle, query)
+	f := testCompiler(b, policy, benchMonsterInput, query, "", bundle.Data)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		f(b)
 	}
 }
 
@@ -160,15 +180,24 @@ var benchEntitlementsQuery = `main/main`
 func TestEntitlements(t *testing.T) {
 	bundle := loadBundle(t, benchEntitlementsBundle)
 	policy := setup(t, bundle, benchEntitlementsQuery)
-	testCompiler(t, policy, benchEntitlementsInput, benchEntitlementsQuery, benchEntitlementsResult, bundle.Data)
+	testCompiler(t, policy, benchEntitlementsInput, benchEntitlementsQuery, benchEntitlementsResult, bundle.Data)(t)
 }
 
 func BenchmarkEntitlements(b *testing.B) {
 	bundle := loadBundle(b, benchEntitlementsBundle)
 	policy := setup(b, bundle, benchEntitlementsQuery)
 	b.ResetTimer()
-
 	for i := 0; i < b.N; i++ {
-		testCompiler(b, policy, benchEntitlementsInput, benchEntitlementsQuery, "", bundle.Data)
+		testCompiler(b, policy, benchEntitlementsInput, benchEntitlementsQuery, "", bundle.Data)(b)
+	}
+}
+
+func BenchmarkEntitlementsEval(b *testing.B) {
+	bundle := loadBundle(b, benchEntitlementsBundle)
+	policy := setup(b, bundle, benchEntitlementsQuery)
+	f := testCompiler(b, policy, benchEntitlementsInput, benchEntitlementsQuery, "", bundle.Data)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		f(b)
 	}
 }
