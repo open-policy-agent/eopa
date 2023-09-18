@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"unsafe"
 )
 
 const (
@@ -1664,11 +1665,10 @@ func getInt32ArraySize(data []byte, offset uint32) int {
 	return 4 + 4*getInt32ArrayLen(data, offset)
 }
 
-//go:inline
 func getString(data []byte, offset uint32) string {
 	l := getUint32(data, offset)
 	offset += 4
-	return string(data[offset : offset+l])
+	return unsafe.String(&data[offset], l)
 }
 
 func appendStringSize(value string) int {
