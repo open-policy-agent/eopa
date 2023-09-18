@@ -10,7 +10,7 @@ import (
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 
-	"github.com/OneOfOne/xxhash"
+	"github.com/cespare/xxhash/v2"
 	"github.com/open-policy-agent/opa/ast"
 )
 
@@ -805,7 +805,7 @@ func (s *Set) Hash(ctx context.Context) (uint64, error) {
 		err error
 	)
 	s.set.Iter(func(v interface{}) bool {
-		h := xxhash.New64()
+		h := xxhash.New()
 		err = hashImpl(ctx, v, h)
 		m += h.Sum64()
 		return err != nil

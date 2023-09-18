@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/OneOfOne/xxhash"
+	"github.com/cespare/xxhash/v2"
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
@@ -31,12 +31,12 @@ type hashable interface {
 }
 
 func hash(ctx context.Context, value interface{}) (uint64, error) {
-	hasher := xxhash.New64()
+	hasher := xxhash.New()
 	err := hashImpl(ctx, value, hasher)
 	return hasher.Sum64(), err
 }
 
-func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.XXHash64) error {
+func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.Digest) error {
 	// Note Hasher writer below never returns an error.
 
 	switch value := value.(type) {
@@ -132,7 +132,7 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.XXHash64) e
 	return nil
 }
 
-func hashString(value *fjson.String, hasher *xxhash.XXHash64) {
+func hashString(value *fjson.String, hasher *xxhash.Digest) {
 	hasher.Write([]byte{typeHashString})
 
 	if len(*value) == 0 {
@@ -147,7 +147,7 @@ func hashString(value *fjson.String, hasher *xxhash.XXHash64) {
 // any object implementation, to guarantee identical hashing across
 // different object implementations.
 func ObjectHashEntry(ctx context.Context, h uint64, k, v interface{}) (uint64, error) {
-	hasher := xxhash.New64()
+	hasher := xxhash.New()
 	err := hashImpl(ctx, k, hasher)
 	if err == nil {
 		err = hashImpl(ctx, v, hasher)
