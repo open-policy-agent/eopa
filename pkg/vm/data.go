@@ -5,13 +5,13 @@ import (
 	"encoding/base64"
 	gojson "encoding/json"
 	"errors"
-	"sort"
 	"strconv"
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/open-policy-agent/opa/ast"
+	"golang.org/x/exp/slices"
 )
 
 var (
@@ -161,13 +161,13 @@ func (*DataOperations) ArrayAppend(ctx context.Context, array interface{}, value
 func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (interface{}, error) {
 	switch v := value.(type) {
 	case fjson.Null:
-		return v, nil
+		return value, nil
 	case fjson.Bool:
-		return v, nil
+		return value, nil
 	case fjson.Float:
-		return v, nil
+		return value, nil
 	case *fjson.String:
-		return v, nil
+		return value, nil
 	case fjson.Array:
 		return v.Clone(false), nil
 	case fjson.Object:
@@ -210,13 +210,13 @@ func (*DataOperations) Equal(ctx context.Context, a, b interface{}) (bool, error
 func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (interface{}, error) {
 	switch x := x.(type) {
 	case nil:
-		return fjson.NewNull(), nil
+		return o.MakeNull(), nil
 	case ast.Null:
-		return fjson.NewNull(), nil
+		return o.MakeNull(), nil
 	case bool:
-		return fjson.NewBool(x), nil
+		return o.MakeBoolean(x), nil
 	case ast.Boolean:
-		return fjson.NewBool(bool(x)), nil
+		return o.MakeBoolean(bool(x)), nil
 	case gojson.Number:
 		return fjson.NewFloat(x), nil
 	case ast.Number:
@@ -250,19 +250,16 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 		}
 		return fjson.NewArray(values...), nil
 	case *ast.Array:
-		values := make([]fjson.File, 0, x.Len())
-		err := x.Iter(func(v *ast.Term) error {
-			y, err := o.FromInterface(ctx, v.Value)
+		n := x.Len()
+		arr := fjson.NewArray(make([]fjson.File, n)...)
+		for i := 0; i < n; i++ {
+			y, err := o.FromInterface(ctx, x.Elem(i).Value)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			values = append(values, y.(fjson.Json))
-			return nil
-		})
-		if err != nil {
-			return nil, err
+			arr.SetIdx(i, y.(fjson.File))
 		}
-		return fjson.NewArray(values...), nil
+		return arr, nil
 	case map[string]interface{}:
 		obj := NewObject()
 		for k, v := range x {
@@ -693,7 +690,9 @@ func (o *DataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, e
 			return nil, err
 		}
 
-		sort.Sort(termSlice(terms))
+		slices.SortFunc(terms, func(a, b *ast.Term) int {
+			return a.Value.Compare(b.Value)
+		})
 		set := ast.NewSet(terms...)
 		return set, nil
 
@@ -881,10 +880,3 @@ func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
 func notImplemented() {
 	panic("not implemented")
 }
-
-// Borrowed definitions from OPA's ast/term to allow using Golang's default sort on term slices.
-type termSlice []*ast.Term
-
-func (s termSlice) Less(i, j int) bool { return ast.Compare(s[i].Value, s[j].Value) < 0 }
-func (s termSlice) Swap(i, j int)      { x := s[i]; s[i] = s[j]; s[j] = x }
-func (s termSlice) Len() int           { return len(s) }
