@@ -9,12 +9,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/mux"
+	"github.com/open-policy-agent/opa/config"
 	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/plugins/discovery"
 	"github.com/open-policy-agent/opa/storage"
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	eopaStorage "github.com/styrainc/enterprise-opa-private/pkg/storage"
-	"go.uber.org/goleak"
 )
 
 func TestConfig(t *testing.T) {
@@ -25,14 +24,25 @@ func TestConfig(t *testing.T) {
 		response map[string]any
 	}{
 		{
-			name:     "successful request",
-			config:   `{"plugins":{"preview":{}}}`,
+			name:     "no configuration defaults to enabled",
 			code:     http.StatusOK,
 			response: map[string]any{"result": map[string]any{"a": "hello world"}},
 		},
 		{
-			name:     "not configured",
+			name:     "missing configuration falls back to default: enabled)",
 			config:   `{}`,
+			code:     http.StatusOK,
+			response: map[string]any{"result": map[string]any{"a": "hello world"}},
+		},
+		{
+			name:     "enabled: successful request",
+			config:   `{"enabled":true}`,
+			code:     http.StatusOK,
+			response: map[string]any{"result": map[string]any{"a": "hello world"}},
+		},
+		{
+			name:     "disabled: not found",
+			config:   `{"enabled":false}`,
 			code:     http.StatusNotFound,
 			response: nil,
 		},
@@ -52,34 +62,48 @@ func TestConfig(t *testing.T) {
 						"bar": "hello world",
 					},
 				}),
-				tc.config,
 			)
-			router := manager.GetRouter()
-
 			err := manager.Start(ctx)
 			if err != nil {
 				t.Fatalf("Unable to start plugin manager: %v", err)
 			}
 
+			hook := NewHook()
+			hook.Init(manager)
+			if tc.config != "" {
+				hook.OnConfig(ctx, &config.Config{
+					Extra: map[string]json.RawMessage{
+						"preview": []byte(tc.config),
+					},
+				})
+			}
+
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodPost, "/v0/preview/test", nil)
-			router.ServeHTTP(w, r)
+			manager.GetRouter().ServeHTTP(w, r)
 
 			if w.Code != tc.code {
 				t.Fatalf("expected http status %d but received %d", tc.code, w.Code)
 			}
 
-			var value map[string]any
-			json.NewDecoder(w.Body).Decode(&value)
-			if diff := cmp.Diff(tc.response, value); diff != "" {
-				t.Errorf("unexpected response body (-want, +got):\n%s", diff)
+			if tc.response != nil {
+				var value map[string]any
+				err = json.NewDecoder(w.Body).Decode(&value)
+				if err != nil {
+					t.Fatalf("could not decode response body: %v", err)
+				}
+
+				if diff := cmp.Diff(tc.response, value); diff != "" {
+					t.Errorf("unexpected response body (-want, +got):\n%s", diff)
+				}
 			}
+
 		})
 	}
 }
 
-func TestStop(t *testing.T) {
-	defer goleak.VerifyNone(t)
+func TestReconfigure(t *testing.T) {
+	successfulResponse := map[string]any{"result": map[string]any{"a": "hello world"}}
 	ctx := context.Background()
 	manager := pluginMgr(
 		ctx,
@@ -92,30 +116,56 @@ func TestStop(t *testing.T) {
 				"bar": "hello world",
 			},
 		}),
-		`{"plugins":{"preview":{}}}`,
 	)
 	router := manager.GetRouter()
-
 	err := manager.Start(ctx)
 	if err != nil {
 		t.Fatalf("Unable to start plugin manager: %v", err)
 	}
-	// immediately stop the plugin
-	plugin := Lookup(manager)
-	plugin.Stop(ctx)
+
+	hook := NewHook()
+	hook.Init(manager)
+	hook.OnConfig(ctx, &config.Config{
+		Extra: map[string]json.RawMessage{
+			"preview": []byte(`{"enabled": true}`),
+		},
+	})
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/v0/preview/test", nil)
 	router.ServeHTTP(w, r)
 
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected http status %d but received %d", http.StatusOK, w.Code)
+	}
+
+	var value map[string]any
+	err = json.NewDecoder(w.Body).Decode(&value)
+	if err != nil {
+		t.Fatalf("could not decode response body: %v", err)
+	}
+
+	if diff := cmp.Diff(successfulResponse, value); diff != "" {
+		t.Errorf("unexpected response body (-want, +got):\n%s", diff)
+	}
+
+	// reconfigure the plugin to disable preview
+	hook.OnConfigDiscovery(ctx, &config.Config{
+		Extra: map[string]json.RawMessage{
+			"preview": []byte(`{"enabled": false}`),
+		},
+	})
+
+	w = httptest.NewRecorder()
+	r = httptest.NewRequest(http.MethodPost, "/v0/preview/test", nil)
+	router.ServeHTTP(w, r)
+
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected http status %d but received %d", http.StatusNotFound, w.Code)
 	}
-
-	// goleak will assert that no goroutine is still running
 }
 
-func pluginMgr(ctx context.Context, t *testing.T, seedPolicies map[string]string, seedData bjson.Json, config string) *plugins.Manager {
+func pluginMgr(ctx context.Context, t *testing.T, seedPolicies map[string]string, seedData bjson.Json) *plugins.Manager {
 	t.Helper()
 	mux := mux.NewRouter()
 	opts := []func(*plugins.Manager){
@@ -138,18 +188,12 @@ func pluginMgr(ctx context.Context, t *testing.T, seedPolicies map[string]string
 		}
 		store.Commit(ctx, txn)
 	}
-	mgr, err := plugins.New([]byte(config), "test-instance-id", store, opts...)
+	mgr, err := plugins.New([]byte("{}"), "test-instance-id", store, opts...)
 	if err != nil {
 		t.Fatal(err)
 	}
-	disco, err := discovery.New(mgr,
-		discovery.Factories(map[string]plugins.Factory{
-			Name: Factory(),
-		}),
-	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	mgr.Register(discovery.Name, disco)
 	return mgr
 }

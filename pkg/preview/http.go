@@ -14,7 +14,7 @@ import (
 	opaTypes "github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/server/writer"
 	"github.com/open-policy-agent/opa/util"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/preview/types"
+	"github.com/styrainc/enterprise-opa-private/pkg/preview/types"
 )
 
 // httpPrefix is the root HTTP API path where the preview behavior is available
@@ -22,9 +22,9 @@ const httpPrefix = "/v0/preview"
 
 // ServeHTTP exposes the ability to run preview requests. The API is based primarily
 // off of OPAs v1DataPost method mixing in parts of the DAS data API.
-func (p *Plugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (p *PreviewHook) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 404 if preview is inactive
-	if !p.active {
+	if !p.config.Enabled || p.manager == nil {
 		http.Error(w, "", http.StatusNotFound)
 		return
 	}

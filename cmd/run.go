@@ -34,7 +34,7 @@ import (
 	dl "github.com/styrainc/enterprise-opa-private/pkg/plugins/decision_logs"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/preview"
+	"github.com/styrainc/enterprise-opa-private/pkg/preview"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
@@ -315,7 +315,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 	params.rt.BundleActivatorPlugin = "_enterprise_opa"
 
 	ekmHook := ekm.NewEKM(lic, lparams)
-	hs := hooks.New(ekmHook)
+	previewHook := preview.NewHook()
+	hs := hooks.New(ekmHook, previewHook)
 	params.rt.Hooks = hs
 
 	params.rt.Router = loadRouter()
@@ -340,6 +341,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 
 	rt.SetDistributedTracingLogging()
 
+	previewHook.Init(rt.Manager)
+
 	// TODO(sr): This trick won't do for SDK usage. Hence, SDK users will currently
 	//           NOT see OTel traces for decision logs or sql.send.
 	if tp := rt.Manager.TracerProvider(); tp != nil {
@@ -352,7 +355,6 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 		discovery.Factories(map[string]plugins.Factory{
 			data.Name:            data.Factory(),
 			impact.Name:          impact.Factory(),
-			preview.Name:         preview.Factory(),
 			grpc.PluginName:      grpc.Factory(),
 			dl.DLPluginName:      dl.Factory(),
 			opa_envoy.PluginName: &opa_envoy.Factory{}, // Hack(philip): This is ugly, but necessary because upstream lacks the Factory() function.

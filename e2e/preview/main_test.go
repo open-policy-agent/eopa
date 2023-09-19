@@ -19,16 +19,12 @@ import (
 )
 
 func TestHelloWorld(t *testing.T) {
-	config := `
-plugins:
-  preview:
-`
 	policy := `
 package test
 
 hello := "world"
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, config, policy)
+	eopa, eopaOut := loadEnterpriseOPA(t, policy)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -60,16 +56,12 @@ hello := "world"
 }
 
 func TestModules(t *testing.T) {
-	config := `
-plugins:
-  preview:
-`
 	policy := `
 package test
 
 hello := "world"
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, config, policy)
+	eopa, eopaOut := loadEnterpriseOPA(t, policy)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -110,16 +102,12 @@ rego_modules:
 }
 
 func TestLibrary(t *testing.T) {
-	config := `
-plugins:
-  preview:
-`
 	policy := `
 package test
 
 hello := "world"
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, config, policy)
+	eopa, eopaOut := loadEnterpriseOPA(t, policy)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -184,13 +172,9 @@ rego_modules:
 	}
 }
 
-func loadEnterpriseOPA(t *testing.T, config, policy string) (*exec.Cmd, *bytes.Buffer) {
+func loadEnterpriseOPA(t *testing.T, policy string) (*exec.Cmd, *bytes.Buffer) {
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
-	confPath := filepath.Join(dir, "config.yml")
-	if err := os.WriteFile(confPath, []byte(config), 0x777); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
 	policyPath := filepath.Join(dir, "eval.rego")
 	if err := os.WriteFile(policyPath, []byte(policy), 0x777); err != nil {
 		t.Fatalf("write policy: %v", err)
@@ -200,7 +184,6 @@ func loadEnterpriseOPA(t *testing.T, config, policy string) (*exec.Cmd, *bytes.B
 		"run",
 		"--server",
 		"--addr", "localhost:48181",
-		"--config-file", confPath,
 		"--log-level", "debug",
 		"--disable-telemetry",
 	}

@@ -15,8 +15,6 @@ import (
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
-const previewConfig string = `{"plugins":{"preview":{}}}`
-
 var testPolicy = map[string]string{
 	"test/test.rego": `package test
 
@@ -68,8 +66,9 @@ func TestMethods(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.method, func(t *testing.T) {
 			ctx := context.Background()
-			manager := pluginMgr(ctx, t, testPolicy, testData, previewConfig)
+			manager := pluginMgr(ctx, t, testPolicy, testData)
 			manager.Start(ctx)
+			NewHook().Init(manager)
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(tc.method, "/v0/preview/test", nil)
@@ -84,9 +83,10 @@ func TestMethods(t *testing.T) {
 
 func TestHttpIO(t *testing.T) {
 	ctx := context.Background()
-	manager := pluginMgr(ctx, t, testPolicy, testData, previewConfig)
+	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
 	router := manager.GetRouter()
+	NewHook().Init(manager)
 
 	testCases := []struct {
 		name     string
@@ -186,9 +186,10 @@ func TestHttpIO(t *testing.T) {
 
 func TestInstrumentationMetrics(t *testing.T) {
 	ctx := context.Background()
-	manager := pluginMgr(ctx, t, testPolicy, testData, previewConfig)
+	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
 	router := manager.GetRouter()
+	NewHook().Init(manager)
 
 	testCases := []struct {
 		name string
@@ -294,9 +295,10 @@ func TestInstrumentationMetrics(t *testing.T) {
 
 func TestProvenance(t *testing.T) {
 	ctx := context.Background()
-	manager := pluginMgr(ctx, t, testPolicy, testData, previewConfig)
+	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
 	router := manager.GetRouter()
+	NewHook().Init(manager)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/v0/preview/test?provenance", nil)
@@ -319,7 +321,7 @@ func TestProvenanceWithBundleData(t *testing.T) {
 	expectedBundle := "testBundle"
 	expectedRevision := "dGVzdFJldmlzaW9u" // base64 "testRevision"
 	ctx := context.Background()
-	manager := pluginMgr(ctx, t, testPolicy, testData, previewConfig)
+	manager := pluginMgr(ctx, t, testPolicy, testData)
 	// set up a dummy bundle
 	txn, err := manager.Store.NewTransaction(ctx, storage.WriteParams)
 	if err != nil {
@@ -344,6 +346,7 @@ func TestProvenanceWithBundleData(t *testing.T) {
 
 	manager.Start(ctx)
 	router := manager.GetRouter()
+	NewHook().Init(manager)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/v0/preview/test?provenance", nil)
@@ -383,9 +386,10 @@ func TestProvenanceWithBundleData(t *testing.T) {
 
 func TestPrint(t *testing.T) {
 	ctx := context.Background()
-	manager := pluginMgr(ctx, t, testPolicy, testData, previewConfig)
+	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
 	router := manager.GetRouter()
+	NewHook().Init(manager)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/v0/preview/test?print=", bytes.NewBufferString(`{"input": {"test": "input data"}}`))
@@ -409,9 +413,10 @@ func TestPrint(t *testing.T) {
 
 func TestSandbox(t *testing.T) {
 	ctx := context.Background()
-	manager := pluginMgr(ctx, t, testPolicy, testData, previewConfig)
+	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
 	router := manager.GetRouter()
+	NewHook().Init(manager)
 
 	body := bytes.NewBufferString(`{
 		"data": {
@@ -447,9 +452,10 @@ func TestSandbox(t *testing.T) {
 
 func TestStrictBuiltinErrors(t *testing.T) {
 	ctx := context.Background()
-	manager := pluginMgr(ctx, t, testPolicy, testData, previewConfig)
+	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
 	router := manager.GetRouter()
+	NewHook().Init(manager)
 
 	body := `{
 		"rego_modules": {
@@ -478,9 +484,10 @@ func TestStrictBuiltinErrors(t *testing.T) {
 
 func TestPrettyReturn(t *testing.T) {
 	ctx := context.Background()
-	manager := pluginMgr(ctx, t, testPolicy, testData, previewConfig)
+	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
 	router := manager.GetRouter()
+	NewHook().Init(manager)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/v0/preview/test", nil)
@@ -523,9 +530,10 @@ func TestPrettyReturn(t *testing.T) {
 
 func TestStrictCompile(t *testing.T) {
 	ctx := context.Background()
-	manager := pluginMgr(ctx, t, testPolicy, testData, previewConfig)
+	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
 	router := manager.GetRouter()
+	NewHook().Init(manager)
 
 	body := `{
 		"rego_modules": {
@@ -552,9 +560,11 @@ func TestStrictCompile(t *testing.T) {
 
 func TestBodyFormat(t *testing.T) {
 	ctx := context.Background()
-	manager := pluginMgr(ctx, t, testPolicy, testData, previewConfig)
+	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
 	router := manager.GetRouter()
+	NewHook().Init(manager)
+
 	expected := map[string]any{"direct": true, "existingData": "preloaded data", "inputData": "input data"}
 
 	testCases := []struct {

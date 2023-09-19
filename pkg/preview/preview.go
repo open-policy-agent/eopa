@@ -9,7 +9,7 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 	opaTypes "github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/storage"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/preview/types"
+	"github.com/styrainc/enterprise-opa-private/pkg/preview/types"
 )
 
 // PreviewOption is the primary interface supported by the Preview struct,
