@@ -6,7 +6,6 @@ import (
 	gjson "encoding/json"
 	"errors"
 	"io"
-	gstrings "strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -167,35 +166,6 @@ const (
 // registersSize: tradeoff between pre-allocating too much and not enough; tested values 4, 8 and 16
 const registersSize int = 32
 
-func newGlobals(ctx context.Context, vm *VM, opts EvalOpts, runtime *ast.Term, input *interface{}) (*Globals, *cancel) {
-	g := &Globals{
-		vm:                  vm,
-		Limits:              *opts.Limits,
-		memoize:             []map[int]Value{{}},
-		Ctx:                 ctx,
-		Input:               input,
-		Metrics:             opts.Metrics,
-		Time:                opts.Time,
-		Seed:                opts.Seed,
-		Runtime:             runtime,
-		PrintHook:           opts.PrintHook,
-		StrictBuiltinErrors: opts.StrictBuiltinErrors,
-		NDBCache:            opts.NDBCache,
-		Capabilities:        opts.Capabilities,
-		TracingOpts:         opts.TracingOpts,
-		BuiltinFuncs:        opts.BuiltinFuncs,
-		registersPool: sync.Pool{
-			New: newRegisterPoolElement,
-		},
-		statePool: sync.Pool{
-			New: newStateElement,
-		},
-	}
-
-	g.cancel.Init(ctx)
-	return g, &g.cancel
-}
-
 func newRegisterPoolElement() any {
 	l := new(registersList)
 	for i := range l.registers {
@@ -243,185 +213,92 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 	n := plans.Len()
 
 	for i := 0; i < n; i++ {
-		if plan := plans.Plan(i); plan.Name() == name {
+		plan := plans.Plan(i)
+		if plan.Name() != name {
+			continue
+		}
 
-			var input *interface{}
-			if opts.Input != nil {
-				var err error
-				var i interface{}
-				i, err = vm.ops.FromInterface(ctx, *opts.Input)
-				if err != nil {
-					return nil, err
-				}
-				input = &i
-			}
-
-			if opts.Time.IsZero() {
-				opts.Time = time.Now()
-			}
-
-			if opts.Limits == nil {
-				opts.Limits = &DefaultLimits
-			}
-
-			runtime, err := vm.runtime(ctx, opts.Runtime)
+		var input *interface{}
+		if opts.Input != nil {
+			var err error
+			var i interface{}
+			i, err = vm.ops.FromInterface(ctx, *opts.Input)
 			if err != nil {
 				return nil, err
 			}
-
-			globals, cancel := newGlobals(ctx, vm, opts, runtime, input)
-			defer cancel.Exit()
-
-			globals.ResultSet = *vm.ops.MakeSet()
-			globals.Cache = opts.Cache
-			globals.InterQueryBuiltinCache = opts.InterQueryBuiltinCache
-
-			state := newState(globals, StatisticsGet(ctx))
-			defer state.Release()
-
-			globals.Ctx = context.WithValue(globals.Ctx, regoEvalOptsContextKey{}, EvalOpts{
-				Limits:              &globals.Limits, // TODO: Relay the instruction count.
-				Metrics:             globals.Metrics,
-				Time:                globals.Time,
-				Seed:                globals.Seed,
-				Runtime:             globals.Runtime,
-				PrintHook:           globals.PrintHook,
-				StrictBuiltinErrors: globals.StrictBuiltinErrors,
-				NDBCache:            globals.NDBCache,
-				Capabilities:        globals.Capabilities,
-			})
-			globals.Ctx = context.WithValue(globals.Ctx, regoEvalNamespaceContextKey{}, vm.data)
-
-			if err := plan.Execute(state); err != nil {
-				return nil, err
-			}
-
-			if opts.StrictBuiltinErrors && len(globals.BuiltinErrors) > 0 {
-				return nil, globals.BuiltinErrors[0]
-			}
-
-			return vm.ops.ToAST(ctx, &globals.ResultSet)
+			input = &i
 		}
+
+		if opts.Time.IsZero() {
+			opts.Time = time.Now()
+		}
+
+		if opts.Limits == nil {
+			opts.Limits = &DefaultLimits
+		}
+
+		runtime, err := vm.runtime(ctx, opts.Runtime)
+		if err != nil {
+			return nil, err
+		}
+
+		globals := &Globals{
+			vm:                  vm,
+			Limits:              *opts.Limits,
+			memoize:             []map[int]Value{{}},
+			Ctx:                 ctx,
+			Input:               input,
+			Metrics:             opts.Metrics,
+			Time:                opts.Time,
+			Seed:                opts.Seed,
+			Runtime:             runtime,
+			PrintHook:           opts.PrintHook,
+			StrictBuiltinErrors: opts.StrictBuiltinErrors,
+			NDBCache:            opts.NDBCache,
+			Capabilities:        opts.Capabilities,
+			TracingOpts:         opts.TracingOpts,
+			BuiltinFuncs:        opts.BuiltinFuncs,
+			registersPool: sync.Pool{
+				New: newRegisterPoolElement,
+			},
+			statePool: sync.Pool{
+				New: newStateElement,
+			},
+			ResultSet:              *vm.ops.MakeSet(),
+			Cache:                  opts.Cache,
+			InterQueryBuiltinCache: opts.InterQueryBuiltinCache,
+		}
+		globals.cancel.Init(ctx)
+		defer globals.cancel.Exit()
+
+		state := newState(globals, StatisticsGet(ctx))
+		defer state.Release()
+
+		globals.Ctx = context.WithValue(globals.Ctx, regoEvalOptsContextKey{}, EvalOpts{
+			Limits:              &globals.Limits, // TODO: Relay the instruction count.
+			Metrics:             globals.Metrics,
+			Time:                globals.Time,
+			Seed:                globals.Seed,
+			Runtime:             globals.Runtime,
+			PrintHook:           globals.PrintHook,
+			StrictBuiltinErrors: globals.StrictBuiltinErrors,
+			NDBCache:            globals.NDBCache,
+			Capabilities:        globals.Capabilities,
+		})
+		globals.Ctx = context.WithValue(globals.Ctx, regoEvalNamespaceContextKey{}, vm.data)
+
+		if err := plan.Execute(state); err != nil {
+			return nil, err
+		}
+
+		if opts.StrictBuiltinErrors && len(globals.BuiltinErrors) > 0 {
+			return nil, globals.BuiltinErrors[0]
+		}
+
+		return vm.ops.ToAST(ctx, &globals.ResultSet)
 	}
 
 	return nil, ErrQueryNotFound
-}
-
-func (vm *VM) Function(ctx context.Context, path []string, opts EvalOpts) (Value, bool, bool, error) {
-	if !vm.executable.IsValid() {
-		return nil, false, false, ErrInvalidExecutable
-	}
-
-	fname := "g0.data"
-	if len(path) > 0 {
-		fname += "." + gstrings.Join(path, ".")
-	}
-
-	// Try finding a function first, since their execution is a
-	// bit cheaper due to lack of result wrapping.
-
-	functions := vm.executable.Functions()
-	n := functions.Len()
-
-	for i := 0; i < n; i++ {
-		if f := functions.Function(i); f.Name() == fname {
-			if opts.Time.IsZero() {
-				opts.Time = time.Now()
-			}
-
-			if opts.Limits == nil {
-				opts.Limits = &DefaultLimits
-			}
-
-			runtime, err := vm.runtime(ctx, opts.Runtime)
-			if err != nil {
-				return nil, false, false, err
-			}
-
-			globals, cancel := newGlobals(ctx, vm, opts, runtime, opts.Input)
-			defer cancel.Exit()
-
-			args := make([]Value, 2)
-			if opts.Input != nil {
-				var v Value = *opts.Input
-				args[0] = v
-			} else {
-				args[0] = undefined()
-			}
-
-			if vm.data != nil {
-				var v Value = *vm.data
-				args[1] = v
-			} else {
-				args[1] = undefined()
-			}
-
-			state := newState(globals, StatisticsGet(ctx))
-			defer state.Release()
-			if err := f.Execute(state, args); err != nil {
-				return nil, false, false, err
-			}
-
-			if opts.StrictBuiltinErrors && len(globals.BuiltinErrors) > 0 {
-				return nil, false, false, globals.BuiltinErrors[0]
-			}
-
-			result, ok := state.Return()
-			if !ok {
-				// undefined
-				return nil, false, true, nil
-			}
-
-			return state.Local(result), true, true, nil
-		}
-	}
-
-	pname := gstrings.Join(path, "/")
-	plans := vm.executable.Plans()
-	n = plans.Len()
-
-	for i := 0; i < n; i++ {
-		if plan := plans.Plan(i); plan.Name() == pname {
-			if opts.Time.IsZero() {
-				opts.Time = time.Now()
-			}
-
-			if opts.Limits == nil {
-				opts.Limits = &DefaultLimits
-			}
-
-			runtime, err := vm.runtime(ctx, opts.Runtime)
-			if err != nil {
-				return nil, false, false, err
-			}
-
-			globals, cancel := newGlobals(ctx, vm, opts, runtime, opts.Input)
-			defer cancel.Exit()
-
-			globals.ResultSet = *vm.ops.MakeSet()
-
-			state := newState(globals, StatisticsGet(ctx))
-			defer state.Release()
-			if err := plan.Execute(state); err != nil {
-				return nil, false, false, err
-			}
-
-			if opts.StrictBuiltinErrors && len(globals.BuiltinErrors) > 0 {
-				return nil, false, false, globals.BuiltinErrors[0]
-			}
-
-			var m interface{}
-			globals.ResultSet.Iter(func(v fjson.Json) bool {
-				m = v
-				return true
-			})
-
-			r, defined, err := vm.ops.Get(ctx, m, vm.ops.MakeString("result"))
-			return r, defined, true, err
-		}
-	}
-
-	return nil, false, false, nil
 }
 
 func (vm *VM) runtime(ctx context.Context, v interface{}) (*ast.Term, error) {

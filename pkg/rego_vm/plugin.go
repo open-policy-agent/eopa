@@ -143,7 +143,7 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		Input:                  input,
 		Time:                   ectx.Time(),
 		Seed:                   seed,
-		Runtime:                runtime(rt),
+		Runtime:                rt,
 		Cache:                  builtins.Cache{},
 		NDBCache:               ectx.NDBCache(),
 		InterQueryBuiltinCache: ectx.InterQueryBuiltinCache(),
@@ -169,11 +169,4 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 
 	go impact.Enqueue(ctx, ectx, result)
 	return result, nil
-}
-
-func runtime(rt ast.Value) ast.Value {
-	if rt == nil {
-		return ast.NewObject()
-	}
-	return rt
 }
