@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/json/internal/utils"
 )
@@ -884,7 +885,7 @@ func readString(content *utils.MultiReader, offset int64) (string, error) {
 		return "", fmt.Errorf("string not read: %w", err)
 	}
 
-	return string(p), nil
+	return unsafe.String(&p[0], len(p)), nil
 }
 
 func (s *snapshotReader) ReadBytes(offset int64) ([]byte, error) {
