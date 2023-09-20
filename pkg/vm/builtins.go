@@ -3,6 +3,7 @@ package vm
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	gostrings "strings"
 
@@ -590,7 +591,32 @@ func builtinIntegerOperand(state *State, value Value, pos int) (int, bool, error
 			Code:    topdown.TypeErr,
 			Message: builtins.NewOperandErr(pos, "must be integer number but got floating-point number").Error(),
 		})
+		return 0, false, nil
+	}
+	return int(i), true, nil
+}
+
+// builtinIntegerOperandNonStrict also accepts 10e6 as a valid integer, builtinIntegerOperand
+// would NOT.
+func builtinIntegerOperandNonStrict(state *State, value Value, pos int) (int, bool, error) {
+	f, err := builtinNumberOperand(state, value, pos)
+	if err != nil || f == nil {
 		return 0, false, err
+	}
+	i, err := f.Value().Float64()
+	if err != nil {
+		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+			Code:    topdown.TypeErr,
+			Message: builtins.NewOperandErr(pos, "must be integer number").Error(),
+		})
+		return 0, false, nil
+	}
+	if math.Mod(i, 1.0) != 0 {
+		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+			Code:    topdown.TypeErr,
+			Message: builtins.NewOperandErr(pos, "must be integer number but got floating-point number").Error(),
+		})
+		return 0, false, nil
 	}
 	return int(i), true, nil
 }
@@ -1015,5 +1041,76 @@ func typenameBuiltin(state *State, args []Value) error {
 		return nil
 	}
 	state.SetReturnValue(Unused, state.ValueOps().MakeString(typename(args[0])))
+	return nil
+}
+
+func numbersRangeBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
+		return nil
+	}
+	start, ok, err := builtinIntegerOperandNonStrict(state, args[0], 1)
+	if err != nil || !ok {
+		return err
+	}
+	stop, ok, err := builtinIntegerOperandNonStrict(state, args[1], 2)
+	if err != nil || !ok {
+		return err
+	}
+
+	return numbersRange(state, start, stop, 1)
+}
+
+func numbersRangeStepBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[2]) || isUndefinedType(args[1]) || isUndefinedType(args[0]) {
+		return nil
+	}
+	start, ok, err := builtinIntegerOperandNonStrict(state, args[0], 1)
+	if err != nil || !ok {
+		return err
+	}
+	stop, ok, err := builtinIntegerOperandNonStrict(state, args[1], 2)
+	if err != nil || !ok {
+		return err
+	}
+	step, ok, err := builtinIntegerOperandNonStrict(state, args[2], 3)
+	if err != nil || !ok {
+		return err
+	}
+	if step <= 0 {
+		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+			Code:    topdown.BuiltinErr,
+			Message: builtins.NewOperandErr(3, "step must be a positive number above zero").Error(),
+		})
+		return nil
+	}
+	return numbersRange(state, start, stop, step)
+}
+
+func numbersRange(state *State, start, stop, step int) error {
+	// NOTE(sr): This is intentionally *not* preallocated: For large lengths, make([]fjson.File, length)
+	// can take more than two seconds, and we cannot check if the evaluation has been canceled during
+	// that period.
+	var elems []fjson.File
+	var length int
+	var next func(i int) int
+	if start <= stop {
+		length = (stop-start)/step + 1
+		next = func(i int) int { return start + i*step }
+	} else {
+		length = (start-stop)/step + 1
+		next = func(i int) int { return start - i*step }
+	}
+	for i := 0; i < length && !state.Globals.cancel.Cancelled(); i++ {
+		elems = append(elems, fjson.NewFloatInt(int64(next(i))))
+	}
+	if state.Globals.cancel.Cancelled() {
+		return topdown.Halt{
+			Err: &topdown.Error{
+				Code:    topdown.CancelErr,
+				Message: "numbers.range: timed out before generating all numbers in range",
+			},
+		}
+	}
+	state.SetReturnValue(Unused, fjson.NewArray(elems...))
 	return nil
 }

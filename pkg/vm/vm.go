@@ -662,10 +662,8 @@ func (s *State) find2Regs(v1, v2 Local) (*registersList, *registersList) {
 }
 
 func (c *cancel) Init(ctx context.Context) {
-	exit := make(chan struct{})
-	c.exit = exit
-
-	go c.wait(ctx, exit)
+	c.exit = make(chan struct{})
+	go c.wait(ctx)
 }
 
 func (c *cancel) Cancel() {
@@ -680,10 +678,10 @@ func (c *cancel) Exit() {
 	close(c.exit)
 }
 
-func (c *cancel) wait(ctx context.Context, exit chan struct{}) {
+func (c *cancel) wait(ctx context.Context) {
 	select {
 	case <-ctx.Done():
-	case <-exit:
+	case <-c.exit:
 	}
 
 	c.Cancel()

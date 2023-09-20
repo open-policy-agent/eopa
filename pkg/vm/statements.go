@@ -143,6 +143,10 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return isTypeBuiltin(state, args, typeNull)
 	case ast.TypeNameBuiltin.Name:
 		return typenameBuiltin(state, args)
+	case ast.NumbersRange.Name:
+		return numbersRangeBuiltin(state, args)
+	case ast.NumbersRangeStep.Name:
+		return numbersRangeStepBuiltin(state, args)
 	}
 
 	// If none available, revert to standard OPA builtin
