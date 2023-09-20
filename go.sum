@@ -538,7 +538,7 @@ github.com/hashicorp/golang-lru/v2 v2.0.2/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyf
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
 github.com/hashicorp/hcl v1.0.1-vault-5 h1:kI3hhbbyzr4dldA8UdTb7ZlVVlI2DACdCfz31RPDgJM=
 github.com/hashicorp/hcl v1.0.1-vault-5/go.mod h1:XYhtn6ijBSAj6n4YqAaf7RBPS4I06AItNorpy+MoQNM=
-github.com/hashicorp/vault-client-go v0.2.0 h1:Zzf5D2kj7QmBZE2ZTdril1aJlujMptPatxslTkdDF+U=
+github.com/hashicorp/vault-client-go v0.3.3 h1:osw2OiT8sPnHbwJCC7sZc/NSlgN4hm0Ka1M1yXsYuHw=
 github.com/hashicorp/vault/api v1.9.0/go.mod h1:lloELQP4EyhjnCQhF8agKvWIVTmxbpEJj70b98959sM=
 github.com/hashicorp/vault/api v1.9.2 h1:YjkZLJ7K3inKgMZ0wzCU9OHqc+UqMQyXsPXnf3Cl2as=
 github.com/hashicorp/vault/api v1.9.2/go.mod h1:jo5Y/ET+hNyz+JnKDt8XLAdKs+AM0G5W0Vp1IrFI8N8=
@@ -954,9 +954,9 @@ github.com/testcontainers/testcontainers-go/modules/mysql v0.23.0 h1:qGR9z0sCx2U
 github.com/testcontainers/testcontainers-go/modules/mysql v0.23.0/go.mod h1:2ecz7+xtcVvOF4QvbGJJ+mfjqT/Pk9Xyd0YCHGJ++JM=
 github.com/testcontainers/testcontainers-go/modules/postgres v0.23.0 h1:OEGUC1YTN1RyS4xqsHmlyYkBWm9lMJcswoV4JSHJQOM=
 github.com/testcontainers/testcontainers-go/modules/postgres v0.23.0/go.mod h1:YnqIhPwhjqVbJBuvSRJS6pa9Cy1PDRJcrM6T63Uw2ms=
-github.com/testcontainers/testcontainers-go/modules/vault v0.23.0 h1:2cKYGBx7CLEYfMoTjlUwcKYggeLuh6DSB31kFyag4NA=
-github.com/testcontainers/testcontainers-go/modules/vault v0.23.0/go.mod h1:L47EfVhp/ped3LhZnTTaAPGn9O1HBqEv+wcfIFXAalA=
-github.com/tidwall/gjson v1.15.0 h1:5n/pM+v3r5ujuNl4YLZLsQ+UE5jlkLVm7jMzT5Mpolw=
+github.com/testcontainers/testcontainers-go/modules/vault v0.24.0 h1:TQpqCNj/HX+K72fdMcdiwBFq+GUa9hvtpgR8YtVIEVc=
+github.com/testcontainers/testcontainers-go/modules/vault v0.24.0/go.mod h1:2ZzEqykzNqarygJLxFEC+onH4tvdeBEWRmdDn/BRzDI=
+github.com/tidwall/gjson v1.16.0 h1:SyXa+dsSPpUlcwEDuKuEBJEz5vzTvOea+9rjyYodQFg=
 github.com/tidwall/match v1.1.1 h1:+Ho715JplO36QYgwN9PGYNhgZvoUSc9X2c80KVTi+GA=
 github.com/tidwall/pretty v1.2.0 h1:RWIZEg2iJ8/g6fDDYzMpobmaoGh5OLl4AXtGUGPcqCs=
 github.com/tilinna/z85 v1.0.0 h1:uqFnJBlD01dosSeo5sK1G1YGbPuwqVHqR+12OJDRjUw=
