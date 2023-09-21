@@ -15,6 +15,8 @@ require (
 	github.com/rs/zerolog v1.30.0
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
 	github.com/testcontainers/testcontainers-go v0.24.1
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.24.1
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.24.1
 	github.com/testcontainers/testcontainers-go/modules/vault v0.24.1
 	github.com/twmb/franz-go v1.15.0
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
@@ -24,7 +26,7 @@ require (
 require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
-	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
+	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Microsoft/hcsshim v0.11.0 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
