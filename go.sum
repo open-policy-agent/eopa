@@ -950,8 +950,8 @@ github.com/tchap/go-patricia/v2 v2.3.1 h1:6rQp39lgIYZ+MHmdEq4xzuk1t7OdC35z/xm0BG
 github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
 github.com/testcontainers/testcontainers-go v0.24.1 h1:gJdZuQIVWnMJTo+CmQMEP7/CAagNk/0jbcUPn3OWvD8=
 github.com/testcontainers/testcontainers-go v0.24.1/go.mod h1:MGBiAkCm86yXQoCiipmQCqZLVdk1uFqtMqaU1Or0MRk=
-github.com/testcontainers/testcontainers-go/modules/mysql v0.24.0 h1:co2yfbTlUxLsz/zgdma4yeJFc+xossxMuVVsERvPqAI=
-github.com/testcontainers/testcontainers-go/modules/mysql v0.24.0/go.mod h1:D2RUlAryOIxDDugdB7sxSW2nYdOP60+qerZ5+4ToQ0Y=
+github.com/testcontainers/testcontainers-go/modules/mysql v0.24.1 h1:kY2ll2UXs7lUVphm888vivBSic6DMOY+Bk9YVx0eyuw=
+github.com/testcontainers/testcontainers-go/modules/mysql v0.24.1/go.mod h1:qOoCuWDZ2tlm9Egf93DOW76NyNZdrrgO2xQmpxicYIE=
 github.com/testcontainers/testcontainers-go/modules/postgres v0.24.0 h1:6ydG7zM7yvedjPLsh0CKeML8GBNsblTochsQ64RBflg=
 github.com/testcontainers/testcontainers-go/modules/postgres v0.24.0/go.mod h1:NrbkZKxCgwQKgfCnvSykWJDkJ5Pf6zAtfEE2TG1I5EY=
 github.com/testcontainers/testcontainers-go/modules/vault v0.24.1 h1:fj07cn8360Ndni/Muw5Tdf3dwUNC1bglhuhY6zQEjNs=
