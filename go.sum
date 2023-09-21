@@ -952,8 +952,8 @@ github.com/testcontainers/testcontainers-go v0.24.1 h1:gJdZuQIVWnMJTo+CmQMEP7/CA
 github.com/testcontainers/testcontainers-go v0.24.1/go.mod h1:MGBiAkCm86yXQoCiipmQCqZLVdk1uFqtMqaU1Or0MRk=
 github.com/testcontainers/testcontainers-go/modules/mysql v0.24.1 h1:kY2ll2UXs7lUVphm888vivBSic6DMOY+Bk9YVx0eyuw=
 github.com/testcontainers/testcontainers-go/modules/mysql v0.24.1/go.mod h1:qOoCuWDZ2tlm9Egf93DOW76NyNZdrrgO2xQmpxicYIE=
-github.com/testcontainers/testcontainers-go/modules/postgres v0.24.0 h1:6ydG7zM7yvedjPLsh0CKeML8GBNsblTochsQ64RBflg=
-github.com/testcontainers/testcontainers-go/modules/postgres v0.24.0/go.mod h1:NrbkZKxCgwQKgfCnvSykWJDkJ5Pf6zAtfEE2TG1I5EY=
+github.com/testcontainers/testcontainers-go/modules/postgres v0.24.1 h1:lSJLORAjkj8PoiZef+KoziJbhpRmL1ELzJXQQ8L3s1U=
+github.com/testcontainers/testcontainers-go/modules/postgres v0.24.1/go.mod h1:QG4rCYFma/K7CbAFtrqCIn87EI6bNRWaW+Ebt4UV2WA=
 github.com/testcontainers/testcontainers-go/modules/vault v0.24.1 h1:fj07cn8360Ndni/Muw5Tdf3dwUNC1bglhuhY6zQEjNs=
 github.com/testcontainers/testcontainers-go/modules/vault v0.24.1/go.mod h1:i19EcqjayMoO4VXPNRmq7NJ/mhmYwJVCulMZooxRqzA=
 github.com/tidwall/gjson v1.16.0 h1:SyXa+dsSPpUlcwEDuKuEBJEz5vzTvOea+9rjyYodQFg=
