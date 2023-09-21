@@ -46,7 +46,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.24.1
 	github.com/testcontainers/testcontainers-go/modules/mysql v0.24.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.24.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.24.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.24.1
 	github.com/twmb/franz-go v1.15.0
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	go.mongodb.org/mongo-driver v1.12.1
