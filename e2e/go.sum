@@ -440,6 +440,8 @@ github.com/spf13/cobra v0.0.5/go.mod h1:3K3wKZymM7VvHMDS9+Akkh4K60UwM26emMESw8tL
 github.com/spf13/jwalterweatherman v1.0.0/go.mod h1:cQK4TGJAtQXfYWX+Ddv3mKDzgVb68N+wFjFa4jdeBTo=
 github.com/spf13/pflag v1.0.3/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
 github.com/spf13/viper v1.3.2/go.mod h1:ZiWeW+zYFKm7srdB9IoDzzZXaJaI5eL9QjNiN/DMA2s=
+github.com/srenatus/testcontainers-go v0.0.0-20230922084038-b151ec31f069 h1:GKGRIno6FzxRbuAOaUri9pJwoSrbKNv1mH8G4HfcbVM=
+github.com/srenatus/testcontainers-go v0.0.0-20230922084038-b151ec31f069/go.mod h1:MGBiAkCm86yXQoCiipmQCqZLVdk1uFqtMqaU1Or0MRk=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
 github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
@@ -456,8 +458,6 @@ github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXl
 github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635/go.mod h1:hkRG7XYTFWNJGYcbNJQlaLq0fg1yr4J4t/NcTQtrfww=
 github.com/tchap/go-patricia/v2 v2.3.1 h1:6rQp39lgIYZ+MHmdEq4xzuk1t7OdC35z/xm0BGhTkes=
 github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
-github.com/testcontainers/testcontainers-go v0.24.1 h1:gJdZuQIVWnMJTo+CmQMEP7/CAagNk/0jbcUPn3OWvD8=
-github.com/testcontainers/testcontainers-go v0.24.1/go.mod h1:MGBiAkCm86yXQoCiipmQCqZLVdk1uFqtMqaU1Or0MRk=
 github.com/testcontainers/testcontainers-go/modules/kafka v0.24.1 h1:5q9Xfb0RDNf8HjkG9Us++JmHYeHpBPUDPSsf8xzsyds=
 github.com/testcontainers/testcontainers-go/modules/kafka v0.24.1/go.mod h1:JGcL6aMZad+w2c1Nw3v1LBgusZQxi80fJ62Jqb/jWNQ=
 github.com/testcontainers/testcontainers-go/modules/redpanda v0.24.1 h1:TXcCIl8/8T1s3STbsQqLK+ynlEtVas//Cx46uLZpoC4=

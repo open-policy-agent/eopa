@@ -165,3 +165,5 @@ require (
 	oras.land/oras-go/v2 v2.3.0 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace github.com/testcontainers/testcontainers-go => github.com/srenatus/testcontainers-go v0.0.0-20230922084038-b151ec31f069
