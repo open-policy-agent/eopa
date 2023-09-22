@@ -12,8 +12,6 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-22.04
     environment: ci
-    needs:
-    - goreleaser
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -45,35 +43,28 @@ jobs:
         with:
           name: image
           path: enterprise-opa/local.tar
-      - name: Download release binaries
-        uses: actions/download-artifact@v3
-        with:
-          name: binaries
-          path: dist
-      - name: pick up opa version
+      - name: pick up eopa data
         id: enterprise-opa
         run: |
           echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
           echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
           echo "bundles=$(pwd)/e2e" >> $GITHUB_OUTPUT
-          echo "binary=$(pwd)/dist/linux-windows-build_linux_amd64_v1/eopa" >> $GITHUB_OUTPUT
-          echo "fetchdb=$(pwd)/_fetchdb" >> $GITHUB_OUTPUT
-          chmod +x dist/linux-windows-build_linux_amd64_v1/eopa
         working-directory: enterprise-opa
+      - name: pick up paths
+        id: paths
+        run: |
+          echo "fetchdb=$(pwd)/_fetchdb" >> $GITHUB_OUTPUT
+          echo "opa_dir=$(pwd)/opa" >> $GITHUB_OUTPUT
       - name: checkout OPA
         uses: actions/checkout@v4
         with:
           repository: open-policy-agent/opa
           ref: ${{ steps.enterprise-opa.outputs.opa_version }}
           path: opa
-      - name: pick up opa directory
-        id: opa
-        working-directory: opa
-        run: echo "dir=$(pwd)" >> $GITHUB_OUTPUT
       - run: make test-race
         working-directory: enterprise-opa
         env:
-          OPA_ROOT: ${{ steps.opa.outputs.dir }}
+          OPA_ROOT: ${{ steps.paths.outputs.opa_dir }}
       - name: checkout opa-testing-e2e
         uses: actions/checkout@v4
         with:
@@ -100,10 +91,10 @@ jobs:
           persist-credentials: false
       - name: Run enterprise-opa-test (fetchdb)
         run: |
-          sed -i 's#ghcr.io/styrainc/.*:latest#${{ steps.enterprise-opa.outputs.image }}#' ${{ steps.enterprise-opa.outputs.fetchdb}}/Makefile
-          cd e2e && go test -tags e2e_fetchdb ./fetchdb
+          sed -i 's#ghcr.io/styrainc/.*:latest#${{ steps.enterprise-opa.outputs.image  }}#' ${{ steps.paths.outputs.fetchdb}}/Makefile
+          cd enterprise-opa/e2e && go test -tags e2e_fetchdb ./fetchdb
         env:
-          FETCHDB_DIRECTORY: ${{ steps.enterprise-opa.outputs.fetchdb }}
+          FETCHDB_DIRECTORY: ${{ steps.paths.outputs.fetchdb }}
 
   goreleaser:
     name: GoReleaser

@@ -176,9 +176,7 @@ jobs:
         id: enterprise-opa
         run: |
           echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
-          echo "bundles=$(pwd)/e2e" >> $GITHUB_OUTPUT
           echo "binary=$(pwd)/eopa" >> $GITHUB_OUTPUT
-          echo "fetchdb=$(pwd)/_fetchdb" >> $GITHUB_OUTPUT
           chmod +x eopa
       - run: make e2e
         env:
