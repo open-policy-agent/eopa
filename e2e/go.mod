@@ -9,7 +9,7 @@ require (
 	github.com/go-git/go-git/v5 v5.9.0
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/vault/api v1.10.0
-	github.com/minio/minio-go/v7 v7.0.59
+	github.com/minio/minio-go/v7 v7.0.63
 	github.com/open-policy-agent/opa v0.56.0
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/rs/zerolog v1.30.0
