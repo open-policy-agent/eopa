@@ -4,6 +4,18 @@ updates:
   directory: /
   schedule:
     interval: daily
+  groups:
+    testcontainers:
+      patterns:
+      - "github.com/testcontainers/*"
+- package-ecosystem: gomod
+  directory: /e2e
+  schedule:
+    interval: daily
+  groups:
+    testcontainers:
+      patterns:
+      - "github.com/testcontainers/*"
 - package-ecosystem: github-actions
   directory: /
   schedule:
