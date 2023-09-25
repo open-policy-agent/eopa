@@ -490,3 +490,7 @@ func WriteUnchecked(ctx context.Context, store storage.Store, op storage.PatchOp
 		return store.(WriterUnchecked).WriteUnchecked(ctx, txn, op, path, value)
 	})
 }
+
+func WriteUncheckedTxn(ctx context.Context, store storage.Store, txn storage.Transaction, op storage.PatchOp, path storage.Path, value interface{}) error {
+	return store.(WriterUnchecked).WriteUnchecked(ctx, txn, op, path, value)
+}

@@ -35,7 +35,7 @@ var (
 	convertedData []byte
 )
 
-func TestLDAPData(t *testing.T) {
+func TestLDAPDataMocks(t *testing.T) {
 	var (
 		searchResult    *goldap.SearchResult
 		convertedResult []any

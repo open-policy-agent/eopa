@@ -1,17 +1,23 @@
 package ldap
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"net/url"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
+	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/topdown"
 
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/types"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
@@ -25,10 +31,20 @@ type Data struct {
 	log            logging.Logger
 	Config         Config
 	exit, doneExit chan struct{}
+
+	transformRule ast.Ref
+	transform     atomic.Pointer[rego.PreparedEvalQuery]
 }
+
+// Ensure that the kafka sub-plugin will be triggered by the data umbrella plugin,
+// because it implements types.Triggerer.
+var _ types.Triggerer = (*Data)(nil)
 
 func (c *Data) Start(ctx context.Context) error {
 	c.exit = make(chan struct{})
+	if err := c.prepareTransform(ctx); err != nil {
+		return fmt.Errorf("prepare rego_transform: %w", err)
+	}
 	if err := storage.Txn(ctx, c.manager.Store, storage.WriteParams, func(txn storage.Transaction) error {
 		return storage.MakeDir(ctx, c.manager.Store, txn, c.Config.path)
 	}); err != nil {
@@ -69,6 +85,49 @@ func (c *Data) Name() string {
 
 func (c *Data) Path() storage.Path {
 	return c.Config.path
+}
+
+func (c *Data) prepareTransform(ctx context.Context) error {
+	return storage.Txn(ctx, c.manager.Store, storage.TransactionParams{}, func(txn storage.Transaction) error {
+		return c.Trigger(ctx, txn)
+	})
+}
+
+func (c *Data) Trigger(ctx context.Context, txn storage.Transaction) error {
+	if c.Config.RegoTransformRule == "" {
+		return nil
+	}
+	transformRef := ast.MustParseRef(c.Config.RegoTransformRule)
+	// ref: data.x.transform => query: new = data.x.transform
+	query := ast.NewBody(ast.Equality.Expr(ast.VarTerm("new"), ast.NewTerm(transformRef)))
+
+	comp := c.manager.GetCompiler()
+	if comp == nil || comp.RuleTree == nil || comp.RuleTree.Find(transformRef) == nil {
+		c.manager.Logger().Warn("%s plugin (path %s): transform rule %q does not exist yet", c.Name(), c.Path(), transformRef)
+		return nil
+	}
+
+	buf := bytes.Buffer{}
+	r := rego.New(
+		rego.ParsedQuery(query),
+		rego.Compiler(comp),
+		rego.Store(c.manager.Store),
+		rego.Transaction(txn),
+		rego.Runtime(c.manager.Info),
+		rego.EnablePrintStatements(c.manager.EnablePrintStatements()),
+		rego.PrintHook(topdown.NewPrintHook(&buf)),
+	)
+
+	pq, err := r.PrepareForEval(ctx)
+	if err != nil {
+		return err
+	}
+
+	if buf.Len() > 0 {
+		c.log.Debug("prepare print(): %s", buf.String())
+	}
+	c.transform.Store(&pq)
+	return nil
 }
 
 func (c *Data) loop(ctx context.Context) {
@@ -149,13 +208,27 @@ func (c *Data) poll(ctx context.Context, u *url.URL) error {
 
 	data, err := convertEntries(result.Entries)
 	if err != nil {
-		return fmt.Errorf("converting result failed: %v", err)
+		return fmt.Errorf("converting result failed: %w", err)
+	}
+	txn, err := c.manager.Store.NewTransaction(ctx, storage.WriteParams)
+	if err != nil {
+		return fmt.Errorf("create transaction: %w", err)
 	}
 
-	if err := inmem.WriteUnchecked(ctx, c.manager.Store, storage.ReplaceOp, c.Config.path, data); err != nil {
+	transformed := data
+	if c.transformRule != nil {
+		transformed, err = c.transformData(ctx, txn, data)
+		if err != nil {
+			c.manager.Store.Abort(ctx, txn)
+			return fmt.Errorf("transform failed: %w", err)
+		}
+	}
+
+	if err := inmem.WriteUncheckedTxn(ctx, c.manager.Store, txn, storage.ReplaceOp, c.Config.path, transformed); err != nil {
+		c.manager.Store.Abort(ctx, txn)
 		return fmt.Errorf("writing data to %+v failed: %v", c.Config.path, err)
 	}
-	return nil
+	return c.manager.Store.Commit(ctx, txn)
 }
 
 func convertEntries(entries []*ldap.Entry) (any, error) {
@@ -219,4 +292,24 @@ func convertDN(rawDN string) (map[string]any, error) {
 
 	res["_raw"] = rawDN
 	return res, nil
+}
+
+func (c *Data) transformData(ctx context.Context, txn storage.Transaction, incoming any) (any, error) {
+	buf := &bytes.Buffer{}
+	rs, err := c.transform.Load().Eval(ctx,
+		rego.EvalInput(incoming),
+		rego.EvalTransaction(txn),
+		rego.EvalPrintHook(topdown.NewPrintHook(buf)),
+	)
+	if err != nil {
+		return nil, err
+	}
+	if buf.Len() > 0 {
+		c.log.Debug("rego_transform<%s>: %s", c.Config.RegoTransformRule, buf.String())
+	}
+	if len(rs) == 0 {
+		c.log.Debug("incoming data discarded by transform: %v", incoming) // TODO(sr): this could be very large
+		return nil, nil
+	}
+	return rs[0].Bindings["new"], nil
 }

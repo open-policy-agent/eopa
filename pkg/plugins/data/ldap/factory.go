@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/util"
 	"golang.org/x/exp/maps"
@@ -22,12 +23,16 @@ func Factory() plugins.Factory {
 
 func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 	c := config.(Config)
-	return &Data{
+	d := &Data{
 		Config:  c,
 		log:     m.Logger(),
 		exit:    make(chan struct{}),
 		manager: m,
 	}
+	if c.RegoTransformRule != "" {
+		d.transformRule = ast.MustParseRef(c.RegoTransformRule)
+	}
+	return d
 }
 
 func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) {

@@ -28,6 +28,8 @@ var (
 
 // Config represents the configuration of the ldap data plugin
 type Config struct {
+	RegoTransformRule string `json:"rego_transform"`
+
 	URLs     []string `json:"urls"`
 	Username string   `json:"username,omitempty"`
 	Password string   `json:"password,omitempty"`
@@ -63,6 +65,7 @@ func (c Config) Equal(other Config) bool {
 	case !slices.Equal(c.URLs, other.URLs): // the values are sorted through Validate()
 	case c.Username != other.Username:
 	case c.Password != other.Password:
+	case c.RegoTransformRule != other.RegoTransformRule:
 	case c.BaseDN != other.BaseDN:
 	case c.Filter != other.Filter:
 	case c.scope != other.scope: // compare integers are faster
