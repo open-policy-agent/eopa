@@ -36,7 +36,7 @@ require (
 	github.com/open-policy-agent/opa-envoy-plugin v0.56.0-envoy
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/prometheus/client_golang v1.16.0
-	github.com/rs/zerolog v1.30.0
+	github.com/rs/zerolog v1.31.0
 	github.com/sbabiv/xml2map v1.2.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sourcegraph/conc v0.3.0
@@ -220,7 +220,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matoous/go-nanoid/v2 v2.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.18 // indirect
+	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
