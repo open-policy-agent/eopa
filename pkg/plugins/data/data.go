@@ -17,6 +17,7 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/http"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/kafka"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/ldap"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/mongodb"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/okta"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/s3"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/types"
@@ -26,12 +27,13 @@ import (
 const Name = "data"
 
 var dataPluginRegistry = map[string]plugins.Factory{
-	kafka.Name: kafka.Factory(),
-	http.Name:  http.Factory(),
-	okta.Name:  okta.Factory(),
-	ldap.Name:  ldap.Factory(),
-	git.Name:   git.Factory(),
-	s3.Name:    s3.Factory(),
+	git.Name:     git.Factory(),
+	http.Name:    http.Factory(),
+	kafka.Name:   kafka.Factory(),
+	ldap.Name:    ldap.Factory(),
+	mongodb.Name: mongodb.Factory(),
+	okta.Name:    okta.Factory(),
+	s3.Name:      s3.Factory(),
 } // type -> plugin
 
 // Data plugin

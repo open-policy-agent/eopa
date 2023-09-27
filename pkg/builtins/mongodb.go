@@ -32,7 +32,7 @@ const (
 )
 
 var (
-	mongoDBClients = mongoDBClientPool{clients: make(map[mongoDBClientKey]*mongo.Client)}
+	MongoDBClients = mongoDBClientPool{clients: make(map[mongoDBClientKey]*mongo.Client)}
 
 	mongoDBAllowedKeys = ast.NewSet(
 		ast.StringTerm("auth"),
@@ -202,7 +202,7 @@ func builtinMongoDBFind(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 
 	m := map[string]interface{}{}
 	queryErr := func() error {
-		client, err := mongoDBClients.Get(bctx.Context, uri, credential)
+		client, err := MongoDBClients.Get(bctx.Context, uri, credential)
 		if err != nil {
 			return err
 		}
@@ -231,7 +231,7 @@ func builtinMongoDBFind(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 				return err
 			}
 
-			data, err := json.Marshal(toSnakeCase(v))
+			data, err := json.Marshal(ToSnakeCase(v))
 			if err != nil {
 				return err
 			}
@@ -413,7 +413,7 @@ func builtinMongoDBFindOne(bctx topdown.BuiltinContext, operands []*ast.Term, it
 
 	m := map[string]interface{}{}
 	queryErr := func() error {
-		client, err := mongoDBClients.Get(bctx.Context, uri, credential)
+		client, err := MongoDBClients.Get(bctx.Context, uri, credential)
 		if err != nil {
 			return err
 		}
@@ -442,7 +442,7 @@ func builtinMongoDBFindOne(bctx topdown.BuiltinContext, operands []*ast.Term, it
 				return err
 			}
 
-			data, err := json.Marshal(toSnakeCase(v))
+			data, err := json.Marshal(ToSnakeCase(v))
 			if err != nil {
 				return err
 			}
@@ -585,10 +585,10 @@ func (p *mongoDBClientPool) open(ctx context.Context, uri string, credential []b
 	return mongo.Connect(ctx, opts)
 }
 
-// toSnakeCase converts the top level map keys to snake case enough
+// ToSnakeCase converts the top level map keys to snake case enough
 // for JSON decoder, removing underscores. Since JSON decoding prefers
 // case matching but finds noncase matching fields, this is enough.
-func toSnakeCase(v interface{}) interface{} {
+func ToSnakeCase(v interface{}) interface{} {
 	m, ok := v.(map[string]interface{})
 	if !ok {
 		return v
