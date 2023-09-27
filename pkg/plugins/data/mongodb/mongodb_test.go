@@ -27,10 +27,13 @@ import (
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
+const username, password = "root", "password"
+
 func TestMongoDB(t *testing.T) {
-	username, password := "root", "password"
+	ctx := context.Background()
 	mongodb, uri := startMongoDB(t, username, password)
-	defer mongodb.Terminate(context.Background())
+	t.Cleanup(func() { mongodb.Terminate(ctx) })
+	createCollections(ctx, t, uri)
 
 	auth := fmt.Sprintf(`{"username": "%s", "password": "%s"}`, username, password)
 
@@ -121,7 +124,6 @@ plugins:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
 			store := inmem.New()
 			mgr := pluginMgr(t, store, strings.ReplaceAll(strings.ReplaceAll(tt.config, "URI", uri), "AUTH", auth))
 
@@ -148,7 +150,55 @@ plugins:
 			}
 		})
 	}
+}
 
+func TestRegoTransform(t *testing.T) {
+	ctx := context.Background()
+	tx, uri := startMongoDB(t, username, password)
+	t.Cleanup(func() { tx.Terminate(ctx) })
+
+	// TODO(sr): create some realistic-looking data instead?
+	createCollections(ctx, t, uri)
+
+	config := `
+plugins:
+  data:
+    entities: # arbitrary!
+      type: mongodb
+      uri: %[1]s
+      auth: %[2]s
+      database: database
+      collection: collection1
+      keys: ["foo"]
+      rego_transform: data.e2e.transform
+`
+	auth := fmt.Sprintf(`{"username": "%s", "password": "%s"}`, username, password)
+
+	transform := `package e2e
+import future.keywords
+transform[key] := blob.bar if some key, blob in input
+`
+
+	store := storeWithPolicy(ctx, t, transform)
+	mgr := pluginMgr(t, store, fmt.Sprintf(config, uri, auth))
+	if err := mgr.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer mgr.Stop(ctx)
+
+	waitForStorePath(ctx, t, store, "/entities")
+	act, err := storage.ReadOne(ctx, store, storage.MustParsePath("/entities"))
+	if err != nil {
+		t.Fatalf("read back data: %v", err)
+	}
+
+	exp := map[string]any{
+		"a": json.Number("0"),
+		"b": json.Number("1"),
+	}
+	if diff := cmp.Diff(exp, act); diff != "" {
+		t.Errorf("data value mismatch, diff:\n%s", diff)
+	}
 }
 
 func pluginMgr(t *testing.T, store storage.Store, config string) *plugins.Manager {
@@ -225,36 +275,43 @@ func startMongoDB(t *testing.T, username, password string) (testcontainers.Conta
 	if err != nil {
 		t.Fatal(err)
 	}
+	return container, endpoint
+}
 
-	// Create the test content.
+func createCollections(ctx context.Context, t *testing.T, endpoint string) {
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(authMongoURI(endpoint, username, password)))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	collection := client.Database("database").Collection("collection1")
-
 	if _, err := collection.InsertOne(ctx, bson.D{{Key: "foo", Value: "a"}, {Key: "bar", Value: 0}}); err != nil {
 		t.Fatal(err)
 	}
-
 	if _, err := collection.InsertOne(ctx, bson.D{{Key: "foo", Value: "b"}, {Key: "bar", Value: 1}}); err != nil {
 		t.Fatal(err)
 	}
 
 	collection = client.Database("database").Collection("collection2")
-
 	if _, err := collection.InsertOne(ctx, bson.D{{Key: "foo", Value: "a"}, {Key: "bar", Value: "c"}}); err != nil {
 		t.Fatal(err)
 	}
-
 	if _, err := collection.InsertOne(ctx, bson.D{{Key: "foo", Value: "a"}, {Key: "bar", Value: "d"}}); err != nil {
 		t.Fatal(err)
 	}
-
-	return container, endpoint
 }
 
 func authMongoURI(uri string, username string, password string) string {
 	return strings.ReplaceAll(uri, "localhost", username+":"+password+"@localhost")
+}
+
+func storeWithPolicy(ctx context.Context, t *testing.T, transform string) storage.Store {
+	t.Helper()
+	store := inmem.New()
+	if err := storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
+		return store.UpsertPolicy(ctx, txn, "e2e.rego", []byte(transform))
+	}); err != nil {
+		t.Fatalf("store transform policy: %v", err)
+	}
+	return store
 }

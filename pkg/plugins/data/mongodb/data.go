@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
@@ -26,10 +27,15 @@ type Data struct {
 	log            logging.Logger
 	Config         Config
 	exit, doneExit chan struct{}
+
+	*transform.Rego
 }
 
 func (c *Data) Start(ctx context.Context) error {
 	c.exit = make(chan struct{})
+	if err := c.Rego.Prepare(ctx); err != nil {
+		return fmt.Errorf("prepare rego_transform: %w", err)
+	}
 	if err := storage.Txn(ctx, c.manager.Store, storage.WriteParams, func(txn storage.Transaction) error {
 		return storage.MakeDir(ctx, c.manager.Store, txn, c.Config.path)
 	}); err != nil {
@@ -142,11 +148,27 @@ skip:
 		insert(root, path, result)
 	}
 
-	if err := inmem.WriteUnchecked(ctx, c.manager.Store, storage.ReplaceOp, c.Config.path, root); err != nil {
-		return fmt.Errorf("writing data to %+v failed: %v", c.Config.path, err)
+	txn, err := c.manager.Store.NewTransaction(ctx, storage.WriteParams)
+	if err != nil {
+		return fmt.Errorf("create transaction: %w", err)
 	}
 
-	return nil
+	transformed := any(root)
+	if c.Rego != nil {
+		var logs string
+		transformed, logs, err = c.Rego.TransformData(ctx, txn, root)
+		if logs != "" {
+			c.log.Debug(logs)
+		}
+		if err != nil {
+			c.manager.Store.Abort(ctx, txn)
+			return fmt.Errorf("transform failed: %w", err)
+		}
+	}
+	if err := inmem.WriteUncheckedTxn(ctx, c.manager.Store, txn, storage.ReplaceOp, c.Config.path, transformed); err != nil {
+		return fmt.Errorf("writing data to %+v failed: %v", c.Config.path, err)
+	}
+	return c.manager.Store.Commit(ctx, txn)
 }
 
 func insert(data map[string]interface{}, path []string, doc interface{}) {

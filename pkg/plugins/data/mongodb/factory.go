@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/util"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
 )
 
@@ -20,12 +22,16 @@ func Factory() plugins.Factory {
 
 func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 	c := config.(Config)
-	return &Data{
+	d := &Data{
 		Config:  c,
 		log:     m.Logger(),
 		exit:    make(chan struct{}),
 		manager: m,
 	}
+	if c.RegoTransformRule != "" {
+		d.Rego = transform.New(m, ast.MustParseRef(c.RegoTransformRule))
+	}
+	return d
 }
 
 func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) {
@@ -74,6 +80,11 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 	}
 	if c.interval, err = utils.ParseInterval(c.Interval, utils.DefaultInterval); err != nil {
 		return nil, err
+	}
+	if r := c.RegoTransformRule; r != "" {
+		if err := transform.Validate(r); err != nil {
+			return nil, err
+		}
 	}
 
 	return c, nil

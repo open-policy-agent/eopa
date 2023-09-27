@@ -21,6 +21,8 @@ type Config struct {
 	Interval    string                 `json:"polling_interval,omitempty"` // default 30s
 	Path        string                 `json:"path"`
 
+	RegoTransformRule string `json:"rego_transform"`
+
 	// inserted through Validate()
 	credentials []byte
 	findOptions *options.FindOptions

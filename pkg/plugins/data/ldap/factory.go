@@ -12,6 +12,7 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
 )
 
@@ -30,7 +31,7 @@ func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 		manager: m,
 	}
 	if c.RegoTransformRule != "" {
-		d.transformRule = ast.MustParseRef(c.RegoTransformRule)
+		d.Rego = transform.New(m, ast.MustParseRef(c.RegoTransformRule))
 	}
 	return d
 }
@@ -85,6 +86,12 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 		}
 	}
 	slices.Sort(c.attributes)
+
+	if r := c.RegoTransformRule; r != "" {
+		if err := transform.Validate(r); err != nil {
+			return nil, err
+		}
+	}
 
 	return c, nil
 }
