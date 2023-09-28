@@ -252,12 +252,12 @@ func readRevisionFromStore(ctx context.Context, store storage.Store, txn storage
 		return "", err
 	}
 
-	str, ok := value.(*bjson.String)
+	str, ok := value.(string)
 	if !ok {
 		return "", fmt.Errorf("corrupt manifest revision")
 	}
 
-	return str.Value(), nil
+	return str, nil
 }
 
 // ReadBundleMetadataFromStore returns the metadata in the specified bundle.
