@@ -2,13 +2,13 @@ module github.com/styrainc/eopa-examples-sdk
 
 go 1.20
 
-require github.com/open-policy-agent/opa v0.56.0
+require github.com/open-policy-agent/opa v0.57.0
 
 require (
 	github.com/hashicorp/vault/api v1.9.2
 	github.com/styrainc/enterprise-opa-private v1.45.0
-	github.com/testcontainers/testcontainers-go v0.24.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.24.0
+	github.com/testcontainers/testcontainers-go v0.24.1
+	github.com/testcontainers/testcontainers-go/modules/vault v0.24.1
 )
 
 require (
@@ -39,7 +39,7 @@ require (
 	github.com/apache/arrow/go/v12 v12.0.1 // indirect
 	github.com/apache/thrift v0.18.1 // indirect
 	github.com/aws/aws-lambda-go v1.28.0 // indirect
-	github.com/aws/aws-sdk-go v1.45.10 // indirect
+	github.com/aws/aws-sdk-go v1.45.15 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.19.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.28 // indirect
@@ -173,7 +173,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matoous/go-nanoid/v2 v2.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.18 // indirect
+	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.23 // indirect
 	github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8 // indirect
@@ -236,7 +236,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/trinodb/trino-go-client v0.309.0 // indirect
-	github.com/twmb/franz-go v1.14.4 // indirect
+	github.com/twmb/franz-go v1.15.0 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.6.1 // indirect
 	github.com/urfave/cli/v2 v2.25.1 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
@@ -285,7 +285,7 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230711160842-782d3b101e98 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
-	google.golang.org/grpc v1.58.1 // indirect
+	google.golang.org/grpc v1.58.2 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/jcmturner/aescts.v1 v1.0.1 // indirect
 	gopkg.in/jcmturner/dnsutils.v1 v1.0.1 // indirect

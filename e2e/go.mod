@@ -10,7 +10,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/vault/api v1.10.0
 	github.com/minio/minio-go/v7 v7.0.63
-	github.com/open-policy-agent/opa v0.56.0
+	github.com/open-policy-agent/opa v0.57.0
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/rs/zerolog v1.31.0
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000

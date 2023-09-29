@@ -32,7 +32,7 @@ require (
 	github.com/mithrandie/csvq-driver v1.7.0
 	github.com/mithrandie/go-text v1.6.0
 	github.com/okta/okta-sdk-golang/v3 v3.0.12
-	github.com/open-policy-agent/opa v0.56.0
+	github.com/open-policy-agent/opa v0.57.0
 	github.com/open-policy-agent/opa-envoy-plugin v0.56.0-envoy
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/prometheus/client_golang v1.16.0
@@ -365,4 +365,4 @@ replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.56.1-0.20230831211500-0c3603660e0c
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.57.1-0.20230928191305-882b4e76b4f7
