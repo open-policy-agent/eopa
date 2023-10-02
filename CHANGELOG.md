@@ -1,5 +1,66 @@
 # Changelog
 
+## v1.10.1
+
+### New data source integration: MongoDB
+
+It is now possible to use a single MongoDB collection as a data source, with optional filtering/projection at retrieval time.
+
+For example if you had `collection1` in a MongoDB instance set to the following JSON document:
+
+```json
+[
+  {"foo": "a", "bar": 0},
+  {"foo": "b", "bar": 1},
+  {"foo": "c", "bar": 0},
+  {"foo": "d", "bar": 3}
+]
+```
+
+If you configured a MongoDB data source to use `collection1`:
+
+```yaml
+plugins:
+  data:
+    mongodb.example:
+      type: mongodb
+      uri: <your_db_uri_here>
+      auth: <your_login_info_here>
+      database: database
+      collection: collection1
+      keys: ["foo"]
+      filter: {"bar": 0}
+```
+
+The configuration shown above would filter this collection down to just:
+```json
+[
+  {"foo": "a", "bar": 0},
+  {"foo": "c", "bar": 0}
+]
+```
+
+The `keys` parameter in the configuration shown earlier guides how the collection is transformed into a Rego Object, mapping the unique key field(s) to the corresponding documents from the filtered collection:
+
+```json
+{
+  "a": {"foo": "a", "bar": 0},
+  "c": {"foo": "c", "bar": 0}
+}
+```
+
+You could then use this data source in a Rego policy just like any other aggregate data type. As a simple example:
+
+```rego
+package hello_mongodb
+
+filtered_documents := data.mongodb.example
+
+allow if {
+  count(filtered_documents) == 2 # Want just 2 items in the collection.
+}
+```
+
 ## v1.10.0
 
 This release updates the OPA version used in Enterprise OPA to [v0.57.0](https://github.com/open-policy-agent/opa/releases/tag/v0.57.0), and integrates several bugfixes and new features.
