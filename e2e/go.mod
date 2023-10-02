@@ -14,10 +14,10 @@ require (
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/rs/zerolog v1.31.0
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
-	github.com/testcontainers/testcontainers-go v0.24.1
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.24.1
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.24.1
-	github.com/testcontainers/testcontainers-go/modules/vault v0.24.1
+	github.com/testcontainers/testcontainers-go v0.25.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.25.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.25.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.25.0
 	github.com/twmb/franz-go v1.15.0
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	golang.org/x/exp v0.0.0-20230725093048-515e97ebf090
@@ -83,7 +83,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
-	github.com/klauspost/compress v1.16.7 // indirect
+	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
@@ -119,13 +119,13 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sbabiv/xml2map v1.2.1 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
-	github.com/shirou/gopsutil/v3 v3.23.7 // indirect
+	github.com/shirou/gopsutil/v3 v3.23.8 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.2.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
-	github.com/tklauser/go-sysconf v0.3.11 // indirect
-	github.com/tklauser/numcpus v0.6.0 // indirect
+	github.com/tklauser/go-sysconf v0.3.12 // indirect
+	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.6.1 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
