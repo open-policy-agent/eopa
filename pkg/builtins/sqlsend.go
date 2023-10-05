@@ -12,6 +12,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib" // database/sql compatible driver for pgx
+	_ "github.com/snowflakedb/gosnowflake"
 	"modernc.org/sqlite"
 
 	lru "github.com/hashicorp/golang-lru/v2"
@@ -54,7 +55,7 @@ var (
 	)
 
 	requiredKeys     = ast.NewSet(ast.StringTerm("driver"), ast.StringTerm("data_source_name"), ast.StringTerm("query"))
-	supportedDrivers = ast.NewSet(ast.StringTerm("postgres"), ast.StringTerm("mysql"), ast.StringTerm("sqlite"))
+	supportedDrivers = ast.NewSet(ast.StringTerm("postgres"), ast.StringTerm("mysql"), ast.StringTerm("snowflake"), ast.StringTerm("sqlite"))
 
 	// Marked non-deterministic because SQL query results can be non-deterministic.
 	sqlSend = &ast.Builtin{
@@ -518,7 +519,7 @@ func validateDriver(d string) (string, error) {
 	switch d {
 	case "postgres":
 		d = "pgx"
-	case "mysql", "sqlite": // OK
+	case "mysql", "sqlite", "snowflake": // OK
 	default:
 		return "", builtins.NewOperandErr(1, "unknown driver %s, must be one of %v", d, supportedDrivers)
 	}

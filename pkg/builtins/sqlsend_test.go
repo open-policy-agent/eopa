@@ -74,7 +74,7 @@ func TestSQLSend(t *testing.T) {
 			note:    "unknown driver",
 			backend: none,
 			query:   `p = resp { sql.send({"driver": "pg", "data_source_name": "", "query": ""}, resp)}`,
-			error:   `eval_type_error: sql.send: operand 1 unknown driver pg, must be one of {"mysql", "postgres", "sqlite"}`,
+			error:   `eval_type_error: sql.send: operand 1 unknown driver pg, must be one of {"mysql", "postgres", "snowflake", "sqlite"}`,
 		},
 		{
 			note:            "a single row query",

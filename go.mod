@@ -39,6 +39,7 @@ require (
 	github.com/rs/zerolog v1.31.0
 	github.com/sbabiv/xml2map v1.2.1
 	github.com/sirupsen/logrus v1.9.3
+	github.com/snowflakedb/gosnowflake v1.6.23
 	github.com/sourcegraph/conc v0.3.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
@@ -282,7 +283,6 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sijms/go-ora/v2 v2.5.22 // indirect
 	github.com/skeema/knownhosts v1.2.0 // indirect
-	github.com/snowflakedb/gosnowflake v1.6.23 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
 	github.com/tilinna/z85 v1.0.0 // indirect
