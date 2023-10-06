@@ -711,7 +711,19 @@ func NewArray(elements ...File) Array {
 	return newArrayImpl(elements)
 }
 
+func NewArrayWithCapacity(capacity int) Array {
+	if capacity == 0 {
+		return &ArraySlice{nil}
+	}
+
+	return &ArraySlice{make([]File, 0, capacity)}
+}
+
 func newArrayImpl(elements []File) Array {
+	if len(elements) == 0 {
+		return &ArraySlice{nil}
+	}
+
 	return &ArraySlice{elements}
 }
 

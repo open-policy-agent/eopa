@@ -380,8 +380,8 @@ func (*DataOperations) IsObject(ctx context.Context, v interface{}) (bool, error
 	}
 }
 
-func (*DataOperations) MakeArray(int32) fjson.Array {
-	return fjson.NewArray()
+func (*DataOperations) MakeArray(capacity int32) fjson.Array {
+	return fjson.NewArrayWithCapacity(int(capacity))
 }
 
 func (*DataOperations) MakeBoolean(v bool) fjson.Json {
