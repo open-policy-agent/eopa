@@ -627,9 +627,8 @@ func walkBuiltin(state *State, args []Value) error {
 	}
 
 	var arr Value = state.ValueOps().MakeArray(0)
-	state.SetReturnValue(Unused, arr)
 
-	return do(state, state.ValueOps().MakeArray(0), args[0], func(state *State, path, val Value) error {
+	err := do(state, state.ValueOps().MakeArray(0), args[0], func(state *State, path, val Value) error {
 		tuple, _, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.ValueOps().MakeArray(0), path)
 		if err != nil {
 			return err
@@ -641,6 +640,8 @@ func walkBuiltin(state *State, args []Value) error {
 		arr, _, err = state.ValueOps().ArrayAppend(state.Globals.Ctx, arr, tuple)
 		return err
 	})
+	state.SetReturnValue(Unused, arr)
+	return err
 }
 
 func do(state *State, path Value, val Value, record func(*State, Value, Value) error) error {
@@ -686,7 +687,6 @@ func arrayConcatBuiltin(state *State, args []Value) error {
 	}
 
 	var ret Value = state.ValueOps().MakeArray(0)
-	state.SetReturnValue(Unused, ret)
 	arrays := []any{a, b}
 	for i := range arrays {
 		var innerErr error
@@ -708,6 +708,7 @@ func arrayConcatBuiltin(state *State, args []Value) error {
 		}
 	}
 
+	state.SetReturnValue(Unused, ret)
 	return nil
 }
 
