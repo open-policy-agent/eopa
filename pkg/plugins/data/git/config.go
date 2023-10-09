@@ -53,6 +53,8 @@ type Config struct {
 	Interval string `json:"polling_interval,omitempty"` // default 5m, min 10s
 	Path     string `json:"path"`
 
+	RegoTransformRule string `json:"rego_transform"`
+
 	// inserted through Validate()
 	url      string
 	auth     transport.AuthMethod

@@ -25,6 +25,11 @@ import (
 )
 
 func TestGitData(t *testing.T) {
+	const transform = `package e2e
+	import future.keywords
+	transform.raw := input
+`
+
 	for _, tt := range []struct {
 		name     string
 		config   string
@@ -85,6 +90,91 @@ plugins:
 				}
 				expected = map[string]any{
 					"foo": "baz",
+				}
+
+				if _, err := w.Add("data.json"); err != nil {
+					t.Fatalf("adding data.json to commit: %v", err)
+				}
+				if _, err := w.Commit("add data.json", &git.CommitOptions{
+					Author: &object.Signature{
+						Name:  "John Doe",
+						Email: "john@doe.org",
+						When:  time.Now(),
+					},
+				}); err != nil {
+					t.Fatalf("creating new commit: %v", err)
+				}
+
+				time.Sleep(12 * time.Second)
+				act, err = storage.ReadOne(ctx, store, storage.MustParsePath("/git/placeholder"))
+				if err != nil {
+					t.Fatalf("read back data: %v", err)
+				}
+				if diff := cmp.Diff(expected, act); diff != "" {
+					t.Errorf("data value mismatch, diff:\n%s", diff)
+				}
+			},
+		},
+		{
+			name: "transform",
+			config: `
+plugins:
+  data:
+    git.placeholder:
+      type: git
+      url: %s
+      polling_interval: 10s
+      file_path: data.json
+      rego_transform: data.e2e.transform
+`,
+			validate: func(t *testing.T, store storage.Store, repo *git.Repository, dir string) {
+				ctx := context.Background()
+
+				w, err := repo.Worktree()
+				if err != nil {
+					t.Fatalf("getting worktree")
+				}
+
+				if err := os.WriteFile(path.Join(dir, "data.json"), []byte(`{"foo": "bar"}`), 0o644); err != nil {
+					t.Fatalf("create data.json file: %v", err)
+				}
+				expected := map[string]any{
+					"raw": map[string]any{
+						"foo": "bar",
+					},
+				}
+
+				if _, err := w.Add("data.json"); err != nil {
+					t.Fatalf("adding data.json to commit: %v", err)
+				}
+				if _, err := w.Commit("add data.json", &git.CommitOptions{
+					Author: &object.Signature{
+						Name:  "John Doe",
+						Email: "john@doe.org",
+						When:  time.Now(),
+					},
+				}); err != nil {
+					t.Fatalf("creating new commit: %v", err)
+				}
+
+				waitForStorePath(ctx, t, store, "/git/placeholder")
+				act, err := storage.ReadOne(ctx, store, storage.MustParsePath("/git/placeholder"))
+				if err != nil {
+					t.Fatalf("read back data: %v", err)
+				}
+				if diff := cmp.Diff(expected, act); diff != "" {
+					t.Errorf("data value mismatch, diff:\n%s", diff)
+				}
+
+				// update file
+
+				if err := os.WriteFile(path.Join(dir, "data.json"), []byte(`{"foo": "baz"}`), 0o644); err != nil {
+					t.Fatalf("create data.json file: %v", err)
+				}
+				expected = map[string]any{
+					"raw": map[string]any{
+						"foo": "baz",
+					},
 				}
 
 				if _, err := w.Add("data.json"); err != nil {
@@ -208,7 +298,7 @@ plugins:
 			}
 
 			ctx := context.Background()
-			store := inmem.New()
+			store := storeWithPolicy(ctx, t, transform)
 			mgr := pluginMgr(t, store, cfg)
 
 			if err := mgr.Start(ctx); err != nil {
@@ -295,4 +385,15 @@ func waitForStorePath(ctx context.Context, t *testing.T, store storage.Store, pa
 	}, 200*time.Millisecond, 30*time.Second); err != nil {
 		t.Fatalf("wait for store path %v: %v", path, err)
 	}
+}
+
+func storeWithPolicy(ctx context.Context, t *testing.T, transform string) storage.Store {
+	t.Helper()
+	store := inmem.New()
+	if err := storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
+		return store.UpsertPolicy(ctx, txn, "e2e.rego", []byte(transform))
+	}); err != nil {
+		t.Fatalf("store transform policy: %v", err)
+	}
+	return store
 }

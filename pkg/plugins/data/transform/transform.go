@@ -12,6 +12,8 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
+
+	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 type Rego struct {
@@ -20,7 +22,14 @@ type Rego struct {
 	transform atomic.Pointer[rego.PreparedEvalQuery]
 }
 
-func New(m *plugins.Manager, r ast.Ref) *Rego {
+// New instantiates the Rego transform. It'll be a no-op unless a reference
+// to some Rego rule is provided (r0). The caller needs to assure that the ref
+// string is a valid ast.Ref, otherwise this will panic.
+func New(m *plugins.Manager, r0 string) *Rego {
+	var r ast.Ref
+	if r0 != "" {
+		r = ast.MustParseRef(r0)
+	}
 	return &Rego{manager: m, rule: r}
 }
 
@@ -41,7 +50,11 @@ func (s *Rego) Prepare(ctx context.Context) error {
 	})
 }
 
-func (s *Rego) TransformData(ctx context.Context, txn storage.Transaction, incoming any) (any, string, error) {
+// transformData applies Rego transform rule(s) to incoming, and returns the result.
+func (s *Rego) transformData(ctx context.Context, txn storage.Transaction, incoming any) (any, string, error) {
+	if s.rule == nil {
+		return incoming, "", nil
+	}
 	logs := strings.Builder{}
 	buf := &bytes.Buffer{}
 	rs, err := s.transform.Load().Eval(ctx,
@@ -63,7 +76,7 @@ func (s *Rego) TransformData(ctx context.Context, txn storage.Transaction, incom
 }
 
 func (s *Rego) Trigger(ctx context.Context, txn storage.Transaction) error {
-	if s == nil {
+	if s == nil || s.rule == nil {
 		return nil
 	}
 	transformRef := s.rule
@@ -91,4 +104,25 @@ func (s *Rego) Trigger(ctx context.Context, txn storage.Transaction) error {
 	}
 	s.transform.Store(&pq)
 	return nil
+}
+
+// Ingest applies the transform rule(s) for this Rego object to incoming,
+// and then commits the result to the store.
+func (s *Rego) Ingest(ctx context.Context, path storage.Path, incoming any) error {
+	txn, err := s.manager.Store.NewTransaction(ctx, storage.WriteParams)
+	if err != nil {
+		return fmt.Errorf("create transaction: %w", err)
+	}
+	transformed := incoming
+	if s != nil {
+		transformed, _, err = s.transformData(ctx, txn, incoming)
+		if err != nil {
+			s.manager.Store.Abort(ctx, txn)
+			return fmt.Errorf("transform failed: %w", err)
+		}
+	}
+	if err := inmem.WriteUncheckedTxn(ctx, s.manager.Store, txn, storage.ReplaceOp, path, transformed); err != nil {
+		return fmt.Errorf("writing data to %+v failed: %v", path, err)
+	}
+	return s.manager.Store.Commit(ctx, txn)
 }

@@ -587,6 +587,15 @@ func JSONResponder(data []byte) httpmock.Responder {
 }
 
 func TestOKTAData(t *testing.T) {
+	const transform = `package e2e
+import future.keywords
+transform.users[id] := d {
+	some entry in input.users
+	id := entry.id
+	d := object.filter(entry.profile, {"firstName", "email"})
+}
+`
+
 	for _, tt := range []struct {
 		name         string
 		config       string
@@ -809,6 +818,34 @@ plugins:
 				"apps":          expectedApps,
 			},
 		},
+		{
+			name: "transform",
+			config: `
+plugins:
+  data:
+    okta.placeholder:
+      type: okta
+      url: https://okta.local
+      token: test-token
+      users: true
+      rego_transform: data.e2e.transform
+`,
+			responders: []Responder{
+				{
+					Method:    http.MethodGet,
+					URL:       "https://okta.local/api/v1/users",
+					Responder: JSONResponder(users),
+				},
+			},
+			expectedData: map[string]any{
+				"users": map[string]any{
+					"00u8c2qt45hW8VYPO5d7": map[string]any{
+						"email":     "sergey@styra.com",
+						"firstName": "Sergey",
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			defer goleak.VerifyNone(t, goleak.IgnoreTopFunction("github.com/patrickmn/go-cache.(*janitor).Run"))
@@ -820,7 +857,7 @@ plugins:
 			}
 
 			ctx := context.Background()
-			store := inmem.New()
+			store := storeWithPolicy(ctx, t, transform)
 			mgr := pluginMgr(t, store, tt.config)
 
 			if err := mgr.Start(ctx); err != nil {
@@ -914,4 +951,15 @@ func waitForStorePath(ctx context.Context, t *testing.T, store storage.Store, pa
 	}, 200*time.Millisecond, 10*time.Second); err != nil {
 		t.Fatalf("wait for store path %v: %v", path, err)
 	}
+}
+
+func storeWithPolicy(ctx context.Context, t *testing.T, transform string) storage.Store {
+	t.Helper()
+	store := inmem.New()
+	if err := storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
+		return store.UpsertPolicy(ctx, txn, "e2e.rego", []byte(transform))
+	}); err != nil {
+		t.Fatalf("store transform policy: %v", err)
+	}
+	return store
 }

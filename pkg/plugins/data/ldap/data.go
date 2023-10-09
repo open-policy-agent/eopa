@@ -14,7 +14,6 @@ import (
 
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/types"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 const (
@@ -31,7 +30,7 @@ type Data struct {
 	*transform.Rego
 }
 
-// Ensure that the kafka sub-plugin will be triggered by the data umbrella plugin,
+// Ensure that this sub-plugin will be triggered by the data umbrella plugin,
 // because it implements types.Triggerer.
 var _ types.Triggerer = (*Data)(nil)
 
@@ -162,29 +161,11 @@ func (c *Data) poll(ctx context.Context, u *url.URL) error {
 	if err != nil {
 		return fmt.Errorf("converting result failed: %w", err)
 	}
-	txn, err := c.manager.Store.NewTransaction(ctx, storage.WriteParams)
-	if err != nil {
-		return fmt.Errorf("create transaction: %w", err)
-	}
 
-	transformed := data
-	if c.Rego != nil {
-		var logs string
-		transformed, logs, err = c.Rego.TransformData(ctx, txn, data)
-		if logs != "" {
-			c.log.Debug(logs)
-		}
-		if err != nil {
-			c.manager.Store.Abort(ctx, txn)
-			return fmt.Errorf("transform failed: %w", err)
-		}
+	if err := c.Rego.Ingest(ctx, c.Path(), data); err != nil {
+		return fmt.Errorf("plugin %s at %s: %w", c.Name(), c.Config.path, err)
 	}
-
-	if err := inmem.WriteUncheckedTxn(ctx, c.manager.Store, txn, storage.ReplaceOp, c.Config.path, transformed); err != nil {
-		c.manager.Store.Abort(ctx, txn)
-		return fmt.Errorf("writing data to %+v failed: %v", c.Config.path, err)
-	}
-	return c.manager.Store.Commit(ctx, txn)
+	return nil
 }
 
 func convertEntries(entries []*ldap.Entry) (any, error) {

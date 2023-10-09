@@ -26,6 +26,15 @@ import (
 )
 
 func TestHTTPData(t *testing.T) {
+	const transform = `package e2e
+	import future.keywords
+	transform.users[id] := d {
+		entry := input
+		id := entry.id
+		d := entry.userId
+	}
+	`
+
 	for _, tt := range []struct {
 		name         string
 		handler      func(tb testing.TB) http.HandlerFunc
@@ -54,6 +63,35 @@ plugins:
 {
   "userId": 1,
   "id": 1,
+  "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
+}`,
+					))
+				}
+			},
+		},
+		{
+			name: "transform",
+			config: `
+plugins:
+  data:
+    http.placeholder:
+      type: http
+      url: %[1]s
+      rego_transform: data.e2e.transform
+`,
+			expectedData: []map[string]any{
+				{
+					"users": map[string]any{
+						"id01": "admin",
+					},
+				},
+			},
+			handler: func(tb testing.TB) http.HandlerFunc {
+				return func(writer http.ResponseWriter, request *http.Request) {
+					writer.Write([]byte(`
+{
+  "userId": "admin",
+  "id": "id01",
   "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
 }`,
 					))
@@ -226,7 +264,7 @@ plugins:
 			ctx := context.Background()
 			config := fmt.Sprintf(tt.config, srv.URL)
 
-			store := inmem.New()
+			store := storeWithPolicy(ctx, t, transform)
 			mgr := pluginMgr(t, store, config)
 
 			if err := mgr.Start(ctx); err != nil {
@@ -337,4 +375,15 @@ func waitForStorePath(ctx context.Context, t *testing.T, store storage.Store, pa
 	}, 200*time.Millisecond, 10*time.Second); err != nil {
 		t.Fatalf("wait for store path %v: %v", path, err)
 	}
+}
+
+func storeWithPolicy(ctx context.Context, t *testing.T, transform string) storage.Store {
+	t.Helper()
+	store := inmem.New()
+	if err := storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
+		return store.UpsertPolicy(ctx, txn, "e2e.rego", []byte(transform))
+	}); err != nil {
+		t.Fatalf("store transform policy: %v", err)
+	}
+	return store
 }

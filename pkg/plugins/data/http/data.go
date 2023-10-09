@@ -14,8 +14,9 @@ import (
 	"github.com/open-policy-agent/opa/util"
 
 	"github.com/styrainc/enterprise-opa-private/pkg"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/types"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 const (
@@ -29,10 +30,19 @@ type Data struct {
 	log            logging.Logger
 	Config         Config
 	exit, doneExit chan struct{}
+
+	*transform.Rego
 }
+
+// Ensure that this sub-plugin will be triggered by the data umbrella plugin,
+// because it implements types.Triggerer.
+var _ types.Triggerer = (*Data)(nil)
 
 func (c *Data) Start(ctx context.Context) error {
 	c.exit = make(chan struct{})
+	if err := c.Rego.Prepare(ctx); err != nil {
+		return fmt.Errorf("prepare rego_transform: %w", err)
+	}
 	if err := storage.Txn(ctx, c.manager.Store, storage.WriteParams, func(txn storage.Transaction) error {
 		return storage.MakeDir(ctx, c.manager.Store, txn, c.Config.path)
 	}); err != nil {
@@ -107,7 +117,11 @@ LOOP:
 			break LOOP
 		case <-timer.C:
 		}
-		if v := c.poll(ctx, r, eTag, client); v != "" {
+		v, err := c.poll(ctx, r, eTag, client)
+		if err != nil {
+			c.log.Error("polling for url %q failed: %+v", c.Config.URL, err)
+		}
+		if v != "" {
 			eTag = v
 		}
 		timer.Reset(c.Config.interval)
@@ -120,7 +134,7 @@ LOOP:
 	close(c.doneExit)
 }
 
-func (c *Data) poll(ctx context.Context, body io.ReadSeeker, eTag string, client http.Client) string {
+func (c *Data) poll(ctx context.Context, body io.ReadSeeker, eTag string, client http.Client) (string, error) {
 	if body != nil {
 		body.Seek(0, io.SeekStart) // ignore error since we always seek to the start of the buffer
 	}
@@ -128,7 +142,7 @@ func (c *Data) poll(ctx context.Context, body io.ReadSeeker, eTag string, client
 	req, err := http.NewRequestWithContext(ctx, c.Config.method, c.Config.url.String(), body)
 	if err != nil {
 		// should never be reached because the url is checked during the validation
-		panic(fmt.Errorf("cannot create request: %w", err))
+		return "", fmt.Errorf("cannot create request: %w", err)
 	}
 	if c.Config.headers != nil {
 		req.Header = c.Config.headers.Clone()
@@ -142,50 +156,47 @@ func (c *Data) poll(ctx context.Context, body io.ReadSeeker, eTag string, client
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		c.log.Warn("request failed: %v", err)
-		return ""
+		return "", err
 	}
+	// TODO(sr): When this data module is triggered -- i.e. when the rego_transform code has changed --
+	// we might still want to re-fetch, i.e. invalidate the etag.
 	if resp.StatusCode == http.StatusNotModified {
 		c.log.Debug("not modified, etag: s", eTag)
-		return ""
+		return "", nil
 	}
 
 	if resp.StatusCode >= 400 {
 		if resp.Body != nil {
 			data, err := io.ReadAll(resp.Body)
 			if err != nil {
-				c.log.Warn("cannot read response body: %v", err)
+				return "", fmt.Errorf("cannot read response body: %w", err)
 			}
 			resp.Body.Close()
 			if len(data) > 0 {
-				c.log.Warn("request failed with status %q and response: %s", resp.Status, string(data))
-				return ""
+				return "", fmt.Errorf("request failed with status %q and response: %s", resp.Status, string(data))
 			}
 		}
-		c.log.Warn("request failed with status %q", resp.Status)
-		return ""
+		return "", fmt.Errorf("request failed with status %q", resp.Status)
 	}
 
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
-		c.log.Warn("cannot read response body: %v", err)
-		return ""
+		return "", fmt.Errorf("cannot read response body: %w", err)
 	}
 	resp.Body.Close()
 
 	data, err := unmarshalUnknown(raw)
 	if err != nil {
 		c.log.Debug("response: %s", string(raw))
-		c.log.Warn("cannot decode response: %v", err)
-		return ""
+		return "", fmt.Errorf("cannot decode response: %w", err)
+
 	}
-	if err := inmem.WriteUnchecked(ctx, c.manager.Store, storage.ReplaceOp, c.Config.path, data); err != nil {
-		c.log.Error("writing data to %+v failed: %v", c.Config.path, err)
-		return ""
+	if err := c.Rego.Ingest(ctx, c.Path(), data); err != nil {
+		return "", fmt.Errorf("writing data to %+v failed: %w", c.Config.path, err)
 	}
 
 	// override eTag only if everything ok with the current response
-	return resp.Header.Get("ETag")
+	return resp.Header.Get("ETag"), nil
 }
 
 func unmarshalUnknown(raw []byte) (any, error) {

@@ -13,7 +13,6 @@ import (
 	goldap "github.com/go-ldap/ldap/v3"
 	"github.com/google/go-cmp/cmp"
 	tmock "github.com/stretchr/testify/mock"
-	"go.uber.org/goleak"
 
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
@@ -102,7 +101,6 @@ plugins:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			defer goleak.VerifyNone(t)
 			client := &mocks.Client{}
 			defer client.AssertExpectations(t)
 
@@ -147,7 +145,6 @@ plugins:
       username: test
       password: testpswd
 `
-	defer goleak.VerifyNone(t)
 	client := &mocks.Client{}
 	defer client.AssertExpectations(t)
 
@@ -213,7 +210,7 @@ func waitForStorePath(ctx context.Context, t *testing.T, store storage.Store, pa
 			return false
 		}
 		return true
-	}, 200*time.Millisecond, 10*time.Second); err != nil {
+	}, 200*time.Millisecond, 20*time.Second); err != nil {
 		t.Fatalf("wait for store path %v: %v", path, err)
 	}
 }

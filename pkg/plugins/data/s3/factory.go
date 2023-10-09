@@ -9,6 +9,7 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/util"
 
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
 )
 
@@ -25,6 +26,7 @@ func (factory) New(m *plugins.Manager, config any) plugins.Plugin {
 		log:     m.Logger(),
 		exit:    make(chan struct{}),
 		manager: m,
+		Rego:    transform.New(m, c.RegoTransformRule),
 	}
 }
 
@@ -84,6 +86,11 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (any, error) {
 	}
 	if c.interval, err = utils.ParseInterval(c.Interval, 5*time.Minute); err != nil {
 		return nil, err
+	}
+	if r := c.RegoTransformRule; r != "" {
+		if err := transform.Validate(r); err != nil {
+			return nil, err
+		}
 	}
 
 	return c, nil

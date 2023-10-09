@@ -14,7 +14,7 @@ import (
 
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/types"
 )
 
 const (
@@ -30,6 +30,10 @@ type Data struct {
 
 	*transform.Rego
 }
+
+// Ensure that this sub-plugin will be triggered by the data umbrella plugin,
+// because it implements types.Triggerer.
+var _ types.Triggerer = (*Data)(nil)
 
 func (c *Data) Start(ctx context.Context) error {
 	c.exit = make(chan struct{})
@@ -148,27 +152,10 @@ skip:
 		insert(root, path, result)
 	}
 
-	txn, err := c.manager.Store.NewTransaction(ctx, storage.WriteParams)
-	if err != nil {
-		return fmt.Errorf("create transaction: %w", err)
+	if err := c.Rego.Ingest(ctx, c.Path(), root); err != nil {
+		return fmt.Errorf("plugin %s at %s: %w", c.Name(), c.Config.path, err)
 	}
-
-	transformed := any(root)
-	if c.Rego != nil {
-		var logs string
-		transformed, logs, err = c.Rego.TransformData(ctx, txn, root)
-		if logs != "" {
-			c.log.Debug(logs)
-		}
-		if err != nil {
-			c.manager.Store.Abort(ctx, txn)
-			return fmt.Errorf("transform failed: %w", err)
-		}
-	}
-	if err := inmem.WriteUncheckedTxn(ctx, c.manager.Store, txn, storage.ReplaceOp, c.Config.path, transformed); err != nil {
-		return fmt.Errorf("writing data to %+v failed: %v", c.Config.path, err)
-	}
-	return c.manager.Store.Commit(ctx, txn)
+	return nil
 }
 
 func insert(data map[string]interface{}, path []string, doc interface{}) {

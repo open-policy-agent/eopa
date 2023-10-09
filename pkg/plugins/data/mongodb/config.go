@@ -63,6 +63,7 @@ func (c Config) Equal(other Config) bool {
 	case slices.Compare(c.Keys, other.Keys) != 0:
 	case c.Canonical == other.Canonical:
 	case c.Interval != other.Interval:
+	case c.RegoTransformRule != other.RegoTransformRule:
 		// Path excluded.
 	default:
 		return true

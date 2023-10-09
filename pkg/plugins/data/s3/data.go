@@ -19,8 +19,9 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/types"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 const (
@@ -38,7 +39,13 @@ type Data struct {
 	hc             *http.Client
 	session        *session.Session
 	exit, doneExit chan struct{}
+
+	*transform.Rego
 }
+
+// Ensure that this sub-plugin will be triggered by the data umbrella plugin,
+// because it implements types.Triggerer.
+var _ types.Triggerer = (*Data)(nil)
 
 type credentialsProvider struct {
 	accessID, secret string
@@ -56,11 +63,15 @@ func (p *credentialsProvider) IsExpired() bool {
 }
 
 func (c *Data) Start(ctx context.Context) error {
+	if err := c.Rego.Prepare(ctx); err != nil {
+		return fmt.Errorf("prepare rego_transform: %w", err)
+	}
 	c.hc = &http.Client{}
 	cfg := aws.NewConfig().
 		WithHTTPClient(c.hc).
 		WithCredentials(credentials.NewCredentials(&credentialsProvider{c.Config.AccessID, c.Config.Secret})).
-		WithRegion(c.Config.region)
+		WithRegion(c.Config.region).
+		WithS3ForcePathStyle(c.Config.ForcePath)
 	if c.Config.endpoint != "" {
 		cfg = cfg.WithEndpoint(c.Config.endpoint)
 	}
@@ -148,10 +159,9 @@ func (c *Data) poll(ctx context.Context) error {
 		return nil
 	}
 
-	if err := inmem.WriteUnchecked(ctx, c.manager.Store, storage.ReplaceOp, c.Config.path, results); err != nil {
-		return fmt.Errorf("writing data to %+v failed: %w", c.Config.path, err)
+	if err := c.Rego.Ingest(ctx, c.Path(), results); err != nil {
+		return fmt.Errorf("plugin %s at %s: %w", c.Name(), c.Config.path, err)
 	}
-
 	return nil
 }
 

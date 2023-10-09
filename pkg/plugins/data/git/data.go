@@ -19,8 +19,9 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/types"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 const (
@@ -38,9 +39,18 @@ type Data struct {
 	exit, doneExit chan struct{}
 	repository     *git.Repository
 	ref            plumbing.ReferenceName
+
+	*transform.Rego
 }
 
+// Ensure that this sub-plugin will be triggered by the data umbrella plugin,
+// because it implements types.Triggerer.
+var _ types.Triggerer = (*Data)(nil)
+
 func (c *Data) Start(ctx context.Context) error {
+	if err := c.Rego.Prepare(ctx); err != nil {
+		return fmt.Errorf("prepare rego_transform: %w", err)
+	}
 	r, err := git.Init(memory.NewStorage(), memfs.New())
 	if err != nil {
 		return err
@@ -138,10 +148,9 @@ func (c *Data) poll(ctx context.Context) error {
 		return err
 	}
 
-	if err := inmem.WriteUnchecked(ctx, c.manager.Store, storage.ReplaceOp, c.Config.path, results); err != nil {
-		return fmt.Errorf("writing data to %+v failed: %w", c.Config.path, err)
+	if err := c.Rego.Ingest(ctx, c.Path(), results); err != nil {
+		return fmt.Errorf("plugin %s at %s: %w", c.Name(), c.Config.path, err)
 	}
-
 	return nil
 }
 

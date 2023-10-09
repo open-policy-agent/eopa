@@ -17,7 +17,8 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/types"
 )
 
 const (
@@ -30,9 +31,18 @@ type Data struct {
 	log            logging.Logger
 	Config         Config
 	exit, doneExit chan struct{}
+
+	*transform.Rego
 }
 
+// Ensure that this sub-plugin will be triggered by the data umbrella plugin,
+// because it implements types.Triggerer.
+var _ types.Triggerer = (*Data)(nil)
+
 func (c *Data) Start(ctx context.Context) error {
+	if err := c.Rego.Prepare(ctx); err != nil {
+		return fmt.Errorf("prepare rego_transform: %w", err)
+	}
 	c.exit = make(chan struct{})
 	if err := storage.Txn(ctx, c.manager.Store, storage.WriteParams, func(txn storage.Transaction) error {
 		return storage.MakeDir(ctx, c.manager.Store, txn, c.Config.path)
@@ -91,7 +101,9 @@ LOOP:
 			break LOOP
 		case <-timer.C:
 		}
-		c.poll(ctx, conf)
+		if err := c.poll(ctx, conf); err != nil {
+			c.log.Error("polling data from Okta failed: %+v", err)
+		}
 		timer.Reset(c.Config.interval)
 	}
 	// stop and drain the timer
@@ -102,14 +114,13 @@ LOOP:
 	close(c.doneExit)
 }
 
-func (c *Data) poll(ctx context.Context, conf *okta.Configuration) {
+func (c *Data) poll(ctx context.Context, conf *okta.Configuration) error {
 	client := okta.NewAPIClient(conf)
 	if c.Config.ClientSecret != "" {
 		var token string
 		token, err := exchangeClientSecret(ctx, conf.HTTPClient, c.Config)
 		if err != nil {
-			c.log.Error("okta client misconfiguration: %v", err)
-			return
+			return fmt.Errorf("okta client misconfiguration: %w", err)
 		}
 		// the client must be recreated with the token
 		conf.Okta.Client.Token = token
@@ -163,13 +174,12 @@ func (c *Data) poll(ctx context.Context, conf *okta.Configuration) {
 	}
 
 	if len(merr) > 0 {
-		c.log.Warn("not all resources were fetched: %v", errors.Join(merr...))
-		return
+		return fmt.Errorf("not all resources were fetched: %v", errors.Join(merr...))
 	}
-
-	if err := inmem.WriteUnchecked(ctx, c.manager.Store, storage.ReplaceOp, c.Config.path, results); err != nil {
-		c.log.Error("writing data to %+v failed: %v", c.Config.path, err)
+	if err := c.Rego.Ingest(ctx, c.Path(), results); err != nil {
+		return fmt.Errorf("plugin %s at %s: %w", c.Name(), c.Config.path, err)
 	}
+	return nil
 }
 
 func getUsers(ctx context.Context, client *okta.APIClient) ([]okta.User, error) {

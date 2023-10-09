@@ -33,6 +33,7 @@ plugins:
       filter: "(objectclass=*)"
       username: %[1]s
       password: %[2]s
+      polling_interval: 10s
       rego_transform: data.e2e.transform
 `
 
@@ -63,6 +64,11 @@ member_ids(uids) := { id |
 }
 `
 
+	transform1 := `package e2e.transform
+import future.keywords
+game := "over"
+`
+
 	store := storeWithPolicy(ctx, t, transform)
 	mgr := pluginMgr(t, store, fmt.Sprintf(config, rootUser, rootPassword, addr))
 	if err := mgr.Start(ctx); err != nil {
@@ -70,25 +76,40 @@ member_ids(uids) := { id |
 	}
 	defer mgr.Stop(ctx)
 
-	waitForStorePath(ctx, t, store, "/entities/users/alice")
-	act, err := storage.ReadOne(ctx, store, storage.MustParsePath("/entities"))
-	if err != nil {
-		t.Fatalf("read back data: %v", err)
-	}
+	{
+		waitForStorePath(ctx, t, store, "/entities/users/alice")
+		act := must(storage.ReadOne(ctx, store, storage.MustParsePath("/entities")))(t)
 
-	exp := map[string]any{
-		"users": map[string]any{
-			"admin": map[string]any{"name": "Administrator"},
-			"alice": map[string]any{"name": "Alice"},
-			"bob":   map[string]any{"name": "Bob"},
-		},
-		"groups": map[string]any{
-			"app-admins":      []any{"alice", "bob"},
-			"app-superadmins": []any{"alice"},
-		},
+		exp := map[string]any{
+			"users": map[string]any{
+				"admin": map[string]any{"name": "Administrator"},
+				"alice": map[string]any{"name": "Alice"},
+				"bob":   map[string]any{"name": "Bob"},
+			},
+			"groups": map[string]any{
+				"app-admins":      []any{"alice", "bob"},
+				"app-superadmins": []any{"alice"},
+			},
+		}
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Errorf("data value mismatch, diff:\n%s", diff)
+		}
 	}
-	if diff := cmp.Diff(exp, act); diff != "" {
-		t.Errorf("data value mismatch, diff:\n%s", diff)
+	{ // replace transform0 by transform1
+		if err := storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
+			return store.UpsertPolicy(ctx, txn, "e2e.rego", []byte(transform1))
+		}); err != nil {
+			t.Fatalf("store transform policy: %v", err)
+		}
+	}
+	{
+		waitForStorePath(ctx, t, store, "/entities/game")
+		act := must(storage.ReadOne(ctx, store, storage.MustParsePath("/entities/game")))(t)
+
+		exp := "over"
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Errorf("data value mismatch, diff:\n%s", diff)
+		}
 	}
 }
 
@@ -102,23 +123,13 @@ func testServer(ctx context.Context, t *testing.T) (string, testcontainers.Conta
 		},
 	}
 
-	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+	c := must(testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Logger:           testcontainers.TestLogger(t),
 		Started:          true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	mappedPort, err := c.MappedPort(ctx, "3890/tcp")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	port, err := c.MappedPort(ctx, "17170/tcp")
-	if err != nil {
-		t.Fatal(err)
-	}
+	}))(t)
+	mappedPort := must(c.MappedPort(ctx, "3890/tcp"))(t)
+	port := must(c.MappedPort(ctx, "17170/tcp"))(t)
 	api := fmt.Sprintf("http://localhost:%s", port.Port())
 	tok := token(t, api)
 	createUser(t, api, tok, "alice", "alice@example.com", "Alice")
@@ -134,10 +145,7 @@ func testServer(ctx context.Context, t *testing.T) (string, testcontainers.Conta
 
 func token(t *testing.T, api string) string {
 	payload := fmt.Sprintf(`{"username": "admin", "password": "%s"}`, rootPassword)
-	resp, err := http.Post(api+"/auth/simple/login", "application/json", strings.NewReader(payload))
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := must(http.Post(api+"/auth/simple/login", "application/json", strings.NewReader(payload)))(t)
 	defer resp.Body.Close()
 	var m struct {
 		Token string
@@ -173,10 +181,7 @@ func query(t *testing.T, api, token, query string) map[string]any {
 	req, _ := http.NewRequest("POST", api+"/api/graphql", strings.NewReader(query))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer "+token)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := must(http.DefaultClient.Do(req))(t)
 	defer resp.Body.Close()
 	var data struct {
 		Data map[string]any
@@ -197,4 +202,14 @@ func storeWithPolicy(ctx context.Context, t *testing.T, transform string) storag
 		t.Fatalf("store transform policy: %v", err)
 	}
 	return store
+}
+
+func must[T any](x T, err error) func(t *testing.T) T {
+	return func(t *testing.T) T {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return x
+	}
 }

@@ -32,6 +32,8 @@ type Config struct {
 	Interval string `json:"polling_interval,omitempty"` // default 5m, min 10s
 	Path     string `json:"path"`
 
+	RegoTransformRule string `json:"rego_transform"`
+
 	// inserted through Validate()
 	path     storage.Path
 	interval time.Duration
@@ -44,6 +46,7 @@ func (c Config) Equal(other Config) bool {
 	case c.URL != other.URL:
 	case c.ClientID != other.ClientID:
 	case c.ClientSecret != other.ClientSecret:
+	case c.RegoTransformRule != other.RegoTransformRule:
 	case c.Token != other.Token:
 	case c.PrivateKey != other.PrivateKey:
 	case c.PrivateKeyID != other.PrivateKeyID:

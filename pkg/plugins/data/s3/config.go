@@ -24,14 +24,17 @@ var (
 
 // Config represents the configuration of the s3 data plugin
 type Config struct {
-	URL      string `json:"url"`
-	Region   string `json:"region,omitempty"`
-	Endpoint string `json:"endpoint,omitempty"`
-	AccessID string `json:"access_id"`
-	Secret   string `json:"secret"`
+	URL       string `json:"url"`
+	Region    string `json:"region,omitempty"`
+	Endpoint  string `json:"endpoint,omitempty"`
+	AccessID  string `json:"access_id"`
+	Secret    string `json:"secret"`
+	ForcePath bool   `json:"force_path"`
 
 	Interval string `json:"polling_interval,omitempty"` // default 5m, min 10s
 	Path     string `json:"path"`
+
+	RegoTransformRule string `json:"rego_transform"`
 
 	// inserted through Validate()
 	bucket   string
@@ -45,6 +48,8 @@ type Config struct {
 func (c Config) Equal(other Config) bool {
 	switch {
 	case c.AccessID != other.AccessID:
+	case c.RegoTransformRule != other.RegoTransformRule:
+	case c.ForcePath != other.ForcePath:
 	case c.Secret != other.Secret:
 	case c.bucket != other.bucket:
 	case c.filepath != other.filepath:

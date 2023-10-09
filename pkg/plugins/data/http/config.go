@@ -23,6 +23,8 @@ type Config struct {
 
 	Path string `json:"path"`
 
+	RegoTransformRule string `json:"rego_transform"`
+
 	SkipVerification bool   `json:"tls_skip_verification,omitempty"`
 	Cert             string `json:"tls_client_cert,omitempty"`
 	CACert           string `json:"tls_ca_cert,omitempty"`
@@ -52,6 +54,7 @@ func (c Config) Equal(other Config) bool {
 	switch {
 	case c.URL != other.URL:
 	case c.Method != other.Method:
+	case c.RegoTransformRule != other.RegoTransformRule:
 	case c.Body != other.Body:
 	case c.File != other.File:
 	case c.Timeout != other.Timeout:
