@@ -7,6 +7,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	opa_storage "github.com/open-policy-agent/opa/storage"
@@ -159,4 +160,30 @@ p := numbers.range(0, 10)
 		}()
 	}
 	wg.Wait()
+}
+
+func TestEvalInputWithCustomType(t *testing.T) {
+	ctx := context.Background()
+
+	type xt map[string][]string
+	var x xt = map[string][]string{"foo": {"bar", "baz"}}
+	r := rego.New(
+		rego.Target(rego_vm.Target),
+		rego.Query("result = input"),
+		rego.Input(x),
+	)
+
+	pr, err := r.PrepareForEval(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := pr.Eval(ctx, rego.EvalInput(x))
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp := map[string]any{"foo": []any{"bar", "baz"}}
+	act := res[0].Bindings["result"]
+	if diff := cmp.Diff(exp, act); diff != "" {
+		t.Errorf("unexpected result (-want, +got):\n%s", diff)
+	}
 }

@@ -208,31 +208,14 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: enterprise-opa/go.sum
           check-latest: true
-      - name: Build
+      - name: Build and E2E
         run: |
           go mod tidy
           go build -o regal main.go
+          REGAL_BIN=$(pwd)/regal go test -tags e2e github.com/styrainc/regal/e2e -v -skip TestTestRegalBundledBundle
         working-directory: enterprise-opa/examples/regal
         env:
           GOPRIVATE: github.com/styrainc/
-      - name: pick up regal path and ref
-        id: regal
-        run: |
-          echo "path=$(pwd)/regal" >> $GITHUB_OUTPUT
-          go list -m -json github.com/styrainc/regal | opa eval -fraw -I 'sprintf("ref=%s", [split(input.Version, "-")[2]])' >> $GITHUB_OUTPUT
-        working-directory: enterprise-opa/examples/regal
-      - name: checkout Regal
-        uses: actions/checkout@v4
-        with:
-          repository: styrainc/regal
-          path: regal
-          fetch-depth: 0
-      - run: git checkout ${{ steps.regal.outputs.ref }}
-        working-directory: regal
-      - run: go test -tags e2e ./e2e -v
-        working-directory: regal
-        env:
-          REGAL_BIN: ${{ steps.regal.outputs.path }}
 
   trivy-scan-image:
     name: Trivy security scan image

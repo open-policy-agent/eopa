@@ -30,6 +30,7 @@ require (
 	github.com/keygen-sh/keygen-go/v2 v2.7.0
 	github.com/lib/pq v1.10.9
 	github.com/minio/minio-go/v7 v7.0.63
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mithrandie/csvq v1.18.1
 	github.com/mithrandie/csvq-driver v1.7.0
 	github.com/mithrandie/go-text v1.6.0
@@ -232,7 +233,6 @@ require (
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mithrandie/go-file/v2 v2.1.0 // indirect
 	github.com/mithrandie/ternary v1.1.1 // indirect
 	github.com/moby/locker v1.0.1 // indirect

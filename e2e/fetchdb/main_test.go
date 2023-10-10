@@ -5,6 +5,7 @@ package fetchdb
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"os"
 	"os/exec"
 	"testing"
@@ -26,6 +27,9 @@ func TestAllRegoTestsInFetchdb(t *testing.T) {
 	cmd.Dir = os.Getenv("FETCHDB_DIRECTORY")
 	output, err := cmd.Output()
 	if err != nil {
+		if e := (&exec.ExitError{}); errors.As(err, &e) {
+			t.Log(string(e.Stderr))
+		}
 		t.Fatal(err)
 	}
 

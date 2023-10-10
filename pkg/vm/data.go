@@ -326,7 +326,11 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 	case []byte:
 		return fjson.NewString(base64.StdEncoding.EncodeToString(x)), nil
 	default:
-		notImplemented()
+		y, err := toNative(x)
+		if err != nil {
+			notImplemented()
+		}
+		return o.FromInterface(ctx, y)
 	}
 
 	return nil, nil
