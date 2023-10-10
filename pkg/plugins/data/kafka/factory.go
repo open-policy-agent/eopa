@@ -9,10 +9,10 @@ import (
 	"github.com/twmb/franz-go/pkg/sasl/plain"
 	"github.com/twmb/franz-go/pkg/sasl/scram"
 
-	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/util"
 
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
 )
 
@@ -25,11 +25,11 @@ func Factory() plugins.Factory {
 func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 	c := config.(Config)
 	return &Data{
-		Config:        c,
-		log:           m.Logger(),
-		exit:          make(chan struct{}),
-		manager:       m,
-		transformRule: ast.MustParseRef(c.RegoTransformRule),
+		Config:  c,
+		log:     m.Logger(),
+		exit:    make(chan struct{}),
+		manager: m,
+		Rego:    transform.New(m, c.Path, Name, c.RegoTransformRule),
 	}
 }
 
@@ -47,6 +47,9 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 	}
 	if c.RegoTransformRule == "" {
 		return nil, fmt.Errorf("rego transform rule required")
+	}
+	if err := transform.Validate(c.RegoTransformRule); err != nil {
+		return nil, err
 	}
 
 	// TLS and/or SASL

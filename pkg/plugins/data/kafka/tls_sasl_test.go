@@ -33,6 +33,19 @@ const caCertPath = "testdata/tls/ca.pem"
 const clientCertPath = "testdata/tls/client-cert.pem"
 const clientKeyPath = "testdata/tls/client-key.pem"
 
+const transform = `package e2e
+import future.keywords
+transform[key] := val if {
+	some msg in input
+	payload := json.unmarshal(base64.decode(msg.value))
+	key := base64.decode(msg.key)
+	val := {
+		"value": payload,
+		"headers": msg.headers,
+	}
+}
+`
+
 func TestTLS(t *testing.T) {
 	ctx := context.Background()
 	topic := "cipot"
@@ -49,17 +62,6 @@ plugins:
       tls_ca_cert: testdata/tls/ca.pem
 `, topic)
 
-	transform := `package e2e
-import future.keywords
-transform contains {"op": "add", "path": key, "value": val} if {
-	payload := json.unmarshal(base64.decode(input.value))
-	key := base64.decode(input.key)
-	val := {
-		"value": payload,
-		"headers": input.headers,
-	}
-}
-`
 	store := storeWithPolicy(ctx, t, transform)
 	mgr := pluginMgr(ctx, t, store, config)
 
@@ -138,17 +140,6 @@ plugins:
       sasl_password: %[3]s
 `, topic, user, pass)
 
-	transform := `package e2e
-import future.keywords
-transform contains {"op": "add", "path": key, "value": val} if {
-	payload := json.unmarshal(base64.decode(input.value))
-	key := base64.decode(input.key)
-	val := {
-		"value": payload,
-		"headers": input.headers,
-	}
-}
-`
 	store := storeWithPolicy(ctx, t, transform)
 	mgr := pluginMgr(ctx, t, store, config)
 
@@ -203,17 +194,6 @@ plugins:
       rego_transform: "data.e2e.transform"
 `, topic, "", "")
 
-	transform := `package e2e
-import future.keywords
-transform contains {"op": "add", "path": key, "value": val} if {
-	payload := json.unmarshal(base64.decode(input.value))
-	key := base64.decode(input.key)
-	val := {
-		"value": payload,
-		"headers": input.headers,
-	}
-}
-`
 	store := storeWithPolicy(ctx, t, transform)
 
 	_ = testRedPanda(t, []string{
@@ -286,17 +266,6 @@ plugins:
       sasl_password: %[3]s
 `, topic, user, pass)
 
-	transform := `package e2e
-import future.keywords
-transform contains {"op": "add", "path": key, "value": val} if {
-	payload := json.unmarshal(base64.decode(input.value))
-	key := base64.decode(input.key)
-	val := {
-		"value": payload,
-		"headers": input.headers,
-	}
-}
-`
 	store := storeWithPolicy(ctx, t, transform)
 	mgr := pluginMgr(ctx, t, store, config)
 

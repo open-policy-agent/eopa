@@ -182,7 +182,7 @@ func (c *Data) compilerTrigger(ctx context.Context, txn storage.Transaction) {
 		dp := c.plugins[path].(dataPlugin)
 		pluginRoot := dp.Path().String()[1:] // drop first `/`
 		if opa_bundle.RootPathsContain(roots, pluginRoot) {
-			c.Error("data plugin: %s path %s overlaps with bundle root %v", dp.Name(), pluginRoot, roots)
+			c.Error("%s plugin: data.%s overlaps with bundle root %v", dp.Name(), path, roots)
 			// continue here, there could be more than one overlap
 		}
 	}

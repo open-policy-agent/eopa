@@ -1,26 +1,19 @@
 package kafka
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 
-	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/topdown"
 
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/types"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 const Name = "kafka"
@@ -33,8 +26,7 @@ type Data struct {
 	client         *kgo.Client
 	exit, doneExit chan struct{}
 
-	transformRule ast.Ref
-	transform     atomic.Pointer[rego.PreparedEvalQuery]
+	*transform.Rego
 }
 
 // Ensure that the kafka sub-plugin will be triggered by the data umbrella plugin,
@@ -43,7 +35,7 @@ var _ types.Triggerer = (*Data)(nil)
 
 func (c *Data) Start(ctx context.Context) error {
 	c.exit = make(chan struct{})
-	if err := c.prepareTransform(ctx); err != nil {
+	if err := c.Rego.Prepare(ctx); err != nil {
 		return fmt.Errorf("prepare rego_transform: %w", err)
 	}
 	if err := storage.Txn(ctx, c.manager.Store, storage.WriteParams, func(txn storage.Transaction) error {
@@ -125,7 +117,7 @@ LOOP:
 		case <-c.exit:
 			break LOOP
 		default:
-			if !c.ready() { // don't fetch and drop if we're not ready
+			if !c.Rego.Ready() { // don't fetch and drop if we're not ready
 				time.Sleep(100 * time.Millisecond)
 				continue
 			}
@@ -152,10 +144,6 @@ LOOP:
 		}
 	}
 	close(c.doneExit)
-}
-
-func (c *Data) ready() bool {
-	return c.transform.Load() != nil
 }
 
 func mapFromRecord(r *kgo.Record) any {
@@ -188,153 +176,9 @@ func (c *Data) transformAndSave(ctx context.Context, n int, iter *kgo.FetchesRec
 		batch[i] = mapFromRecord(record)
 		i++
 	}
-	if err := storage.Txn(ctx, c.manager.Store, storage.WriteParams, func(txn storage.Transaction) error {
-		var results []processed
-		printOut := bytes.Buffer{}
-		for i := range batch {
-			res, err := c.transformOne(ctx, txn, batch[i], &printOut)
-			if printOut.Len() > 0 { // print any debug output we might have gotten, error or not
-				c.log.Debug("printOut(): %s", printOut.String())
-				printOut.Reset()
-			}
-			if err != nil {
-				c.log.Error("transform: skipped input %v: %v", batch[i], err)
-				continue // don't discard batch because one transform was bad
-			}
-			if res != nil {
-				results = append(results, res...)
-			}
-		}
-		for i := range results {
-			op, path, value := results[i].op, results[i].path, results[i].value
-			if err := c.manager.Store.(inmem.WriterUnchecked).WriteUnchecked(ctx, txn, op, path, value); err != nil {
-				c.log.Error("store: %s failed: %v", results[i].String(), err)
-			}
-		}
-		return nil
-	}); err != nil {
-		c.log.Error("write batch %v to %v: %v", batch, c.Config.path, err)
+	if err := c.Rego.Ingest(ctx, c.Path(), batch); err != nil {
+		c.log.Error("plugin %s at %s: %w", c.Name(), c.Config.path, err)
 	}
-}
-
-func (c *Data) prepareTransform(ctx context.Context) error {
-	return storage.Txn(ctx, c.manager.Store, storage.TransactionParams{}, func(txn storage.Transaction) error {
-		return c.Trigger(ctx, txn)
-	})
-}
-
-func (c *Data) Trigger(ctx context.Context, txn storage.Transaction) error {
-	transformRef := ast.MustParseRef(c.Config.RegoTransformRule)
-	// ref: data.x.transform => query: data.x.transform[op]
-	query := ast.NewBody(ast.NewExpr(ast.NewTerm(transformRef.Append(ast.VarTerm("op")))))
-
-	comp := c.manager.GetCompiler()
-	if comp == nil || comp.RuleTree == nil || comp.RuleTree.Find(transformRef) == nil {
-		c.manager.Logger().Warn("kafka plugin (path %s): transform rule %q does not exist yet", c.Path(), transformRef)
-		return nil
-	}
-
-	buf := bytes.Buffer{}
-	r := rego.New(
-		rego.ParsedQuery(query),
-		rego.Compiler(comp),
-		rego.Store(c.manager.Store),
-		rego.Transaction(txn),
-		rego.Runtime(c.manager.Info),
-		rego.EnablePrintStatements(c.manager.EnablePrintStatements()),
-		rego.PrintHook(topdown.NewPrintHook(&buf)),
-	)
-
-	pq, err := r.PrepareForEval(ctx)
-	if err != nil {
-		return err
-	}
-
-	if buf.Len() > 0 {
-		c.log.Debug("prepare print(): %s", buf.String())
-	}
-	c.transform.Store(&pq)
-	return nil
-}
-
-type processed struct {
-	op    storage.PatchOp
-	path  storage.Path
-	value any
-}
-
-func (p *processed) String() string {
-	switch p.op {
-	case storage.RemoveOp:
-		return fmt.Sprintf("remove %v", p.path)
-	case storage.AddOp:
-		return fmt.Sprintf("add %v to %v", p.value, p.path)
-	case storage.ReplaceOp:
-		return fmt.Sprintf("replace %v by %v", p.path, p.value)
-	}
-	panic("unreachable")
-}
-
-func (c *Data) transformOne(ctx context.Context, txn storage.Transaction, message any, buf io.Writer) ([]processed, error) {
-	rs, err := c.transform.Load().Eval(ctx,
-		rego.EvalInput(message),
-		rego.EvalTransaction(txn),
-		rego.EvalPrintHook(topdown.NewPrintHook(buf)),
-	)
-	if err != nil {
-		return nil, err
-	}
-	if len(rs) == 0 {
-		c.log.Debug("message discarded by transform: %v", message)
-		return nil, nil
-	}
-	proc := make([]processed, len(rs))
-	for i := range rs {
-		path, op, value, err := dissect(rs[i].Bindings["op"])
-		if err != nil {
-			return nil, err
-		}
-
-		// target path is `path` appeneded to the plugins subtree root
-		pathTgt := c.Config.path[:]
-		for _, piece := range strings.Split(path, "/") {
-			pathTgt = append(pathTgt, piece)
-		}
-
-		proc[i] = processed{
-			op:    op,
-			path:  pathTgt,
-			value: value,
-		}
-	}
-	return proc, nil
-}
-
-func dissect(x any) (string, storage.PatchOp, any, error) {
-	m, ok := x.(map[string]any)
-	if !ok {
-		return "", 0, nil, fmt.Errorf("transform returned %T (expected object)", x)
-	}
-	pathAny := m["path"]
-	path, ok := pathAny.(string)
-	if !ok {
-		return "", 0, nil, fmt.Errorf("transform returned path %v of type %[1]T (expected string)", pathAny)
-	}
-	if path == "" {
-		return "", 0, nil, fmt.Errorf("transform returned empty path")
-	}
-	var op storage.PatchOp
-	switch o := m["op"]; o {
-	case "replace":
-		op = storage.ReplaceOp
-	case "add":
-		op = storage.AddOp
-	case "remove":
-		op = storage.RemoveOp
-	default:
-		return "", 0, nil, fmt.Errorf(`transform returned unexpected op %v (must be one of "replace", "add", "remove")`, o)
-	}
-	return path, op, m["value"], nil
 }
 
 func (c *Data) kgoLogger() kgo.Logger {

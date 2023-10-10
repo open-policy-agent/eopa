@@ -33,7 +33,7 @@ func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 		log:     m.Logger(),
 		exit:    make(chan struct{}),
 		manager: m,
-		Rego:    transform.New(m, c.RegoTransformRule),
+		Rego:    transform.New(m, c.Path, Name, c.RegoTransformRule),
 	}
 }
 

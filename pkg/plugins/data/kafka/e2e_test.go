@@ -2,7 +2,6 @@ package kafka_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -16,15 +15,10 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/plugin/kzerolog"
 
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/plugins/discovery"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/util"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm" // important! use VM for rego.Eval below
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 var dockerPool = func() *dockertest.Pool {
@@ -55,13 +49,14 @@ plugins:
 
 	transform := `package e2e
 import future.keywords
-transform contains {"op": "add", "path": key, "value": val} if {
-	print(input)
-	payload := json.unmarshal(base64.decode(input.value))
-	key := base64.decode(input.key)
+transform[key] := val if {
+	some msg in input # input is a batch now
+	print(msg)
+	payload := json.unmarshal(base64.decode(msg.value))
+	key := base64.decode(msg.key)
 	val := {
 		"value": payload,
-		"headers": input.headers,
+		"headers": msg.headers,
 	}
 }
 `
@@ -167,130 +162,17 @@ transform contains {"op": "add", "path": key, "value": val} if {
 	}
 }
 
-func TestKafkaTransforms(t *testing.T) {
-	ctx := context.Background()
-	_ = testKafka(t)
-	topic := "cipot"
-	store := inmem.New()
-	config := fmt.Sprintf(`
-plugins:
-  data:
-    kafka.messages:
-      type: kafka
-      urls: [localhost:19092]
-      topics: [%[1]s]
-      rego_transform: "data.e2e.transform"
-`, topic)
-
-	transform := `package e2e
-import future.keywords
-transform contains json.unmarshal(base64.decode(input.value)) if print(input)
-`
-	if err := storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
-		return store.UpsertPolicy(ctx, txn, "e2e.rego", []byte(transform))
-	}); err != nil {
-		t.Fatalf("store transform policy: %v", err)
-	}
-	l := logging.New()
-	l.SetLevel(logging.Debug)
-	mgr, err := plugins.New([]byte(config), "test-instance-id", store,
-		plugins.Logger(l),
-		plugins.EnablePrintStatements(true),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	disco, err := discovery.New(mgr,
-		discovery.Factories(map[string]plugins.Factory{data.Name: data.Factory()}),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	mgr.Register(discovery.Name, disco)
-
-	cl, err := kafkaClient()
-	if err != nil {
-		t.Fatalf("kafka client: %v", err)
-	}
-
-	if err := mgr.Start(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-
-	for _, op := range []struct {
-		path string
-		op   string
-		val  any
-	}{
-		{
-			path: "a",
-			op:   "add",
-			val:  map[string]any{"b": false, "c": 21},
-		},
-		{
-			path: "a/c",
-			op:   "replace",
-			val:  float64(22),
-		},
-		{
-			path: "a/b",
-			op:   "remove",
-		},
-		{
-			path: "arr",
-			op:   "add",
-			val:  []string{"foo"},
-		},
-		{
-			path: "arr/-",
-			op:   "add",
-			val:  "bar",
-		},
-		{
-			path: "arr/0",
-			op:   "replace",
-			val:  "fox",
-		},
-		{
-			path: "done",
-			op:   "add",
-			val:  true,
-		},
-	} {
-		m := map[string]any{
-			"op":   op.op,
-			"path": op.path,
-		}
-		if op.val != nil {
-			m["value"] = op.val
-		}
-		payload, err := json.Marshal(m)
-		if err != nil {
-			t.Fatal(err)
-		}
-		record := &kgo.Record{
-			Topic: topic,
-			Value: payload,
-		}
-		cl.Produce(ctx, record, nil)
-	}
-
-	waitForStorePath(ctx, t, store, "/kafka/messages/done")
-
-	act, err := storage.ReadOne(ctx, store, storage.MustParsePath("/kafka/messages"))
-	if err != nil {
-		t.Fatalf("read back data: %v", err)
-	}
-	exp := map[string]any{
-		"a":    map[string]any{"c": json.Number("22")},
-		"arr":  []any{"fox", "bar"},
-		"done": true,
-	}
-	if diff := cmp.Diff(exp, act); diff != "" {
-		t.Errorf("data value mismatch (-want +got):\n%s", diff)
-	}
-}
-
+// TestKafkaPolicyUpdate sets up this sequence of events:
+//  0. there is no transform policy present, but it is configured with the kafka data plugin
+//  1. data is published on the topic
+//  2. the data is NOT pulled, nothing happens
+//  3. the transform policy is stored
+//  4. on the next iteration, the previously-published record is processed, transformed and stored
+//  5. another message is published on the topic
+//  6. the message is processed, and the rego_transform takes care of KEEPING the previously stored
+//     message -- it takes care of the merging of old and new
+//  7. another message is published on the topic, same key as (1.)
+//  8. the newest version of the message replaces the previous one
 func TestKafkaPolicyUpdate(t *testing.T) {
 	ctx := context.Background()
 	topic := "cipot"
@@ -306,13 +188,23 @@ plugins:
 
 	transform := `package e2e
 import future.keywords
-transform contains {"op": "add", "path": key, "value": val} if {
-	print(input)
-	payload := json.unmarshal(base64.decode(input.value))
-	key := base64.decode(input.key)
+transform[key] := val if {
+	some msg in input
+	print("new", msg)
+	payload := json.unmarshal(base64.decode(msg.value))
+	key := base64.decode(msg.key)
 	val := {
 		"value": payload,
-		"headers": input.headers,
+		"headers": msg.headers,
+	}
+}
+
+# merge with old
+transform[key] := val if {
+	some key, val in data.kafka.messages
+	print("prev", key, val)
+	every msg in input {
+		key != base64.decode(msg.key) # incoming batch takes precedence
 	}
 }
 `
@@ -327,12 +219,14 @@ transform contains {"op": "add", "path": key, "value": val} if {
 		t.Fatalf("kafka client: %v", err)
 	}
 
-	// record written before we're consuming messages
-	// this one is NOT to be ignored: we don't have a data transform yet but we might just
-	// be waiting for a bundle to be activated
-	record := &kgo.Record{Topic: topic, Key: []byte("one"), Value: []byte(`{"foo":"bar"}`)}
-	if err := cl.ProduceSync(ctx, record).FirstErr(); err != nil {
-		t.Fatalf("produce messages: %v", err)
+	{
+		// record written before we're consuming messages
+		// this one is NOT to be ignored: we don't have a data transform yet but we might just
+		// be waiting for a bundle to be activated
+		record := &kgo.Record{Topic: topic, Key: []byte("one"), Value: []byte(`{"foo":"bar"}`)}
+		if err := cl.ProduceSync(ctx, record).FirstErr(); err != nil {
+			t.Fatalf("produce messages: %v", err)
+		}
 	}
 
 	if err := mgr.Start(context.Background()); err != nil {
@@ -353,17 +247,18 @@ transform contains {"op": "add", "path": key, "value": val} if {
 	// Storage triggers are all run before the store write returns, so the transform
 	// should be in place by now.
 
-	// this record should be transformed and stored
-	record = &kgo.Record{
-		Topic: topic,
-		Key:   []byte("two"),
-		Value: []byte(`{"fox":"box"}`),
-		Headers: []kgo.RecordHeader{
-			{Key: "header", Value: []byte("value")},
-		},
-	}
-	if err := cl.ProduceSync(ctx, record).FirstErr(); err != nil {
-		t.Fatalf("produce messages: %v", err)
+	{ // this record should be transformed and stored
+		record := &kgo.Record{
+			Topic: topic,
+			Key:   []byte("two"),
+			Value: []byte(`{"fox":"box"}`),
+			Headers: []kgo.RecordHeader{
+				{Key: "header", Value: []byte("value")},
+			},
+		}
+		if err := cl.ProduceSync(ctx, record).FirstErr(); err != nil {
+			t.Fatalf("produce messages: %v", err)
+		}
 	}
 
 	waitForStorePath(ctx, t, store, "/kafka/messages/one")
@@ -387,6 +282,30 @@ transform contains {"op": "add", "path": key, "value": val} if {
 			"headers": []any{map[string]any{"key": "header", "value": "dmFsdWU="}},
 			"value":   map[string]any{"fox": "box"},
 		}
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Errorf("data value mismatch (-want +got):\n%s", diff)
+		}
+	}
+
+	{
+		// record overwriting "one" published before
+		record := &kgo.Record{Topic: topic, Key: []byte("one"), Value: []byte(`{"foo":"bear"}`)}
+		if err := cl.ProduceSync(ctx, record).FirstErr(); err != nil {
+			t.Fatalf("produce messages: %v", err)
+		}
+		// sentinel message, everything in this test is in-order
+		if err := cl.ProduceSync(ctx, &kgo.Record{Topic: topic, Key: []byte("three"), Value: []byte(`{}`)}).FirstErr(); err != nil {
+			t.Fatalf("produce messages: %v", err)
+		}
+	}
+
+	waitForStorePath(ctx, t, store, "/kafka/messages/three")
+	{
+		act, err := storage.ReadOne(ctx, store, storage.MustParsePath("/kafka/messages/one"))
+		if err != nil {
+			t.Fatalf("read back data: %v", err)
+		}
+		exp := map[string]any{"headers": []any{}, "value": map[string]any{"foo": "bear"}}
 		if diff := cmp.Diff(exp, act); diff != "" {
 			t.Errorf("data value mismatch (-want +got):\n%s", diff)
 		}

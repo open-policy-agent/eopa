@@ -1,10 +1,19 @@
 package transform
 import future.keywords
-transform contains {"op": "add", "path": key, "value": val} if {
-	payload := json.unmarshal(base64.decode(input.value))
-	key := base64.decode(input.key)
+transform[key] := val if {
+	some msg in input
+	payload := json.unmarshal(base64.decode(msg.value))
+	key := base64.decode(msg.key)
 	val := {
 		"value": payload,
-		"headers": input.headers,
+		"headers": msg.headers,
+	}
+}
+
+# merge with old
+transform[key] := val if {
+	some key, val in data.kafka.messages
+	every msg in input {
+		key != base64.decode(msg.key) # incoming batch takes precedence
 	}
 }

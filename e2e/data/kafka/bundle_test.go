@@ -49,7 +49,7 @@ func TestTransformFromBundle(t *testing.T) {
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, eopaOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`kafka plugin (data.kafka.messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
 	wait.ForLog(t, eopaOut, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
 
 	statusOK := map[string]any{"state": "OK"}
@@ -110,8 +110,8 @@ func TestOverlapBundleWithoutRoots(t *testing.T) {
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, eopaOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
-	wait.ForLog(t, eopaOut, equals(`data plugin: kafka path kafka/messages overlaps with bundle root []`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`kafka plugin (data.kafka.messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`kafka plugin: data.kafka.messages overlaps with bundle root []`), 2*time.Second)
 	wait.ForLog(t, eopaOut, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
 
 	statusOK := map[string]any{"state": "OK"}
@@ -129,7 +129,7 @@ func TestOverlapBundleOverlappingRoots(t *testing.T) {
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, eopaOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`kafka plugin (data.kafka.messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
 	wait.ForLog(t, eopaOut, equals(`Bundle activation failed: path "/kafka/messages" is owned by plugin "kafka"`), 2*time.Second)
 
 	statusOK := map[string]any{"state": "OK"}
@@ -148,8 +148,8 @@ func TestOverlapBundlePrefixRoot(t *testing.T) {
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, eopaOut, equals(`kafka plugin (path /kafka/messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
-	wait.ForLog(t, eopaOut, equals(`data plugin: kafka path kafka/messages overlaps with bundle root [transform kafka]`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`kafka plugin (data.kafka.messages): transform rule "data.transform.transform" does not exist yet`), 2*time.Second)
+	wait.ForLog(t, eopaOut, equals(`kafka plugin: data.kafka.messages overlaps with bundle root [transform kafka]`), 2*time.Second)
 	wait.ForLog(t, eopaOut, equals(`Bundle loaded and activated successfully.`), 2*time.Second)
 
 	statusOK := map[string]any{"state": "OK"}
@@ -228,6 +228,7 @@ func eopaRun(t *testing.T, config string, extra ...string) (*exec.Cmd, *bytes.Bu
 		"--server",
 		"--addr", "localhost:8181",
 		"--disable-telemetry",
+		"--log-level", "debug",
 	}
 	if config != "" {
 		configPath := filepath.Join(dir, "config.yml")
