@@ -42,7 +42,7 @@ package e2e
 import future.keywords
 
 transform[k] := v if {
-	some k, v in input
+	some k, v in input.incoming
 	is_array(v)
 }
 `

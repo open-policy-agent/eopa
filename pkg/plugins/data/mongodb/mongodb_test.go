@@ -176,7 +176,7 @@ plugins:
 
 	transform := `package e2e
 import future.keywords
-transform[key] := blob.bar if some key, blob in input
+transform[key] := blob.bar if some key, blob in input.incoming
 `
 
 	store := storeWithPolicy(ctx, t, transform)

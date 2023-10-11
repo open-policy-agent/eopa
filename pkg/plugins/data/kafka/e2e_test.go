@@ -50,7 +50,7 @@ plugins:
 	transform := `package e2e
 import future.keywords
 transform[key] := val if {
-	some msg in input # input is a batch now
+	some msg in input.incoming # incoming is a batch
 	print(msg)
 	payload := json.unmarshal(base64.decode(msg.value))
 	key := base64.decode(msg.key)
@@ -136,13 +136,13 @@ plugins:
 
 	transform := `package e2e
 import future.keywords
-transform contains {"op": "add", "path": key, "value": val} if {
-	print(input)
-	payload := json.unmarshal(base64.decode(input.value))
-	key := base64.decode(input.key)
+transform[key] := val if {
+	some msg in input.incoming # incoming is a batch
+	payload := json.unmarshal(base64.decode(msg.value))
+	key := base64.decode(msg.key)
 	val := {
 		"value": payload,
-		"headers": input.headers,
+		"headers": msg.headers,
 	}
 }
 `
@@ -189,7 +189,7 @@ plugins:
 	transform := `package e2e
 import future.keywords
 transform[key] := val if {
-	some msg in input
+	some msg in input.incoming
 	print("new", msg)
 	payload := json.unmarshal(base64.decode(msg.value))
 	key := base64.decode(msg.key)
@@ -201,9 +201,9 @@ transform[key] := val if {
 
 # merge with old
 transform[key] := val if {
-	some key, val in data.kafka.messages
+	some key, val in input.previous
 	print("prev", key, val)
-	every msg in input {
+	every msg in input.incoming {
 		key != base64.decode(msg.key) # incoming batch takes precedence
 	}
 }

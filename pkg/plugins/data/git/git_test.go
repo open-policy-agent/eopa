@@ -27,7 +27,7 @@ import (
 func TestGitData(t *testing.T) {
 	const transform = `package e2e
 	import future.keywords
-	transform.raw := input
+	transform.raw := input.incoming
 `
 
 	for _, tt := range []struct {

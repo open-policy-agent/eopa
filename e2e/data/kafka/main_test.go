@@ -98,7 +98,7 @@ plugins:
 			policy := `package e2e
 import future.keywords
 transform[key] := val if {
-	some msg in input
+	some msg in input.incoming
 	payload := json.unmarshal(base64.decode(msg.value))
 	key := base64.decode(msg.key)
 	val := {
@@ -108,8 +108,8 @@ transform[key] := val if {
 }
 # merge with old
 transform[key] := val if {
-	some key, val in data.messages
-	every msg in input {
+	some key, val in input.previous
+	every msg in input.incoming {
 		key != base64.decode(msg.key) # incoming batch takes precedence
 	}
 }

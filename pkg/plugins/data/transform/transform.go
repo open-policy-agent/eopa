@@ -16,10 +16,11 @@ import (
 )
 
 type Rego struct {
-	manager    *plugins.Manager
-	name, path string
-	rule       ast.Ref
-	transform  atomic.Pointer[rego.PreparedEvalQuery]
+	manager   *plugins.Manager
+	name      string
+	path      *ast.Term
+	rule      ast.Ref
+	transform atomic.Pointer[rego.PreparedEvalQuery]
 }
 
 // New instantiates the Rego transform. It'll be a no-op unless a reference
@@ -30,7 +31,7 @@ func New(m *plugins.Manager, path, name, r0 string) *Rego {
 	if r0 != "" {
 		r = ast.MustParseRef(r0)
 	}
-	return &Rego{manager: m, name: name, path: path, rule: r}
+	return &Rego{manager: m, name: name, path: ast.MustParseTerm("data." + path), rule: r}
 }
 
 func Validate(r string) error {
@@ -61,7 +62,7 @@ func (s *Rego) transformData(ctx context.Context, txn storage.Transaction, incom
 	}
 	buf := &bytes.Buffer{}
 	rs, err := s.transform.Load().Eval(ctx,
-		rego.EvalInput(incoming),
+		rego.EvalInput(map[string]any{"incoming": incoming}),
 		rego.EvalTransaction(txn),
 		rego.EvalPrintHook(topdown.NewPrintHook(buf)),
 	)
@@ -88,13 +89,18 @@ func (s *Rego) Trigger(ctx context.Context, txn storage.Transaction) error {
 		return nil
 	}
 	transformRef := s.rule
-	// ref: data.x.transform => query: new = data.x.transform
-	query := ast.NewBody(ast.Equality.Expr(ast.VarTerm("new"), ast.NewTerm(transformRef)))
+	// ref: data.x.transform => query: new = data.x.transform with input.previous as data.mountpoint
+	expr := ast.Equality.Expr(ast.VarTerm("new"), ast.NewTerm(transformRef))
+	expr.With = append(expr.With, &ast.With{
+		Target: ast.RefTerm(ast.InputRootDocument, ast.StringTerm("previous")),
+		Value:  s.path,
+	})
+	query := ast.NewBody(expr)
 
 	comp := s.manager.GetCompiler()
 	// TODO(sr): improve our debugging story
 	if comp == nil || comp.RuleTree == nil || comp.RuleTree.Find(transformRef) == nil {
-		s.manager.Logger().Warn("%s plugin (data.%s): transform rule %q does not exist yet", s.name, s.path, transformRef)
+		s.manager.Logger().Warn("%s plugin (%s): transform rule %q does not exist yet", s.name, s.path, transformRef)
 		return nil
 	}
 

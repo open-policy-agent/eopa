@@ -590,7 +590,7 @@ func TestOKTAData(t *testing.T) {
 	const transform = `package e2e
 import future.keywords
 transform.users[id] := d {
-	some entry in input.users
+	some entry in input.incoming.users
 	id := entry.id
 	d := object.filter(entry.profile, {"firstName", "email"})
 }

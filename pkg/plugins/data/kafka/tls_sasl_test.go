@@ -36,7 +36,7 @@ const clientKeyPath = "testdata/tls/client-key.pem"
 const transform = `package e2e
 import future.keywords
 transform[key] := val if {
-	some msg in input
+	some msg in input.incoming
 	payload := json.unmarshal(base64.decode(msg.value))
 	key := base64.decode(msg.key)
 	val := {

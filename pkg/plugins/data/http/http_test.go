@@ -29,7 +29,7 @@ func TestHTTPData(t *testing.T) {
 	const transform = `package e2e
 	import future.keywords
 	transform.users[id] := d {
-		entry := input
+		entry := input.incoming
 		id := entry.id
 		d := entry.userId
 	}

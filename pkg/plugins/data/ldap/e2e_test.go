@@ -40,7 +40,7 @@ plugins:
 	transform := `package e2e
 import future.keywords
 transform.users[id] := y if {
-	some entry in input
+	some entry in input.incoming
 	"inetOrgPerson" in entry.objectclass
 	id := entry.uid[0]
 	y := {
@@ -49,7 +49,7 @@ transform.users[id] := y if {
 }
 
 transform.groups[id] := members if {
-	some entry in input
+	some entry in input.incoming
 	"groupOfUniqueNames" in entry.objectclass
 	id := entry.cn[0]
 	members := member_ids(entry.uniquemember)
@@ -57,7 +57,7 @@ transform.groups[id] := members if {
 }
 
 member_ids(uids) := { id |
-	some entry in input
+	some entry in input.incoming
 	"inetOrgPerson" in entry.objectclass
 	entry.dn._raw in uids
 	id := entry.uid[0]
