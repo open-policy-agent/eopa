@@ -36,7 +36,8 @@ var BuiltinMap map[string]*ast.Builtin
 // this list.
 var DefaultBuiltins = [...]*ast.Builtin{
 	// SQL/database builtins.
-	dynamoDBSend,
+	dynamoDBGet,
+	dynamoDBQuery,
 	mongoDBFind,
 	mongoDBFindOne,
 	regoEval,

@@ -26,7 +26,7 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
-func TestDynamoDBSend(t *testing.T) {
+func TestDynamoDBGet(t *testing.T) {
 	ddb, endpoint := startDynamoDB(t)
 	defer ddb.Terminate(context.Background())
 
@@ -43,16 +43,16 @@ func TestDynamoDBSend(t *testing.T) {
 	}{
 		{
 			note:                "missing parameter(s)",
-			source:              `p = resp { dynamodb.send({}, resp)}`,
+			source:              `p = resp { dynamodb.get({}, resp)}`,
 			result:              "",
-			error:               `eval_type_error: dynamodb.send: operand 1 missing required request parameter(s): {"region"}`,
+			error:               `eval_type_error: dynamodb.get: operand 1 missing required request parameter(s): {"key", "region", "table"}`,
 			doNotResetCache:     false,
 			time:                now,
 			interQueryCacheHits: 0,
 		},
 		{
 			note:                "non-existing row query",
-			source:              fmt.Sprintf(`p := dynamodb.send({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "get": {"table": "foo", "key": {"p": {"S": "nonexisting"}, "s": {"N": "1"}}}})`, endpoint),
+			source:              fmt.Sprintf(`p := dynamodb.get({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "nonexisting"}, "s": {"N": "1"}}})`, endpoint),
 			result:              `{{"result": {"p": {}}}}`,
 			error:               "",
 			doNotResetCache:     false,
@@ -61,17 +61,8 @@ func TestDynamoDBSend(t *testing.T) {
 		},
 		{
 			note:                "a single row query",
-			source:              fmt.Sprintf(`p := dynamodb.send({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}})`, endpoint),
+			source:              fmt.Sprintf(`p := dynamodb.get({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}})`, endpoint),
 			result:              `{{"result": {"p": {"row": {"number": 1234, "p": "x", "s": 1, "string": "value"}}}}}`,
-			error:               "",
-			doNotResetCache:     false,
-			time:                now,
-			interQueryCacheHits: 0,
-		},
-		{
-			note:                "a multi row query",
-			source:              fmt.Sprintf(`p := dynamodb.send({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "query": {"table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}}})`, endpoint),
-			result:              `{{"result": {"p": {"rows": [{"number": 1234, "p": "x", "s": 1, "string": "value"},{"number": 4321, "p": "x", "s": 2, "string": "value2"}]}}}}`,
 			error:               "",
 			doNotResetCache:     false,
 			time:                now,
@@ -80,9 +71,9 @@ func TestDynamoDBSend(t *testing.T) {
 		{
 			note: "intra-query query cache",
 			source: fmt.Sprintf(`p = [ resp1, resp2 ] {
-                                dynamodb.send({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}}, resp1)
-                                dynamodb.send({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}}, resp2) # cached
-				}`, endpoint, endpoint),
+								                                dynamodb.get({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}, resp1)
+								                                dynamodb.get({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}, resp2) # cached
+												}`, endpoint, endpoint),
 			result:              `{{"result": {"p": [{"row": {"number": 1234, "p": "x", "s": 1, "string": "value"}}, {"row": {"number": 1234, "p": "x", "s": 1, "string": "value"}}]}}}`,
 			error:               "",
 			doNotResetCache:     false,
@@ -91,7 +82,7 @@ func TestDynamoDBSend(t *testing.T) {
 		},
 		{
 			note:                "inter-query query cache warmup (default duration)",
-			source:              fmt.Sprintf(`p := dynamodb.send({"cache": true, "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}})`, endpoint),
+			source:              fmt.Sprintf(`p := dynamodb.get({"cache": true, "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}})`, endpoint),
 			result:              `{{"result": {"p": {"row": {"number": 1234, "p": "x", "s": 1, "string": "value"}}}}}`,
 			error:               "",
 			doNotResetCache:     false,
@@ -100,7 +91,7 @@ func TestDynamoDBSend(t *testing.T) {
 		},
 		{
 			note:                "inter-query query cache check (default duration, valid)",
-			source:              fmt.Sprintf(`p := dynamodb.send({"cache": true, "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}})`, endpoint),
+			source:              fmt.Sprintf(`p := dynamodb.get({"cache": true, "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}})`, endpoint),
 			result:              `{{"result": {"p": {"row": {"number": 1234, "p": "x", "s": 1, "string": "value"}}}}}`,
 			error:               "",
 			doNotResetCache:     true, // keep the warmup results
@@ -109,7 +100,7 @@ func TestDynamoDBSend(t *testing.T) {
 		},
 		{
 			note:                "inter-query query cache check (default duration, expired)",
-			source:              fmt.Sprintf(`p := dynamodb.send({"cache": true, "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}})`, endpoint),
+			source:              fmt.Sprintf(`p := dynamodb.get({"cache": true, "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}})`, endpoint),
 			result:              `{{"result": {"p": {"row": {"number": 1234, "p": "x", "s": 1, "string": "value"}}}}}`,
 			error:               "",
 			doNotResetCache:     true, // keep the warmup results
@@ -118,7 +109,7 @@ func TestDynamoDBSend(t *testing.T) {
 		},
 		{
 			note:                "inter-query query cache warmup (explicit duration)",
-			source:              fmt.Sprintf(`p := dynamodb.send({"cache": true, "cache_duration": "10s", "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}})`, endpoint),
+			source:              fmt.Sprintf(`p := dynamodb.get({"cache": true, "cache_duration": "10s", "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}})`, endpoint),
 			result:              `{{"result": {"p": {"row": {"number": 1234, "p": "x", "s": 1, "string": "value"}}}}}`,
 			error:               "",
 			doNotResetCache:     false,
@@ -127,7 +118,7 @@ func TestDynamoDBSend(t *testing.T) {
 		},
 		{
 			note:                "inter-query query cache check (explicit duration, valid)",
-			source:              fmt.Sprintf(`p := dynamodb.send({"cache": true, "cache_duration": "10s", "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}})`, endpoint),
+			source:              fmt.Sprintf(`p := dynamodb.get({"cache": true, "cache_duration": "10s", "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}})`, endpoint),
 			result:              `{{"result": {"p": {"row": {"number": 1234, "p": "x", "s": 1, "string": "value"}}}}}`,
 			error:               "",
 			doNotResetCache:     true, // keep the warmup results
@@ -136,7 +127,7 @@ func TestDynamoDBSend(t *testing.T) {
 		},
 		{
 			note:                "inter-query query cache check (explicit duration, expired)",
-			source:              fmt.Sprintf(`p := dynamodb.send({"cache": true, "cache_duration": "10s", "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}})`, endpoint),
+			source:              fmt.Sprintf(`p := dynamodb.get({"cache": true, "cache_duration": "10s", "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}})`, endpoint),
 			result:              `{{"result": {"p": {"row": {"number": 1234, "p": "x", "s": 1, "string": "value"}}}}}`,
 			error:               "",
 			doNotResetCache:     true, // keep the warmup results
@@ -145,16 +136,16 @@ func TestDynamoDBSend(t *testing.T) {
 		},
 		{
 			note:                "error w/o raise",
-			source:              fmt.Sprintf(`p := dynamodb.send({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"S": "1"}}}})`, endpoint),
+			source:              fmt.Sprintf(`p := dynamodb.get({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "x"}, "s": {"S": "1"}}})`, endpoint),
 			result:              "",
-			error:               "eval_builtin_error: dynamodb.send: ValidationException: One or more parameter values were invalid: Type mismatch for key",
+			error:               "eval_builtin_error: dynamodb.get: ValidationException: One or more parameter values were invalid: Type mismatch for key",
 			doNotResetCache:     false,
 			time:                now,
 			interQueryCacheHits: 0,
 		},
 		{
 			note:                "error with raise",
-			source:              fmt.Sprintf(`p := dynamodb.send({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"S": "1"}}}, "raise_error": false})`, endpoint),
+			source:              fmt.Sprintf(`p := dynamodb.get({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "x"}, "s": {"S": "1"}}, "raise_error": false})`, endpoint),
 			result:              `{{"result": {"p": {"error": {"code": "ValidationException", "message": "One or more parameter values were invalid: Type mismatch for key"}}}}}`,
 			error:               "",
 			doNotResetCache:     false,
@@ -180,12 +171,153 @@ func TestDynamoDBSend(t *testing.T) {
 				})
 			}
 
-			executeDynamoDB(t, interQueryCache, "package t\n"+tc.source, "t", tc.result, tc.error, tc.time, tc.interQueryCacheHits)
+			executeDynamoDB(t, interQueryCache, "package t\n"+tc.source, "t", tc.result, tc.error, tc.time, dynamoDBGetInterQueryCacheHits, tc.interQueryCacheHits)
 		})
 	}
 }
 
-func executeDynamoDB(tb testing.TB, interQueryCache cache.InterQueryCache, module string, query string, expectedResult string, expectedError string, time time.Time, expectedInterQueryCacheHits int) {
+func TestDynamoDBQuery(t *testing.T) {
+	ddb, endpoint := startDynamoDB(t)
+	defer ddb.Terminate(context.Background())
+
+	now := time.Now()
+
+	tests := []struct {
+		note                string
+		source              string
+		result              string
+		error               string
+		doNotResetCache     bool
+		time                time.Time
+		interQueryCacheHits int
+	}{
+		{
+			note:                "missing parameter(s)",
+			source:              `p = resp { dynamodb.query({}, resp)}`,
+			result:              "",
+			error:               `eval_type_error: dynamodb.query: operand 1 missing required request parameter(s): {"key_condition_expression", "region", "table"}`,
+			doNotResetCache:     false,
+			time:                now,
+			interQueryCacheHits: 0,
+		},
+		{
+			note:                "a multi row query",
+			source:              fmt.Sprintf(`p := dynamodb.query({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}})`, endpoint),
+			result:              `{{"result": {"p": {"rows": [{"number": 1234, "p": "x", "s": 1, "string": "value"},{"number": 4321, "p": "x", "s": 2, "string": "value2"}]}}}}`,
+			error:               "",
+			doNotResetCache:     false,
+			time:                now,
+			interQueryCacheHits: 0,
+		},
+		{
+			note: "intra-query query cache",
+			source: fmt.Sprintf(`p = [ resp1, resp2 ] {
+								                                dynamodb.query({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}}, resp1)
+								                                dynamodb.query({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}}, resp2) # cached
+												}`, endpoint, endpoint),
+			result:              `{{"result": {"p": [{"rows": [{"number": 1234, "p": "x", "s": 1, "string": "value"}, {"number": 4321, "p": "x", "s": 2, "string": "value2"}]}, {"rows": [{"number": 1234, "p": "x", "s": 1, "string": "value"},{"number": 4321, "p": "x", "s": 2, "string": "value2"}]}]}}}`,
+			error:               "",
+			doNotResetCache:     false,
+			time:                now,
+			interQueryCacheHits: 0,
+		},
+		{
+			note:                "inter-query query cache warmup (default duration)",
+			source:              fmt.Sprintf(`p := dynamodb.query({"cache": true, "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}})`, endpoint),
+			result:              `{{"result": {"p": {"rows": [{"number": 1234, "p": "x", "s": 1, "string": "value"}, {"number": 4321, "p": "x", "s": 2, "string": "value2"}]}}}}`,
+			error:               "",
+			doNotResetCache:     false,
+			time:                now,
+			interQueryCacheHits: 0,
+		},
+		{
+			note:                "inter-query query cache check (default duration, valid)",
+			source:              fmt.Sprintf(`p := dynamodb.query({"cache": true, "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}})`, endpoint),
+			result:              `{{"result": {"p": {"rows": [{"number": 1234, "p": "x", "s": 1, "string": "value"}, {"number": 4321, "p": "x", "s": 2, "string": "value2"}]}}}}`,
+			error:               "",
+			doNotResetCache:     true, // keep the warmup results
+			time:                now.Add(interQueryCacheDurationDefault - 1),
+			interQueryCacheHits: 1,
+		},
+		{
+			note:                "inter-query query cache check (default duration, expired)",
+			source:              fmt.Sprintf(`p := dynamodb.query({"cache": true, "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}})`, endpoint),
+			result:              `{{"result": {"p": {"rows": [{"number": 1234, "p": "x", "s": 1, "string": "value"}, {"number": 4321, "p": "x", "s": 2, "string": "value2"}]}}}}`,
+			error:               "",
+			doNotResetCache:     true, // keep the warmup results
+			time:                now.Add(interQueryCacheDurationDefault),
+			interQueryCacheHits: 0,
+		},
+		{
+			note:                "inter-query query cache warmup (explicit duration)",
+			source:              fmt.Sprintf(`p := dynamodb.query({"cache": true, "cache_duration": "10s", "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}})`, endpoint),
+			result:              `{{"result": {"p": {"rows": [{"number": 1234, "p": "x", "s": 1, "string": "value"}, {"number": 4321, "p": "x", "s": 2, "string": "value2"}]}}}}`,
+			error:               "",
+			doNotResetCache:     false,
+			time:                now,
+			interQueryCacheHits: 0,
+		},
+		{
+			note:                "inter-query query cache check (explicit duration, valid)",
+			source:              fmt.Sprintf(`p := dynamodb.query({"cache": true, "cache_duration": "10s", "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}})`, endpoint),
+			result:              `{{"result": {"p": {"rows": [{"number": 1234, "p": "x", "s": 1, "string": "value"}, {"number": 4321, "p": "x", "s": 2, "string": "value2"}]}}}}`,
+			error:               "",
+			doNotResetCache:     true, // keep the warmup results
+			time:                now.Add(10*time.Second - 1),
+			interQueryCacheHits: 1,
+		},
+		{
+			note:                "inter-query query cache check (explicit duration, expired)",
+			source:              fmt.Sprintf(`p := dynamodb.query({"cache": true, "cache_duration": "10s", "credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}})`, endpoint),
+			result:              `{{"result": {"p": {"rows": [{"number": 1234, "p": "x", "s": 1, "string": "value"}, {"number": 4321, "p": "x", "s": 2, "string": "value2"}]}}}}`,
+			error:               "",
+			doNotResetCache:     true, // keep the warmup results
+			time:                now.Add(10*time.Second + 1),
+			interQueryCacheHits: 0,
+		},
+		{
+			note:                "error w/o raise",
+			source:              fmt.Sprintf(`p := dynamodb.query({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"N": "0"}}, "expression_attribute_names": {"#p": "p"}})`, endpoint),
+			result:              "",
+			error:               "eval_builtin_error: dynamodb.query: ValidationException: One or more parameter values were invalid: Condition parameter type does not match schema type",
+			doNotResetCache:     false,
+			time:                now,
+			interQueryCacheHits: 0,
+		},
+		{
+			note:                "error with raise",
+			source:              fmt.Sprintf(`p := dynamodb.query({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"N": "0"}}, "expression_attribute_names": {"#p": "p"}, "raise_error": false})`, endpoint),
+			result:              `{{"result": {"p": {"error": {"code": "ValidationException", "message": "One or more parameter values were invalid: Condition parameter type does not match schema type"}}}}}`,
+			error:               "",
+			doNotResetCache:     false,
+			time:                now,
+			interQueryCacheHits: 0,
+		},
+	}
+
+	var maxSize int64 = 1024 * 1024
+	interQueryCache := cache.NewInterQueryCache(&cache.Config{
+		InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
+			MaxSizeBytes: &maxSize,
+		},
+	})
+
+	for _, tc := range tests {
+		t.Run(tc.note, func(t *testing.T) {
+			if !tc.doNotResetCache {
+				interQueryCache = cache.NewInterQueryCache(&cache.Config{
+					InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
+						MaxSizeBytes: &maxSize,
+					},
+				})
+			}
+
+			executeDynamoDB(t, interQueryCache, "package t\n"+tc.source, "t", tc.result, tc.error, tc.time, dynamoDBQueryInterQueryCacheHits, tc.interQueryCacheHits)
+		})
+	}
+}
+
+func executeDynamoDB(tb testing.TB, interQueryCache cache.InterQueryCache, module string, query string, expectedResult string, expectedError string, time time.Time, interQueryCacheHitsKey string, expectedInterQueryCacheHits int) {
 	b := &bundle.Bundle{
 		Modules: []bundle.ModuleFile{
 			{
@@ -236,7 +368,7 @@ func executeDynamoDB(tb testing.TB, interQueryCache cache.InterQueryCache, modul
 		tb.Fatalf("got %v wanted %v\n", v, expectedResult)
 	}
 
-	if hits := metrics.Counter(dynamoDBSendInterQueryCacheHits).Value().(uint64); hits != uint64(expectedInterQueryCacheHits) {
+	if hits := metrics.Counter(interQueryCacheHitsKey).Value().(uint64); hits != uint64(expectedInterQueryCacheHits) {
 		tb.Fatalf("got %v hits, wanted %v\n", hits, expectedInterQueryCacheHits)
 	}
 }

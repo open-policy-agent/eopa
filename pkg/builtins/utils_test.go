@@ -567,7 +567,7 @@ import data.system.eopa.utils.mongodb.v1.vault as mongodb
 	}
 }
 
-func TestDynamoDBSendVault(t *testing.T) {
+func TestDynamoDBGetVault(t *testing.T) {
 	ctx := context.Background()
 
 	tc, endpoint := startDynamoDB(t)
@@ -608,7 +608,7 @@ func TestDynamoDBSendVault(t *testing.T) {
 			note:  "send/get",
 			query: "x := data.example.p.row",
 			module: `
-p := dynamodb.send({"get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}})
+p := dynamodb.get({"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}})
 `,
 			exp: func(t *testing.T, rs rego.ResultSet) {
 				act := rs[0].Bindings["x"].(map[string]any)
@@ -627,11 +627,11 @@ p := dynamodb.send({"get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": 
 			note:  "send/get with override",
 			query: "x := data.example.p.row",
 			module: `
-dynamodb_send(req) := result {
-	result := dynamodb.send(req)
+dynamodb_get(req) := result {
+	result := dynamodb.get(req)
 		with dynamodb.override.secret_path as "secret/overridedynamodb"
 }
-p := dynamodb_send({"get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}})
+p := dynamodb_get({"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}})
 `,
 			exp: func(t *testing.T, rs rego.ResultSet) {
 				act := rs[0].Bindings["x"].(map[string]any)
@@ -650,7 +650,7 @@ p := dynamodb_send({"get": {"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": 
 			note:  "send/query",
 			query: "x := data.example.p.rows",
 			module: `
-p := dynamodb.send({"query": {"table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}}})
+p := dynamodb.query({"table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}})
 `,
 			exp: func(t *testing.T, rs rego.ResultSet) {
 				act := rs[0].Bindings["x"].([]any)
