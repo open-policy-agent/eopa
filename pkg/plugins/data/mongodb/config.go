@@ -6,7 +6,6 @@ import (
 
 	"github.com/open-policy-agent/opa/storage"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"golang.org/x/exp/slices"
 )
 
 type Config struct {
@@ -16,7 +15,6 @@ type Config struct {
 	Collection  string                 `json:"collection"`
 	FindOptions map[string]interface{} `json:"find_options"`
 	Filter      map[string]interface{} `json:"filter"`
-	Keys        []string               `json:"keys"`
 	Canonical   bool                   `json:"canonical"`
 	Interval    string                 `json:"polling_interval,omitempty"` // default 30s
 	Path        string                 `json:"path"`
@@ -60,7 +58,6 @@ func (c Config) Equal(other Config) bool {
 	case c.Collection != other.Collection:
 	case !reflect.DeepEqual(c.FindOptions, other.FindOptions):
 	case !reflect.DeepEqual(c.Filter, other.Filter):
-	case slices.Compare(c.Keys, other.Keys) != 0:
 	case c.Canonical == other.Canonical:
 	case c.Interval != other.Interval:
 	case c.RegoTransformRule != other.RegoTransformRule:

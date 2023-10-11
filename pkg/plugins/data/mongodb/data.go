@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -98,7 +99,7 @@ LOOP:
 		case <-timer.C:
 		}
 
-		if err := c.poll(ctx, c.Config.URI, c.Config.credentials, c.Config.Database, c.Config.Collection, c.Config.Filter, c.Config.findOptions, c.Config.Canonical, c.Config.Keys); err != nil {
+		if err := c.poll(ctx, c.Config.URI, c.Config.credentials, c.Config.Database, c.Config.Collection, c.Config.Filter, c.Config.findOptions, c.Config.Canonical); err != nil {
 			c.log.Error("polling for url %q failed: %+v", c.Config.URI, err)
 		}
 
@@ -111,7 +112,7 @@ LOOP:
 	}
 }
 
-func (c *Data) poll(ctx context.Context, uri string, credentials []byte, database string, collection string, filter interface{}, options *options.FindOptions, canonical bool, keys []string) error {
+func (c *Data) poll(ctx context.Context, uri string, credentials []byte, database string, collection string, filter interface{}, options *options.FindOptions, canonical bool) error {
 	client, err := builtins.MongoDBClients.Get(ctx, uri, credentials)
 	if err != nil {
 		return err
@@ -141,35 +142,35 @@ skip:
 			return err
 		}
 
-		path := make([]string, len(keys))
-		for i, key := range keys {
-			var ok bool
-			if path[i], ok = result[key].(string); !ok {
-				continue skip
-			}
+		// Extract the primary key and remove it from the
+		// stored document. If user used projection to filter
+		// the _id out; can't do much but skip the row.  While
+		// default MongoDB primary keys are UUID strings, it
+		// does allow user-provided non-string id's. Those
+		// primary keys we convert to strings.
+
+		id, ok := result["_id"]
+		if !ok {
+			continue skip
 		}
 
-		insert(root, path, result)
+		delete(result, "_id")
+
+		switch id := id.(type) {
+		case string:
+			root[id] = result
+		default:
+			encoded, err := json.Marshal(id)
+			if err != nil {
+				continue skip
+			}
+
+			root[string(encoded)] = result
+		}
 	}
 
 	if err := c.Rego.Ingest(ctx, c.Path(), root); err != nil {
 		return fmt.Errorf("plugin %s at %s: %w", c.Name(), c.Config.path, err)
 	}
 	return nil
-}
-
-func insert(data map[string]interface{}, path []string, doc interface{}) {
-	key := path[0]
-	if len(path) == 1 {
-		data[key] = doc
-		return
-	}
-
-	child, ok := data[key].(map[string]interface{})
-	if !ok {
-		child = make(map[string]interface{})
-		data[key] = child
-	}
-
-	insert(child, path[1:], doc)
 }

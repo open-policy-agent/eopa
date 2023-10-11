@@ -41,7 +41,6 @@ func TestMongoDB(t *testing.T) {
 		name     string
 		config   string
 		expected any
-		ignoreID bool
 	}{
 		{
 			name: "one key",
@@ -54,34 +53,11 @@ plugins:
       auth: AUTH
       database: database
       collection: collection1
-      keys: ["foo"]
 `,
 			expected: map[string]interface{}{
-				"a": map[string]interface{}{"foo": "a", "bar": json.Number("0")},
-				"b": map[string]interface{}{"foo": "b", "bar": json.Number("1")},
+				"a": map[string]interface{}{"bar": json.Number("0")},
+				"b": map[string]interface{}{"bar": json.Number("1")},
 			},
-			ignoreID: true,
-		},
-		{
-			name: "two keys",
-			config: `
-plugins:
-  data:
-    mongodb.placeholder:
-      type: mongodb
-      uri: URI
-      auth: AUTH
-      database: database
-      collection: collection2
-      keys: ["foo", "bar"]
-`,
-			expected: map[string]interface{}{
-				"a": map[string]interface{}{
-					"c": map[string]interface{}{"foo": "a", "bar": "c"},
-					"d": map[string]interface{}{"foo": "a", "bar": "d"},
-				},
-			},
-			ignoreID: true,
 		},
 		{
 			name: "filter",
@@ -94,16 +70,14 @@ plugins:
       auth: AUTH
       database: database
       collection: collection1
-      keys: ["foo"]
       filter: {"bar": 0}
 `,
 			expected: map[string]interface{}{
-				"a": map[string]interface{}{"foo": "a", "bar": json.Number("0")},
+				"a": map[string]interface{}{"bar": json.Number("0")},
 			},
-			ignoreID: true,
 		},
 		{
-			name: "options",
+			name: "options (exclude bar field)",
 			config: `
 plugins:
   data:
@@ -113,14 +87,12 @@ plugins:
       auth: AUTH
       database: database
       collection: collection1
-      keys: ["foo"]
-      find_options: {"projection": {"_id": false}}
+      find_options: {"projection": {"bar": 0}}
 `,
 			expected: map[string]interface{}{
-				"a": map[string]interface{}{"foo": "a", "bar": json.Number("0")},
-				"b": map[string]interface{}{"foo": "b", "bar": json.Number("1")},
+				"a": map[string]interface{}{},
+				"b": map[string]interface{}{},
 			},
-			ignoreID: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -138,14 +110,7 @@ plugins:
 				t.Fatalf("read back data: %v", err)
 			}
 
-			var options []cmp.Option
-			if tt.ignoreID {
-				options = append(options, cmp.FilterPath(func(p cmp.Path) bool {
-					return strings.HasSuffix(p.GoString(), `["_id"]`)
-				}, cmp.Ignore()))
-			}
-
-			if diff := cmp.Diff(tt.expected, act, options...); diff != "" {
+			if diff := cmp.Diff(tt.expected, act); diff != "" {
 				t.Errorf("data value mismatch, diff:%s", diff)
 			}
 		})
@@ -285,18 +250,10 @@ func createCollections(ctx context.Context, t *testing.T, endpoint string) {
 	}
 
 	collection := client.Database("database").Collection("collection1")
-	if _, err := collection.InsertOne(ctx, bson.D{{Key: "foo", Value: "a"}, {Key: "bar", Value: 0}}); err != nil {
+	if _, err := collection.InsertOne(ctx, bson.D{{Key: "_id", Value: "a"}, {Key: "bar", Value: 0}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := collection.InsertOne(ctx, bson.D{{Key: "foo", Value: "b"}, {Key: "bar", Value: 1}}); err != nil {
-		t.Fatal(err)
-	}
-
-	collection = client.Database("database").Collection("collection2")
-	if _, err := collection.InsertOne(ctx, bson.D{{Key: "foo", Value: "a"}, {Key: "bar", Value: "c"}}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := collection.InsertOne(ctx, bson.D{{Key: "foo", Value: "a"}, {Key: "bar", Value: "d"}}); err != nil {
+	if _, err := collection.InsertOne(ctx, bson.D{{Key: "_id", Value: "b"}, {Key: "bar", Value: 1}}); err != nil {
 		t.Fatal(err)
 	}
 }

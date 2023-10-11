@@ -46,9 +46,6 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 	if c.Collection == "" {
 		return nil, errors.New("collection is required")
 	}
-	if len(c.Keys) < 1 {
-		return nil, errors.New("one or more key required")
-	}
 	if c.Path == "" {
 		return nil, errors.New("path is required")
 	}
