@@ -24,8 +24,10 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/bundle"
 	metrics "github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/plugins"
+	opa_bundle_plugin "github.com/open-policy-agent/opa/plugins/bundle"
 	"github.com/open-policy-agent/opa/plugins/logs"
 	"github.com/open-policy-agent/opa/rego"
 	opa_server "github.com/open-policy-agent/opa/server"
@@ -46,7 +48,6 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
 	internal_logging "github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc/internal/logging"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc/internal/uuid"
 	bulkv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/bulk/v1"
@@ -661,7 +662,7 @@ func (s *Server) makeRego(_ context.Context,
 }
 
 func (s *Server) hasLegacyBundle(br bundleRevisions) bool {
-	bp := bundle.Lookup(s.manager)
+	bp := opa_bundle_plugin.Lookup(s.manager)
 	return br.LegacyRevision != "" || (bp != nil && !bp.Config().IsMultiBundle())
 }
 
