@@ -629,7 +629,7 @@ func walkBuiltin(state *State, args []Value) error {
 	var arr Value = state.ValueOps().MakeArray(0)
 
 	err := do(state, state.ValueOps().MakeArray(0), args[0], func(state *State, path, val Value) error {
-		tuple, _, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.ValueOps().MakeArray(0), path)
+		tuple, _, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.ValueOps().MakeArray(2), path)
 		if err != nil {
 			return err
 		}
