@@ -39,5 +39,5 @@ else :=	sprintf("%s:%s@tcp(%s:%s)/%s?tls=%s", [host, port, dbname, sslmode]) if 
 
 override.secret_path if false
 
-secret_path(_) = override.secret_path if true
+secret_path(_) := override.secret_path if true
 else := "secret/mysql"

@@ -40,5 +40,5 @@ else := {
 
 override.secret_path if false
 
-secret_path(_) = override.secret_path if true
+secret_path(_) := override.secret_path if true
 else := "secret/mongodb"

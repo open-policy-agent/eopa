@@ -80,6 +80,12 @@ jobs:
             echo "::info:: If the diffs above include the protoc version number, consider reinstalling to get the latest protbuf/grpc tooling."
             exit 1
           fi
+      - name: Setup Regal
+        uses: StyraInc/setup-regal@v0.2.0
+        with:
+          version: v0.10.1
+      - name: Run Regal Lint
+        run: regal lint --format github .
 
   test:
     name: Test

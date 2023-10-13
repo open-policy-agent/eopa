@@ -1,0 +1,36 @@
+rules:
+  bugs:
+    constant-condition:
+      level: error
+      ignore:
+        files:
+          - library/utils/
+          - cmd/test.rego
+          - e2e/cli/
+  idiomatic:
+    no-defined-entrypoint:
+      level: ignore
+  imports:
+    implicit-future-keywords:
+      level: ignore
+  style:
+    opa-fmt:
+      level: ignore
+    todo-comment:
+      level: ignore
+  testing:
+    metasyntactic-variable:
+      level: error
+      ignore:
+        files:
+          - "*test.rego"
+    test-outside-test-package:
+      level: error
+      ignore:
+        files:
+          - e2e/
+          - test/cli/
+
+ignore:
+  files:
+    - pkg/rego_vm/testdata/monster.rego
