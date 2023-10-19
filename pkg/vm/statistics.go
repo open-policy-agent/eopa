@@ -11,7 +11,9 @@ type (
 
 type (
 	Statistics struct {
-		EvalInstructions int64 `json:"eval_instructions"`
+		EvalInstructions   int64 `json:"eval_instructions"`
+		VirtualCacheHits   int64 `json:"virtual_cache_hits"`
+		VirtualCacheMisses int64 `json:"virtual_cache_misses"`
 	}
 )
 
@@ -25,7 +27,8 @@ func StatisticsGet(ctx context.Context) *Statistics {
 }
 
 func (s *Statistics) String() string {
-	return fmt.Sprintf("<statistics eval_instrs:%d>", s.EvalInstructions)
+	return fmt.Sprintf("<statistics eval_instrs:%d, virtual_cache_hits:%d, virtual_cache_misses:%d>",
+		s.EvalInstructions, s.VirtualCacheHits, s.VirtualCacheMisses)
 }
 
 func WithStatistics(ctx context.Context) (*Statistics, context.Context) {

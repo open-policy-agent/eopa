@@ -165,6 +165,8 @@ plugins:
 				{
 					exp := []string{
 						"counter_regovm_eval_instructions",
+						"counter_regovm_virtual_cache_hits",
+						"counter_regovm_virtual_cache_misses",
 						"counter_server_query_cache_hit",
 						"timer_rego_input_parse_ns",
 						// "timer_rego_module_parse_ns", // TODO(philip): Triage *why* this is causing E2E test failures.

@@ -85,7 +85,7 @@ type (
 		NDBCache               builtins.NDBCache
 		BuiltinErrors          []error
 		TracingOpts            tracing.Options
-		memoize                []map[int]Value
+		memoize                []map[any]Value
 		Limits                 Limits
 		StrictBuiltinErrors    bool
 		cancel                 cancel
@@ -252,7 +252,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 		globals := &Globals{
 			vm:                  vm,
 			Limits:              *opts.Limits,
-			memoize:             []map[int]Value{{}},
+			memoize:             []map[any]Value{{}},
 			Ctx:                 ctx,
 			Input:               input,
 			Metrics:             opts.Metrics,
@@ -584,20 +584,51 @@ func (s *State) Unset(target Local) {
 }
 
 func (s *State) MemoizePush() {
-	s.Globals.memoize = append(s.Globals.memoize, map[int]Value{})
+	s.Globals.memoize = append(s.Globals.memoize, map[any]Value{})
 }
 
 func (s *State) MemoizePop() {
 	s.Globals.memoize = s.Globals.memoize[0 : len(s.Globals.memoize)-1]
 }
 
-func (s *State) MemoizeGet(idx int) (Value, bool) {
-	v, ok := s.Globals.memoize[len(s.Globals.memoize)-1][idx]
+func (s *State) MemoizeGet(idx int, args []Value) (Value, bool) {
+	key := key(idx, args)
+	v, ok := s.Globals.memoize[len(s.Globals.memoize)-1][key]
 	return v, ok
 }
 
-func (s *State) MemoizeInsert(idx int, value Value) {
-	s.Globals.memoize[len(s.Globals.memoize)-1][idx] = value
+func key(idx int, args []Value) any {
+	var ret any
+	switch len(args) {
+	case 0:
+		ret = idx
+	case 1:
+		ret = [2]any{idx, args[0]}
+	case 2:
+		ret = [3]any{idx, args[0], args[1]}
+	case 3:
+		ret = [4]any{idx, args[0], args[1], args[2]}
+	case 4:
+		ret = [5]any{idx, args[0], args[1], args[2], args[3]}
+	case 5:
+		ret = [6]any{idx, args[0], args[1], args[2], args[3], args[4]}
+	case 6:
+		ret = [7]any{idx, args[0], args[1], args[2], args[3], args[4], args[5]}
+	case 7:
+		ret = [8]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6]}
+	case 8:
+		ret = [9]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]}
+	case 9:
+		ret = [10]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]}
+	default:
+		panic("arity > 9, unreachable")
+	}
+	return ret
+}
+
+func (s *State) MemoizeInsert(idx int, args []Value, value Value) {
+	key := key(idx, args)
+	s.Globals.memoize[len(s.Globals.memoize)-1][key] = value
 }
 
 func (s *State) Instr(i int64) error {

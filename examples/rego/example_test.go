@@ -324,7 +324,7 @@ func ExampleRego_metrics() {
 
 	// Output:
 	//
-	// number of metrics: 4
+	// number of metrics: 6
 	// vm evaluated instruction count: 8
 }
 

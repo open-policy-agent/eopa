@@ -7,6 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/topdown"
+	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
 func isUndefinedType(v Value) bool {
@@ -38,12 +39,29 @@ func (f function) Execute(state *State, args []Value) error {
 	return builtin(f).Execute(state, args)
 }
 
+func isHashable(as []Value) bool {
+	if len(as) > 9 {
+		return false
+	}
+	for i := range as {
+		switch as[i].(type) {
+		case IterableObject, fjson.Array, *Set, fjson.Object:
+			return false
+		}
+	}
+	return true
+}
+
 func (f function) execute(state *State, args []Value) error {
 	index, ret := f.Index(), f.Return()
 
-	memoize := f.ParamsLen() == 2
+	funArgs := args[2:f.ParamsLen()]
+	memoize := isHashable(funArgs)
 	if memoize {
-		if value, ok := state.MemoizeGet(index); ok {
+		value, ok := state.MemoizeGet(index, funArgs)
+		if ok {
+			state.stats.VirtualCacheHits++
+
 			if !isUndefinedType(value) {
 				state.SetReturnValue(ret, value)
 			}
@@ -53,6 +71,9 @@ func (f function) execute(state *State, args []Value) error {
 
 			return nil
 		}
+		state.stats.VirtualCacheMisses++
+	} else {
+		state.stats.VirtualCacheMisses++
 	}
 
 	f.ParamsIter(func(i uint32, arg Local) error {
@@ -77,7 +98,7 @@ func (f function) execute(state *State, args []Value) error {
 			value = undefined()
 		}
 
-		state.MemoizeInsert(index, value)
+		state.MemoizeInsert(index, funArgs, value)
 	}
 
 	return err

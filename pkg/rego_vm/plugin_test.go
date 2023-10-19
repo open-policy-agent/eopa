@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+
 	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/rego"
 	opa_storage "github.com/open-policy-agent/opa/storage"
 	opa_inmem "github.com/open-policy-agent/opa/storage/inmem"
@@ -185,5 +187,126 @@ func TestEvalInputWithCustomType(t *testing.T) {
 	act := res[0].Bindings["result"]
 	if diff := cmp.Diff(exp, act); diff != "" {
 		t.Errorf("unexpected result (-want, +got):\n%s", diff)
+	}
+}
+
+func TestEvalWithFuncMemoization(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		note         string
+		mod          string
+		hits, misses uint64
+	}{
+		{
+			note: "one argument/int",
+			mod: `
+f(_) := 1
+p if { # miss
+	f(1) # miss
+	f(1) # hit
+}`,
+			misses: 2,
+			hits:   1,
+		},
+		{
+			note: "two arguments/int,string",
+			mod: `
+f(_, _) := 1
+p if { # miss
+	f(1, "foo") # miss
+	f(1, "foo") # hit
+}`,
+			misses: 2,
+			hits:   1,
+		},
+		{
+			note: "nine arguments/int,string,bool,null,float,string,string,string,string",
+			mod: `
+f(_1, _2, _3, _4, _5, _6, _7, _8, _9) := 1
+p if { # miss
+	f(1, "foo", true, null, 1.1, "a", "b", "c", "d") # miss
+	f(1, "foo", true, null, 1.1, "a", "b", "c", "d") # hit
+}`,
+			misses: 2,
+			hits:   1,
+		},
+		{
+			note: "ten arguments/ints",
+			mod: `
+f(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10) := 1
+p if { # miss
+	f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) # miss
+	f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) # miss -- 10+ args not supported
+}`,
+			misses: 3,
+			hits:   0,
+		},
+		{
+			note: "one argument/object",
+			mod: `
+f(_) := 1
+p if { # miss
+	f({"a":1}) # miss
+	f({"a":1}) # miss -- not supported yet
+}`,
+			misses: 3,
+			hits:   0,
+		},
+		{
+			note: "one argument/array",
+			mod: `
+f(_) := 1
+p if { # miss
+	f([1]) # miss
+	f([1]) # miss -- not supported yet
+}`,
+			misses: 3,
+			hits:   0,
+		},
+		{
+			note: "one argument/set",
+			mod: `
+f(_) := 1
+p if { # miss
+	f({1}) # miss
+	f({1}) # miss -- not supported yet
+}`,
+			misses: 3,
+			hits:   0,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.note, func(t *testing.T) {
+			policy := `package test
+import future.keywords
+` + tc.mod
+
+			m := metrics.New()
+			r := rego.New(
+				rego.Target(rego_vm.Target),
+				rego.Query("data.test.p = x"),
+				rego.Module("test.rego", policy),
+				rego.Metrics(m),
+			)
+			res, err := r.Eval(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			m0 := m.All()
+			if exp, act := 1, len(res); exp != act {
+				t.Fatalf("expected %d results, got %d", exp, act)
+			}
+			if exp, act := (rego.Vars{"x": true}), res[0].Bindings; cmp.Diff(exp, act) != "" {
+				t.Fatalf("unexpected result (-want, +got):\n%s", cmp.Diff(exp, act))
+			}
+			if exp, act := tc.hits, m0["counter_regovm_virtual_cache_hits"]; exp != act {
+				t.Errorf("expected %d hits, got %d", exp, act)
+			}
+			if exp, act := tc.misses, m0["counter_regovm_virtual_cache_misses"]; exp != act {
+				t.Errorf("expected %d misses, got %d", exp, act)
+			}
+		})
 	}
 }
