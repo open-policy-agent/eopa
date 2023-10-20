@@ -11,34 +11,36 @@ import (
 )
 
 var modules map[string]*ast.Module
+var packages map[string]string // "data.system.eopa.utils.dynamodb.v1" -> its filename == key in modules
 
 func Init() (err error) {
 	ast.DefaultModuleLoader(loader)
-	modules, err = toMap(embedded.Library)
+	modules, packages, err = toMap(embedded.Library)
 	return
 }
 
-// TODO(sr): Right now, we'll unconditionally inject our library modules.
-// That'll cause extra work for the compiler which may be unnecessary in
-// most cases. The optimization here would be to check the argument to
-// `loader` and see if any of the provided functions is imported at all.
 func loader(res map[string]*ast.Module) (map[string]*ast.Module, error) {
-	_, done := res[random(modules)]
-	if !done {
-		return modules, nil
+	extras := make(map[string]*ast.Module)
+	for _, mod := range res {
+		ast.WalkRefs(mod, func(a ast.Ref) bool {
+			f, found := packages[a[:len(a)-1].String()]
+			if found {
+				if _, done := extras[f]; done {
+					return false // skip this one, dealt with already
+				}
+				if _, loaded := res[f]; !loaded { // avoid loading what was loaded already again
+					extras[f] = modules[f]
+				}
+			}
+			return found
+		})
 	}
-	return nil, nil
+	return extras, nil
 }
 
-func random(m map[string]*ast.Module) string {
-	for k := range m {
-		return k
-	}
-	panic("unreachable")
-}
-
-func toMap(fsys fs.FS) (map[string]*ast.Module, error) {
+func toMap(fsys fs.FS) (map[string]*ast.Module, map[string]string, error) {
 	mods := make(map[string]*ast.Module)
+	pkgs := make(map[string]string)
 	if err := fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
 		if filepath.Ext(p) == ".rego" {
 			fd, err := fsys.Open(p)
@@ -53,10 +55,11 @@ func toMap(fsys fs.FS) (map[string]*ast.Module, error) {
 			if err != nil {
 				return err
 			}
+			pkgs[mods[p].Package.Path.String()] = p
 		}
 		return nil
 	}); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return mods, nil
+	return mods, pkgs, nil
 }
