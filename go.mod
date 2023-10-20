@@ -3,6 +3,7 @@ module github.com/styrainc/enterprise-opa-private
 go 1.20
 
 require (
+	git.sr.ht/~charles/graph v0.0.1
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/aws/aws-sdk-go v1.46.0
 	github.com/benthosdev/benthos/v4 v4.22.0
