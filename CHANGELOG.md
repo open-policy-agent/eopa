@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.11.1
+
+This is a bug fix release addressing the following security issue:
+
+OpenTelemetry-Go Contrib security fix [CVE-2023-45142](https://github.com/advisories/GHSA-rcjv-mgp8-qvmr):
+
+ > Denial of service in otelhttp due to unbound cardinality metrics.
+
+### Note: [GO-2023-2102](https://pkg.go.dev/vuln/GO-2023-2102) was fixed in v1.11.0
+
+> A malicious HTTP/2 client which rapidly creates requests and immediately resets them can cause excessive server resource consumption.
+
 ## v1.11.0
 
 This release includes several bugfixes and a powerful new feature for data source integrations: Rego transform rules!

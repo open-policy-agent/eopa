@@ -35,8 +35,8 @@ require (
 	github.com/mithrandie/csvq-driver v1.7.0
 	github.com/mithrandie/go-text v1.6.0
 	github.com/okta/okta-sdk-golang/v3 v3.0.12
-	github.com/open-policy-agent/opa v0.57.0
-	github.com/open-policy-agent/opa-envoy-plugin v0.57.0-envoy
+	github.com/open-policy-agent/opa v0.57.1
+	github.com/open-policy-agent/opa-envoy-plugin v0.57.1-envoy
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/rs/zerolog v1.31.0
@@ -313,7 +313,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.44.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.19.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.19.0 // indirect
@@ -367,6 +367,6 @@ replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.57.1-0.20230928191305-882b4e76b4f7
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.57.1-0.20231020083802-9575746348d9
 
 replace github.com/benthosdev/benthos/v4 => github.com/srenatus/benthos/v4 v4.0.0-20231012093337-5d01c59eabeb
