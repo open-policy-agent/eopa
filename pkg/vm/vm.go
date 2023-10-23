@@ -592,42 +592,67 @@ func (s *State) MemoizePop() {
 }
 
 func (s *State) MemoizeGet(idx int, args []Value) (Value, bool) {
-	key := key(idx, args)
+	// Do not share a key construction function with Insert to
+	// avoid Get from allocating the key from heap: golang would
+	// have to emit a function allocating the key from heap.
+
+	var key any
+	switch len(args) {
+	case 0:
+		key = idx
+	case 1:
+		key = [2]any{idx, args[0]}
+	case 2:
+		key = [3]any{idx, args[0], args[1]}
+	case 3:
+		key = [4]any{idx, args[0], args[1], args[2]}
+	case 4:
+		key = [5]any{idx, args[0], args[1], args[2], args[3]}
+	case 5:
+		key = [6]any{idx, args[0], args[1], args[2], args[3], args[4]}
+	case 6:
+		key = [7]any{idx, args[0], args[1], args[2], args[3], args[4], args[5]}
+	case 7:
+		key = [8]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6]}
+	case 8:
+		key = [9]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]}
+	case 9:
+		key = [10]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]}
+	default:
+		panic("arity > 9, unreachable")
+	}
+
 	v, ok := s.Globals.memoize[len(s.Globals.memoize)-1][key]
 	return v, ok
 }
 
-func key(idx int, args []Value) any {
-	var ret any
+func (s *State) MemoizeInsert(idx int, args []Value, value Value) {
+	var key any
 	switch len(args) {
 	case 0:
-		ret = idx
+		key = idx
 	case 1:
-		ret = [2]any{idx, args[0]}
+		key = [2]any{idx, args[0]}
 	case 2:
-		ret = [3]any{idx, args[0], args[1]}
+		key = [3]any{idx, args[0], args[1]}
 	case 3:
-		ret = [4]any{idx, args[0], args[1], args[2]}
+		key = [4]any{idx, args[0], args[1], args[2]}
 	case 4:
-		ret = [5]any{idx, args[0], args[1], args[2], args[3]}
+		key = [5]any{idx, args[0], args[1], args[2], args[3]}
 	case 5:
-		ret = [6]any{idx, args[0], args[1], args[2], args[3], args[4]}
+		key = [6]any{idx, args[0], args[1], args[2], args[3], args[4]}
 	case 6:
-		ret = [7]any{idx, args[0], args[1], args[2], args[3], args[4], args[5]}
+		key = [7]any{idx, args[0], args[1], args[2], args[3], args[4], args[5]}
 	case 7:
-		ret = [8]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6]}
+		key = [8]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6]}
 	case 8:
-		ret = [9]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]}
+		key = [9]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]}
 	case 9:
-		ret = [10]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]}
+		key = [10]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]}
 	default:
 		panic("arity > 9, unreachable")
 	}
-	return ret
-}
 
-func (s *State) MemoizeInsert(idx int, args []Value, value Value) {
-	key := key(idx, args)
 	s.Globals.memoize[len(s.Globals.memoize)-1][key] = value
 }
 
