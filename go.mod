@@ -52,7 +52,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/mysql v0.25.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.25.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.25.0
-	github.com/twmb/franz-go v1.15.0
+	github.com/twmb/franz-go v1.15.1
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	go.mongodb.org/mongo-driver v1.12.1
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.45.0
@@ -295,7 +295,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/trinodb/trino-go-client v0.312.0 // indirect
-	github.com/twmb/franz-go/pkg/kmsg v1.6.1 // indirect
+	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/urfave/cli/v2 v2.25.7 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.0 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
