@@ -220,7 +220,7 @@ func (a *ArraySliceCompact[T]) AppendSingle(element File) (Array, bool) {
 // append appends the elements to the array, doubling the capacity as
 // many times as necessary.
 func (a *ArraySliceCompact[T]) append(elements ...File) Array {
-	m := len(a.elements) + len(elements)
+	m := a.n + len(elements)
 	n := make([]File, m)
 	j := 0
 	for i := 0; i < a.n; i++ {
