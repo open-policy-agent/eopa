@@ -1112,6 +1112,6 @@ func numbersRange(state *State, start, stop, step int) error {
 			},
 		}
 	}
-	state.SetReturnValue(Unused, fjson.NewArray(elems...))
+	state.SetReturnValue(Unused, fjson.NewArray(elems, len(elems)))
 	return nil
 }

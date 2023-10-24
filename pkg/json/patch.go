@@ -385,7 +385,7 @@ func apply(json File, ptr []string, value File, op PatchOp) (File, error) {
 							x[i] = v.Value(j)
 						}
 					}
-					v = NewArray(x...)
+					v = NewArray(x, len(x))
 				}
 			case PatchOpTest:
 				b, ok := value.(Json)

@@ -36,7 +36,7 @@ func TestUnmarshalObject(t *testing.T) {
 
 func TestUnmarshalArray(t *testing.T) {
 	decoder := NewDecoder(bytes.NewBuffer([]byte(`["a", "b"]{`)))
-	parsed := NewArray()
+	parsed := NewArray(nil, 0)
 	if err := decoder.UnmarshalArray(func(decoder *Decoder) error {
 		v, err := decoder.Decode()
 		if err != nil {

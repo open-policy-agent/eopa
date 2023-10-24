@@ -95,12 +95,12 @@ func (d *Decoder) Decode() (Json, error) {
 		}
 
 		if len(arr) <= maxCompactArray {
-			return NewArrayCompact(arr), nil
+			return NewArray(arr, len(arr)), nil
 		}
 
 		trimmed := make([]File, len(arr))
 		copy(trimmed, arr)
-		return newArrayImpl(trimmed), nil
+		return NewArray(trimmed, len(trimmed)), nil
 
 	case jsoniter.ObjectValue:
 		properties := make(map[string]File)

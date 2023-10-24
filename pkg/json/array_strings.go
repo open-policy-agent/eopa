@@ -9,10 +9,11 @@ import (
 // ArraySliceCompactStrings is a compact implementation of the string
 // arrays with at most 32 elements.
 type ArraySliceCompactStrings[T indexableStrings] struct {
+	n        int
 	elements T
 }
 
-func NewArrayCompactStrings(elements []File) Array {
+func NewArrayCompactStrings(elements []File, cap int) Array {
 	n := len(elements)
 	if n == 0 || n > 32 {
 		return nil
@@ -26,7 +27,7 @@ func NewArrayCompactStrings(elements []File) Array {
 		}
 	}
 
-	switch len(elements) {
+	switch cap {
 	case 1:
 		return newArrayCompactStrings[[1]*String](elements)
 	case 2:
@@ -92,15 +93,16 @@ func NewArrayCompactStrings(elements []File) Array {
 	case 32:
 		return newArrayCompactStrings[[32]*String](elements)
 	default:
-		return newArrayImpl(elements)
+		return &ArraySlice{elements}
 	}
 }
 
 func newArrayCompactStrings[T indexableStrings](elements []File) Array {
-	var a ArraySliceCompactStrings[T]
+	a := ArraySliceCompactStrings[T]{n: len(elements)}
 	for i := range elements {
 		a.elements[i] = elements[i].(*String)
 	}
+
 	return &a
 }
 
@@ -113,12 +115,58 @@ func (a *ArraySliceCompactStrings[T]) Contents() interface{} {
 }
 
 func (a *ArraySliceCompactStrings[T]) Append(elements ...File) Array {
-	return a.clone(false).Append(elements...)
+	if a.n+len(elements) <= len(a.elements) {
+		for _, element := range elements {
+			switch element.(type) {
+			case *String:
+			default:
+				return a.append(elements...)
+			}
+		}
+
+		for i, element := range elements {
+			a.elements[a.n+i] = element.(*String)
+		}
+
+		a.n += len(elements)
+		return a
+	}
+
+	return a.append(elements...)
 }
 
 func (a *ArraySliceCompactStrings[T]) AppendSingle(element File) (Array, bool) {
-	n, _ := a.clone(false).AppendSingle(element)
-	return n, true
+	if a.n+1 <= len(a.elements) {
+		switch s := element.(type) {
+		case *String:
+			a.elements[a.n] = s
+			a.n++
+			return a, false
+		}
+	}
+
+	return a.append(element), true
+}
+
+func (a *ArraySliceCompactStrings[T]) append(elements ...File) Array {
+	m := len(a.elements) + len(elements)
+	n := make([]File, m)
+	j := 0
+	for i := 0; i < a.n; i++ {
+		n[j] = a.elements[i]
+		j++
+	}
+	for i := 0; i < len(elements); i++ {
+		n[j] = elements[i]
+		j++
+	}
+
+	p := 1
+	for p < m {
+		p *= 2
+	}
+
+	return NewArray(n, p)
 }
 
 func (a *ArraySliceCompactStrings[T]) Slice(i, j int) Array {
@@ -127,11 +175,11 @@ func (a *ArraySliceCompactStrings[T]) Slice(i, j int) Array {
 		elements[k] = a.elements[i+k]
 	}
 
-	return newArrayImpl(elements)
+	return NewArray(elements, len(elements))
 }
 
 func (a *ArraySliceCompactStrings[T]) Len() int {
-	return len(a.elements)
+	return a.n
 }
 
 func (a *ArraySliceCompactStrings[T]) Value(i int) Json {
@@ -159,7 +207,17 @@ func (a *ArraySliceCompactStrings[T]) iterate(i int) File {
 }
 
 func (a *ArraySliceCompactStrings[T]) RemoveIdx(i int) Json {
-	return a.clone(false).RemoveIdx(i)
+	if a.n == 1 {
+		return zeroArray
+	}
+
+	for ; i < a.n-1; i++ {
+		a.elements[i] = a.elements[i+1]
+	}
+
+	a.n--
+	a.elements[a.n] = nil
+	return a
 }
 
 func (a *ArraySliceCompactStrings[T]) SetIdx(i int, j File) Json {
@@ -169,9 +227,19 @@ func (a *ArraySliceCompactStrings[T]) SetIdx(i int, j File) Json {
 
 	if s, ok := j.(*String); ok {
 		a.elements[i] = s
+		return a
 	}
 
-	return a.clone(false).SetIdx(i, j)
+	f := make([]File, a.Len())
+	for k := 0; k < len(f); k++ {
+		if k == i {
+			f[k] = j
+		} else {
+			f[k] = a.valueImpl(k)
+		}
+	}
+
+	return NewArray(f, len(f))
 }
 
 func (a *ArraySliceCompactStrings[T]) JSON() interface{} {

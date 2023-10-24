@@ -692,7 +692,7 @@ func (a ArrayBinary) clone() Array {
 		c[i] = a.valueImpl(i)
 	}
 
-	return newArrayImpl(c)
+	return NewArray(c, len(c))
 }
 
 func (a ArrayBinary) String() string {
@@ -705,26 +705,6 @@ func (a ArrayBinary) String() string {
 
 type ArraySlice struct {
 	elements []File
-}
-
-func NewArray(elements ...File) Array {
-	return newArrayImpl(elements)
-}
-
-func NewArrayWithCapacity(capacity int) Array {
-	if capacity == 0 {
-		return &ArraySlice{nil}
-	}
-
-	return &ArraySlice{make([]File, 0, capacity)}
-}
-
-func newArrayImpl(elements []File) Array {
-	if len(elements) == 0 {
-		return &ArraySlice{nil}
-	}
-
-	return &ArraySlice{elements}
 }
 
 func (a *ArraySlice) WriteTo(w io.Writer) (int64, error) {
@@ -746,7 +726,7 @@ func (a *ArraySlice) AppendSingle(element File) (Array, bool) {
 }
 
 func (a *ArraySlice) Slice(i, j int) Array {
-	return NewArray(a.elements[i:j]...)
+	return NewArray(a.elements[i:j], j-i)
 }
 
 func (a *ArraySlice) Len() int {
@@ -1668,7 +1648,7 @@ func (u *unmarshaller) unmarshalArray(values reflect.Value, typ reflect.Type) (J
 		a = append(a, value)
 	}
 
-	return NewArrayCompact(a), nil
+	return NewArray(a, len(a)), nil
 }
 
 func (u *unmarshaller) unmarshalMap(values reflect.Value) (Json, error) {

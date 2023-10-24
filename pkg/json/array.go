@@ -59,7 +59,7 @@ func (arraySliceBase[T]) clone(a T, deepCopy bool) Array {
 		j[i] = v
 	}
 
-	return newArrayImpl(j)
+	return NewArray(j, len(j))
 }
 
 func (arraySliceBase[T]) JSON(a T) interface{} {
@@ -97,15 +97,16 @@ func (arraySliceBase[T]) String(a T) string {
 // ArraySliceCompact is a compact implementation of the arrays with at
 // most 32 elements.
 type ArraySliceCompact[T indexable] struct {
+	n        int
 	elements T
 }
 
-func NewArrayCompact(elements []File) Array {
-	if a := NewArrayCompactStrings(elements); a != nil {
+func NewArray(elements []File, cap int) Array {
+	if a := NewArrayCompactStrings(elements, cap); a != nil {
 		return a
 	}
 
-	switch len(elements) {
+	switch cap {
 	case 0:
 		return zeroArray
 	case 1:
@@ -173,12 +174,12 @@ func NewArrayCompact(elements []File) Array {
 	case 32:
 		return newArrayCompact[[32]File](elements)
 	default:
-		return newArrayImpl(elements)
+		return &ArraySlice{elements}
 	}
 }
 
 func newArrayCompact[T indexable](elements []File) Array {
-	var a ArraySliceCompact[T]
+	a := ArraySliceCompact[T]{n: len(elements)}
 	for i := range elements {
 		a.elements[i] = elements[i]
 	}
@@ -194,12 +195,49 @@ func (a *ArraySliceCompact[T]) Contents() interface{} {
 }
 
 func (a *ArraySliceCompact[T]) Append(elements ...File) Array {
-	return a.clone(false).Append(elements...)
+	if a.n+len(elements) <= len(a.elements) {
+		for i, element := range elements {
+			a.elements[a.n+i] = element
+		}
+
+		a.n += len(elements)
+		return a
+	}
+
+	return a.append(elements...)
 }
 
 func (a *ArraySliceCompact[T]) AppendSingle(element File) (Array, bool) {
-	n, _ := a.clone(false).AppendSingle(element)
-	return n, true
+	if a.n+1 <= len(a.elements) {
+		a.elements[a.n] = element
+		a.n++
+		return a, false
+	}
+
+	return a.append(element), true
+}
+
+// append appends the elements to the array, doubling the capacity as
+// many times as necessary.
+func (a *ArraySliceCompact[T]) append(elements ...File) Array {
+	m := len(a.elements) + len(elements)
+	n := make([]File, m)
+	j := 0
+	for i := 0; i < a.n; i++ {
+		n[j] = a.elements[i]
+		j++
+	}
+	for i := 0; i < len(elements); i++ {
+		n[j] = elements[i]
+		j++
+	}
+
+	p := 1
+	for p < m {
+		p *= 2
+	}
+
+	return NewArray(n, p)
 }
 
 func (a *ArraySliceCompact[T]) Slice(i, j int) Array {
@@ -208,11 +246,11 @@ func (a *ArraySliceCompact[T]) Slice(i, j int) Array {
 		elements[k] = a.elements[i+k]
 	}
 
-	return newArrayImpl(elements)
+	return NewArray(elements, len(elements))
 }
 
 func (a *ArraySliceCompact[T]) Len() int {
-	return len(a.elements)
+	return a.n
 }
 
 func (a *ArraySliceCompact[T]) Value(i int) Json {
@@ -243,7 +281,17 @@ func (a *ArraySliceCompact[T]) iterate(i int) File {
 }
 
 func (a *ArraySliceCompact[T]) RemoveIdx(i int) Json {
-	return a.clone(false).RemoveIdx(i)
+	if a.n == 1 {
+		return zeroArray
+	}
+
+	for ; i < a.n-1; i++ {
+		a.elements[i] = a.elements[i+1]
+	}
+
+	a.n--
+	a.elements[a.n] = nil
+	return a
 }
 
 func (a *ArraySliceCompact[T]) SetIdx(i int, j File) Json {

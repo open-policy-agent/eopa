@@ -238,7 +238,7 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 		for _, v := range x {
 			values = append(values, fjson.NewString(v))
 		}
-		return fjson.NewArray(values...), nil
+		return fjson.NewArray(values, len(x)), nil
 	case []interface{}:
 		values := make([]fjson.File, 0, len(x))
 		for _, v := range x {
@@ -248,10 +248,10 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 			}
 			values = append(values, y.(fjson.Json))
 		}
-		return fjson.NewArray(values...), nil
+		return fjson.NewArray(values, len(x)), nil
 	case *ast.Array:
 		n := x.Len()
-		arr := fjson.NewArray(make([]fjson.File, n)...)
+		arr := fjson.NewArray(make([]fjson.File, n), n)
 		for i := 0; i < n; i++ {
 			y, err := o.FromInterface(ctx, x.Elem(i).Value)
 			if err != nil {
@@ -281,7 +281,7 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 			}
 			values = append(values, y.(fjson.Json))
 		}
-		return fjson.NewArray(values...), nil
+		return fjson.NewArray(values, len(x)), nil
 	case map[string]string:
 		obj := NewObject()
 		for k, v := range x {
@@ -385,7 +385,7 @@ func (*DataOperations) IsObject(ctx context.Context, v interface{}) (bool, error
 }
 
 func (*DataOperations) MakeArray(capacity int32) fjson.Array {
-	return fjson.NewArrayWithCapacity(int(capacity))
+	return fjson.NewArray(nil, int(capacity))
 }
 
 func (*DataOperations) MakeBoolean(v bool) fjson.Json {
