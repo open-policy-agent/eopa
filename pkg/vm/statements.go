@@ -457,29 +457,27 @@ func (a assignVar) Execute(state *State) (bool, uint32, error) {
 func (s scan) Execute(state *State) (bool, uint32, error) {
 	var stop bool
 	var n uint32
-	var err error
 
 	// TODO: Should break index=1 if the source is not iterable?
 
 	source, skey, svalue := s.Source(), s.Key(), s.Value()
 	block := s.Block()
 
-	if err2 := func(f func(key, value interface{}) bool) error {
+	if err2 := func(f func(key, value interface{}) (bool, error)) error {
 		return state.ValueOps().Iter(state.Globals.Ctx, state.Local(source), *noescape(&f))
-	}(func(key, value interface{}) bool {
+	}(func(key, value interface{}) (bool, error) {
 		state.SetValue(skey, key)
 		state.SetValue(svalue, value)
 
+		var err error
 		stop, n, err = block.Execute(state)
 		if stop || err != nil {
-			return true
+			return true, err
 		}
 
-		return false
+		return false, nil
 	}); err2 != nil {
 		return false, 0, err2
-	} else if err != nil {
-		return false, 0, err
 	}
 
 	if stop && n > 0 {

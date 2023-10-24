@@ -322,7 +322,7 @@ func (txn *transaction) Get(ctx context.Context, key interface{}) (interface{}, 
 	return txn.tree.Get(ctx, key)
 }
 
-func (txn *transaction) Iter(ctx context.Context, f func(key, value interface{}) bool) error {
+func (txn *transaction) Iter(ctx context.Context, f func(key, value interface{}) (bool, error)) error {
 	return txn.tree.Iter(ctx, f)
 }
 

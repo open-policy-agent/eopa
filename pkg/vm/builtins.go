@@ -22,11 +22,11 @@ func memberBuiltin(state *State, args []Value) error {
 
 	var found bool
 
-	if err := func(f func(key, value interface{}) bool) error {
+	if err := func(f func(key, value interface{}) (bool, error)) error {
 		return state.ValueOps().Iter(state.Globals.Ctx, args[1], *noescape(&f))
-	}(func(_, v interface{}) bool {
+	}(func(_, v interface{}) (bool, error) {
 		found, _ = state.ValueOps().Equal(state.Globals.Ctx, args[0], v)
-		return found
+		return found, nil
 	}); err != nil {
 		return err
 	}
@@ -98,11 +98,11 @@ func objectGetBuiltin(state *State, args []Value) error {
 
 	var found bool
 
-	if err := func(f func(key, value interface{}) bool) error {
+	if err := func(f func(key, value interface{}) (bool, error)) error {
 		return state.ValueOps().Iter(state.Globals.Ctx, path, *noescape(&f))
-	}(func(_, v interface{}) bool { // path array values are our object keys
+	}(func(_, v interface{}) (bool, error) { // path array values are our object keys
 		obj, found, _ = state.ValueOps().Get(state.Globals.Ctx, obj, v)
-		return !found // always iterate path array to the end if found
+		return !found, nil // always iterate path array to the end if found
 	}); err != nil {
 		return err
 	}
@@ -134,13 +134,12 @@ func objectKeysBuiltin(state *State, args []Value) error {
 			}
 		}
 	case IterableObject:
-		var innerErr error
-		o.Iter(state.Globals.Ctx, func(key any, _ any) bool {
-			innerErr = state.ValueOps().SetAdd(state.Globals.Ctx, set, key)
-			return innerErr != nil
+		err := o.Iter(state.Globals.Ctx, func(key any, _ any) (bool, error) {
+			err := state.ValueOps().SetAdd(state.Globals.Ctx, set, key)
+			return err != nil, err
 		})
-		if innerErr != nil {
-			return innerErr
+		if err != nil {
+			return err
 		}
 	}
 
@@ -209,13 +208,11 @@ func objectSelect(state *State, args []Value, keep bool) error {
 		return nil
 	}
 
-	var innerErr error
-	if err := state.ValueOps().Iter(state.Globals.Ctx, obj, func(k, v any) bool {
+	if err := state.ValueOps().Iter(state.Globals.Ctx, obj, func(k, v any) (bool, error) {
 		key := k.(fjson.Json)
 		ok, err := selected(key)
 		if err != nil {
-			innerErr = err
-			return true // abort
+			return true, err // abort
 		}
 		if !ok && !keep {
 			result.Insert(state.Globals.Ctx, k, v)
@@ -223,12 +220,9 @@ func objectSelect(state *State, args []Value, keep bool) error {
 		if ok && keep {
 			result.Insert(state.Globals.Ctx, k, v)
 		}
-		return false // continue
+		return false, nil // continue
 	}); err != nil {
 		return err
-	}
-	if innerErr != nil {
-		return innerErr
 	}
 
 	state.SetReturnValue(Unused, result)
@@ -649,9 +643,8 @@ func do(state *State, path Value, val Value, record func(*State, Value, Value) e
 		return err
 	}
 
-	var innerErr error
-	if err := state.ValueOps().Iter(state.Globals.Ctx, val, func(k, v any) bool {
-		innerErr = func(state *State, k, v Value) error {
+	if err := state.ValueOps().Iter(state.Globals.Ctx, val, func(k, v any) (bool, error) {
+		err := func(state *State, k, v Value) error {
 			p, err := state.ValueOps().CopyShallow(state.Globals.Ctx, path)
 			if err != nil {
 				return err
@@ -665,12 +658,12 @@ func do(state *State, path Value, val Value, record func(*State, Value, Value) e
 			}
 			return do(state, p, v, record) // recurse
 		}(state, k, v)
-		return innerErr != nil
+		return err != nil, err
 	}); err != nil {
 		return err
 	}
 
-	return innerErr
+	return nil
 }
 
 func arrayConcatBuiltin(state *State, args []Value) error {
@@ -689,9 +682,8 @@ func arrayConcatBuiltin(state *State, args []Value) error {
 	var ret Value = state.ValueOps().MakeArray(0)
 	arrays := []any{a, b}
 	for i := range arrays {
-		var innerErr error
-		if err := state.ValueOps().Iter(state.Globals.Ctx, arrays[i], func(_, v any) bool {
-			innerErr = func(state *State, v Value) error {
+		if err := state.ValueOps().Iter(state.Globals.Ctx, arrays[i], func(_, v any) (bool, error) {
+			err := func(state *State, v Value) error {
 				v, err := state.ValueOps().CopyShallow(state.Globals.Ctx, v)
 				if err != nil {
 					return err
@@ -699,12 +691,9 @@ func arrayConcatBuiltin(state *State, args []Value) error {
 				ret, _, err = state.ValueOps().ArrayAppend(state.Globals.Ctx, ret, v)
 				return err
 			}(state, v)
-			return innerErr != nil
+			return err != nil, err
 		}); err != nil {
 			return err
-		}
-		if innerErr != nil {
-			return innerErr
 		}
 	}
 
@@ -855,11 +844,11 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 				return value.(fjson.Json), true, nil
 			}
 
-			if err := b.Iter(ctx, func(key, value interface{}) bool {
+			if err := b.Iter(ctx, func(key, value interface{}) (bool, error) {
 				if key, ok := key.(*fjson.String); !ok || a.Value(key.Value()) == nil {
 					result.Insert(ctx, key, value)
 				}
-				return false
+				return false, nil
 			}); err != nil {
 				return nil, err
 			}
@@ -896,12 +885,11 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 				}
 			}
 
-			var err2 error
-			a.Iter(ctx, func(key, value interface{}) bool {
+			err := a.Iter(ctx, func(key, value interface{}) (bool, error) {
 				k, ok := key.(fjson.Json)
 				if !ok {
 					result.Insert(ctx, key, value)
-					return false
+					return false, nil
 				}
 
 				getValue := func(key fjson.Json) (fjson.Json, bool) {
@@ -915,44 +903,39 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 				v2, ok := getValue(k)
 				if !ok {
 					result.Insert(ctx, key, value)
-					return false
+					return false, nil
 				}
 
 				m, err := objectUnion(ctx, value, v2)
 				if err != nil {
-					err2 = err
-					return true
+					return true, err
 				}
 
 				result.Insert(ctx, key, m)
-				return false
+				return false, nil
 			})
-			if err2 != nil {
-				return nil, err2
+			if err != nil {
+				return nil, err
 			}
 
 		case IterableObject:
-			var err2 error
-			if err := b.Iter(ctx, func(key, value interface{}) bool {
+			if err := b.Iter(ctx, func(key, value interface{}) (bool, error) {
 				if _, ok, err := a.Get(ctx, key); err != nil {
-					err2 = err
-					return true
+					return true, err
 				} else if !ok {
 					result.Insert(ctx, key, value)
 				}
 
-				return false
+				return false, nil
 			}); err != nil {
 				return nil, err
-			} else if err2 != nil {
-				return nil, err2
 			}
 
-			a.Iter(ctx, func(key, value interface{}) bool {
+			err := a.Iter(ctx, func(key, value interface{}) (bool, error) {
 				k, ok := key.(fjson.Json)
 				if !ok {
 					result.Insert(ctx, key, value)
-					return false
+					return false, nil
 				}
 
 				getValue := func(key fjson.Json) (fjson.Json, bool, error) {
@@ -966,24 +949,22 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 
 				v2, ok, err := getValue(k)
 				if err != nil {
-					err2 = err
-					return true
+					return true, err
 				} else if !ok {
 					result.Insert(ctx, key, value)
-					return false
+					return false, nil
 				}
 
 				m, err := objectUnion(ctx, value, v2)
 				if err != nil {
-					err2 = err
-					return true
+					return true, err
 				}
 
 				result.Insert(ctx, key, m)
-				return false
+				return false, nil
 			})
-			if err2 != nil {
-				return nil, err2
+			if err != nil {
+				return nil, err
 			}
 		default:
 			return b, nil

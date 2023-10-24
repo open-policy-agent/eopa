@@ -65,10 +65,10 @@ func TestHashMapIter(t *testing.T) {
 		panic(fmt.Sprintf("Expected collision: %v", m))
 	}
 	results := map[float64]string{}
-	m.Iter(func(k, v interface{}) bool {
+	m.Iter(func(k, v interface{}) (bool, error) {
 		f, _ := k.(testHashType).Json.(fjson.Float).Value().Float64()
 		results[f] = v.(*fjson.String).Value()
-		return false
+		return false, nil
 	})
 	expected := map[float64]string{
 		float64(1):   value.Value(),

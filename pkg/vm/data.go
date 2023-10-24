@@ -42,7 +42,7 @@ type (
 	// IterableObject is the interface for external, read-only (probably persisted) object implementations.
 	IterableObject interface {
 		Get(ctx context.Context, key interface{}) (interface{}, bool, error)
-		Iter(ctx context.Context, f func(key, value interface{}) bool) error
+		Iter(ctx context.Context, f func(key, value interface{}) (bool, error)) error
 		Len(ctx context.Context) (int, error)
 		Hash(ctx context.Context) (uint64, error)
 	}
@@ -183,14 +183,10 @@ func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (inte
 	case IterableObject:
 		// TODO: Return a copy-on-write object.
 		obj := NewObject()
-		var err2 error
-		err := v.Iter(ctx, func(k, v interface{}) bool {
-			err2 = obj.Insert(ctx, k, v)
-			return err2 != nil
-		})
-		if err2 != nil {
-			return nil, err2
-		} else if err != nil {
+		if err := v.Iter(ctx, func(k, v interface{}) (bool, error) {
+			err := obj.Insert(ctx, k, v)
+			return err != nil, err
+		}); err != nil {
 			return nil, err
 		}
 
@@ -336,25 +332,38 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 	return nil, nil
 }
 
-func (o *DataOperations) Iter(ctx context.Context, v interface{}, f func(key, value interface{}) bool) error {
+func (o *DataOperations) Iter(ctx context.Context, v interface{}, f func(key, value interface{}) (bool, error)) error {
 	switch v := v.(type) {
 	case fjson.Array:
 		n := v.Len()
 		for i := 0; i < n; i++ {
-			if f(o.MakeNumberInt(int64(i)), v.Iterate(i)) {
+			if stop, err := f(o.MakeNumberInt(int64(i)), v.Iterate(i)); err != nil {
+				return err
+			} else if stop {
 				break
 			}
 		}
 	case fjson.Object:
 		for i, key := range v.Names() {
-			if f(fjson.NewString(key), v.Iterate(i)) {
+			if stop, err := f(fjson.NewString(key), v.Iterate(i)); err != nil {
+				return err
+			} else if stop {
 				break
 			}
 		}
 	case *Set:
+		var err2 error // TODO
 		v.Iter(func(v fjson.Json) bool {
-			return f(v, v)
+			stop, err := f(v, v)
+			if err != nil {
+				err2 = err
+				return true
+			}
+
+			return stop
 		})
+		return err2
+
 	case IterableObject:
 		return v.Iter(ctx, f)
 	}
@@ -529,59 +538,51 @@ func (o *DataOperations) ObjectMerge(ctx context.Context, a, b interface{}) (int
 
 	merged := NewObject()
 
-	var err error
-
-	if err2 := objectIterate(ctx, a, func(key, value interface{}) bool {
-		var other interface{}
-		var ok bool
-		other, ok, err = objectGet(ctx, b, key)
+	if err := objectIterate(ctx, a, func(key, value interface{}) (bool, error) {
+		other, ok, err := objectGet(ctx, b, key)
 		if err != nil {
-			return true
+			return true, err
 		} else if !ok {
 			err = merged.Insert(ctx, key, value)
-			return err != nil
+			return err != nil, err
 		}
 
-		var m interface{}
-		m, err = o.ObjectMerge(ctx, value, other)
+		m, err := o.ObjectMerge(ctx, value, other)
 		if err != nil {
-			return true
+			return true, err
 		}
 
 		err = merged.Insert(ctx, key, m)
-		return err != nil
-	}); err2 != nil {
-		return nil, err2
-	} else if err != nil {
+		return err != nil, err
+	}); err != nil {
 		return nil, err
 	}
 
-	if err2 := objectIterate(ctx, b, func(key, value interface{}) bool {
-		var ok bool
-		_, ok, err = objectGet(ctx, a, key)
+	if err := objectIterate(ctx, b, func(key, value interface{}) (bool, error) {
+		_, ok, err := objectGet(ctx, a, key)
 		if err != nil {
-			return true
+			return true, err
 		}
 		if !ok {
-			err = merged.Insert(ctx, key, value)
+			err := merged.Insert(ctx, key, value)
 			if err != nil {
-				return true
+				return true, err
 			}
 		}
-		return false
-	}); err2 != nil {
-		return nil, err2
-	} else if err != nil {
+		return false, nil
+	}); err != nil {
 		return nil, err
 	}
 
 	return merged, nil
 }
 
-func objectIterate(ctx context.Context, obj interface{}, f func(key, value interface{}) bool) error {
+func objectIterate(ctx context.Context, obj interface{}, f func(key, value interface{}) (bool, error)) error {
 	if obj, ok := obj.(fjson.Object); ok {
 		for i, name := range obj.Names() {
-			if f(fjson.NewString(name), obj.Iterate(i)) {
+			if stop, err := f(fjson.NewString(name), obj.Iterate(i)); err != nil {
+				return err
+			} else if stop {
 				break
 			}
 		}
@@ -702,25 +703,20 @@ func (o *DataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, e
 
 	case IterableObject:
 		obj := ast.NewObject()
-		var err error
-		if err2 := v.Iter(ctx, func(k, v interface{}) bool {
-			var a ast.Value
-			a, err = o.ToAST(ctx, k)
+		if err := v.Iter(ctx, func(k, v interface{}) (bool, error) {
+			a, err := o.ToAST(ctx, k)
 			if err != nil {
-				return true
+				return true, err
 			}
 
-			var b ast.Value
-			b, err = o.ToAST(ctx, v)
+			b, err := o.ToAST(ctx, v)
 			if err != nil {
-				return true
+				return true, err
 			}
 
 			obj.Insert(ast.NewTerm(a), ast.NewTerm(b))
-			return false
-		}); err2 != nil {
-			return nil, err2
-		} else if err != nil {
+			return false, nil
+		}); err != nil {
 			return nil, err
 		}
 		return obj, nil
@@ -834,11 +830,18 @@ func (o *Object) Get(ctx context.Context, k interface{}) (interface{}, bool, err
 	return o.obj.Get(ctx, k)
 }
 
-func (o *Object) Iter(_ context.Context, iter func(key, value interface{}) bool) error {
+func (o *Object) Iter(_ context.Context, iter func(key, value interface{}) (bool, error)) error {
+	var err2 error // TODO
 	o.obj.Iter(func(k, v T) bool {
-		return iter(k, v)
+		stop, err := iter(k, v)
+		if err != nil {
+			err2 = err
+			return true
+		}
+
+		return stop
 	})
-	return nil
+	return err2
 }
 
 func (o *Object) Len(context.Context) (int, error) {
@@ -867,10 +870,9 @@ func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
 	switch v := v.(type) {
 	case IterableObject:
 		obj := NewObject()
-		var err error
-		v.Iter(ctx, func(k, v interface{}) bool {
+		err := v.Iter(ctx, func(k, v interface{}) (bool, error) {
 			obj.Insert(ctx, k.(*fjson.String), v.(fjson.Json))
-			return false
+			return false, nil
 		})
 		if err != nil {
 			return nil, err

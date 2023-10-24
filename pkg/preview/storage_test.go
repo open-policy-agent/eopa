@@ -82,9 +82,9 @@ func TestTransactionIter(t *testing.T) {
 		{Key: "key3", Value: "preview value 2"},
 	}
 	found := make([]kvPair, 0, 4)
-	transaction.Iter(ctx, func(k, v any) bool {
+	transaction.Iter(ctx, func(k, v any) (bool, error) {
 		found = append(found, kvPair{Key: extractString(k), Value: extractString(v)})
-		return false
+		return false, nil
 	})
 	sort.Slice(found, func(i, j int) bool {
 		return found[i].Key+found[i].Value < found[j].Key+found[j].Value
@@ -99,9 +99,9 @@ func TestTransactionIterReturnsEarly(t *testing.T) {
 	ctx := context.Background()
 	transaction := iterableTestTransaction(ctx, t, testStore(t))
 	iterations := 0
-	transaction.Iter(ctx, func(k, v any) bool {
+	transaction.Iter(ctx, func(k, v any) (bool, error) {
 		iterations++
-		return true
+		return true, nil
 	})
 
 	if iterations != 1 {

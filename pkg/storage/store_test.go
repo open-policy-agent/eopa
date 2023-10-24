@@ -354,16 +354,16 @@ type iterOp struct {
 }
 
 type iterable interface {
-	Iter(ctx context.Context, f func(key, value interface{}) bool) error
+	Iter(ctx context.Context, f func(key, value interface{}) (bool, error)) error
 }
 
 func (o iterOp) Execute(ctx context.Context, t *testing.T, v interface{}) {
 	i := v.(iterable)
 	result := fjson.NewObject(nil)
 
-	if err := i.Iter(ctx, func(key, value interface{}) bool {
+	if err := i.Iter(ctx, func(key, value interface{}) (bool, error) {
 		result.Set(key.(*fjson.String).Value(), value.(fjson.Json))
-		return false
+		return false, nil
 	}); err != nil {
 		t.Fatal(err)
 	}

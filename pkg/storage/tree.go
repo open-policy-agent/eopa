@@ -87,7 +87,7 @@ func (n *tree) Get(ctx context.Context, key interface{}) (interface{}, bool, err
 	return nil, false, nil
 }
 
-func (n *tree) Iter(ctx context.Context, f func(key, value interface{}) bool) error {
+func (n *tree) Iter(ctx context.Context, f func(key, value interface{}) (bool, error)) error {
 	if len(n.children) == 0 && n.store != nil {
 		v, ok, err := n.txn.read(ctx, n.store, n.path)
 		if err != nil {
@@ -107,23 +107,21 @@ func (n *tree) Iter(ctx context.Context, f func(key, value interface{}) bool) er
 
 func (n *tree) Len(ctx context.Context) (int, error) {
 	i := 0
-	err := n.Iter(ctx, func(_, _ interface{}) bool {
+	err := n.Iter(ctx, func(_, _ interface{}) (bool, error) {
 		i++
-		return false
+		return false, nil
 	})
 	return i, err
 }
 
 func (n *tree) Hash(ctx context.Context) (uint64, error) {
 	var h uint64
-	var err2 error
-	if err := n.Iter(ctx, func(k, v interface{}) bool {
-		h, err2 = vm.ObjectHashEntry(ctx, h, k, v)
-		return err2 != nil
+	if err := n.Iter(ctx, func(k, v interface{}) (bool, error) {
+		var err error
+		h, err = vm.ObjectHashEntry(ctx, h, k, v)
+		return err != nil, err
 	}); err != nil {
 		return 0, err
-	} else if err2 != nil {
-		return 0, err2
 	}
 
 	return h, nil
@@ -198,7 +196,7 @@ func (t *lazyTree) Find(storage.Path) (storage.Store, error) {
 	return t.store, nil
 }
 
-func (t *lazyTree) Iter(ctx context.Context, f func(key, value interface{}) bool) error {
+func (t *lazyTree) Iter(ctx context.Context, f func(key, value interface{}) (bool, error)) error {
 	// TODO: Ideally the store would have a native iteration
 	// interface, to avoid loading the whole document in memory at
 	// once.
@@ -215,23 +213,21 @@ func (t *lazyTree) Iter(ctx context.Context, f func(key, value interface{}) bool
 
 func (t *lazyTree) Len(ctx context.Context) (int, error) {
 	n := 0
-	err := t.Iter(ctx, func(_, _ interface{}) bool {
+	err := t.Iter(ctx, func(_, _ interface{}) (bool, error) {
 		n++
-		return false
+		return false, nil
 	})
 	return n, err
 }
 
 func (t *lazyTree) Hash(ctx context.Context) (uint64, error) {
 	var h uint64
-	var err2 error
-	if err := t.Iter(ctx, func(k, v interface{}) bool {
-		h, err2 = vm.ObjectHashEntry(ctx, h, k, v)
-		return err2 != nil
+	if err := t.Iter(ctx, func(k, v interface{}) (bool, error) {
+		var err error
+		h, err = vm.ObjectHashEntry(ctx, h, k, v)
+		return err != nil, err
 	}); err != nil {
 		return 0, err
-	} else if err2 != nil {
-		return 0, err2
 	}
 
 	return h, nil

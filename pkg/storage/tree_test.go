@@ -137,12 +137,12 @@ func TestTree(t *testing.T) {
 
 					switch i := result.(type) {
 					case node:
-						err = i.Iter(ctx, func(key, value interface{}) bool {
+						err = i.Iter(ctx, func(key, value interface{}) (bool, error) {
 							if keys == nil {
 								keys = make([]string, 0)
 							}
 							keys = append(keys.([]string), key.(*json.String).Value())
-							return false
+							return false, nil
 						})
 					case json.Object:
 						keys = i.Names()

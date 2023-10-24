@@ -56,12 +56,13 @@ func (t *PreviewTransaction) Get(ctx context.Context, key interface{}) (interfac
 // This method does not deduplicate when a key is declared in both transactions.
 //
 // Preview data is iterated before primary data
-func (t *PreviewTransaction) Iter(ctx context.Context, f func(key, value any) bool) error {
+func (t *PreviewTransaction) Iter(ctx context.Context, f func(key, value any) (bool, error)) error {
 	found := false
 	iFunc := func(iterable vm.IterableObject) error {
-		return iterable.Iter(ctx, func(k, v any) bool {
-			found = f(k, v)
-			return found
+		return iterable.Iter(ctx, func(k, v any) (bool, error) {
+			var err error
+			found, err = f(k, v)
+			return found, err
 		})
 	}
 
@@ -106,14 +107,12 @@ func (t *PreviewTransaction) Len(ctx context.Context) (int, error) {
 
 func (t *PreviewTransaction) Hash(ctx context.Context) (uint64, error) {
 	var h uint64
-	var err2 error
-	if err := t.Iter(ctx, func(k, v interface{}) bool {
-		h, err2 = vm.ObjectHashEntry(ctx, h, k, v)
-		return err2 != nil
+	if err := t.Iter(ctx, func(k, v interface{}) (bool, error) {
+		var err error
+		h, err = vm.ObjectHashEntry(ctx, h, k, v)
+		return err != nil, err
 	}); err != nil {
 		return 0, err
-	} else if err2 != nil {
-		return 0, err2
 	}
 
 	return h, nil
