@@ -886,18 +886,8 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 		}
 
 	case IterableObject:
-		var getValue func(key fjson.Json) (fjson.Json, bool, error)
-
 		switch b := b.(type) {
 		case fjson.Object:
-			getValue = func(key fjson.Json) (fjson.Json, bool, error) {
-				var v2 fjson.Json
-				if skey, ok := key.(*fjson.String); ok {
-					v2 = b.Value(skey.Value())
-				}
-				return v2, v2 != nil, nil
-			}
-
 			for _, key := range b.Names() {
 				if _, ok, err := a.Get(ctx, fjson.NewString(key)); err != nil {
 					return nil, err
@@ -906,16 +896,42 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 				}
 			}
 
-		case IterableObject:
-			getValue = func(key fjson.Json) (fjson.Json, bool, error) {
-				value, ok, err := b.Get(ctx, key)
-				if !ok || err != nil {
-					return nil, ok, err
+			var err2 error
+			a.Iter(ctx, func(key, value interface{}) bool {
+				k, ok := key.(fjson.Json)
+				if !ok {
+					result.Insert(ctx, key, value)
+					return false
 				}
 
-				return value.(fjson.Json), true, nil
+				getValue := func(key fjson.Json) (fjson.Json, bool) {
+					var v2 fjson.Json
+					if skey, ok := key.(*fjson.String); ok {
+						v2 = b.Value(skey.Value())
+					}
+					return v2, v2 != nil
+				}
+
+				v2, ok := getValue(k)
+				if !ok {
+					result.Insert(ctx, key, value)
+					return false
+				}
+
+				m, err := objectUnion(ctx, value, v2)
+				if err != nil {
+					err2 = err
+					return true
+				}
+
+				result.Insert(ctx, key, m)
+				return false
+			})
+			if err2 != nil {
+				return nil, err2
 			}
 
+		case IterableObject:
 			var err2 error
 			if err := b.Iter(ctx, func(key, value interface{}) bool {
 				if _, ok, err := a.Get(ctx, key); err != nil {
@@ -931,39 +947,48 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 			} else if err2 != nil {
 				return nil, err2
 			}
+
+			a.Iter(ctx, func(key, value interface{}) bool {
+				k, ok := key.(fjson.Json)
+				if !ok {
+					result.Insert(ctx, key, value)
+					return false
+				}
+
+				getValue := func(key fjson.Json) (fjson.Json, bool, error) {
+					value, ok, err := b.Get(ctx, key)
+					if !ok || err != nil {
+						return nil, ok, err
+					}
+
+					return value.(fjson.Json), true, nil
+				}
+
+				v2, ok, err := getValue(k)
+				if err != nil {
+					err2 = err
+					return true
+				} else if !ok {
+					result.Insert(ctx, key, value)
+					return false
+				}
+
+				m, err := objectUnion(ctx, value, v2)
+				if err != nil {
+					err2 = err
+					return true
+				}
+
+				result.Insert(ctx, key, m)
+				return false
+			})
+			if err2 != nil {
+				return nil, err2
+			}
 		default:
 			return b, nil
 		}
 
-		var err2 error
-		a.Iter(ctx, func(key, value interface{}) bool {
-			k, ok := key.(fjson.Json)
-			if !ok {
-				result.Insert(ctx, key, value)
-				return false
-			}
-
-			v2, ok, err := getValue(k)
-			if err != nil {
-				err2 = err
-				return true
-			} else if !ok {
-				result.Insert(ctx, key, value)
-				return false
-			}
-
-			m, err := objectUnion(ctx, value, v2)
-			if err != nil {
-				err2 = err
-				return true
-			}
-
-			result.Insert(ctx, key, m)
-			return false
-		})
-		if err2 != nil {
-			return nil, err2
-		}
 	default:
 		return b, nil
 	}
