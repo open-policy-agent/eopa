@@ -143,6 +143,22 @@ func TestHttpIO(t *testing.T) {
 			},
 		},
 		{
+			name: "ad hoc query against overridden policy",
+			body: []byte(`{"rego": "direct", "rego_modules": {"test/test.rego": "package test\n\ndefault direct=\"overridden policy\""}}`),
+			response: map[string]any{
+				"expressions": []any{
+					map[string]any{
+						"value": "overridden policy",
+						"text":  "direct",
+						"location": map[string]any{
+							"row": float64(1),
+							"col": float64(1),
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "nd builtin cache",
 			body: []byte(`{
 				"rego_modules": {

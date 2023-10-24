@@ -180,15 +180,18 @@ func (q *QueryOpt) Init(preview *Preview) error {
 // up to run in the context of the package represented by the path. If not, the
 // path reference is queried directly.
 func (q *QueryOpt) RegoOptions() []func(*rego.Rego) {
+	pkg := q.ref.String()
 	if q.query == "" {
 		return []func(*rego.Rego){
-			rego.Query(q.ref.String()),
+			rego.Query(pkg),
 		}
 	}
+	// query packages should not have the default root document
+	pkg = strings.TrimPrefix(pkg, ast.DefaultRootDocument.Value.String()+".")
 	return []func(*rego.Rego){
 		rego.Query(q.query),
 		// rego.Imports([]string{}), // TODO: Do we need to parse this out...?
-		rego.Package(q.ref.String()),
+		rego.Package(pkg),
 	}
 }
 
