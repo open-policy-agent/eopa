@@ -158,3 +158,19 @@ func TestArrayStringsSizes(t *testing.T) {
 		})
 	}
 }
+
+// TestArrayStringsAppend stresses the append implementation.
+func TestArrayStringsAppend(t *testing.T) {
+	arr := newArrayCompactStrings[[1]*String](nil)
+	var expected []interface{}
+
+	for i := int64(0); i < 64; i++ {
+		arr = arr.Append(NewString(fmt.Sprintf("%d", i)), NewString(fmt.Sprintf("%d", i*2)))
+		expected = append(expected, fmt.Sprintf("%d", i))
+		expected = append(expected, fmt.Sprintf("%d", i*2))
+
+		if !reflect.DeepEqual(arr.JSON(), expected) {
+			t.Error("broken array append")
+		}
+	}
+}

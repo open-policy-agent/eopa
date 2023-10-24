@@ -2,6 +2,7 @@ package json
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -157,6 +158,22 @@ func TestArraySizes(t *testing.T) {
 				t.Error("broken walk")
 			}
 		})
+	}
+}
+
+// TestArrayAppend stresses the append implementation.
+func TestArrayAppend(t *testing.T) {
+	arr := NewArray(nil, 1)
+	var expected []interface{}
+
+	for i := int64(0); i < 64; i++ {
+		arr = arr.Append(NewFloatInt(i), NewFloatInt(i*2))
+		expected = append(expected, json.Number(fmt.Sprintf("%d", i)))
+		expected = append(expected, json.Number(fmt.Sprintf("%d", i*2)))
+
+		if !reflect.DeepEqual(arr.JSON(), expected) {
+			t.Error("broken array append")
+		}
 	}
 }
 
