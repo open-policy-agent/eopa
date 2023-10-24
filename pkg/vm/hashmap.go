@@ -39,10 +39,9 @@ func (h *HashMap) Copy(ctx context.Context) (*HashMap, error) {
 		table: make(map[int]*hashEntry, len(h.table)),
 		size:  0,
 	}
-	var err error
-	h.Iter(func(k, v T) bool {
-		err = cpy.Put(ctx, k, v)
-		return err != nil
+	_, err := h.Iter(func(k, v T) (bool, error) {
+		err := cpy.Put(ctx, k, v)
+		return err != nil, err
 	})
 	return cpy, err
 }
@@ -53,25 +52,22 @@ func (h *HashMap) Equal(ctx context.Context, other *HashMap) (bool, error) {
 	if h.Len() != other.Len() {
 		return false, nil
 	}
-	var err error
-	return !h.Iter(func(k, v T) bool {
-		var ov T
-		var ok bool
-		ov, ok, err = other.Get(ctx, k)
+	stop, err := h.Iter(func(k, v T) (bool, error) {
+		ov, ok, err := other.Get(ctx, k)
 		if err != nil {
-			return true
+			return true, err
 		} else if !ok {
-			return true
+			return true, nil
 		}
 
-		var eq bool
-		eq, err = h.eq(ctx, v, ov)
+		eq, err := h.eq(ctx, v, ov)
 		if err != nil {
-			return true
+			return true, err
 		}
 
-		return !eq
-	}), err
+		return !eq, nil
+	})
+	return !stop, err
 }
 
 // Get returns the value for k.
@@ -122,22 +118,19 @@ func (h *HashMap) Delete(ctx context.Context, k T) error {
 // Hash returns the hash code for this hash map.
 func (h *HashMap) Hash(ctx context.Context) (int, error) {
 	var hash int
-	var err error
-	h.Iter(func(k, v T) bool {
-		var kh int
-		kh, err = h.hash(ctx, k)
+	_, err := h.Iter(func(k, v T) (bool, error) {
+		kh, err := h.hash(ctx, k)
 		if err != nil {
-			return true
+			return true, err
 		}
 
-		var vh int
-		vh, err = h.hash(ctx, v)
+		vh, err := h.hash(ctx, v)
 		if err != nil {
-			return true
+			return true, err
 		}
 
 		hash += kh + vh
-		return false
+		return false, nil
 	})
 	return hash, err
 }
@@ -146,15 +139,17 @@ func (h *HashMap) Hash(ctx context.Context) (int, error) {
 // If the iter function returns true, iteration stops and the return value is true.
 // If the iter function never returns true, iteration proceeds through all elements
 // and the return value is false.
-func (h *HashMap) Iter(iter func(T, T) bool) bool {
+func (h *HashMap) Iter(iter func(T, T) (bool, error)) (bool, error) {
 	for _, entry := range h.table {
 		for ; entry != nil; entry = entry.next {
-			if iter(entry.k, entry.v) {
-				return true
+			if stop, err := iter(entry.k, entry.v); err != nil {
+				return false, err
+			} else if stop {
+				return true, nil
 			}
 		}
 	}
-	return false
+	return false, nil
 }
 
 // Len returns the current size of this HashMap.
@@ -189,13 +184,13 @@ func (h *HashMap) String() string {
 	var b gostrings.Builder
 	b.WriteRune('{')
 	i := 0
-	h.Iter(func(k T, v T) bool {
+	h.Iter(func(k T, v T) (bool, error) {
 		if i > 0 {
 			b.WriteString(", ")
 		}
 
 		b.WriteString(fmt.Sprintf("%v: %v", k, v))
-		return false
+		return false, nil
 	})
 	b.WriteRune('}')
 	return b.String()
@@ -209,9 +204,9 @@ func (h *HashMap) Update(ctx context.Context, other *HashMap) (*HashMap, error) 
 	if err != nil {
 		return nil, err
 	}
-	other.Iter(func(k, v T) bool {
-		err = updated.Put(ctx, k, v)
-		return err != nil
+	_, err = other.Iter(func(k, v T) (bool, error) {
+		err := updated.Put(ctx, k, v)
+		return err != nil, err
 	})
 	return updated, err
 }

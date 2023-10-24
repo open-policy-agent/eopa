@@ -31,12 +31,11 @@ func (h *HashSet) Copy(ctx context.Context) (*HashSet, error) {
 		table: make(map[int]*hashSetEntry, len(h.table)),
 		size:  0,
 	}
-	var err error
-	h.Iter(func(k T) bool {
-		if err = cpy.Put(ctx, k); err != nil {
-			return true
+	_, err := h.Iter(func(k T) (bool, error) {
+		if err := cpy.Put(ctx, k); err != nil {
+			return true, err
 		}
-		return false
+		return false, nil
 	})
 	if err != nil {
 		return nil, err
@@ -50,14 +49,12 @@ func (h *HashSet) Equal(ctx context.Context, other *HashSet) (bool, error) {
 	if h.Len() != other.Len() {
 		return false, nil
 	}
-	var err error
-	neq := h.Iter(func(k T) bool {
-		var eq bool
-		eq, err = other.Get(ctx, k)
+	neq, err := h.Iter(func(k T) (bool, error) {
+		eq, err := other.Get(ctx, k)
 		if err != nil {
-			return true
+			return true, err
 		}
-		return !eq
+		return !eq, err
 	})
 	return !neq, err
 }
@@ -109,15 +106,13 @@ func (h *HashSet) Delete(ctx context.Context, k T) error {
 // Hash returns the hash code for this hash map.
 func (h *HashSet) Hash(ctx context.Context) (int, error) {
 	var hash int
-	var err error
-	h.Iter(func(k T) bool {
-		var v int
-		v, err = h.hash(ctx, k)
+	_, err := h.Iter(func(k T) (bool, error) {
+		v, err := h.hash(ctx, k)
 		if err != nil {
-			return true
+			return true, err
 		}
 		hash += v
-		return false
+		return false, nil
 	})
 	return hash, err
 }
@@ -126,15 +121,17 @@ func (h *HashSet) Hash(ctx context.Context) (int, error) {
 // If the iter function returns true, iteration stops and the return value is true.
 // If the iter function never returns true, iteration proceeds through all elements
 // and the return value is false.
-func (h *HashSet) Iter(iter func(T) bool) bool {
+func (h *HashSet) Iter(iter func(T) (bool, error)) (bool, error) {
 	for _, entry := range h.table {
 		for ; entry != nil; entry = entry.next {
-			if iter(entry.k) {
-				return true
+			if stop, err := iter(entry.k); err != nil {
+				return false, err
+			} else if stop {
+				return true, nil
 			}
 		}
 	}
-	return false
+	return false, nil
 }
 
 // Len returns the current size of this HashSet.
@@ -168,13 +165,13 @@ func (h *HashSet) String() string {
 	var b gostrings.Builder
 	b.WriteRune('{')
 	i := 0
-	h.Iter(func(k T) bool {
+	h.Iter(func(k T) (bool, error) {
 		if i > 0 {
 			b.WriteString(", ")
 		}
 		b.WriteString(fmt.Sprintf("%v", k))
 		i++
-		return false
+		return false, nil
 	})
 	b.WriteRune('}')
 	return b.String()
@@ -186,9 +183,9 @@ func (h *HashSet) Update(ctx context.Context, other *HashSet) (*HashSet, error) 
 	if err != nil {
 		return nil, err
 	}
-	other.Iter(func(k T) bool {
-		err = updated.Put(ctx, k)
-		return err != nil
+	_, err = other.Iter(func(k T) (bool, error) {
+		err := updated.Put(ctx, k)
+		return err != nil, err
 	})
 	if err != nil {
 		return nil, err

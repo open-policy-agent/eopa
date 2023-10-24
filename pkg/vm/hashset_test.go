@@ -51,10 +51,10 @@ func TestHashSetIter(t *testing.T) {
 		panic(fmt.Sprintf("Expected collision: %v", m))
 	}
 	results := map[float64]struct{}{}
-	m.Iter(func(k interface{}) bool {
+	m.Iter(func(k interface{}) (bool, error) {
 		f, _ := k.(testHashType).Json.(fjson.Float).Value().Float64()
 		results[f] = struct{}{}
-		return false
+		return false, nil
 	})
 	expected := map[float64]struct{}{
 		float64(1):   {},

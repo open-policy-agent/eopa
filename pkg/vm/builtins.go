@@ -9,7 +9,6 @@ import (
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 
-	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
 	"golang.org/x/exp/slices"
@@ -295,28 +294,28 @@ func stringsConcatBuiltin(state *State, args []Value) error {
 			strs = make([]string, 0, n)
 		}
 
-		var err2 error
-		if set.Iter(func(vv fjson.Json) bool {
+		if stop, err := set.Iter(func(vv fjson.Json) (bool, error) {
 			v := *noescape(&vv) // nothing below moves the v into heap as ToAST creates a deep copy.
 			str, ok := v.(*fjson.String)
 			if !ok {
-				var v ast.Value
-				v, err2 = state.ValueOps().ToAST(state.Globals.Ctx, v)
-				if err2 != nil {
-					return true
+				v, err := state.ValueOps().ToAST(state.Globals.Ctx, v)
+				if err != nil {
+					return true, err
 				}
 
 				state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
 					Code:    topdown.TypeErr,
 					Message: builtins.NewOperandTypeErr(2, v, "string").Error(),
 				})
-				return true
+				return true, nil
 			}
 
 			strs = append(strs, str.Value())
-			return false
-		}) {
-			return err2
+			return false, nil
+		}); err != nil {
+			return err
+		} else if stop {
+			return nil
 		}
 
 		slices.Sort(strs)
@@ -778,14 +777,14 @@ func binaryOrBuiltin(state *State, args []Value) error {
 
 	result := NewSet()
 
-	a.Iter(func(x fjson.Json) bool {
+	a.Iter(func(x fjson.Json) (bool, error) {
 		result.Add(state.Globals.Ctx, x)
-		return false
+		return false, nil
 	})
 
-	b.Iter(func(x fjson.Json) bool {
+	b.Iter(func(x fjson.Json) (bool, error) {
 		result.Add(state.Globals.Ctx, x)
-		return false
+		return false, nil
 	})
 
 	state.SetReturnValue(Unused, result)

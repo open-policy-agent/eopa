@@ -174,10 +174,9 @@ func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (inte
 		return v.Clone(false), nil
 	case *Set:
 		set := NewSet()
-		var err error
-		v.Iter(func(v fjson.Json) bool {
-			err = set.Add(ctx, v)
-			return err != nil
+		_, err := v.Iter(func(v fjson.Json) (bool, error) {
+			err := set.Add(ctx, v)
+			return err != nil, err
 		})
 		return set, err
 	case IterableObject:
@@ -352,17 +351,15 @@ func (o *DataOperations) Iter(ctx context.Context, v interface{}, f func(key, va
 			}
 		}
 	case *Set:
-		var err2 error // TODO
-		v.Iter(func(v fjson.Json) bool {
+		_, err := v.Iter(func(v fjson.Json) (bool, error) {
 			stop, err := f(v, v)
 			if err != nil {
-				err2 = err
-				return true
+				return true, err
 			}
 
-			return stop
+			return stop, nil
 		})
-		return err2
+		return err
 
 	case IterableObject:
 		return v.Iter(ctx, f)
@@ -679,17 +676,15 @@ func (o *DataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, e
 	case *Set:
 		// TODO: Sorting is for deterministic tests.
 		// We prealloc the Term array and sort it here to trim down the total number of allocs.
-		var err error
 		terms := make([]*ast.Term, 0, v.Len())
-		v.Iter(func(v fjson.Json) bool {
-			var a ast.Value
-			a, err = o.ToAST(ctx, v)
+		_, err := v.Iter(func(v fjson.Json) (bool, error) {
+			a, err := o.ToAST(ctx, v)
 			if err != nil {
-				return true
+				return true, err
 			}
 
 			terms = append(terms, ast.NewTerm(a))
-			return false
+			return false, nil
 		})
 		if err != nil {
 			return nil, err
@@ -762,9 +757,9 @@ func (s *Set) Get(ctx context.Context, k fjson.Json) (fjson.Json, bool, error) {
 	return nil, false, nil
 }
 
-func (s *Set) Iter(iter func(v fjson.Json) bool) bool {
+func (s *Set) Iter(iter func(v fjson.Json) (bool, error)) (bool, error) {
 	// Note: this does not return the elements in any sorted order.
-	return s.set.Iter(func(v interface{}) bool {
+	return s.set.Iter(func(v interface{}) (bool, error) {
 		return iter(v.(fjson.Json))
 	})
 }
@@ -782,14 +777,14 @@ func (s *Set) Equal(ctx context.Context, y *Set) (bool, error) {
 		return false, nil
 	}
 
-	match := true
-	var err error
-	s.Iter(func(v fjson.Json) bool {
+	match := true // TODO
+	_, err := s.Iter(func(v fjson.Json) (bool, error) {
+		var err error
 		_, match, err = y.Get(ctx, v)
 		if err != nil {
-			return true
+			return true, err
 		}
-		return !match
+		return !match, err
 	})
 	if err != nil {
 		return false, err
@@ -800,14 +795,13 @@ func (s *Set) Equal(ctx context.Context, y *Set) (bool, error) {
 
 func (s *Set) Hash(ctx context.Context) (uint64, error) {
 	var (
-		m   uint64
-		err error
+		m uint64
 	)
-	s.set.Iter(func(v interface{}) bool {
+	_, err := s.set.Iter(func(v interface{}) (bool, error) {
 		h := xxhash.New()
-		err = hashImpl(ctx, v, h)
+		err := hashImpl(ctx, v, h)
 		m += h.Sum64()
-		return err != nil
+		return err != nil, err
 	})
 
 	return m, err
@@ -831,17 +825,15 @@ func (o *Object) Get(ctx context.Context, k interface{}) (interface{}, bool, err
 }
 
 func (o *Object) Iter(_ context.Context, iter func(key, value interface{}) (bool, error)) error {
-	var err2 error // TODO
-	o.obj.Iter(func(k, v T) bool {
+	_, err := o.obj.Iter(func(k, v T) (bool, error) {
 		stop, err := iter(k, v)
 		if err != nil {
-			err2 = err
-			return true
+			return true, err
 		}
 
-		return stop
+		return stop, nil
 	})
-	return err2
+	return err
 }
 
 func (o *Object) Len(context.Context) (int, error) {
@@ -850,12 +842,12 @@ func (o *Object) Len(context.Context) (int, error) {
 
 func (o *Object) Hash(ctx context.Context) (uint64, error) {
 	var (
-		err error
-		h   uint64
+		h uint64
 	)
-	o.obj.Iter(func(k, v T) bool {
+	_, err := o.obj.Iter(func(k, v T) (bool, error) {
+		var err error
 		h, err = ObjectHashEntry(ctx, h, k, v)
-		return err != nil
+		return err != nil, err
 	})
 
 	return h, err
