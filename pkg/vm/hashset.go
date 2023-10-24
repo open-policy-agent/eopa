@@ -20,7 +20,7 @@ type HashSet struct {
 // NewHashSet returns a new empty HashSet.
 func NewHashSet() *HashSet {
 	return &HashSet{
-		table: make(map[int]*hashSetEntry),
+		table: nil,
 		size:  0,
 	}
 }
@@ -61,6 +61,10 @@ func (h *HashSet) Equal(ctx context.Context, other *HashSet) (bool, error) {
 
 // Get checks if the value is in the set.
 func (h *HashSet) Get(ctx context.Context, k T) (bool, error) {
+	if h.table == nil {
+		return false, nil
+	}
+
 	hash, err := h.hash(ctx, k)
 	if err != nil {
 		return false, err
@@ -79,6 +83,10 @@ func (h *HashSet) Get(ctx context.Context, k T) (bool, error) {
 
 // Delete removes the the key k.
 func (h *HashSet) Delete(ctx context.Context, k T) error {
+	if h.table == nil {
+		return nil
+	}
+
 	hash, err := h.hash(ctx, k)
 	if err != nil {
 		return err
@@ -122,6 +130,10 @@ func (h *HashSet) Hash(ctx context.Context) (int, error) {
 // If the iter function never returns true, iteration proceeds through all elements
 // and the return value is false.
 func (h *HashSet) Iter(iter func(T) (bool, error)) (bool, error) {
+	if h.table == nil {
+		return false, nil
+	}
+
 	for _, entry := range h.table {
 		for ; entry != nil; entry = entry.next {
 			if stop, err := iter(entry.k); err != nil {
@@ -146,6 +158,11 @@ func (h *HashSet) Put(ctx context.Context, k T) error {
 	if err != nil {
 		return err
 	}
+
+	if h.table == nil {
+		h.table = make(map[int]*hashSetEntry)
+	}
+
 	head := h.table[hash]
 	for entry := head; entry != nil; entry = entry.next {
 		eq, err := h.eq(ctx, entry.k, k)

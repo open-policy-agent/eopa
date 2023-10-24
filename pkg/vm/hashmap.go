@@ -28,7 +28,7 @@ type HashMap struct {
 // NewHashMap returns a new empty HashMap.
 func NewHashMap() *HashMap {
 	return &HashMap{
-		table: make(map[int]*hashEntry),
+		table: nil,
 		size:  0,
 	}
 }
@@ -72,6 +72,10 @@ func (h *HashMap) Equal(ctx context.Context, other *HashMap) (bool, error) {
 
 // Get returns the value for k.
 func (h *HashMap) Get(ctx context.Context, k T) (T, bool, error) {
+	if h.table == nil {
+		return nil, false, nil
+	}
+
 	hash, err := h.hash(ctx, k)
 	if err != nil {
 		return nil, false, err
@@ -91,6 +95,10 @@ func (h *HashMap) Get(ctx context.Context, k T) (T, bool, error) {
 
 // Delete removes the the key k.
 func (h *HashMap) Delete(ctx context.Context, k T) error {
+	if h.table == nil {
+		return nil
+	}
+
 	hash, err := h.hash(ctx, k)
 	if err != nil {
 		return err
@@ -140,6 +148,10 @@ func (h *HashMap) Hash(ctx context.Context) (int, error) {
 // If the iter function never returns true, iteration proceeds through all elements
 // and the return value is false.
 func (h *HashMap) Iter(iter func(T, T) (bool, error)) (bool, error) {
+	if h.table == nil {
+		return false, nil
+	}
+
 	for _, entry := range h.table {
 		for ; entry != nil; entry = entry.next {
 			if stop, err := iter(entry.k, entry.v); err != nil {
@@ -164,6 +176,11 @@ func (h *HashMap) Put(ctx context.Context, k T, v T) error {
 	if err != nil {
 		return err
 	}
+
+	if h.table == nil {
+		h.table = make(map[int]*hashEntry)
+	}
+
 	head := h.table[hash]
 	for entry := head; entry != nil; entry = entry.next {
 		eq, err := h.eq(ctx, entry.k, k)
