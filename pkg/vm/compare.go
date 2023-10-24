@@ -94,35 +94,40 @@ func equalObject(ctx context.Context, a, b interface{}) (bool, error) {
 	case IterableObject:
 		switch b := b.(type) {
 		case fjson.Object:
-			eq := true
 			var err error
 			n := 0
 			a.Iter(ctx, func(k, va T) bool {
 				s, ok := k.(*fjson.String)
 				if !ok {
-					eq = false
+					n = -1
 					return true
 				}
 
 				vb := b.Value(s.Value())
 				if vb == nil {
-					eq = false
+					n = -1
 					return true
 				}
 
 				n++
 
+				var eq bool
 				eq, err = equalOp(ctx, va, vb)
 				if err != nil {
 					return true
+				} else if !eq {
+					n = -1
 				}
 
 				return !eq
 			})
-			return b.Len() == n && eq, err
+			if n < 0 {
+				return false, nil
+			}
+
+			return b.Len() == n, err
 
 		case IterableObject:
-			eq := true
 			var err error
 			n := 0
 			if err2 := a.Iter(ctx, func(k, va T) bool {
@@ -132,15 +137,18 @@ func equalObject(ctx context.Context, a, b interface{}) (bool, error) {
 				if err != nil {
 					return true
 				} else if !ok {
-					eq = false
+					n = -1
 					return true
 				}
 
 				n++
 
+				var eq bool
 				eq, err = equalOp(ctx, va, vb)
 				if err != nil {
 					return true
+				} else if !eq {
+					n = -1
 				}
 
 				return !eq
@@ -148,7 +156,7 @@ func equalObject(ctx context.Context, a, b interface{}) (bool, error) {
 				return false, err2
 			} else if err != nil {
 				return false, err
-			} else if !eq {
+			} else if n < 0 {
 				return false, nil
 			}
 
