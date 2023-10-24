@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
@@ -13,42 +16,45 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 4 {
-		fmt.Println("Usage:\n\tirutil {json,dot} FILENAME ENTRYPOINT")
-		os.Exit(1)
-	}
-	exportType := os.Args[1]
-	entrypoints := os.Args[3:]
+	var filename string
+	fs := flag.NewFlagSet("irdump", flag.ExitOnError)
+	fs.StringVar(&filename, "f", "", "Rego filename to read in and dump IR JSON for. (default: stdin)")
+	fs.Parse(os.Args[1:])
+	entrypoints := fs.Args()
 
-	filename := os.Args[2]
-	b, err := os.ReadFile(filename)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	if len(entrypoints) == 0 {
+		fs.Usage()
 	}
 
-	policy, err := compileRego(topdown.BuiltinContext{}, filename, string(b), entrypoints)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	switch exportType {
-	case "json":
-		bs, err := json.Marshal(policy)
+	// Get input Rego file from stdin or a file on disk.
+	var fileText strings.Builder
+	if filename == "" {
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			fileText.WriteString(scanner.Text() + "\n")
+		}
+	} else {
+		b, err := os.ReadFile(filename)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		fmt.Println(string(bs))
-	case "dot":
-		f, err := PolicyToCFGDAGForest(policy)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		fmt.Println(f.AsDOT())
+		fileText.Write(b)
 	}
+
+	policy, err := compileRego(topdown.BuiltinContext{}, filename, fileText.String(), entrypoints)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	bs, err := json.Marshal(policy)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	fmt.Println(string(bs))
 }
 
 // Compiles a single Rego module to an ir.Policy.

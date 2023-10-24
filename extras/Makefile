@@ -1,8 +1,12 @@
 
-build: irutil
+.PHONY: build irdump irviz clean
+build: irdump irviz
 
-irutil:
-	go build -o irutil cmd/irutil/*.go
+irdump:
+	go build -o irdump cmd/irdump/main.go
+
+irviz:
+	go build -o irviz cmd/irviz/*.go
 
 clean:
-	rm -f irutil
+	rm -f irdump irviz

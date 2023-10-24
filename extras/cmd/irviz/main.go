@@ -1,0 +1,49 @@
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/open-policy-agent/opa/ir"
+)
+
+func main() {
+	var filename string
+	fs := flag.NewFlagSet("irviz", flag.ExitOnError)
+	fs.StringVar(&filename, "f", "", "IR JSON filename to read in and dump a Graphviz DOT diagram for. (default: stdin)")
+	fs.Parse(os.Args[1:])
+
+	// Get input Rego file from stdin or a file on disk.
+	var fileBytes bytes.Buffer
+	if filename == "" {
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			fileBytes.Write(scanner.Bytes())
+			fileBytes.WriteByte('\n')
+		}
+	} else {
+		b, err := os.ReadFile(filename)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fileBytes.Write(b)
+	}
+
+	var policy ir.Policy
+	if err := json.Unmarshal(fileBytes.Bytes(), &policy); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	f, err := PolicyToCFGDAGForest(&policy)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	fmt.Println(f.AsDOT())
+}
