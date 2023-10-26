@@ -6,7 +6,7 @@ replace github.com/styrainc/enterprise-opa-private => ../
 
 require (
 	github.com/docker/go-connections v0.4.0
-	github.com/go-git/go-git/v5 v5.9.0
+	github.com/go-git/go-git/v5 v5.10.0
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/vault/api v1.10.0
 	github.com/minio/minio-go/v7 v7.0.63
@@ -18,7 +18,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.25.0
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.25.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.25.0
-	github.com/twmb/franz-go v1.15.0
+	github.com/twmb/franz-go v1.15.1
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 )
@@ -126,7 +126,7 @@ require (
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
-	github.com/twmb/franz-go/pkg/kmsg v1.6.1 // indirect
+	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
