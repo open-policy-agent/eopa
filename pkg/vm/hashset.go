@@ -2,8 +2,6 @@ package vm
 
 import (
 	"context"
-	"fmt"
-	gostrings "strings"
 )
 
 type hashSetEntry struct {
@@ -23,24 +21,6 @@ func NewHashSet() *HashSet {
 		table: nil,
 		size:  0,
 	}
-}
-
-// Copy returns a shallow copy of this HashSet.
-func (h *HashSet) Copy(ctx context.Context) (*HashSet, error) {
-	cpy := &HashSet{
-		table: make(map[int]*hashSetEntry, len(h.table)),
-		size:  0,
-	}
-	_, err := h.Iter(func(k T) (bool, error) {
-		if err := cpy.Put(ctx, k); err != nil {
-			return true, err
-		}
-		return false, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return cpy, nil
 }
 
 // Equal returns true if this HashSet equals the other HashSet.
@@ -79,36 +59,6 @@ func (h *HashSet) Get(ctx context.Context, k T) (bool, error) {
 	}
 
 	return false, nil
-}
-
-// Delete removes the the key k.
-func (h *HashSet) Delete(ctx context.Context, k T) error {
-	if h.table == nil {
-		return nil
-	}
-
-	hash, err := h.hash(ctx, k)
-	if err != nil {
-		return err
-	}
-	var prev *hashSetEntry
-	for entry := h.table[hash]; entry != nil; entry = entry.next {
-		eq, err := h.eq(ctx, entry.k, k)
-		if err != nil {
-			return err
-		}
-		if eq {
-			if prev != nil {
-				prev.next = entry.next
-			} else {
-				h.table[hash] = entry.next
-			}
-			h.size--
-			return nil
-		}
-		prev = entry
-	}
-	return nil
 }
 
 // Hash returns the hash code for this hash map.
@@ -176,38 +126,6 @@ func (h *HashSet) Put(ctx context.Context, k T) error {
 	h.table[hash] = &hashSetEntry{k: k, next: head}
 	h.size++
 	return nil
-}
-
-func (h *HashSet) String() string {
-	var b gostrings.Builder
-	b.WriteRune('{')
-	i := 0
-	h.Iter(func(k T) (bool, error) {
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteString(fmt.Sprintf("%v", k))
-		i++
-		return false, nil
-	})
-	b.WriteRune('}')
-	return b.String()
-}
-
-// Update returns a new HashSet with elements from the other HashSet put into this HashSet.
-func (h *HashSet) Update(ctx context.Context, other *HashSet) (*HashSet, error) {
-	updated, err := h.Copy(ctx)
-	if err != nil {
-		return nil, err
-	}
-	_, err = other.Iter(func(k T) (bool, error) {
-		err := updated.Put(ctx, k)
-		return err != nil, err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return updated, nil
 }
 
 func (h *HashSet) hash(ctx context.Context, v T) (int, error) {

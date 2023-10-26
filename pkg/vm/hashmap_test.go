@@ -14,28 +14,19 @@ import (
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
-func TestHashMapPutDelete(t *testing.T) {
+func TestHashMapPut(t *testing.T) {
 	ctx := context.Background()
 	m := stringHashMap()
 	m.Put(ctx, str("a"), str("b"))
 	m.Put(ctx, str("b"), str("c"))
-	if err := m.Delete(ctx, str("b")); err != nil {
-		t.Fatal(err)
-	}
-	r, _, _ := m.Get(ctx, str("a"))
-	if *r.(*fjson.String) != *str("b") {
+
+	r, ok, _ := m.Get(ctx, str("a"))
+	if !ok || *r.(*fjson.String) != *str("b") {
 		t.Fatal("Expected a to be intact")
 	}
-	r, ok, _ := m.Get(ctx, str("b"))
-	if ok {
-		t.Fatalf("Expected b to be removed: %v", r)
-	}
-	if err := m.Delete(ctx, str("b")); err != nil {
-		t.Fatal(err)
-	}
-	r, _, _ = m.Get(ctx, str("a"))
-	if *r.(*fjson.String) != *str("b") {
-		t.Fatal("Expected a to be intact")
+	r, ok, _ = m.Get(ctx, str("b"))
+	if !ok || *r.(*fjson.String) != *str("c") {
+		t.Fatal("Expected b to be intact")
 	}
 }
 
@@ -116,66 +107,6 @@ func TestHashMapCompare(t *testing.T) {
 	}
 	if eq, err := m.Equal(ctx, n); eq || err != nil {
 		t.Errorf("Did not expect hash maps to be equal for %v and %v", m, n)
-	}
-}
-
-func TestHashMapCopy(t *testing.T) {
-	ctx := context.Background()
-	m := stringHashMap()
-
-	k1 := str("k1")
-	k2 := str("k2")
-	v1 := str("hello")
-	v2 := str("goodbye")
-
-	m.Put(ctx, k1, v1)
-	m.Put(ctx, k2, v2)
-
-	n, _ := m.Copy(ctx)
-
-	if eq, err := n.Equal(ctx, m); !eq || err != nil {
-		t.Errorf("Expected hash maps to be equal: %v != %v", n, m)
-		return
-	}
-
-	m.Put(ctx, k2, str("world"))
-
-	if eq, err := n.Equal(ctx, m); eq || err != nil {
-		t.Errorf("Expected hash maps to be non-equal: %v == %v", n, m)
-	}
-}
-
-func TestHashMapUpdate(t *testing.T) {
-	ctx := context.Background()
-	m := stringHashMap()
-	n := stringHashMap()
-	x := stringHashMap()
-
-	k1 := str("k1")
-	k2 := str("k2")
-	v1 := str("hello")
-	v2 := str("goodbye")
-
-	m.Put(ctx, k1, v1)
-	n.Put(ctx, k2, v2)
-	x.Put(ctx, k1, v1)
-	x.Put(ctx, k2, v2)
-
-	o, _ := n.Update(ctx, m)
-
-	if eq, err := x.Equal(ctx, o); !eq || err != nil {
-		t.Errorf("Expected update to merge hash maps: %v != %v", x, o)
-	}
-}
-
-func TestHashMapString(t *testing.T) {
-	ctx := context.Background()
-	x := stringHashMap()
-	x.Put(ctx, str("x"), str("y"))
-	str := x.String()
-	exp := `{"x": "y"}`
-	if exp != str {
-		t.Errorf("expected x.String() == {x: y}: %v != %v", exp, str)
 	}
 }
 

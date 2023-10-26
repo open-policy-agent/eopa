@@ -14,16 +14,11 @@ func TestHashSetPutDelete(t *testing.T) {
 	m := stringHashSet()
 	m.Put(ctx, str("a"))
 	m.Put(ctx, str("b"))
-	m.Delete(ctx, str("b"))
 	if ok, _ := m.Get(ctx, str("a")); !ok {
 		t.Fatal("Expected a to be intact")
 	}
-	if ok, _ := m.Get(ctx, str("b")); ok {
-		t.Fatalf("Expected b to be removed: %v", "b")
-	}
-	m.Delete(ctx, str("b"))
-	if ok, _ := m.Get(ctx, str("a")); !ok {
-		t.Fatal("Expected a to be intact")
+	if ok, _ := m.Get(ctx, str("b")); !ok {
+		t.Fatal("Expected b to be intact")
 	}
 }
 
@@ -101,56 +96,6 @@ func TestHashSetCompare(t *testing.T) {
 	}
 	if ok, _ := m.Equal(ctx, n); ok {
 		t.Errorf("Did not expect hash sets to be equal for %v and %v", m, n)
-	}
-}
-
-func TestHashSetCopy(t *testing.T) {
-	ctx := context.Background()
-	m := stringHashSet()
-
-	k1 := str("k1")
-	k2 := str("k2")
-
-	m.Put(ctx, k1)
-	m.Put(ctx, k2)
-
-	n, _ := m.Copy(ctx)
-
-	if ok, _ := n.Equal(ctx, m); !ok {
-		t.Errorf("Expected hash sets to be equal: %v != %v", n, m)
-		return
-	}
-}
-
-func TestHashSetUpdate(t *testing.T) {
-	ctx := context.Background()
-	m := stringHashSet()
-	n := stringHashSet()
-	x := stringHashSet()
-
-	k1 := str("k1")
-	k2 := str("k2")
-
-	m.Put(ctx, k1)
-	n.Put(ctx, k2)
-	x.Put(ctx, k1)
-	x.Put(ctx, k2)
-
-	o, _ := n.Update(ctx, m)
-
-	if ok, _ := x.Equal(ctx, o); !ok {
-		t.Errorf("Expected update to merge hash sets: %v != %v", x, o)
-	}
-}
-
-func TestHashSetString(t *testing.T) {
-	ctx := context.Background()
-	x := stringHashSet()
-	x.Put(ctx, str("x"))
-	str := x.String()
-	exp := `{"x"}`
-	if exp != str {
-		t.Errorf("expected x.String() == {x: y}: %v != %v", exp, str)
 	}
 }
 

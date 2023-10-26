@@ -6,8 +6,6 @@ package vm
 
 import (
 	"context"
-	"fmt"
-	gostrings "strings"
 )
 
 // T is a concise way to refer to T.
@@ -31,19 +29,6 @@ func NewHashMap() *HashMap {
 		table: nil,
 		size:  0,
 	}
-}
-
-// Copy returns a shallow copy of this HashMap.
-func (h *HashMap) Copy(ctx context.Context) (*HashMap, error) {
-	cpy := &HashMap{
-		table: make(map[int]*hashEntry, len(h.table)),
-		size:  0,
-	}
-	_, err := h.Iter(func(k, v T) (bool, error) {
-		err := cpy.Put(ctx, k, v)
-		return err != nil, err
-	})
-	return cpy, err
 }
 
 // Equal returns true if this HashMap equals the other HashMap.
@@ -91,36 +76,6 @@ func (h *HashMap) Get(ctx context.Context, k T) (T, bool, error) {
 		}
 	}
 	return nil, false, nil
-}
-
-// Delete removes the the key k.
-func (h *HashMap) Delete(ctx context.Context, k T) error {
-	if h.table == nil {
-		return nil
-	}
-
-	hash, err := h.hash(ctx, k)
-	if err != nil {
-		return err
-	}
-	var prev *hashEntry
-	for entry := h.table[hash]; entry != nil; entry = entry.next {
-		eq, err := h.eq(ctx, entry.k, k)
-		if err != nil {
-			return err
-		} else if eq {
-			if prev != nil {
-				prev.next = entry.next
-			} else {
-				h.table[hash] = entry.next
-			}
-			h.size--
-			return nil
-		}
-		prev = entry
-	}
-
-	return nil
 }
 
 // Hash returns the hash code for this hash map.
@@ -195,37 +150,6 @@ func (h *HashMap) Put(ctx context.Context, k T, v T) error {
 	h.table[hash] = &hashEntry{k: k, v: v, next: head}
 	h.size++
 	return nil
-}
-
-func (h *HashMap) String() string {
-	var b gostrings.Builder
-	b.WriteRune('{')
-	i := 0
-	h.Iter(func(k T, v T) (bool, error) {
-		if i > 0 {
-			b.WriteString(", ")
-		}
-
-		b.WriteString(fmt.Sprintf("%v: %v", k, v))
-		return false, nil
-	})
-	b.WriteRune('}')
-	return b.String()
-}
-
-// Update returns a new HashMap with elements from the other HashMap put into this HashMap.
-// If the other HashMap contains elements with the same key as this HashMap, the value
-// from the other HashMap overwrites the value from this HashMap.
-func (h *HashMap) Update(ctx context.Context, other *HashMap) (*HashMap, error) {
-	updated, err := h.Copy(ctx)
-	if err != nil {
-		return nil, err
-	}
-	_, err = other.Iter(func(k, v T) (bool, error) {
-		err := updated.Put(ctx, k, v)
-		return err != nil, err
-	})
-	return updated, err
 }
 
 func (h *HashMap) hash(ctx context.Context, v T) (int, error) {
