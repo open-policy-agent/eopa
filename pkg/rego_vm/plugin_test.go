@@ -196,6 +196,7 @@ func TestEvalWithFuncMemoization(t *testing.T) {
 	tests := []struct {
 		note         string
 		mod          string
+		input        any
 		hits, misses uint64
 	}{
 		{
@@ -208,6 +209,21 @@ p if { # miss
 }`,
 			misses: 2,
 			hits:   1,
+		},
+		{
+			note:  "one argument/string from literal+var+input",
+			input: "a",
+			mod: `
+f(_) := 1
+p if { # miss
+	f("a")   # miss
+	f("a")   # hit
+	x := "a"
+	f(x)     # hit
+	f(input) # hit
+}`,
+			misses: 2,
+			hits:   3,
 		},
 		{
 			note: "two arguments/int,string",
@@ -284,12 +300,16 @@ import future.keywords
 ` + tc.mod
 
 			m := metrics.New()
-			r := rego.New(
+			opts := []func(*rego.Rego){
 				rego.Target(rego_vm.Target),
 				rego.Query("data.test.p = x"),
 				rego.Module("test.rego", policy),
 				rego.Metrics(m),
-			)
+			}
+			if tc.input != nil {
+				opts = append(opts, rego.Input(tc.input))
+			}
+			r := rego.New(opts...)
 			res, err := r.Eval(ctx)
 			if err != nil {
 				t.Fatal(err)

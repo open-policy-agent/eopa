@@ -61,10 +61,10 @@ type (
 
 	// State holds all the evaluation state and is passed along the statements as the evaluation progresses.
 	State struct {
+		args    [4]Value
 		Globals *Globals
 		stats   *Statistics
 		locals  Locals
-		args    [4]Value
 	}
 
 	Globals struct {
@@ -76,20 +76,20 @@ type (
 		InterQueryBuiltinCache cache.InterQueryCache
 		Ctx                    context.Context
 		Seed                   io.Reader
-		Runtime                *ast.Term
-		vm                     *VM
+		cancel                 cancel
 		Cache                  builtins.Cache
+		vm                     *VM
 		BuiltinFuncs           map[string]*topdown.Builtin
 		Capabilities           *ast.Capabilities
 		Input                  *interface{}
 		NDBCache               builtins.NDBCache
+		Runtime                *ast.Term
+		ResultSet              Set
 		BuiltinErrors          []error
 		TracingOpts            tracing.Options
-		memoize                []map[any]Value
+		memoize                []map[k]Value
 		Limits                 Limits
 		StrictBuiltinErrors    bool
-		cancel                 cancel
-		ResultSet              Set
 	}
 
 	Limits struct {
@@ -119,8 +119,8 @@ type (
 	StringIndexConst int
 
 	cancel struct {
-		value int32
 		exit  chan struct{}
+		value int32
 	}
 )
 
@@ -252,7 +252,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 		globals := &Globals{
 			vm:                  vm,
 			Limits:              *opts.Limits,
-			memoize:             []map[any]Value{{}},
+			memoize:             []map[k]Value{{}},
 			Ctx:                 ctx,
 			Input:               input,
 			Metrics:             opts.Metrics,
@@ -584,11 +584,28 @@ func (s *State) Unset(target Local) {
 }
 
 func (s *State) MemoizePush() {
-	s.Globals.memoize = append(s.Globals.memoize, map[any]Value{})
+	s.Globals.memoize = append(s.Globals.memoize, map[k]Value{})
 }
 
 func (s *State) MemoizePop() {
 	s.Globals.memoize = s.Globals.memoize[0 : len(s.Globals.memoize)-1]
+}
+
+func h(v Value) arg { // NB: inline? leaks?
+	if f, ok := v.(*fjson.String); ok {
+		return arg{s: f.Value()}
+	}
+	return arg{a: v}
+}
+
+type k struct {
+	args any
+	idx  int
+}
+
+type arg struct {
+	a any
+	s string
 }
 
 func (s *State) MemoizeGet(idx int, args []Value) (Value, bool) {
@@ -596,28 +613,27 @@ func (s *State) MemoizeGet(idx int, args []Value) (Value, bool) {
 	// avoid Get from allocating the key from heap: golang would
 	// have to emit a function allocating the key from heap.
 
-	var key any
+	key := k{idx: idx}
 	switch len(args) {
 	case 0:
-		key = idx
 	case 1:
-		key = [2]any{idx, args[0]}
+		key.args = h(args[0])
 	case 2:
-		key = [3]any{idx, args[0], args[1]}
+		key.args = [...]arg{h(args[0]), h(args[1])}
 	case 3:
-		key = [4]any{idx, args[0], args[1], args[2]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2])}
 	case 4:
-		key = [5]any{idx, args[0], args[1], args[2], args[3]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2]), h(args[3])}
 	case 5:
-		key = [6]any{idx, args[0], args[1], args[2], args[3], args[4]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2]), h(args[3]), h(args[4])}
 	case 6:
-		key = [7]any{idx, args[0], args[1], args[2], args[3], args[4], args[5]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2]), h(args[3]), h(args[4]), h(args[5])}
 	case 7:
-		key = [8]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2]), h(args[3]), h(args[4]), h(args[5]), h(args[6])}
 	case 8:
-		key = [9]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2]), h(args[3]), h(args[4]), h(args[5]), h(args[6]), h(args[7])}
 	case 9:
-		key = [10]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2]), h(args[3]), h(args[4]), h(args[5]), h(args[6]), h(args[7]), h(args[8])}
 	default:
 		panic("arity > 9, unreachable")
 	}
@@ -627,28 +643,27 @@ func (s *State) MemoizeGet(idx int, args []Value) (Value, bool) {
 }
 
 func (s *State) MemoizeInsert(idx int, args []Value, value Value) {
-	var key any
+	key := k{idx: idx}
 	switch len(args) {
 	case 0:
-		key = idx
 	case 1:
-		key = [2]any{idx, args[0]}
+		key.args = h(args[0])
 	case 2:
-		key = [3]any{idx, args[0], args[1]}
+		key.args = [...]arg{h(args[0]), h(args[1])}
 	case 3:
-		key = [4]any{idx, args[0], args[1], args[2]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2])}
 	case 4:
-		key = [5]any{idx, args[0], args[1], args[2], args[3]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2]), h(args[3])}
 	case 5:
-		key = [6]any{idx, args[0], args[1], args[2], args[3], args[4]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2]), h(args[3]), h(args[4])}
 	case 6:
-		key = [7]any{idx, args[0], args[1], args[2], args[3], args[4], args[5]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2]), h(args[3]), h(args[4]), h(args[5])}
 	case 7:
-		key = [8]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2]), h(args[3]), h(args[4]), h(args[5]), h(args[6])}
 	case 8:
-		key = [9]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2]), h(args[3]), h(args[4]), h(args[5]), h(args[6]), h(args[7])}
 	case 9:
-		key = [10]any{idx, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]}
+		key.args = [...]arg{h(args[0]), h(args[1]), h(args[2]), h(args[3]), h(args[4]), h(args[5]), h(args[6]), h(args[7]), h(args[8])}
 	default:
 		panic("arity > 9, unreachable")
 	}

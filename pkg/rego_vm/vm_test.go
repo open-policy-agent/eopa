@@ -77,6 +77,8 @@ func testCompiler(tb testing.TB, policy ir.Policy, input string, query string, r
 		}
 		if b, ok := tb.(*testing.B); ok {
 			b.ReportMetric(float64(s.EvalInstructions), "instr/op")
+			b.ReportMetric(float64(s.VirtualCacheHits), "cache_hits/op")
+			b.ReportMetric(float64(s.VirtualCacheMisses), "cache_misses/op")
 		}
 		if result == "" {
 			return

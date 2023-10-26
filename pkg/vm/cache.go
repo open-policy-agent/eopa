@@ -41,8 +41,8 @@ type (
 	// cache, the keys include the input field values the result
 	// depends on.
 	evalCacheResult struct {
-		value   string
 		expires time.Time
+		value   string
 	}
 )
 
@@ -193,7 +193,7 @@ func (vm *VM) putEvalCache(cache cache.InterQueryCache, key ast.Object, value as
 }
 
 func newEvalCacheResult(value ast.Value, expires time.Time) evalCacheResult {
-	return evalCacheResult{value.String(), expires}
+	return evalCacheResult{value: value.String(), expires: expires}
 }
 
 func (e evalCacheResult) SizeInBytes() int64 {
