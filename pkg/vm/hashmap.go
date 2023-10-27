@@ -12,22 +12,20 @@ import (
 type T = interface{}
 
 type hashEntry struct {
+	hash int
 	k    T
 	v    T
-	next *hashEntry
 }
 
 // HashMap represents a key/value map.
 type HashMap struct {
-	table map[int]*hashEntry
-	size  int
+	table []hashEntry
 }
 
 // NewHashMap returns a new empty HashMap.
 func NewHashMap() *HashMap {
 	return &HashMap{
 		table: nil,
-		size:  0,
 	}
 }
 
@@ -66,13 +64,15 @@ func (h *HashMap) Get(ctx context.Context, k T) (T, bool, error) {
 		return nil, false, err
 	}
 
-	for entry := h.table[hash]; entry != nil; entry = entry.next {
-		eq, err := h.eq(ctx, entry.k, k)
-		if err != nil {
-			return nil, false, err
-		}
-		if eq {
-			return entry.v, true, nil
+	for i := 0; i < len(h.table); i++ {
+		if h.table[i].hash == hash {
+			eq, err := h.eq(ctx, h.table[i].k, k)
+			if err != nil {
+				return nil, false, err
+			}
+			if eq {
+				return h.table[i].v, true, nil
+			}
 		}
 	}
 	return nil, false, nil
@@ -103,17 +103,11 @@ func (h *HashMap) Hash(ctx context.Context) (int, error) {
 // If the iter function never returns true, iteration proceeds through all elements
 // and the return value is false.
 func (h *HashMap) Iter(iter func(T, T) (bool, error)) (bool, error) {
-	if h.table == nil {
-		return false, nil
-	}
-
-	for _, entry := range h.table {
-		for ; entry != nil; entry = entry.next {
-			if stop, err := iter(entry.k, entry.v); err != nil {
-				return false, err
-			} else if stop {
-				return true, nil
-			}
+	for i := 0; i < len(h.table); i++ {
+		if stop, err := iter(h.table[i].k, h.table[i].v); err != nil {
+			return false, err
+		} else if stop {
+			return true, nil
 		}
 	}
 	return false, nil
@@ -121,7 +115,7 @@ func (h *HashMap) Iter(iter func(T, T) (bool, error)) (bool, error) {
 
 // Len returns the current size of this HashMap.
 func (h *HashMap) Len() int {
-	return h.size
+	return len(h.table)
 }
 
 // Put inserts a key/value pair into this HashMap. If the key is already present, the existing
@@ -132,23 +126,20 @@ func (h *HashMap) Put(ctx context.Context, k T, v T) error {
 		return err
 	}
 
-	if h.table == nil {
-		h.table = make(map[int]*hashEntry)
+	for i := 0; i < len(h.table); i++ {
+		if h.table[i].hash == hash {
+			eq, err := h.eq(ctx, h.table[i].k, k)
+			if err != nil {
+				return err
+			}
+			if eq {
+				h.table[i].v = v
+				return nil
+			}
+		}
 	}
 
-	head := h.table[hash]
-	for entry := head; entry != nil; entry = entry.next {
-		eq, err := h.eq(ctx, entry.k, k)
-		if err != nil {
-			return err
-		}
-		if eq {
-			entry.v = v
-			return nil
-		}
-	}
-	h.table[hash] = &hashEntry{k: k, v: v, next: head}
-	h.size++
+	h.table = append(h.table, hashEntry{hash: hash, k: k, v: v})
 	return nil
 }
 

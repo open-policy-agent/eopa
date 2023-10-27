@@ -7,7 +7,6 @@ package vm
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -50,10 +49,6 @@ func TestHashMapIter(t *testing.T) {
 	value := str("")
 	for _, k := range keys {
 		m.Put(ctx, k, value)
-	}
-	// 1 and 1.4 should both hash to 1.
-	if len(m.table) != 2 {
-		panic(fmt.Sprintf("Expected collision: %v", m))
 	}
 	results := map[float64]string{}
 	m.Iter(func(k, v interface{}) (bool, error) {

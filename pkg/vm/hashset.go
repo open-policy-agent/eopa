@@ -5,21 +5,19 @@ import (
 )
 
 type hashSetEntry struct {
+	hash int
 	k    T
-	next *hashSetEntry
 }
 
 // HashSet represents a key/value map.
 type HashSet struct {
-	table map[int]*hashSetEntry
-	size  int
+	table []hashSetEntry
 }
 
 // NewHashSet returns a new empty HashSet.
 func NewHashSet() *HashSet {
 	return &HashSet{
 		table: nil,
-		size:  0,
 	}
 }
 
@@ -49,12 +47,15 @@ func (h *HashSet) Get(ctx context.Context, k T) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	for entry := h.table[hash]; entry != nil; entry = entry.next {
-		eq, err := h.eq(ctx, entry.k, k)
-		if err != nil {
-			return false, err
-		} else if eq {
-			return true, nil
+
+	for i := 0; i < len(h.table); i++ {
+		if h.table[i].hash == hash {
+			eq, err := h.eq(ctx, h.table[i].k, k)
+			if err != nil {
+				return false, err
+			} else if eq {
+				return true, nil
+			}
 		}
 	}
 
@@ -80,17 +81,11 @@ func (h *HashSet) Hash(ctx context.Context) (int, error) {
 // If the iter function never returns true, iteration proceeds through all elements
 // and the return value is false.
 func (h *HashSet) Iter(iter func(T) (bool, error)) (bool, error) {
-	if h.table == nil {
-		return false, nil
-	}
-
-	for _, entry := range h.table {
-		for ; entry != nil; entry = entry.next {
-			if stop, err := iter(entry.k); err != nil {
-				return false, err
-			} else if stop {
-				return true, nil
-			}
+	for i := 0; i < len(h.table); i++ {
+		if stop, err := iter(h.table[i].k); err != nil {
+			return false, err
+		} else if stop {
+			return true, nil
 		}
 	}
 	return false, nil
@@ -98,7 +93,7 @@ func (h *HashSet) Iter(iter func(T) (bool, error)) (bool, error) {
 
 // Len returns the current size of this HashSet.
 func (h *HashSet) Len() int {
-	return h.size
+	return len(h.table)
 }
 
 // Put inserts a value into this HashSet. If the value is already
@@ -109,22 +104,19 @@ func (h *HashSet) Put(ctx context.Context, k T) error {
 		return err
 	}
 
-	if h.table == nil {
-		h.table = make(map[int]*hashSetEntry)
+	for i := 0; i < len(h.table); i++ {
+		if h.table[i].hash == hash {
+			eq, err := h.eq(ctx, h.table[i].k, k)
+			if err != nil {
+				return err
+			}
+			if eq {
+				return nil
+			}
+		}
 	}
 
-	head := h.table[hash]
-	for entry := head; entry != nil; entry = entry.next {
-		eq, err := h.eq(ctx, entry.k, k)
-		if err != nil {
-			return err
-		}
-		if eq {
-			return nil
-		}
-	}
-	h.table[hash] = &hashSetEntry{k: k, next: head}
-	h.size++
+	h.table = append(h.table, hashSetEntry{hash: hash, k: k})
 	return nil
 }
 

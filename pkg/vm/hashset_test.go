@@ -2,7 +2,6 @@ package vm
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -40,10 +39,6 @@ func TestHashSetIter(t *testing.T) {
 	keys := []fjson.Json{testHashType{fjson.NewFloat("1"), 1}, testHashType{fjson.NewFloat("2"), 2}, testHashType{fjson.NewFloat("1.4"), 1}}
 	for _, k := range keys {
 		m.Put(ctx, k)
-	}
-	// 1 and 1.4 should both hash to 1.
-	if len(m.table) != 2 {
-		panic(fmt.Sprintf("Expected collision: %v", m))
 	}
 	results := map[float64]struct{}{}
 	m.Iter(func(k interface{}) (bool, error) {
