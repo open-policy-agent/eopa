@@ -36,8 +36,8 @@ require (
 	github.com/mithrandie/csvq-driver v1.7.0
 	github.com/mithrandie/go-text v1.6.0
 	github.com/okta/okta-sdk-golang/v3 v3.0.12
-	github.com/open-policy-agent/opa v0.57.1
-	github.com/open-policy-agent/opa-envoy-plugin v0.57.1-envoy
+	github.com/open-policy-agent/opa v0.58.0
+	github.com/open-policy-agent/opa-envoy-plugin v0.58.0-envoy
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/rs/zerolog v1.31.0
@@ -149,7 +149,7 @@ require (
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
-	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.4 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
@@ -354,8 +354,8 @@ require (
 	modernc.org/opt v0.1.3 // indirect
 	modernc.org/strutil v1.1.3 // indirect
 	modernc.org/token v1.1.0 // indirect
-	oras.land/oras-go/v2 v2.3.0 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
+	oras.land/oras-go/v2 v2.3.1 // indirect
+	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
 // glog's init function does a lookup of the current user, and that can be quite
@@ -369,6 +369,6 @@ replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.57.1-0.20231024155310-596445ab005d
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.57.1-0.20231027073340-835bfc8160a1
 
 replace github.com/benthosdev/benthos/v4 => github.com/srenatus/benthos/v4 v4.0.0-20231012093337-5d01c59eabeb

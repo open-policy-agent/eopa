@@ -1,5 +1,40 @@
 # Changelog
 
+## v1.12.0
+
+This release updates the OPA version used in Enterprise OPA to [v0.58.0](https://github.com/open-policy-agent/opa/releases/tag/v0.58.0),
+and integrates several performance improvements and a bug fix:
+
+### Function return value caching
+
+Function calls in Rego now have their return value cached: when called with the same arguments,
+subsequent evaluations will use the cached value.
+Previously, the function body was evaluated twice.
+
+Currently, only simple argument types are subject to caching: numbers, bools, strings -- collection
+arguments are exempt.
+
+### Library utils lazy loading
+
+If your policy does not make use of any of the `data.system.eopa.utils` helpers of Enterprise OPA's
+[builtin functions](https://docs.styra.com/enterprise-opa/reference/built-in-functions), they are not loaded,
+and thus avoid superfluous work in the compiler.
+
+### Topdown-specific compiler stages
+
+When evaluating a policy, certain compiler stages in OPA are now skipped: namely, the Rego VM in
+Enterprise OPA does not make use of OPA's rule and comprehension indices, so we no longer build them
+in the compiler stages.
+
+### Numerous Rego VM improvements
+
+The Rego VM now uses less allocations, improving overall performance.
+
+### [Preview API](https://docs.styra.com/enterprise-opa/reference/api-reference/preview-api)
+
+Fixes a bug with "Preview Selection".
+
+
 ## v1.11.1
 
 This is a bug fix release addressing the following security issue:
