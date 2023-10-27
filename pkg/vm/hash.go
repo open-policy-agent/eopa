@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"math"
-	"reflect"
-	"unsafe"
 
 	"github.com/cespare/xxhash/v2"
 
@@ -13,15 +11,13 @@ import (
 )
 
 const (
-	typeHashNull   = 0
-	typeHashBool   = 1
-	typeHashFloat  = 2
-	typeHashString = 3
-	typeHashArray  = 4
-	typeHashObject = 5
-	typeHashSet    = 6
-
-	maxInt32 int32 = (1<<31 - 1)
+	typeHashNull = iota
+	typeHashBool
+	typeHashFloat
+	typeHashString
+	typeHashArray
+	typeHashObject
+	typeHashSet
 )
 
 // hashable is for testing purposes, to allow hash function customization.
@@ -139,8 +135,7 @@ func hashString(value *fjson.String, hasher *xxhash.Digest) {
 		return
 	}
 
-	ss := (*reflect.StringHeader)(unsafe.Pointer(value))
-	hasher.Write((*[maxInt32]byte)(unsafe.Pointer(ss.Data))[:len(*value):len(*value)])
+	hasher.WriteString(string(*value))
 }
 
 // ObjectHashEntry hashes an object key-value pair. To be used with
