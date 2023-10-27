@@ -6,13 +6,21 @@ import (
 	"math"
 	"math/big"
 	gostrings "strings"
+	"sync"
 
-	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	"github.com/gobwas/glob"
+	"golang.org/x/exp/slices"
 
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
-	"golang.org/x/exp/slices"
+
+	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
+
+// NOTE(sr): A global map as cache used like this would be trouble if user-provided
+// data was used as pattern in calls go glob.match. Let's hope it never is.
+var globCacheLock = sync.Mutex{}
+var globCache = map[string]glob.Glob{}
 
 func memberBuiltin(state *State, args []Value) error {
 	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
@@ -266,7 +274,7 @@ func stringsConcatBuiltin(state *State, args []Value) error {
 		for i := 0; i < n; i++ {
 			str, ok := array.Iterate(i).(*fjson.String)
 			if !ok {
-				v, err := state.ValueOps().ToAST(state.Globals.Ctx, array)
+				v, err := state.ValueOps().ToAST(state.Globals.Ctx, array.Iterate(i))
 				if err != nil {
 					return err
 				}
@@ -1119,4 +1127,87 @@ func numbersRange(state *State, start, stop, step int) error {
 	}
 	state.SetReturnValue(Unused, fjson.NewArray(elems, len(elems)))
 	return nil
+}
+
+func globMatchBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[2]) || isUndefinedType(args[1]) || isUndefinedType(args[0]) {
+		return nil
+	}
+	pattern, err := builtinStringOperand(state, args[0], 1)
+	if err != nil {
+		return err
+	}
+	match, err := builtinStringOperand(state, args[2], 1)
+	if err != nil {
+		return err
+	}
+
+	var delimiters []rune
+	switch args[1].(type) {
+	case fjson.Null:
+		delimiters = []rune{}
+	case fjson.Array:
+		d, err := builtinArrayOperand(state, args[1], 1)
+		if err != nil || d == nil {
+			return err
+		}
+		for i := 0; i < d.Len(); i++ {
+			x, ok := d.Iterate(i).(*fjson.String)
+			if !ok || len(*x) != 1 {
+				v, err := state.ValueOps().ToAST(state.Globals.Ctx, d.Iterate(i))
+				if err != nil {
+					return err
+				}
+
+				state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+					Code:    topdown.TypeErr,
+					Message: builtins.NewOperandTypeErr(2, v, "rune").Error(),
+				})
+				return nil
+			}
+			delimiters = append(delimiters, rune((*x)[0]))
+
+		}
+		if len(delimiters) == 0 {
+			delimiters = []rune{'.'}
+		}
+	default:
+		v, err := state.ValueOps().ToAST(state.Globals.Ctx, args[1])
+		if err != nil {
+			return err
+		}
+		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+			Code:    topdown.TypeErr,
+			Message: builtins.NewOperandTypeErr(2, v, "array", "null").Error(),
+		})
+		return nil
+	}
+
+	builder := gostrings.Builder{}
+	builder.Grow(len(pattern) + len(delimiters) + 1)
+	builder.WriteString(string(pattern))
+	builder.WriteRune('-')
+	for _, v := range delimiters {
+		builder.WriteRune(v)
+	}
+	id := builder.String()
+
+	g, err := globCompile(id, pattern, delimiters)
+	if err != nil {
+		return err
+	}
+	state.SetReturnValue(Unused, fjson.NewBool(g.Match(match)))
+	return nil
+}
+
+func globCompile(id, pattern string, delimiters []rune) (glob.Glob, error) {
+	globCacheLock.Lock()
+	defer globCacheLock.Unlock()
+	var err error
+	p, ok := globCache[id]
+	if ok {
+		return p, nil
+	}
+	globCache[id], err = glob.Compile(pattern, delimiters...)
+	return globCache[id], err
 }
