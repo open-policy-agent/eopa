@@ -831,8 +831,14 @@ func (a arrayAppend) Execute(state *State) (bool, uint32, error) {
 }
 
 func (s setAdd) Execute(state *State) (bool, uint32, error) {
-	err := state.ValueOps().SetAdd(state.Globals.Ctx, state.Local(s.Set()), state.Value(s.Value()))
-	return false, 0, err
+	set := s.Set()
+	newSet, err := state.ValueOps().SetAdd(state.Globals.Ctx, state.Local(set), state.Value(s.Value()))
+	if err != nil {
+		return false, 0, err
+	}
+
+	state.SetValue(set, newSet)
+	return false, 0, nil
 }
 
 func (o objectInsertOnce) Execute(state *State) (bool, uint32, error) {
@@ -915,8 +921,13 @@ func (r resultSetAdd) Execute(state *State) (bool, uint32, error) {
 		return false, 0, nil
 	}
 
-	err := state.ValueOps().SetAdd(state.Globals.Ctx, &state.Globals.ResultSet, valueValue)
-	return false, 0, err
+	newSet, err := state.ValueOps().SetAdd(state.Globals.Ctx, &state.Globals.ResultSet, valueValue)
+	if err != nil {
+		return false, 0, err
+	}
+
+	state.Globals.ResultSet = *newSet.(*Set)
+	return false, 0, nil
 }
 
 func (with with) Execute(state *State) (bool, uint32, error) {

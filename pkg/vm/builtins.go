@@ -136,13 +136,15 @@ func objectKeysBuiltin(state *State, args []Value) error {
 	case fjson.Object:
 		keys := o.Names()
 		for _, k := range keys {
-			if err := state.ValueOps().SetAdd(state.Globals.Ctx, set, state.ValueOps().MakeString(k)); err != nil {
+			var err error
+			if set, err = state.ValueOps().SetAdd(state.Globals.Ctx, set, state.ValueOps().MakeString(k)); err != nil {
 				return err
 			}
 		}
 	case IterableObject:
 		err := o.Iter(state.Globals.Ctx, func(key any, _ any) (bool, error) {
-			err := state.ValueOps().SetAdd(state.Globals.Ctx, set, key)
+			var err error
+			set, err = state.ValueOps().SetAdd(state.Globals.Ctx, set, key)
 			return err != nil, err
 		})
 		if err != nil {
@@ -194,7 +196,8 @@ func objectSelect(state *State, args []Value, keep bool) error {
 	case fjson.Array:
 		s := NewSet()
 		for i := 0; i < coll.Len(); i++ {
-			if err := s.Add(state.Globals.Ctx, coll.Iterate(i)); err != nil {
+			var err error
+			if s, err = s.Add(state.Globals.Ctx, coll.Iterate(i)); err != nil {
 				return err
 			}
 		}

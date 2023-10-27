@@ -175,7 +175,8 @@ func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (inte
 	case *Set:
 		set := NewSet()
 		_, err := v.Iter(func(v fjson.Json) (bool, error) {
-			err := set.Add(ctx, v)
+			var err error
+			set, err = set.Add(ctx, v)
 			return err != nil, err
 		})
 		return set, err
@@ -183,7 +184,8 @@ func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (inte
 		// TODO: Return a copy-on-write object.
 		obj := NewObject()
 		if err := v.Iter(ctx, func(k, v interface{}) (bool, error) {
-			err := obj.Insert(ctx, k, v)
+			var err error
+			obj, err = obj.Insert(ctx, k, v)
 			return err != nil, err
 		}); err != nil {
 			return nil, err
@@ -262,7 +264,7 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 			if err != nil {
 				return nil, err
 			}
-			if err := obj.Insert(ctx, fjson.NewString(k), y.(fjson.Json)); err != nil {
+			if obj, err = obj.Insert(ctx, fjson.NewString(k), y.(fjson.Json)); err != nil {
 				return nil, err
 			}
 		}
@@ -280,7 +282,8 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 	case map[string]string:
 		obj := NewObject()
 		for k, v := range x {
-			if err := obj.Insert(ctx, fjson.NewString(k), fjson.NewString(v)); err != nil {
+			var err error
+			if obj, err = obj.Insert(ctx, fjson.NewString(k), fjson.NewString(v)); err != nil {
 				return nil, err
 			}
 		}
@@ -296,7 +299,8 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 			if err != nil {
 				return err
 			}
-			return obj.Insert(ctx, kj.(fjson.Json), vj.(fjson.Json))
+			obj, err = obj.Insert(ctx, kj.(fjson.Json), vj.(fjson.Json))
+			return err
 		}); err != nil {
 			return nil, err
 		}
@@ -310,7 +314,8 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 			if err != nil {
 				return err
 			}
-			return set.Add(ctx, y.(fjson.Json))
+			set, err = set.Add(ctx, y.(fjson.Json))
+			return err
 		})
 		if err != nil {
 			return nil, err
@@ -496,7 +501,8 @@ func (*DataOperations) ObjectInsert(ctx context.Context, object, key, value inte
 
 	switch o := object.(type) {
 	case *Object:
-		return object, false, o.Insert(ctx, jkey, value)
+		object, err = o.Insert(ctx, jkey, value)
+		return object, false, err
 
 	case fjson.Object:
 		jvalue, err := castJSON(ctx, value)
@@ -540,7 +546,7 @@ func (o *DataOperations) ObjectMerge(ctx context.Context, a, b interface{}) (int
 		if err != nil {
 			return true, err
 		} else if !ok {
-			err = merged.Insert(ctx, key, value)
+			merged, err = merged.Insert(ctx, key, value)
 			return err != nil, err
 		}
 
@@ -549,7 +555,7 @@ func (o *DataOperations) ObjectMerge(ctx context.Context, a, b interface{}) (int
 			return true, err
 		}
 
-		err = merged.Insert(ctx, key, m)
+		merged, err = merged.Insert(ctx, key, m)
 		return err != nil, err
 	}); err != nil {
 		return nil, err
@@ -561,7 +567,7 @@ func (o *DataOperations) ObjectMerge(ctx context.Context, a, b interface{}) (int
 			return true, err
 		}
 		if !ok {
-			err := merged.Insert(ctx, key, value)
+			merged, err = merged.Insert(ctx, key, value)
 			if err != nil {
 				return true, err
 			}
@@ -603,10 +609,10 @@ func objectGet(ctx context.Context, obj interface{}, key interface{}) (interface
 	return obj.(IterableObject).Get(ctx, key)
 }
 
-func (*DataOperations) SetAdd(ctx context.Context, set, value interface{}) error {
+func (*DataOperations) SetAdd(ctx context.Context, set, value interface{}) (interface{}, error) {
 	jvalue, err := castJSON(ctx, value)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	switch set := set.(type) {
@@ -614,11 +620,11 @@ func (*DataOperations) SetAdd(ctx context.Context, set, value interface{}) error
 		return set.Add(ctx, jvalue)
 	default:
 		if _, err := castJSON(ctx, set); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return set, nil
 }
 
 func (o *DataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, error) {
@@ -742,8 +748,8 @@ func NewSet() *Set {
 	return &Set{set: *NewHashSet()}
 }
 
-func (s *Set) Add(ctx context.Context, v fjson.Json) error {
-	return s.set.Put(ctx, v)
+func (s *Set) Add(ctx context.Context, v fjson.Json) (*Set, error) {
+	return s, s.set.Put(ctx, v)
 }
 
 func (s *Set) Get(ctx context.Context, k fjson.Json) (fjson.Json, bool, error) {
@@ -816,8 +822,8 @@ func NewObject() *Object {
 	return &Object{obj: *NewHashMap()}
 }
 
-func (o *Object) Insert(ctx context.Context, k, v interface{}) error {
-	return o.obj.Put(ctx, k, v)
+func (o *Object) Insert(ctx context.Context, k, v interface{}) (*Object, error) {
+	return o, o.obj.Put(ctx, k, v)
 }
 
 func (o *Object) Get(ctx context.Context, k interface{}) (interface{}, bool, error) {
