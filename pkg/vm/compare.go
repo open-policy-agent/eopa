@@ -58,8 +58,8 @@ func equalOp(ctx context.Context, a, b interface{}) (bool, error) {
 	case IterableObject:
 		return equalObject(ctx, a, b)
 
-	case *Set:
-		if y, ok := b.(*Set); ok {
+	case Set:
+		if y, ok := b.(Set); ok {
 			return x.Equal(ctx, y)
 		}
 

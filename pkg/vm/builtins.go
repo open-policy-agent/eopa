@@ -188,7 +188,7 @@ func objectSelect(state *State, args []Value, keep bool) error {
 			skey, ok := key.(*fjson.String)
 			return ok && coll.Value(skey.Value()) != nil, nil
 		}
-	case *Set:
+	case Set:
 		selected = func(key fjson.Json) (bool, error) {
 			_, ok, err := coll.Get(state.Globals.Ctx, key)
 			return err == nil && ok, err
@@ -295,7 +295,7 @@ func stringsConcatBuiltin(state *State, args []Value) error {
 		result := state.ValueOps().MakeString(gostrings.Join(strs, string(join)))
 		state.SetReturnValue(Unused, result)
 
-	case *Set:
+	case Set:
 		set := x
 
 		var strs []string
@@ -438,7 +438,7 @@ func stringsSprintfBuiltin(state *State, args []Value) error {
 			}
 		case *fjson.String:
 			a[i] = v.Value()
-		case fjson.Array, fjson.Object, Object, *Set:
+		case fjson.Array, fjson.Object, Object, Set:
 			// TODO: Object, Set have no String() implementation at the moment, whereas fjson.Array/fjson.Object
 			// String()'s produce slightly different output from their AST versions.
 			c, err := state.ValueOps().ToAST(state.Globals.Ctx, elem)
@@ -476,7 +476,7 @@ func countBuiltin(state *State, args []Value) error {
 		}
 		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(n)))
 		return nil
-	case *Set:
+	case Set:
 		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(a.Len())))
 		return nil
 	case *fjson.String:
@@ -514,8 +514,8 @@ func builtinStringOperand(state *State, value Value, pos int) (string, error) {
 	return s.Value(), nil
 }
 
-func builtinSetOperand(state *State, value Value, pos int) (*Set, error) {
-	s, ok := value.(*Set)
+func builtinSetOperand(state *State, value Value, pos int) (Set, error) {
+	s, ok := value.(Set)
 	if !ok {
 		v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
 		if err != nil {
@@ -788,15 +788,23 @@ func binaryOrBuiltin(state *State, args []Value) error {
 
 	result := NewSet()
 
-	a.Iter(func(x fjson.Json) (bool, error) {
-		result.Add(state.Globals.Ctx, x)
-		return false, nil
+	_, err = a.Iter(func(x fjson.Json) (bool, error) {
+		var err error
+		result, err = result.Add(state.Globals.Ctx, x)
+		return false, err
 	})
+	if err != nil {
+		return err
+	}
 
-	b.Iter(func(x fjson.Json) (bool, error) {
-		result.Add(state.Globals.Ctx, x)
-		return false, nil
+	_, err = b.Iter(func(x fjson.Json) (bool, error) {
+		var err error
+		result, err = result.Add(state.Globals.Ctx, x)
+		return false, err
 	})
+	if err != nil {
+		return err
+	}
 
 	state.SetReturnValue(Unused, result)
 	return nil
@@ -1033,7 +1041,7 @@ func typeObject(v Value) bool {
 }
 
 func typeSet(v Value) bool {
-	_, ok := v.(*Set)
+	_, ok := v.(Set)
 	return ok
 }
 
@@ -1069,7 +1077,7 @@ func typename(v Value) string {
 		return "number"
 	case fjson.Object, IterableObject:
 		return "object"
-	case *Set:
+	case Set:
 		return "set"
 	}
 	panic("unreachable")

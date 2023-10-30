@@ -45,7 +45,7 @@ func isHashable(as []Value) bool {
 	}
 	for i := range as {
 		switch as[i].(type) {
-		case IterableObject, fjson.Array, *Set, fjson.Object:
+		case IterableObject, fjson.Array, Set, fjson.Object:
 			return false
 		}
 	}
@@ -921,12 +921,12 @@ func (r resultSetAdd) Execute(state *State) (bool, uint32, error) {
 		return false, 0, nil
 	}
 
-	newSet, err := state.ValueOps().SetAdd(state.Globals.Ctx, &state.Globals.ResultSet, valueValue)
+	newSet, err := state.ValueOps().SetAdd(state.Globals.Ctx, state.Globals.ResultSet, valueValue)
 	if err != nil {
 		return false, 0, err
 	}
 
-	state.Globals.ResultSet = *newSet.(*Set)
+	state.Globals.ResultSet = newSet.(Set)
 	return false, 0, nil
 }
 

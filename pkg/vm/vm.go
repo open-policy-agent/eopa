@@ -271,7 +271,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 			statePool: sync.Pool{
 				New: newStateElement,
 			},
-			ResultSet:              *vm.ops.MakeSet(),
+			ResultSet:              vm.ops.MakeSet(),
 			Cache:                  opts.Cache,
 			InterQueryBuiltinCache: opts.InterQueryBuiltinCache,
 		}
@@ -302,7 +302,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 			return nil, globals.BuiltinErrors[0]
 		}
 
-		r, err := vm.ops.ToAST(ctx, &globals.ResultSet)
+		r, err := vm.ops.ToAST(ctx, globals.ResultSet)
 		if err != nil {
 			return nil, err
 		}

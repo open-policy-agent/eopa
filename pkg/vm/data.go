@@ -9,15 +9,13 @@ import (
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 
-	"github.com/cespare/xxhash/v2"
 	"github.com/open-policy-agent/opa/ast"
 	"golang.org/x/exp/slices"
 )
 
 var (
-	ErrInvalidData            = errors.New("invalid data")      // Unsupported data type detected.
-	ErrIllegalIter            = errors.New("illegal iteration") // Illegal iteration over persisted table detected.
-	_              fjson.Json = &Set{}
+	ErrInvalidData = errors.New("invalid data")      // Unsupported data type detected.
+	ErrIllegalIter = errors.New("illegal iteration") // Illegal iteration over persisted table detected.
 
 	// prebuilt types are not stored as their specific types to keep them allocated as ready for interface{}.
 
@@ -87,7 +85,7 @@ func (*DataOperations) Get(ctx context.Context, value, key interface{}) (interfa
 		value := v.Value(s.Value())
 		return value, value != nil, nil
 
-	case *Set:
+	case Set:
 		return v.Get(ctx, jkey)
 
 	case IterableObject:
@@ -170,7 +168,7 @@ func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (inte
 		return v.Clone(false), nil
 	case fjson.Object:
 		return v.Clone(false), nil
-	case *Set:
+	case Set:
 		set := NewSet()
 		_, err := v.Iter(func(v fjson.Json) (bool, error) {
 			var err error
@@ -353,7 +351,7 @@ func (o *DataOperations) Iter(ctx context.Context, v interface{}, f func(key, va
 				break
 			}
 		}
-	case *Set:
+	case Set:
 		_, err := v.Iter(func(v fjson.Json) (bool, error) {
 			stop, err := f(v, v)
 			if err != nil {
@@ -438,7 +436,7 @@ func (*DataOperations) MakeNumberRef(n interface{}) fjson.Float {
 	return fjson.NewFloat(gojson.Number(n.(*fjson.String).Value()))
 }
 
-func (*DataOperations) MakeSet() *Set {
+func (*DataOperations) MakeSet() Set {
 	return NewSet()
 }
 
@@ -452,7 +450,7 @@ func (o *DataOperations) Len(ctx context.Context, v interface{}) (fjson.Json, er
 		return o.MakeNumberInt(int64(v.Len())), nil
 	case fjson.Object:
 		return o.MakeNumberInt(int64(v.Len())), nil
-	case *Set:
+	case Set:
 		return o.MakeNumberInt(int64(v.Len())), nil
 	case *fjson.String:
 		return o.MakeNumberInt(int64(len(v.Value()))), nil
@@ -619,7 +617,7 @@ func (*DataOperations) SetAdd(ctx context.Context, set, value interface{}) (inte
 	}
 
 	switch set := set.(type) {
-	case *Set:
+	case Set:
 		return set.Add(ctx, jvalue)
 	default:
 		if _, err := castJSON(ctx, set); err != nil {
@@ -682,7 +680,7 @@ func (o *DataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, e
 		}
 		return obj, nil
 
-	case *Set:
+	case Set:
 		// TODO: Sorting is for deterministic tests.
 		// We prealloc the Term array and sort it here to trim down the total number of allocs.
 		terms := make([]*ast.Term, 0, v.Len())
@@ -738,82 +736,6 @@ func (o *DataOperations) ToInterface(ctx context.Context, v interface{}) (interf
 	}
 
 	return ast.JSONWithOpt(v.(ast.Value), ast.JSONOpt{SortSets: false})
-}
-
-// Example JSON type library
-
-type Set struct {
-	fjson.Json
-	set HashSet
-}
-
-func NewSet() *Set {
-	return &Set{set: *NewHashSet()}
-}
-
-func (s *Set) Add(ctx context.Context, v fjson.Json) (*Set, error) {
-	return s, s.set.Put(ctx, v)
-}
-
-func (s *Set) Get(ctx context.Context, k fjson.Json) (fjson.Json, bool, error) {
-	ok, err := s.set.Get(ctx, k)
-	if err != nil {
-		return nil, false, err
-	} else if ok {
-		return k, true, nil
-	}
-
-	return nil, false, nil
-}
-
-func (s *Set) Iter(iter func(v fjson.Json) (bool, error)) (bool, error) {
-	// Note: this does not return the elements in any sorted order.
-	return s.set.Iter(func(v interface{}) (bool, error) {
-		return iter(v.(fjson.Json))
-	})
-}
-
-func (s *Set) Len() int {
-	return s.set.Len()
-}
-
-func (s *Set) Equal(ctx context.Context, y *Set) (bool, error) {
-	if s == y {
-		return true, nil
-	}
-
-	if s.Len() != y.Len() {
-		return false, nil
-	}
-
-	match := true // TODO
-	_, err := s.Iter(func(v fjson.Json) (bool, error) {
-		var err error
-		_, match, err = y.Get(ctx, v)
-		if err != nil {
-			return true, err
-		}
-		return !match, err
-	})
-	if err != nil {
-		return false, err
-	}
-
-	return match, nil
-}
-
-func (s *Set) Hash(ctx context.Context) (uint64, error) {
-	var (
-		m uint64
-	)
-	_, err := s.set.Iter(func(v interface{}) (bool, error) {
-		h := xxhash.New()
-		err := hashImpl(ctx, v, h)
-		m += h.Sum64()
-		return err != nil, err
-	})
-
-	return m, err
 }
 
 func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {

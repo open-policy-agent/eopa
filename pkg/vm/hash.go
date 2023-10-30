@@ -104,7 +104,7 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.Digest) err
 		binary.BigEndian.PutUint64(b, m)
 		hasher.Write(b)
 
-	case *Set:
+	case Set:
 		hasher.Write([]byte{typeHashSet})
 
 		m, err := value.Hash(ctx)
