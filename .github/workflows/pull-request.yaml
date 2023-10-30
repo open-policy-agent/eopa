@@ -128,6 +128,9 @@ jobs:
         id: opa
         working-directory: opa
         run: echo "dir=$(pwd)" >> $GITHUB_OUTPUT
+      - name: setup testcontainers-go properties
+        run: cp -v testcontainers.properties ~/.testcontainers.properties
+        working-directory: enterprise-opa
       - run: make test
         working-directory: enterprise-opa
         env:
@@ -164,7 +167,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: setup testcontainers-go properties
-        run: cp -v e2e/testcontainers.properties ~/.testcontainers.properties
+        run: cp -v testcontainers.properties ~/.testcontainers.properties
       - uses: asdf-vm/actions/install@v3
       - uses: actions/setup-go@v4
         with:

@@ -591,7 +591,7 @@ func TestDynamoDBGetVault(t *testing.T) {
 	}
 
 	tc, addr, token := startVaultMulti(t, "secret", secrets)
-	t.Cleanup(func() { tc.Terminate(context.Background()) })
+	t.Cleanup(func() { tc.Terminate(ctx) })
 
 	env := map[string]string{
 		"VAULT_ADDRESS": addr,

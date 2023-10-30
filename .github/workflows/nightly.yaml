@@ -50,6 +50,9 @@ jobs:
           echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
           echo "bundles=$(pwd)/e2e" >> $GITHUB_OUTPUT
         working-directory: enterprise-opa
+      - name: setup testcontainers-go properties
+        run: cp -v testcontainers.properties ~/.testcontainers.properties
+        working-directory: enterprise-opa
       - name: pick up paths
         id: paths
         run: |

@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/testcontainers/testcontainers-go/modules/localstack"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
@@ -377,16 +377,11 @@ func startDynamoDB(t *testing.T) (testcontainers.Container, string) {
 	t.Helper()
 
 	ctx := context.Background()
-	ddb, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "amazon/dynamodb-local:latest",
-			Cmd:          []string{"-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"},
-			ExposedPorts: []string{"8000/tcp"},
-			WaitingFor:   wait.NewHostPortStrategy("8000"),
-		},
-		Logger:  testcontainers.TestLogger(t),
-		Started: true,
-	})
+	opts := []testcontainers.ContainerCustomizer{
+		testLogger(t),
+		testcontainers.WithImage("localstack/localstack:2.3.0"),
+	}
+	ddb, err := localstack.RunContainer(ctx, opts...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -396,7 +391,7 @@ func startDynamoDB(t *testing.T) (testcontainers.Container, string) {
 		t.Fatal(err)
 	}
 
-	port, err := ddb.MappedPort(ctx, "8000")
+	port, err := ddb.MappedPort(ctx, "4566/tcp")
 	if err != nil {
 		t.Fatal(err)
 	}
