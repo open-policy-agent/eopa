@@ -12,6 +12,7 @@ import (
 	"github.com/styrainc/enterprise-opa-private/internal/license"
 	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
 	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
+	"github.com/styrainc/enterprise-opa-private/pkg/iropt"
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
 
@@ -26,8 +27,54 @@ func addInstructionLimitFlag(c *cobra.Command, instrLimit *int64) {
 	c.Flags().Int64Var(instrLimit, "instruction-limit", 100_000_000, "set instruction limit for VM")
 }
 
+func addOptimizationFlagsAndDescription(c *cobra.Command, optLevel *int64, optEnableFlags, optDisableFlags *iropt.OptimizationPassFlags) {
+	flags2Fields := optEnableFlags.GetFlagToFieldsMapping()
+	enableFieldPtrs := optEnableFlags.GetFieldPtrMapping()
+	disableFieldPtrs := optDisableFlags.GetFieldPtrMapping()
+
+	// Add explicit optimization pass enable flags.
+	for flag, fieldName := range flags2Fields {
+		// Add pass enable flag.
+		c.Flags().BoolVar(enableFieldPtrs[fieldName], "of"+flag, true, "")
+		c.Flag("of" + flag).Hidden = true // Hide all of these flags by default.
+		// Add pass disable flag.
+		c.Flags().BoolVar(disableFieldPtrs[fieldName], "ofno"+flag, false, "")
+		c.Flag("ofno" + flag).Hidden = true
+		// Mark both flags as mutually exclusive.
+		c.MarkFlagsMutuallyExclusive("of"+flag, "ofno"+flag)
+	}
+
+	// Add -O# flags
+	// HACK(philip): We have to do this safety check, because the `eval` command already sets a -O flag.
+	if c.Flags().Lookup("O") == nil && c.Flags().Lookup("optimize") == nil {
+		c.Flags().Int64VarP(optLevel, "optimize", "O", 0, "set optimization level")
+	}
+	// Add extra text to the long command description.
+	c.Long = c.Long + `
+Optimization Flags
+------------------
+
+The -O flag controls the optimization level. By default, only a limited selection of the
+safest optimizations are enabled at -O=0, with progressively more aggressive optimizations
+enabled at successively higher -O levels.
+
+Nearly all optimizations can be controlled directly with enable/disable flags.
+The pattern for these flags mimics that of well-known compilers, with -of and -ofno
+prefixes controlling enabling and disabling of specific passes, respectively.
+
+The following flags control specific optimizations:
+
+  -oflicm/-ofno-licm
+	Controls the Loop-Invariant Code Motion (LICM) pass. LICM is used to automatically
+	pull loop-independent code out of loops, dramatically improving performance for most
+	iteration-heavy policies. (Enabled by default at -O=0)
+`
+}
+
 func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	var instructionLimit int64
+	var optLevel int64
+	var enableOptPassFlags, disableOptPassFlags iropt.OptimizationPassFlags
 
 	// For all Enterprise OPA commands, the VM is the default target. It can be
 	// overridden for `eopa eval` by providing `-t rego`.
@@ -51,6 +98,17 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 			if instructionLimit > 0 {
 				rego_vm.SetLimits(instructionLimit)
 			}
+
+			// Note(philip): Ensure the global var responsible for the optimization schedule is set correctly.
+			var optimizationSchedule []*iropt.IROptPass
+			switch optLevel {
+			case 0:
+				optimizationSchedule = iropt.NewIROptLevel0Schedule(&enableOptPassFlags, &disableOptPassFlags)
+			default:
+				// Note(philip): Expand the case list as we accrue more optimization levels.
+				optimizationSchedule = iropt.NewIROptLevel0Schedule(&enableOptPassFlags, &disableOptPassFlags)
+			}
+			iropt.RegoVMIROptimizationPassSchedule = optimizationSchedule
 
 			switch cmd.CalledAs() {
 			case "eval":
@@ -76,10 +134,12 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 		case "run":
 			addLicenseFlags(c, lparams)
 			addInstructionLimitFlag(c, &instructionLimit)
+			addOptimizationFlagsAndDescription(c, &optLevel, &enableOptPassFlags, &disableOptPassFlags)
 			root.AddCommand(initRun(c, brand, lic, lparams)) // wrap OPA run
 		case "eval":
 			addLicenseFlags(c, lparams)
 			addInstructionLimitFlag(c, &instructionLimit)
+			addOptimizationFlagsAndDescription(c, &optLevel, &enableOptPassFlags, &disableOptPassFlags)
 
 			c.Flags().VarP(logLevel, "log-level", "l", "set log level")
 			c.Flags().Var(logFormat, "log-format", "set log format") // NOTE(sr): we don't support "text" here

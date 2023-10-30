@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+This release includes a powerful new compiler optimization for Enterprise OPA: Loop-Invariant Code Motion!
+
+### Loop-Invariant Code Motion
+
+This technique allows Enterprise OPA to hoist redundant code out of loops in query plans, and allows it to intelligently restructure nested loops as well.
+In iteration-heavy policies, the speedups can be dramatic.
+
+This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
+
 ## v1.12.0
 
 This release updates the OPA version used in Enterprise OPA to [v0.58.0](https://github.com/open-policy-agent/opa/releases/tag/v0.58.0),

@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/styrainc/enterprise-opa-private/pkg/iropt"
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle" // register bjson extension
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
@@ -23,8 +24,10 @@ import (
 	"github.com/open-policy-agent/opa/topdown/builtins"
 )
 
-const Name = "rego_target_vm"
-const Target = "vm"
+const (
+	Name   = "rego_target_vm"
+	Target = "vm"
+)
 
 var defaultTgt = false
 
@@ -32,8 +35,10 @@ func init() {
 	rego.RegisterPlugin(Name, &vmp{})
 }
 
-var limits *vm.Limits
-var limitsMtx sync.Mutex
+var (
+	limits    *vm.Limits
+	limitsMtx sync.Mutex
+)
 
 // SetLimits allows changing the *vm.Limits passed to the VM with EvalOpts.
 func SetLimits(instr int64) {
@@ -54,6 +59,8 @@ func (*vmp) IsTarget(t string) bool {
 	return t == Target || defaultTgt
 }
 
+// Applies the current server-wide optimization schedule before building
+// EOPA VM bytecode from the policy.
 func (*vmp) PrepareForEval(_ context.Context, policy *ir.Policy, opts ...rego.PrepareOption) (rego.TargetPluginEval, error) {
 	po := &rego.PrepareConfig{}
 	for _, o := range opts {
@@ -68,7 +75,13 @@ func (*vmp) PrepareForEval(_ context.Context, policy *ir.Policy, opts ...rego.Pr
 		bis = bi.BuiltinFuncs()
 	}
 
-	executable, err := vm.NewCompiler().WithPolicy(policy).WithBuiltins(bis).Compile()
+	// Note(philip): This is where the IR optimization passes are applied.
+	optimizedPolicy, err := iropt.RunPasses(policy, iropt.RegoVMIROptimizationPassSchedule)
+	if err != nil {
+		return nil, err
+	}
+
+	executable, err := vm.NewCompiler().WithPolicy(optimizedPolicy).WithBuiltins(bis).Compile()
 	if err != nil {
 		return nil, err
 	}

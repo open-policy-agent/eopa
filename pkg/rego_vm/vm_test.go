@@ -13,6 +13,7 @@ import (
 	"github.com/open-policy-agent/opa/compile"
 	"github.com/open-policy-agent/opa/ir"
 
+	"github.com/styrainc/enterprise-opa-private/pkg/iropt"
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
@@ -152,6 +153,17 @@ func BenchmarkMonster(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		testCompiler(b, policy, benchMonsterInput, query, "", bundle.Data)(b)
+	}
+}
+
+func BenchmarkMonsterOptimized(b *testing.B) {
+	query := "play"
+	bundle := createBundle(b, benchMonsterRego)
+	policy := setup(b, bundle, query)
+	optPolicy, _ := iropt.RunPasses(&policy, iropt.NewIROptLevel0Schedule(&iropt.OptimizationPassFlags{}, &iropt.OptimizationPassFlags{}))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		testCompiler(b, *optPolicy, benchMonsterInput, query, "", bundle.Data)(b)
 	}
 }
 
