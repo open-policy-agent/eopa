@@ -996,6 +996,14 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 	nested := result
 	var last int
 
+	type entry struct {
+		value    Value
+		modified bool
+		key      *fjson.String
+	}
+
+	var path []entry
+
 	pathLen-- // upto last item
 	if err := with.PathIter(func(i uint32, arg int) error {
 		if i == pathLen {
@@ -1009,19 +1017,18 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 		}
 
 		var isObject bool
-		nestedBefore := nested
 		if !ok {
 			next = ops.MakeObject()
-			nested, _, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
+			nested, ok, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
 		} else if isObject, err = ops.IsObject(state.Globals.Ctx, next); err != nil {
 			return err
 		} else if !isObject {
 			next = ops.MakeObject()
-			nested, _, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
+			nested, ok, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
 		} else {
 			next, err = ops.CopyShallow(state.Globals.Ctx, next)
 			if err == nil {
-				nested, _, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
+				nested, ok, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
 			}
 		}
 
@@ -1029,22 +1036,37 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 			return err
 		}
 
-		if nested != nestedBefore {
-			panic("not reached")
-		}
-
+		path = append(path, entry{nested, ok, key})
 		nested = next
 		return nil
 	}); err != nil {
 		return nil, err
 	}
 
-	nestedBefore := nested
-	nested, _, err = ops.ObjectInsert(state.Globals.Ctx, nested, state.String(StringIndexConst(last)), state.Value(value))
-	if nested != nestedBefore {
-		panic("not reached")
+	key := state.String(StringIndexConst(last))
+	nested, ok, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, state.Value(value))
+	path = append(path, entry{nested, ok, key})
+
+	if err != nil {
+		return nil, err
 	}
-	return result, err
+
+	var rest bool
+	for i := range path {
+		e := path[len(path)-i-1]
+		if rest || e.modified {
+			rest = true
+
+			if i > 0 {
+				path[i-1].value, _, err = ops.ObjectInsert(state.Globals.Ctx, path[i-1].value, path[i-1].key, path[i].value)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	return path[0].value, nil
 }
 
 // noescape hides a pointer from escape analysis.  noescape is

@@ -4,6 +4,8 @@ import (
 	"context"
 )
 
+type T = interface{}
+
 type hashSetEntry struct {
 	hash int
 	k    T

@@ -225,12 +225,12 @@ func objectSelect(state *State, args []Value, keep bool) error {
 			return true, err // abort
 		}
 		if !ok && !keep {
-			result.Insert(state.Globals.Ctx, k, v)
+			result, err = result.Insert(state.Globals.Ctx, k, v)
 		}
 		if ok && keep {
-			result.Insert(state.Globals.Ctx, k, v)
+			result, err = result.Insert(state.Globals.Ctx, k, v)
 		}
-		return false, nil // continue
+		return false, err // continue
 	}); err != nil {
 		return err
 	}
@@ -438,7 +438,7 @@ func stringsSprintfBuiltin(state *State, args []Value) error {
 			}
 		case *fjson.String:
 			a[i] = v.Value()
-		case fjson.Array, fjson.Object, *Object, *Set:
+		case fjson.Array, fjson.Object, Object, *Set:
 			// TODO: Object, Set have no String() implementation at the moment, whereas fjson.Array/fjson.Object
 			// String()'s produce slightly different output from their AST versions.
 			c, err := state.ValueOps().ToAST(state.Globals.Ctx, elem)
@@ -840,7 +840,11 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 
 			for _, key := range b.Names() {
 				if a.Value(key) == nil {
-					result.Insert(ctx, fjson.NewString(key), b.Value(key))
+					var err error
+					result, err = result.Insert(ctx, fjson.NewString(key), b.Value(key))
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 
@@ -855,10 +859,11 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 			}
 
 			if err := b.Iter(ctx, func(key, value interface{}) (bool, error) {
+				var err error
 				if key, ok := key.(*fjson.String); !ok || a.Value(key.Value()) == nil {
-					result.Insert(ctx, key, value)
+					result, err = result.Insert(ctx, key, value)
 				}
-				return false, nil
+				return false, err
 			}); err != nil {
 				return nil, err
 			}
@@ -872,7 +877,10 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 			if err != nil {
 				return nil, err
 			} else if !ok {
-				result.Insert(ctx, fjson.NewString(key), a.Value(key))
+				result, err = result.Insert(ctx, fjson.NewString(key), a.Value(key))
+				if err != nil {
+					return nil, err
+				}
 				continue
 			}
 
@@ -881,7 +889,10 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 				return nil, err
 			}
 
-			result.Insert(ctx, fjson.NewString(key), m)
+			result, err = result.Insert(ctx, fjson.NewString(key), m)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 	case IterableObject:
@@ -891,15 +902,20 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 				if _, ok, err := a.Get(ctx, fjson.NewString(key)); err != nil {
 					return nil, err
 				} else if !ok {
-					result.Insert(ctx, key, b.Value(key))
+					var err error
+					result, err = result.Insert(ctx, key, b.Value(key))
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 
 			err := a.Iter(ctx, func(key, value interface{}) (bool, error) {
 				k, ok := key.(fjson.Json)
 				if !ok {
-					result.Insert(ctx, key, value)
-					return false, nil
+					var err error
+					result, err = result.Insert(ctx, key, value)
+					return false, err
 				}
 
 				getValue := func(key fjson.Json) (fjson.Json, bool) {
@@ -912,8 +928,9 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 
 				v2, ok := getValue(k)
 				if !ok {
-					result.Insert(ctx, key, value)
-					return false, nil
+					var err error
+					result, err = result.Insert(ctx, key, value)
+					return false, err
 				}
 
 				m, err := objectUnion(ctx, value, v2)
@@ -921,8 +938,8 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 					return true, err
 				}
 
-				result.Insert(ctx, key, m)
-				return false, nil
+				result, err = result.Insert(ctx, key, m)
+				return false, err
 			})
 			if err != nil {
 				return nil, err
@@ -933,7 +950,10 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 				if _, ok, err := a.Get(ctx, key); err != nil {
 					return true, err
 				} else if !ok {
-					result.Insert(ctx, key, value)
+					result, err = result.Insert(ctx, key, value)
+					if err != nil {
+						return false, err
+					}
 				}
 
 				return false, nil
@@ -944,8 +964,9 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 			err := a.Iter(ctx, func(key, value interface{}) (bool, error) {
 				k, ok := key.(fjson.Json)
 				if !ok {
-					result.Insert(ctx, key, value)
-					return false, nil
+					var err error
+					result, err = result.Insert(ctx, key, value)
+					return false, err
 				}
 
 				getValue := func(key fjson.Json) (fjson.Json, bool, error) {
@@ -961,8 +982,9 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 				if err != nil {
 					return true, err
 				} else if !ok {
-					result.Insert(ctx, key, value)
-					return false, nil
+					var err error
+					result, err = result.Insert(ctx, key, value)
+					return false, err
 				}
 
 				m, err := objectUnion(ctx, value, v2)
@@ -970,8 +992,8 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 					return true, err
 				}
 
-				result.Insert(ctx, key, m)
-				return false, nil
+				result, err = result.Insert(ctx, key, m)
+				return false, err
 			})
 			if err != nil {
 				return nil, err

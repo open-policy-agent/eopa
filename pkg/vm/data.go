@@ -15,11 +15,9 @@ import (
 )
 
 var (
-	ErrInvalidData                = errors.New("invalid data")      // Unsupported data type detected.
-	ErrIllegalIter                = errors.New("illegal iteration") // Illegal iteration over persisted table detected.
-	_              fjson.Json     = &Set{}
-	_              fjson.Json     = &Object{}
-	_              IterableObject = &Object{}
+	ErrInvalidData            = errors.New("invalid data")      // Unsupported data type detected.
+	ErrIllegalIter            = errors.New("illegal iteration") // Illegal iteration over persisted table detected.
+	_              fjson.Json = &Set{}
 
 	// prebuilt types are not stored as their specific types to keep them allocated as ready for interface{}.
 
@@ -407,8 +405,13 @@ func (*DataOperations) MakeBoolean(v bool) fjson.Json {
 	return prebuiltFalse
 }
 
-func (*DataOperations) MakeObject() *Object {
-	return NewObject()
+func (*DataOperations) MakeObject() Object {
+	// TODO: Planner emits code that breaks with generic rule
+	// heads, unless the objects constructed allow in-place
+	// key-value insertion. Compact object types don't allow that:
+	// once they reach their capacity limit, a new (bigger)
+	// instance has to be created.
+	return newObjectLarge(0)
 }
 
 func (*DataOperations) MakeNull() fjson.Json {
@@ -500,9 +503,9 @@ func (*DataOperations) ObjectInsert(ctx context.Context, object, key, value inte
 	}
 
 	switch o := object.(type) {
-	case *Object:
-		object, err = o.Insert(ctx, jkey, value)
-		return object, false, err
+	case Object:
+		o, err = o.Insert(ctx, jkey, value)
+		return o, o != object, err
 
 	case fjson.Object:
 		jvalue, err := castJSON(ctx, value)
@@ -813,52 +816,6 @@ func (s *Set) Hash(ctx context.Context) (uint64, error) {
 	return m, err
 }
 
-type Object struct {
-	fjson.Json
-	obj HashMap
-}
-
-func NewObject() *Object {
-	return &Object{obj: *NewHashMap()}
-}
-
-func (o *Object) Insert(ctx context.Context, k, v interface{}) (*Object, error) {
-	return o, o.obj.Put(ctx, k, v)
-}
-
-func (o *Object) Get(ctx context.Context, k interface{}) (interface{}, bool, error) {
-	return o.obj.Get(ctx, k)
-}
-
-func (o *Object) Iter(_ context.Context, iter func(key, value interface{}) (bool, error)) error {
-	_, err := o.obj.Iter(func(k, v T) (bool, error) {
-		stop, err := iter(k, v)
-		if err != nil {
-			return true, err
-		}
-
-		return stop, nil
-	})
-	return err
-}
-
-func (o *Object) Len(context.Context) (int, error) {
-	return o.obj.Len(), nil
-}
-
-func (o *Object) Hash(ctx context.Context) (uint64, error) {
-	var (
-		h uint64
-	)
-	_, err := o.obj.Iter(func(k, v T) (bool, error) {
-		var err error
-		h, err = ObjectHashEntry(ctx, h, k, v)
-		return err != nil, err
-	})
-
-	return h, err
-}
-
 func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
 	j, ok := v.(fjson.Json)
 	if ok {
@@ -869,8 +826,9 @@ func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
 	case IterableObject:
 		obj := NewObject()
 		err := v.Iter(ctx, func(k, v interface{}) (bool, error) {
-			obj.Insert(ctx, k.(*fjson.String), v.(fjson.Json))
-			return false, nil
+			var err error
+			obj, err = obj.Insert(ctx, k.(*fjson.String), v.(fjson.Json))
+			return false, err
 		})
 		if err != nil {
 			return nil, err
