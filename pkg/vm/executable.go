@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"unsafe"
+
+	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
 const (
@@ -247,7 +249,7 @@ func (strings) Write(strings []string) []byte {
 }
 
 //go:inline
-func (s strings) String(vm *VM, i StringIndexConst) Value {
+func (s strings) String(vm *VM, i StringIndexConst) *fjson.String {
 	if s, ok := vm.getCachedString(i); ok {
 		return s
 	}

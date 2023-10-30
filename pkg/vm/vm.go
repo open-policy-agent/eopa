@@ -347,7 +347,7 @@ func (vm *VM) runtime(ctx context.Context, v interface{}) (*ast.Term, error) {
 	return ast.NewTerm(runtime), nil
 }
 
-func (vm *VM) getCachedString(i StringIndexConst) (Value, bool) {
+func (vm *VM) getCachedString(i StringIndexConst) (*fjson.String, bool) {
 	if int(i) >= len(vm.stringsCache) {
 		return nil, false
 	}
@@ -509,7 +509,7 @@ func (s *State) Local(v Local) Value {
 	return s.findReg(v).registers[int(v)%registersSize]
 }
 
-func (s *State) String(v StringIndexConst) Value {
+func (s *State) String(v StringIndexConst) *fjson.String {
 	return s.Globals.vm.executable.Strings().String(s.Globals.vm, v)
 }
 
