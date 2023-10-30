@@ -161,12 +161,17 @@ func (forest CFGDAGForest) AsDOT() string {
 	return out.String()
 }
 
+func quote(s string) string {
+	x := strconv.Quote(s)
+	return x[1 : len(x)-1]
+}
+
 // We generate nodes with unique IDs: N_{plan,func}_$name_$blockIdx_$nodeID
 func (g *CFGDAG) AsDOT(name, prefix, label string, indentLevel int) string {
 	out := strings.Builder{}
 	indentPrefix := strings.Repeat("\t", indentLevel)
-	out.WriteString(indentPrefix + "subgraph \"cluster_" + prefix + "_" + name + "\" {\n")
-	out.WriteString(indentPrefix + "label=\"" + label + "\"\n")
+	out.WriteString(indentPrefix + "subgraph \"cluster_" + prefix + "_" + quote(name) + "\" {\n")
+	out.WriteString(indentPrefix + "label=\"" + quote(label) + "\"\n")
 	descendants, err := EnumerateDescendants(g.Start)
 	if err != nil {
 		log.Fatal(err)
@@ -273,7 +278,7 @@ func argsOfStmt(stmt ir.Stmt) []string {
 			args = append(args, operand2Str(op))
 		}
 		argStr := strings.Join(args, ", ")
-		return []string{x.Func, argStr, local2Str(x.Result)} // TODO: Deal with variable-length args better?
+		return []string{quote(x.Func), argStr, local2Str(x.Result)} // TODO: Deal with variable-length args better?
 	case *ir.CallDynamicStmt:
 		args := make([]string, 0, len(x.Args))
 		for _, op := range x.Args {
