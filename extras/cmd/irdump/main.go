@@ -17,6 +17,7 @@ import (
 
 func main() {
 	var filename string
+	var policy *ir.Policy
 	fs := flag.NewFlagSet("irdump", flag.ExitOnError)
 	fs.StringVar(&filename, "f", "", "Rego filename to read in and dump IR JSON for. (default: stdin)")
 	fs.Parse(os.Args[1:])
@@ -42,10 +43,22 @@ func main() {
 		fileText.Write(b)
 	}
 
-	policy, err := compileRego(topdown.BuiltinContext{}, filename, fileText.String(), entrypoints)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	// Attempt to read as a bundle.
+	br := bundle.NewCustomReader(bundle.NewTarballLoader(strings.NewReader(fileText.String()))).WithSkipBundleVerification(true)
+	if b, err := br.Read(); err == nil {
+		policy, err = compileBundle(topdown.BuiltinContext{}, &b, entrypoints)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	} else {
+		// Attempt to read as a normal Rego file.
+		var err error
+		policy, err = compileRego(topdown.BuiltinContext{}, filename, fileText.String(), entrypoints)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 
 	bs, err := json.Marshal(policy)
@@ -75,6 +88,20 @@ func compileRego(bctx topdown.BuiltinContext, filename string, module string, en
 		},
 	}
 
+	compiler := compile.New().WithTarget(compile.TargetPlan).WithBundle(b).WithEntrypoints(entrypointPaths...)
+	if err := compiler.Build(bctx.Context); err != nil {
+		return nil, err
+	}
+
+	bundle := compiler.Bundle()
+	var ir ir.Policy
+	if err := json.Unmarshal(bundle.PlanModules[0].Raw, &ir); err != nil {
+		return nil, err
+	}
+	return &ir, nil
+}
+
+func compileBundle(bctx topdown.BuiltinContext, b *bundle.Bundle, entrypointPaths []string) (*ir.Policy, error) {
 	compiler := compile.New().WithTarget(compile.TargetPlan).WithBundle(b).WithEntrypoints(entrypointPaths...)
 	if err := compiler.Build(bctx.Context); err != nil {
 		return nil, err
