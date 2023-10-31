@@ -67,16 +67,16 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 			okta.WithToken(c.Token),
 		)
 	case c.PrivateKey != "":
-		conf := okta.NewConfiguration(okta.WithPrivateKey(c.PrivateKey))
+		conf, err := okta.NewConfiguration(okta.WithPrivateKey(c.PrivateKey))
+		if err != nil {
+			return nil, err
+		}
 		priv := []byte(strings.ReplaceAll(conf.Okta.Client.PrivateKey, `\n`, "\n"))
 		privPem, _ := pem.Decode(priv)
 		if privPem == nil {
 			return nil, errors.New("invalid private key")
 		}
-		var (
-			parsedKey any
-			err       error
-		)
+		var parsedKey any
 		switch privPem.Type {
 		case "RSA PRIVATE KEY":
 			parsedKey, err = x509.ParsePKCS1PrivateKey(privPem.Bytes)

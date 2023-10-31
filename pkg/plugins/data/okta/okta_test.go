@@ -81,7 +81,9 @@ var (
 			"status":        "ACTIVE",
 			"statusChanged": "2023-02-14T23:53:13Z",
 			"type": map[string]any{
-				"id": "oty8c2qszdAhbwavE5d7",
+				"id":          "oty8c2qszdAhbwavE5d7",
+				"name":        "",
+				"displayName": "",
 			},
 		},
 	}
@@ -160,7 +162,9 @@ var (
 				"status":        "ACTIVE",
 				"statusChanged": "2023-02-14T23:53:13Z",
 				"type": map[string]any{
-					"id": "oty8c2qszdAhbwavE5d7",
+					"id":          "oty8c2qszdAhbwavE5d7",
+					"name":        "",
+					"displayName": "",
 				},
 			},
 		},
@@ -180,7 +184,6 @@ var (
 			"id":          "cr08ciat6nBKUPtfG5d7",
 			"label":       "read-users",
 			"lastUpdated": "2023-02-15T18:56:19Z",
-			"permissions": nil,
 		},
 		map[string]any{
 			"_links": map[string]any{
@@ -196,7 +199,6 @@ var (
 			"id":          "cr08cicu3ym2mDPWM5d7",
 			"label":       "read-groups",
 			"lastUpdated": "2023-02-15T18:57:01Z",
-			"permissions": nil,
 		},
 	}
 	expectedApps = []any{

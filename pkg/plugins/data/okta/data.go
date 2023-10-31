@@ -88,7 +88,7 @@ func (c *Data) Path() storage.Path {
 
 func (c *Data) loop(ctx context.Context) {
 	hc := &http.Client{} // client is needed to close all idle connections
-	conf := okta.NewConfiguration(c.Config.config...)
+	conf, _ := okta.NewConfiguration(c.Config.config...)
 	conf.HTTPClient = hc
 	timer := time.NewTimer(0) // zero timer is needed to execute immediately for first time
 
@@ -183,7 +183,7 @@ func (c *Data) poll(ctx context.Context, conf *okta.Configuration) error {
 }
 
 func getUsers(ctx context.Context, client *okta.APIClient) ([]okta.User, error) {
-	users, resp, err := client.UserApi.ListUsers(ctx).Execute()
+	users, resp, err := client.UserAPI.ListUsers(ctx).Execute()
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func getUsers(ctx context.Context, client *okta.APIClient) ([]okta.User, error) 
 }
 
 func getGroups(ctx context.Context, client *okta.APIClient) ([]okta.Group, error) {
-	groups, resp, err := client.GroupApi.ListGroups(ctx).Execute()
+	groups, resp, err := client.GroupAPI.ListGroups(ctx).Execute()
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func getGroupMembers(ctx context.Context, client *okta.APIClient, groups []okta.
 	members := make(map[string][]okta.User, len(groups))
 	for _, g := range groups {
 		gid := g.GetId()
-		users, resp, err := client.GroupApi.ListGroupUsers(ctx, gid).Execute()
+		users, resp, err := client.GroupAPI.ListGroupUsers(ctx, gid).Execute()
 		if err != nil {
 			return nil, err
 		}
@@ -236,7 +236,7 @@ func getGroupMembers(ctx context.Context, client *okta.APIClient, groups []okta.
 }
 
 func getRoles(ctx context.Context, client *okta.APIClient) ([]okta.IamRole, error) {
-	res, resp, err := client.RoleApi.ListRoles(ctx).Execute()
+	res, resp, err := client.RoleAPI.ListRoles(ctx).Execute()
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func getRoles(ctx context.Context, client *okta.APIClient) ([]okta.IamRole, erro
 }
 
 func getApps(ctx context.Context, client *okta.APIClient) ([]any, error) {
-	apps, resp, err := client.ApplicationApi.ListApplications(ctx).Execute()
+	apps, resp, err := client.ApplicationAPI.ListApplications(ctx).Execute()
 	applications := make([]any, len(apps))
 	for i := range apps {
 		applications[i] = apps[i].GetActualInstance()
