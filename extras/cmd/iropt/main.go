@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/open-policy-agent/opa/ir"
@@ -57,6 +58,10 @@ The following flags control specific optimizations:
 `
 }
 
+const (
+	megabyte = 1073741824
+)
+
 func main() {
 	var enableOptPassFlags, disableOptPassFlags iropt.OptimizationPassFlags
 	var optLevel int64
@@ -70,10 +75,18 @@ func main() {
 			// Get input Rego file from stdin or a file on disk.
 			var fileBytes bytes.Buffer
 			if filename == "" {
-				scanner := bufio.NewScanner(os.Stdin)
-				for scanner.Scan() {
-					fileBytes.Write(scanner.Bytes())
-					fileBytes.WriteByte('\n')
+				r := bufio.NewReaderSize(os.Stdin, megabyte)
+				line, isPrefix, err := r.ReadLine()
+				for err == nil {
+					fileBytes.Write(line)
+					if !isPrefix {
+						fileBytes.WriteByte('\n')
+					}
+					line, isPrefix, err = r.ReadLine()
+				}
+				if err != io.EOF {
+					fmt.Fprintln(os.Stderr, err)
+					os.Exit(1)
 				}
 			} else {
 				b, err := os.ReadFile(filename)

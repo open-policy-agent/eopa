@@ -2,17 +2,22 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
-	"strings"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/compile"
 	"github.com/open-policy-agent/opa/ir"
 	"github.com/open-policy-agent/opa/topdown"
+)
+
+const (
+	megabyte = 1073741824
 )
 
 func main() {
@@ -28,11 +33,20 @@ func main() {
 	}
 
 	// Get input Rego file from stdin or a file on disk.
-	var fileText strings.Builder
+	var fileBytes bytes.Buffer
 	if filename == "" {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			fileText.WriteString(scanner.Text() + "\n")
+		r := bufio.NewReaderSize(os.Stdin, megabyte)
+		line, isPrefix, err := r.ReadLine()
+		for err == nil {
+			fileBytes.Write(line)
+			if !isPrefix {
+				fileBytes.WriteByte('\n')
+			}
+			line, isPrefix, err = r.ReadLine()
+		}
+		if err != io.EOF {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
 	} else {
 		b, err := os.ReadFile(filename)
@@ -40,11 +54,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		fileText.Write(b)
+		fileBytes.Write(b)
 	}
 
 	// Attempt to read as a bundle.
-	br := bundle.NewCustomReader(bundle.NewTarballLoader(strings.NewReader(fileText.String()))).WithSkipBundleVerification(true)
+	br := bundle.NewCustomReader(bundle.NewTarballLoader(bytes.NewReader(fileBytes.Bytes()))).WithSkipBundleVerification(true)
 	if b, err := br.Read(); err == nil {
 		policy, err = compileBundle(topdown.BuiltinContext{}, &b, entrypoints)
 		if err != nil {
@@ -54,7 +68,7 @@ func main() {
 	} else {
 		// Attempt to read as a normal Rego file.
 		var err error
-		policy, err = compileRego(topdown.BuiltinContext{}, filename, fileText.String(), entrypoints)
+		policy, err = compileRego(topdown.BuiltinContext{}, filename, fileBytes.String(), entrypoints)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
