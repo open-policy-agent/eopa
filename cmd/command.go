@@ -40,7 +40,7 @@ func addOptimizationFlagsAndDescription(c *cobra.Command, optLevel *int64, optEn
 	// Add explicit optimization pass enable flags.
 	for flag, fieldName := range flags2Fields {
 		// Add pass enable flag.
-		c.Flags().BoolVar(enableFieldPtrs[fieldName], "of"+flag, true, "")
+		c.Flags().BoolVar(enableFieldPtrs[fieldName], "of"+flag, false, "")
 		c.Flag("of" + flag).Hidden = true // Hide all of these flags by default.
 		// Add pass disable flag.
 		c.Flags().BoolVar(disableFieldPtrs[fieldName], "ofno"+flag, false, "")
