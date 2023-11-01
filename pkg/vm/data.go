@@ -404,12 +404,7 @@ func (*DataOperations) MakeBoolean(v bool) fjson.Json {
 }
 
 func (*DataOperations) MakeObject() Object {
-	// TODO: Planner emits code that breaks with generic rule
-	// heads, unless the objects constructed allow in-place
-	// key-value insertion. Compact object types don't allow that:
-	// once they reach their capacity limit, a new (bigger)
-	// instance has to be created.
-	return newObjectLarge(0)
+	return NewObject()
 }
 
 func (*DataOperations) MakeNull() fjson.Json {
