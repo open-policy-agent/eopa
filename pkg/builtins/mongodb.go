@@ -104,7 +104,7 @@ func builtinMongoDBFind(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 	pos := 1
 	obj, err := builtins.ObjectOperand(operands[0].Value, pos)
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+		return err
 	}
 
 	requestKeys := ast.NewSet(obj.Keys()...)
@@ -120,13 +120,13 @@ func builtinMongoDBFind(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 
 	// find, err := getRequestObjectWithDefault(obj, "find", nil)
 	// if err != nil {
-	// 	return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+	// 	return err
 	// }
 
 	cacheKey := ast.NewObject()
 	var credential []byte
 	if auth, err := getRequestObjectWithDefault(obj, "auth", nil); err != nil {
-		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+		return err
 	} else if auth != nil {
 		a, err := ast.JSON(auth)
 		if err != nil {
@@ -143,22 +143,22 @@ func builtinMongoDBFind(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 
 	uri, err := getRequestString(obj, "uri")
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+		return err
 	}
 
 	raiseError, err := getRequestBoolWithDefault(obj, "raise_error", true)
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+		return err
 	}
 
 	interQueryCacheEnabled, err := getRequestBoolWithDefault(obj, "cache", false)
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+		return err
 	}
 
 	ttl, err := getRequestTimeoutWithDefault(obj, "cache_duration", interQueryCacheDurationDefault)
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+		return err
 	}
 
 	// TODO: Improve error handling to allow separation between
@@ -167,34 +167,34 @@ func builtinMongoDBFind(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 
 	database, err := getRequestString(obj, "database")
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+		return err
 	}
 
 	collection, err := getRequestString(obj, "collection")
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+		return err
 	}
 
 	filter, err := getRequestObject(obj, "filter")
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+		return err
 	}
 
 	opt, err := getRequestObjectWithDefault(obj, "options", ast.NewObject())
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+		return err
 	}
 
 	canonical, err := getRequestBoolWithDefault(obj, "canonical", false)
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+		return err
 	}
 
 	bctx.Metrics.Timer(mongoDBFindLatencyMetricKey).Start()
 
 	if responseObj, ok, err := checkCaches(bctx, cacheKey, interQueryCacheEnabled, mongoDBFindBuiltinCacheKey, mongoDBFindInterQueryCacheHits); ok {
 		if err != nil {
-			return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+			return err
 		}
 
 		return iter(ast.NewTerm(responseObj))
@@ -295,17 +295,17 @@ func builtinMongoDBFind(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 			m["error"] = e
 			queryErr = nil
 		} else {
-			return handleBuiltinErr(mongoDBFindName, bctx.Location, queryErr)
+			return queryErr
 		}
 	}
 
 	responseObj, err := ast.InterfaceToValue(m)
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+		return err
 	}
 
 	if err := insertCaches(bctx, cacheKey, responseObj.(ast.Object), queryErr, interQueryCacheEnabled, ttl, mongoDBFindBuiltinCacheKey); err != nil {
-		return handleBuiltinErr(mongoDBFindName, bctx.Location, err)
+		return err
 	}
 
 	bctx.Metrics.Timer(mongoDBFindLatencyMetricKey).Stop()
@@ -320,7 +320,7 @@ func builtinMongoDBFindOne(bctx topdown.BuiltinContext, operands []*ast.Term, it
 	pos := 1
 	obj, err := builtins.ObjectOperand(operands[0].Value, pos)
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		return err
 	}
 
 	requestKeys := ast.NewSet(obj.Keys()...)
@@ -337,7 +337,7 @@ func builtinMongoDBFindOne(bctx topdown.BuiltinContext, operands []*ast.Term, it
 	cacheKey := ast.NewObject()
 	var credential []byte
 	if auth, err := getRequestObjectWithDefault(obj, "auth", nil); err != nil {
-		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		return err
 	} else if auth != nil {
 		a, err := ast.JSON(auth)
 		if err != nil {
@@ -354,22 +354,22 @@ func builtinMongoDBFindOne(bctx topdown.BuiltinContext, operands []*ast.Term, it
 
 	uri, err := getRequestString(obj, "uri")
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		return err
 	}
 
 	raiseError, err := getRequestBoolWithDefault(obj, "raise_error", true)
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		return err
 	}
 
 	interQueryCacheEnabled, err := getRequestBoolWithDefault(obj, "cache", false)
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		return err
 	}
 
 	ttl, err := getRequestTimeoutWithDefault(obj, "cache_duration", interQueryCacheDurationDefault)
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		return err
 	}
 
 	// TODO: Improve error handling to allow separation between
@@ -378,34 +378,34 @@ func builtinMongoDBFindOne(bctx topdown.BuiltinContext, operands []*ast.Term, it
 
 	database, err := getRequestString(obj, "database")
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		return err
 	}
 
 	collection, err := getRequestString(obj, "collection")
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		return err
 	}
 
 	filter, err := getRequestObject(obj, "filter")
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		return err
 	}
 
 	opt, err := getRequestObjectWithDefault(obj, "options", ast.NewObject())
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		return err
 	}
 
 	canonical, err := getRequestBoolWithDefault(obj, "canonical", false)
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		return err
 	}
 
 	bctx.Metrics.Timer(mongoDBFindOneLatencyMetricKey).Start()
 
 	if responseObj, ok, err := checkCaches(bctx, cacheKey, interQueryCacheEnabled, mongoDBFindBuiltinCacheKey, mongoDBFindInterQueryCacheHits); ok {
 		if err != nil {
-			return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+			return err
 		}
 
 		return iter(ast.NewTerm(responseObj))
@@ -496,17 +496,17 @@ func builtinMongoDBFindOne(bctx topdown.BuiltinContext, operands []*ast.Term, it
 			m["error"] = e
 			queryErr = nil
 		} else {
-			return handleBuiltinErr(mongoDBFindOneName, bctx.Location, queryErr)
+			return queryErr
 		}
 	}
 
 	responseObj, err := ast.InterfaceToValue(m)
 	if err != nil {
-		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		return err
 	}
 
 	if err := insertCaches(bctx, cacheKey, responseObj.(ast.Object), queryErr, interQueryCacheEnabled, ttl, mongoDBFindOneBuiltinCacheKey); err != nil {
-		return handleBuiltinErr(mongoDBFindOneName, bctx.Location, err)
+		return err
 	}
 
 	bctx.Metrics.Timer(mongoDBFindOneLatencyMetricKey).Stop()
@@ -608,6 +608,6 @@ func ToSnakeCase(v interface{}) interface{} {
 }
 
 func init() {
-	topdown.RegisterBuiltinFunc(mongoDBFindName, builtinMongoDBFind)
-	topdown.RegisterBuiltinFunc(mongoDBFindOneName, builtinMongoDBFindOne)
+	RegisterBuiltinFunc(mongoDBFindName, builtinMongoDBFind)
+	RegisterBuiltinFunc(mongoDBFindOneName, builtinMongoDBFindOne)
 }

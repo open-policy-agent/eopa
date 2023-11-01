@@ -82,7 +82,7 @@ func builtinVaultSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter fu
 	pos := 1
 	obj, err := builtins.ObjectOperand(operands[0].Value, pos)
 	if err != nil {
-		return handleBuiltinErr(vaultSendName, bctx.Location, err)
+		return err
 	}
 
 	requestKeys := ast.NewSet(obj.Keys()...)
@@ -98,32 +98,32 @@ func builtinVaultSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter fu
 
 	address, err := getRequestString(obj, "address")
 	if err != nil {
-		return handleBuiltinErr(vaultSendName, bctx.Location, err)
+		return err
 	}
 
 	raiseError, err := getRequestBoolWithDefault(obj, "raise_error", true)
 	if err != nil {
-		return handleBuiltinErr(vaultSendName, bctx.Location, err)
+		return err
 	}
 
 	interQueryCacheEnabled, err := getRequestBoolWithDefault(obj, "cache", false)
 	if err != nil {
-		return handleBuiltinErr(vaultSendName, bctx.Location, err)
+		return err
 	}
 
 	ttl, err := getRequestTimeoutWithDefault(obj, "cache_duration", interQueryCacheDurationDefault)
 	if err != nil {
-		return handleBuiltinErr(vaultSendName, bctx.Location, err)
+		return err
 	}
 
 	appRole, err := getRequestObjectWithDefault(obj, "app_role", nil)
 	if err != nil {
-		return handleBuiltinErr(vaultSendName, bctx.Location, err)
+		return err
 	}
 
 	token, err := getRequestStringWithDefault(obj, "token", "")
 	if err != nil {
-		return handleBuiltinErr(vaultSendName, bctx.Location, err)
+		return err
 	}
 
 	var (
@@ -137,27 +137,27 @@ func builtinVaultSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter fu
 	if appRole != nil {
 		appRoleID, err = getRequestString(appRole, "id")
 		if err != nil {
-			return handleBuiltinErr(vaultSendName, bctx.Location, err)
+			return err
 		}
 
 		appRoleFromFile, err = getRequestStringWithDefault(appRole, "from_file", "")
 		if err != nil {
-			return handleBuiltinErr(vaultSendName, bctx.Location, err)
+			return err
 		}
 
 		appRoleFromEnv, err = getRequestStringWithDefault(appRole, "from_env", "")
 		if err != nil {
-			return handleBuiltinErr(vaultSendName, bctx.Location, err)
+			return err
 		}
 
 		appRoleFromString, err = getRequestStringWithDefault(appRole, "from_string", "")
 		if err != nil {
-			return handleBuiltinErr(vaultSendName, bctx.Location, err)
+			return err
 		}
 
 		appRoleWrappingToken, err = getRequestBoolWithDefault(appRole, "wrapping_token", false)
 		if err != nil {
-			return handleBuiltinErr(vaultSendName, bctx.Location, err)
+			return err
 		}
 
 		if appRoleFromFile == "" && appRoleFromEnv == "" && appRoleFromString == "" {
@@ -169,24 +169,24 @@ func builtinVaultSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter fu
 
 	get, err := getRequestObject(obj, "kv2_get")
 	if err != nil {
-		return handleBuiltinErr(vaultSendName, bctx.Location, err)
+		return err
 	}
 
 	mountPath, err := getRequestString(get, "mount_path")
 	if err != nil {
-		return handleBuiltinErr(vaultSendName, bctx.Location, err)
+		return err
 	}
 
 	path, err := getRequestString(get, "path")
 	if err != nil {
-		return handleBuiltinErr(vaultSendName, bctx.Location, err)
+		return err
 	}
 
 	bctx.Metrics.Timer(vaultSendLatencyMetricKey).Start()
 
 	if responseObj, ok, err := checkCaches(bctx, get, interQueryCacheEnabled, vaultSendBuiltinCacheKey, vaultSendInterQueryCacheHits); ok {
 		if err != nil {
-			return handleBuiltinErr(vaultSendName, bctx.Location, err)
+			return err
 		}
 
 		return iter(ast.NewTerm(responseObj))
@@ -211,7 +211,7 @@ func builtinVaultSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter fu
 		m["data"] = result
 	} else {
 		if raiseError {
-			return handleBuiltinErr(vaultSendName, bctx.Location, getErr)
+			return getErr
 		}
 
 		// TODO: Unpack the specific error type to
@@ -226,11 +226,11 @@ func builtinVaultSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter fu
 
 	responseObj, err := ast.InterfaceToValue(m)
 	if err != nil {
-		return handleBuiltinErr(vaultSendName, bctx.Location, err)
+		return err
 	}
 
 	if err := insertCaches(bctx, get, responseObj.(ast.Object), getErr, interQueryCacheEnabled, ttl, vaultSendBuiltinCacheKey); err != nil {
-		return handleBuiltinErr(vaultSendName, bctx.Location, err)
+		return err
 	}
 
 	bctx.Metrics.Timer(vaultSendLatencyMetricKey).Stop()
@@ -365,5 +365,5 @@ func (v *vaultClient) renew(token *vault.Secret) error {
 }
 
 func init() {
-	topdown.RegisterBuiltinFunc(vaultSendName, builtinVaultSend)
+	RegisterBuiltinFunc(vaultSendName, builtinVaultSend)
 }

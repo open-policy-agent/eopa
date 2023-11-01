@@ -79,7 +79,7 @@ func (e *EKM) onConfig(ctx context.Context, conf *config.Config, validateLicense
 	if validateLicense {
 		defer func() {
 			// TODO(sr): e2e test EKM license interactions
-			if e.checker != nil {
+			if e.checker != nil && e.checker.Strict() {
 				e.checker.ValidateLicenseOrDie(e.lparams) // calls os.Exit if invalid
 			}
 		}()

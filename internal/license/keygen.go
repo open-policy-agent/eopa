@@ -57,6 +57,7 @@ type (
 		mustStartBy *time.Timer
 		fingerprint string
 		exit        func(exitcode int, err error)
+		strict      bool
 	}
 
 	LicenseParams struct {
@@ -105,6 +106,8 @@ type Checker interface {
 	IsOnline() bool
 	Expiry() time.Time
 	Policy() (*KeygenLicense, error)
+	SetStrict(bool)
+	Strict() bool
 
 	ReleaseLicense()
 	Wait(time.Duration) bool
@@ -171,6 +174,14 @@ func (l *keygenLogger) Infof(format string, v ...interface{}) {
 
 func (l *keygenLogger) Debugf(string, ...interface{}) {
 	// l.logger.Debug(format, v...) // very noisy
+}
+
+func (l *checker) SetStrict(x bool) {
+	l.strict = x
+}
+
+func (l *checker) Strict() bool {
+	return l.strict
 }
 
 func (l *checker) IsOnline() bool {

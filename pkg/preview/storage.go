@@ -49,27 +49,27 @@ func (s *PreviewStorage) WithPreviewData(previewData json.Json) *PreviewStorage 
 }
 
 // Register is unsupported in the preview store and always returns and error
-func (s *PreviewStorage) Register(context.Context, storage.Transaction, storage.TriggerConfig) (storage.TriggerHandle, error) {
+func (*PreviewStorage) Register(context.Context, storage.Transaction, storage.TriggerConfig) (storage.TriggerHandle, error) {
 	return nil, errors.New("registering is not supported by preview storage as data is read only")
 }
 
 // ListPolicies is unsupported in the preview store and returns nil (no policies available)
-func (s *PreviewStorage) ListPolicies(context.Context, storage.Transaction) ([]string, error) {
+func (*PreviewStorage) ListPolicies(context.Context, storage.Transaction) ([]string, error) {
 	return nil, nil
 }
 
 // GetPolicy is unsupported in the preview store and always returns an error.
-func (s *PreviewStorage) GetPolicy(context.Context, storage.Transaction, string) ([]byte, error) {
+func (*PreviewStorage) GetPolicy(context.Context, storage.Transaction, string) ([]byte, error) {
 	return nil, errors.New("getting polices is not supported by preview storage")
 }
 
 // UpsertPolicy is unsupported in the preview store and always returns an error.
-func (s *PreviewStorage) UpsertPolicy(context.Context, storage.Transaction, string, []byte) error {
+func (*PreviewStorage) UpsertPolicy(context.Context, storage.Transaction, string, []byte) error {
 	return errors.New("upserting policies is not supported by preview storage")
 }
 
 // DeletePolicy is unsupported in the preview store and always returns an error.
-func (s *PreviewStorage) DeletePolicy(context.Context, storage.Transaction, string) error {
+func (*PreviewStorage) DeletePolicy(context.Context, storage.Transaction, string) error {
 	return errors.New("deleting a policy is not supported by preview storage")
 }
 

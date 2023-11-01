@@ -27,7 +27,7 @@ import (
 	"github.com/styrainc/enterprise-opa-private/internal/license"
 	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
 	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
-	_ "github.com/styrainc/enterprise-opa-private/pkg/builtins" // Activate custom builtins.
+	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
 	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
@@ -35,6 +35,7 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
 	"github.com/styrainc/enterprise-opa-private/pkg/preview"
+	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
@@ -44,6 +45,7 @@ const defaultBindAddress = "localhost:8181"
 
 // Run provides the CLI entrypoint for the `run` subcommand
 func initRun(opa *cobra.Command, brand string, license license.Checker, lparams *keygen.LicenseParams) *cobra.Command {
+	fallback := opa.RunE
 	// Only override Run, so we keep the args and usage texts
 	opa.RunE = func(c *cobra.Command, args []string) error {
 		c.SilenceErrors = true
@@ -56,6 +58,19 @@ func initRun(opa *cobra.Command, brand string, license license.Checker, lparams 
 		}
 		params.rt.Brand = brand
 
+		strict, _ := c.Flags().GetBool("no-license-fallback")
+		license.SetStrict(strict)
+		if !strict { // validate license synchronously
+			if err := license.ValidateLicense(lparams); err != nil { // TODO(sr): context? timeout?
+				fmt.Fprintln(os.Stderr, err.Error()) // TODO(sr): better logging setup?
+				fmt.Fprintln(os.Stderr, "Switching to OPA mode")
+
+				c.SilenceErrors = false
+				return fallback(c, args)
+			}
+		}
+		builtins.Init()
+		rego_vm.SetDefault(true)
 		rt, err := initRuntime(ctx, params, args, license, lparams)
 		if err != nil {
 			fmt.Println("run error:", err)

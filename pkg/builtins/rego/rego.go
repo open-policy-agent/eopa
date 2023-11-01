@@ -17,7 +17,3 @@ var (
 	RegoEvalInterQueryCacheHits = RegoEvalLatencyMetricKey + "_interquery_cache_hits"
 	RegoEvalIntraQueryCacheHits = RegoEvalLatencyMetricKey + "_intraquery_cache_hits"
 )
-
-func RegisterBuiltinRegoEval(f func(topdown.BuiltinContext, []*ast.Term, func(*ast.Term) error) error) {
-	topdown.RegisterBuiltinFunc(RegoEvalName, f)
-}

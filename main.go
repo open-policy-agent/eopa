@@ -5,20 +5,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/cmd"
 
 	_ "github.com/styrainc/enterprise-opa-private/capabilities"
 	eopaCmd "github.com/styrainc/enterprise-opa-private/cmd"
-	internal "github.com/styrainc/enterprise-opa-private/internal/cmd"
 	"github.com/styrainc/enterprise-opa-private/internal/license"
 	"github.com/styrainc/enterprise-opa-private/pkg/library"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
-
-func init() {
-	ast.UpdateCapabilities = internal.EnterpriseOPAExtensions
-}
 
 func main() {
 	// run all deferred functions before os.Exit

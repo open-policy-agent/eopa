@@ -4,19 +4,53 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
-
-	"github.com/open-policy-agent/opa/topdown/cache"
-	"github.com/open-policy-agent/opa/util"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
+	"github.com/open-policy-agent/opa/topdown/cache"
+	"github.com/open-policy-agent/opa/util"
 )
 
 // Builtins is the registry of built-in functions supported by Enterprise OPA.
 // Call RegisterBuiltin to add a new built-in.
 var Builtins []*ast.Builtin
+var builtinFunctions = map[string]topdown.BuiltinFunc{}
+
+func RegisterBuiltinFunc(name string, f topdown.BuiltinFunc) {
+	builtinFunctions[name] = builtinErrorWrapper(name, f)
+}
+
+func builtinErrorWrapper(name string, fn topdown.BuiltinFunc) topdown.BuiltinFunc {
+	return func(bctx topdown.BuiltinContext, args []*ast.Term, iter func(*ast.Term) error) error {
+		err := fn(bctx, args, iter)
+		if err == nil {
+			return nil
+		}
+		return handleBuiltinErr(name, bctx.Location, err)
+	}
+}
+
+func handleBuiltinErr(name string, loc *ast.Location, err error) error {
+	switch err := err.(type) {
+	case builtins.ErrOperand:
+		e := &topdown.Error{
+			Code:     topdown.TypeErr,
+			Message:  fmt.Sprintf("%v: %v", name, err.Error()),
+			Location: loc,
+		}
+		return e.Wrap(err)
+	default:
+		e := &topdown.Error{
+			Code:     topdown.BuiltinErr,
+			Message:  fmt.Sprintf("%v: %v", name, err.Error()),
+			Location: loc,
+		}
+		return e.Wrap(err)
+	}
+}
 
 // RegisterBuiltin adds a new built-in function to the registry.
 func RegisterBuiltin(b *ast.Builtin) {
@@ -377,10 +411,20 @@ func (cache *intraQueryCache) PutError(key ast.Value, err error) {
 	cache.entries.Put(key, intraQueryCacheEntry{Error: err})
 }
 
-func init() {
+func Init() {
 	BuiltinMap = map[string]*ast.Builtin{}
 	for _, b := range DefaultBuiltins {
 		RegisterBuiltin(b)     // Only used for generating Enterprise OPA-specific capabilities.
 		ast.RegisterBuiltin(b) // Normal builtin registration with OPA.
 	}
+	for name, fn := range builtinFunctions {
+		topdown.RegisterBuiltinFunc(name, fn)
+	}
+	updateCaps()
+}
+
+func enterpriseOPAExtensions(f *ast.Capabilities) {
+	features := strings.Split("bjson_bundle,grpc_service,kafka_data_plugin,git_data_plugin,ldap_data_plugin,s3_data_plugin,okta_data_plugin,http_data_plugin,lia_plugin", ",")
+	f.Features = append(f.Features, features...)
+	f.Builtins = append(f.Builtins, Builtins...)
 }

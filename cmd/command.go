@@ -12,6 +12,7 @@ import (
 	"github.com/styrainc/enterprise-opa-private/internal/license"
 	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
 	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
+	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
 	"github.com/styrainc/enterprise-opa-private/pkg/iropt"
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
@@ -21,6 +22,10 @@ const brand = "Enterprise OPA"
 func addLicenseFlags(c *cobra.Command, licenseParams *keygen.LicenseParams) {
 	c.Flags().StringVar(&licenseParams.Key, "license-key", "", "Location of file containing EOPA_LICENSE_KEY")
 	c.Flags().StringVar(&licenseParams.Token, "license-token", "", "Location of file containing EOPA_LICENSE_TOKEN")
+}
+
+func addLicenseFallbackFlags(c *cobra.Command) {
+	c.Flags().Bool("no-license-fallback", false, "Don't fall back to OPA-mode when no license provided.")
 }
 
 func addInstructionLimitFlag(c *cobra.Command, instrLimit *int64) {
@@ -76,10 +81,6 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	var optLevel int64
 	var enableOptPassFlags, disableOptPassFlags iropt.OptimizationPassFlags
 
-	// For all Enterprise OPA commands, the VM is the default target. It can be
-	// overridden for `eopa eval` by providing `-t rego`.
-	rego_vm.SetDefault(true)
-
 	// These flags are added to `eopa eval` (OPA doesn't have them). They are
 	// then passed on to the logger used with keygen for license (de)activation,
 	// heartbeating, etc. There is no extra log output from the actual policy
@@ -133,6 +134,7 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 		switch c.Name() {
 		case "run":
 			addLicenseFlags(c, lparams)
+			addLicenseFallbackFlags(c)
 			addInstructionLimitFlag(c, &instructionLimit)
 			addOptimizationFlagsAndDescription(c, &optLevel, &enableOptPassFlags, &disableOptPassFlags)
 			root.AddCommand(initRun(c, brand, lic, lparams)) // wrap OPA run
@@ -144,11 +146,11 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 			c.Flags().VarP(logLevel, "log-level", "l", "set log level")
 			c.Flags().Var(logFormat, "log-format", "set log format") // NOTE(sr): we don't support "text" here
 
-			root.AddCommand(c)
+			root.AddCommand(setDefaults(c))
 		case "version":
 			root.AddCommand(initVersion()) // override version
 		default:
-			root.AddCommand(c)
+			root.AddCommand(setDefaults(c))
 		}
 	}
 
@@ -160,4 +162,26 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	addLicenseFlags(licenseCmd, lparams)
 	root.AddCommand(licenseCmd)
 	return root
+}
+
+func setDefaults(c *cobra.Command) *cobra.Command {
+	init := func() {
+		rego_vm.SetDefault(true)
+		builtins.Init()
+	}
+	switch {
+	case c.RunE != nil:
+		prev := c.RunE
+		c.RunE = func(c *cobra.Command, args []string) error {
+			init()
+			return prev(c, args)
+		}
+	case c.Run != nil:
+		prev := c.Run
+		c.Run = func(c *cobra.Command, args []string) {
+			init()
+			prev(c, args)
+		}
+	}
+	return c
 }

@@ -63,11 +63,11 @@ var (
 	requiredKeys = ast.NewSet(ast.StringTerm("module"), ast.StringTerm("path"))
 )
 
-func builtinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter func(*ast.Term) error) error {
+func BuiltinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter func(*ast.Term) error) error {
 	pos := 1
 	obj, err := builtins.ObjectOperand(operands[0].Value, pos)
 	if err != nil {
-		return handleBuiltinErr(rego.RegoEvalName, bctx.Location, err)
+		return err
 	}
 
 	requestKeys := ast.NewSet(obj.Keys()...)
@@ -83,7 +83,7 @@ func builtinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter fun
 
 	path, err := getRequestString(obj, "path")
 	if err != nil {
-		return handleBuiltinErr(rego.RegoEvalName, bctx.Location, err)
+		return err
 	}
 
 	if p := string(path); p != "" && !gostrings.HasPrefix(p, "data.") {
@@ -94,32 +94,32 @@ func builtinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter fun
 
 	raiseError, err := getRequestBoolWithDefault(obj, "raise_error", true)
 	if err != nil {
-		return handleBuiltinErr(rego.RegoEvalName, bctx.Location, err)
+		return err
 	}
 
 	filename, err := getRequestStringWithDefault(obj, "filename")
 	if err != nil {
-		return handleBuiltinErr(rego.RegoEvalName, bctx.Location, err)
+		return err
 	}
 
 	module, err := getRequestStringWithDefault(obj, "module")
 	if err != nil {
-		return handleBuiltinErr(rego.RegoEvalName, bctx.Location, err)
+		return err
 	}
 
 	version, err := getRequestStringWithDefault(obj, "version")
 	if err != nil {
-		return handleBuiltinErr(rego.RegoEvalName, bctx.Location, err)
+		return err
 	}
 
 	interQueryCacheEnabled, err := getRequestBoolWithDefault(obj, "cache", false)
 	if err != nil {
-		return handleBuiltinErr(rego.RegoEvalName, bctx.Location, err)
+		return err
 	}
 
 	ttl, err := getRequestTimeoutWithDefault(obj, "cache_duration", interQueryCacheDurationDefault)
 	if err != nil {
-		return handleBuiltinErr(rego.RegoEvalName, bctx.Location, err)
+		return err
 	}
 
 	key := ast.NewObject(
@@ -131,12 +131,12 @@ func builtinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter fun
 
 	ref, err := ast.ParseRef(string(path))
 	if err != nil {
-		return handleBuiltinErr(rego.RegoEvalName, bctx.Location, builtins.NewOperandErr(1, "'%s' must be a reference", "path"))
+		return builtins.NewOperandErr(1, "'%s' must be a reference", "path")
 	}
 
 	sp, err := storage.NewPathForRef(ref)
 	if err != nil {
-		return handleBuiltinErr(rego.RegoEvalName, bctx.Location, builtins.NewOperandErr(1, "'%s' must be a reference", "path"))
+		return builtins.NewOperandErr(1, "'%s' must be a reference", "path")
 	}
 
 	result, err := func() (ast.Value, error) {
@@ -171,10 +171,10 @@ func builtinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter fun
 
 			result, err = ast.InterfaceToValue(m)
 			if err != nil {
-				return handleBuiltinErr(rego.RegoEvalName, bctx.Location, err)
+				return err
 			}
 		} else {
-			return handleBuiltinErr(rego.RegoEvalName, bctx.Location, err)
+			return err
 		}
 	}
 
@@ -447,25 +447,4 @@ func getCurrentTime(bctx topdown.BuiltinContext) time.Time {
 
 	current = time.Unix(0, valueNumInt).UTC()
 	return current
-}
-
-func handleBuiltinErr(name string, loc *ast.Location, err error) error {
-	switch err := err.(type) {
-	case builtins.ErrOperand:
-		return &topdown.Error{
-			Code:     topdown.TypeErr,
-			Message:  fmt.Sprintf("%v: %v", name, err.Error()),
-			Location: loc,
-		}
-	default:
-		return &topdown.Error{
-			Code:     topdown.BuiltinErr,
-			Message:  fmt.Sprintf("%v: %v", name, err.Error()),
-			Location: loc,
-		}
-	}
-}
-
-func init() {
-	rego.RegisterBuiltinRegoEval(builtinRegoEval)
 }

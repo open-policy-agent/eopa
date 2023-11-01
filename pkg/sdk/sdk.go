@@ -5,7 +5,7 @@ import (
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/sdk"
 
-	_ "github.com/styrainc/enterprise-opa-private/pkg/builtins" // Activate custom builtins.
+	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
 	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle" // Register .json extension
@@ -18,6 +18,7 @@ import (
 // specific config to its Config field.
 func DefaultOptions() sdk.Options {
 	rego_vm.SetDefault(true)
+	builtins.Init()
 
 	ekmHook := ekm.NewEKM(nil, nil)
 	ekmHook.SetLogger(logging.NewNoOpLogger())

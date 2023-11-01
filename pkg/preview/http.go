@@ -14,6 +14,7 @@ import (
 	opaTypes "github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/server/writer"
 	"github.com/open-policy-agent/opa/util"
+
 	"github.com/styrainc/enterprise-opa-private/pkg/preview/types"
 )
 

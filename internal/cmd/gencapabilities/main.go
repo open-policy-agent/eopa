@@ -11,16 +11,13 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/types"
 
-	internal "github.com/styrainc/enterprise-opa-private/internal/cmd"
+	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
 )
-
-func init() {
-	// hook Enterprise OPA capabilities extensions callback
-	ast.UpdateCapabilities = internal.EnterpriseOPAExtensions
-}
 
 // used by go-generate to create capabilities.json file
 func main() {
+	// hook Enterprise OPA capabilities extensions callback
+	builtins.Init()
 	f := ast.CapabilitiesForThisVersion()
 
 	fd, err := os.Create(os.Args[1])

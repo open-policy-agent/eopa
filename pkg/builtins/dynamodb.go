@@ -135,7 +135,7 @@ func builtinDynamoDBGet(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 	pos := 1
 	obj, err := builtins.ObjectOperand(operands[0].Value, pos)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	requestKeys := ast.NewSet(obj.Keys()...)
@@ -153,47 +153,47 @@ func builtinDynamoDBGet(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 
 	region, err := getRequestStringWithDefault(obj, "region", "")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	endpoint, err := getRequestStringWithDefault(obj, "endpoint", "")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	credentials, err := getRequestObjectWithDefault(obj, "credentials", ast.NewObject())
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	accessKey, err := getRequestStringWithDefault(credentials, "access_key", "")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	secretKey, err := getRequestStringWithDefault(credentials, "secret_key", "")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	sessionToken, err := getRequestStringWithDefault(credentials, "session_token", "")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	raiseError, err := getRequestBoolWithDefault(obj, "raise_error", true)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	interQueryCacheEnabled, err := getRequestBoolWithDefault(obj, "cache", false)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	ttl, err := getRequestTimeoutWithDefault(obj, "cache_duration", interQueryCacheDurationDefault)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	// TODO: Improve error handling to allow separation between
@@ -202,12 +202,12 @@ func builtinDynamoDBGet(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 
 	table, err := getRequestString(obj, "table")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	consistentRead, err := getRequestBoolWithDefault(obj, "consistent_read", false)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	// TODO: Projection expression and expression attribute names.
@@ -216,7 +216,7 @@ func builtinDynamoDBGet(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 
 	if responseObj, ok, err := checkCaches(bctx, cacheKey, interQueryCacheEnabled && !consistentRead, dynamoDBGetBuiltinCacheKey, dynamoDBGetInterQueryCacheHits); ok {
 		if err != nil {
-			return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+			return err
 		}
 
 		return iter(ast.NewTerm(responseObj))
@@ -227,7 +227,7 @@ func builtinDynamoDBGet(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 
 	key, err := getRequestAttributeValuesWithDefault(obj, "key", nil)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	queryErr = func() error {
@@ -275,17 +275,17 @@ func builtinDynamoDBGet(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 			m["error"] = e
 			queryErr = nil
 		} else {
-			return handleBuiltinErr(dynamoDBGetName, bctx.Location, queryErr)
+			return queryErr
 		}
 	}
 
 	responseObj, err := ast.InterfaceToValue(m)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	if err := insertCaches(bctx, cacheKey, responseObj.(ast.Object), queryErr, interQueryCacheEnabled && !consistentRead, ttl, dynamoDBGetBuiltinCacheKey); err != nil {
-		return handleBuiltinErr(dynamoDBGetName, bctx.Location, err)
+		return err
 	}
 
 	bctx.Metrics.Timer(dynamoDBGetLatencyMetricKey).Stop()
@@ -300,7 +300,7 @@ func builtinDynamoDBQuery(bctx topdown.BuiltinContext, operands []*ast.Term, ite
 	pos := 1
 	obj, err := builtins.ObjectOperand(operands[0].Value, pos)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	requestKeys := ast.NewSet(obj.Keys()...)
@@ -318,47 +318,47 @@ func builtinDynamoDBQuery(bctx topdown.BuiltinContext, operands []*ast.Term, ite
 
 	region, err := getRequestStringWithDefault(obj, "region", "")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	endpoint, err := getRequestStringWithDefault(obj, "endpoint", "")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	credentials, err := getRequestObjectWithDefault(obj, "credentials", ast.NewObject())
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	accessKey, err := getRequestStringWithDefault(credentials, "access_key", "")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	secretKey, err := getRequestStringWithDefault(credentials, "secret_key", "")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	sessionToken, err := getRequestStringWithDefault(credentials, "session_token", "")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	raiseError, err := getRequestBoolWithDefault(obj, "raise_error", true)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	interQueryCacheEnabled, err := getRequestBoolWithDefault(obj, "cache", false)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	ttl, err := getRequestTimeoutWithDefault(obj, "cache_duration", interQueryCacheDurationDefault)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	// TODO: Improve error handling to allow separation between
@@ -367,12 +367,12 @@ func builtinDynamoDBQuery(bctx topdown.BuiltinContext, operands []*ast.Term, ite
 
 	table, err := getRequestString(obj, "table")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	consistentRead, err := getRequestBoolWithDefault(obj, "consistent_read", false)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	// TODO: Projection expression and expression attribute names.
@@ -381,7 +381,7 @@ func builtinDynamoDBQuery(bctx topdown.BuiltinContext, operands []*ast.Term, ite
 
 	if responseObj, ok, err := checkCaches(bctx, cacheKey, interQueryCacheEnabled && !consistentRead, dynamoDBQueryBuiltinCacheKey, dynamoDBQueryInterQueryCacheHits); ok {
 		if err != nil {
-			return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+			return err
 		}
 
 		return iter(ast.NewTerm(responseObj))
@@ -392,47 +392,47 @@ func builtinDynamoDBQuery(bctx topdown.BuiltinContext, operands []*ast.Term, ite
 
 	exclusiveStartKey, err := getRequestAttributeValuesWithDefault(obj, "exclusive_start_key", nil)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	expressionAttributeNames, err := getRequestAttributeNamesWithDefault(obj, "expression_attribute_names", nil)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	expressionAttributeValues, err := getRequestAttributeValuesWithDefault(obj, "expression_attribute_values", nil)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	indexName, err := getRequestStringWithDefault(obj, "index_name", "")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	keyConditionExpression, err := getRequestString(obj, "key_condition_expression")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	limit, err := getRequestIntWithDefault(obj, "limit", 0)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	projectionExpression, err := getRequestStringWithDefault(obj, "projection_expression", "")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	scanIndexForward, err := getRequestBoolWithDefault(obj, "scan_index_forward", true)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	selekt, err := getRequestStringWithDefault(obj, "select", "")
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	paramString := func(s string) *string {
@@ -519,17 +519,17 @@ func builtinDynamoDBQuery(bctx topdown.BuiltinContext, operands []*ast.Term, ite
 			m["error"] = e
 			queryErr = nil
 		} else {
-			return handleBuiltinErr(dynamoDBQueryName, bctx.Location, queryErr)
+			return queryErr
 		}
 	}
 
 	responseObj, err := ast.InterfaceToValue(m)
 	if err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	if err := insertCaches(bctx, cacheKey, responseObj.(ast.Object), queryErr, interQueryCacheEnabled && !consistentRead, ttl, dynamoDBQueryBuiltinCacheKey); err != nil {
-		return handleBuiltinErr(dynamoDBQueryName, bctx.Location, err)
+		return err
 	}
 
 	bctx.Metrics.Timer(dynamoDBQueryLatencyMetricKey).Stop()
@@ -731,6 +731,6 @@ func getRequestAttributeNamesWithDefault(obj ast.Object, key string, def map[str
 }
 
 func init() {
-	topdown.RegisterBuiltinFunc(dynamoDBGetName, builtinDynamoDBGet)
-	topdown.RegisterBuiltinFunc(dynamoDBQueryName, builtinDynamoDBQuery)
+	RegisterBuiltinFunc(dynamoDBGetName, builtinDynamoDBGet)
+	RegisterBuiltinFunc(dynamoDBQueryName, builtinDynamoDBQuery)
 }

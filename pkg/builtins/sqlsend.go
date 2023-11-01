@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"math"
 	"sync"
 	"time"
@@ -131,7 +130,7 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 	pos := 1
 	obj, err := builtins.ObjectOperand(operands[0].Value, pos)
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	requestKeys := ast.NewSet(obj.Keys()...)
@@ -147,42 +146,42 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 
 	driver, err := getRequestString(obj, "driver")
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	driver, err = validateDriver(driver)
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	dsn, err := getRequestString(obj, "data_source_name")
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	maxOpenConnections, err := getRequestIntWithDefault(obj, "max_open_connections", 0)
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	maxIdleConnections, err := getRequestIntWithDefault(obj, "max_idle_connections", 2)
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	connectionMaxIdleTime, err := getRequestTimeoutWithDefault(obj, "connection_max_idle_time", 0)
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	connectionMaxLifetime, err := getRequestTimeoutWithDefault(obj, "connection_max_life_time", 0)
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	maxPreparedStatements, err := getRequestIntWithDefault(obj, "max_prepared_statements", maxPreparedStatementsDefault)
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 	if maxPreparedStatements <= 0 {
 		maxPreparedStatements = 1
@@ -190,28 +189,28 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 
 	query, err := getRequestString(obj, "query")
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 	span.SetAttributes(attribute.String("query", query))
 
 	raiseError, err := getRequestBoolWithDefault(obj, "raise_error", true)
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	rowObject, err := getRequestBoolWithDefault(obj, "row_object", false)
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	interQueryCacheEnabled, err := getRequestBoolWithDefault(obj, "cache", false)
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	ttl, err := getRequestTimeoutWithDefault(obj, "cache_duration", interQueryCacheDurationDefault)
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	// TODO: Improve error handling to allow separation between
@@ -222,7 +221,7 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 	if v := obj.Get(ast.StringTerm("args")); v != nil {
 		a, err := ast.JSON(v.Value)
 		if err != nil {
-			return handleBuiltinErr(sqlSendName, bctx.Location, err)
+			return err
 		}
 
 		arr, ok := a.([]interface{})
@@ -237,7 +236,7 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 
 	if responseObj, ok, err := checkCaches(bctx, obj, interQueryCacheEnabled, sqlSendBuiltinCacheKey, sqlSendInterQueryCacheHits); ok {
 		if err != nil {
-			return handleBuiltinErr(sqlSendName, bctx.Location, err)
+			return err
 		}
 
 		return iter(ast.NewTerm(responseObj))
@@ -335,17 +334,17 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 			m["error"] = e
 			queryErr = nil
 		} else {
-			return handleBuiltinErr(sqlSendName, bctx.Location, queryErr)
+			return queryErr
 		}
 	}
 
 	responseObj, err := ast.InterfaceToValue(m)
 	if err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	if err := insertCaches(bctx, obj, responseObj.(ast.Object), queryErr, interQueryCacheEnabled, ttl, sqlSendBuiltinCacheKey); err != nil {
-		return handleBuiltinErr(sqlSendName, bctx.Location, err)
+		return err
 	}
 
 	bctx.Metrics.Timer(sqlSendLatencyMetricKey).Stop()
@@ -498,23 +497,6 @@ func (s *databaseStmt) Release(n int, close bool) {
 	}
 }
 
-func handleBuiltinErr(name string, loc *ast.Location, err error) error {
-	switch err := err.(type) {
-	case builtins.ErrOperand:
-		return &topdown.Error{
-			Code:     topdown.TypeErr,
-			Message:  fmt.Sprintf("%v: %v", name, err.Error()),
-			Location: loc,
-		}
-	default:
-		return &topdown.Error{
-			Code:     topdown.BuiltinErr,
-			Message:  fmt.Sprintf("%v: %v", name, err.Error()),
-			Location: loc,
-		}
-	}
-}
-
 func validateDriver(d string) (string, error) {
 	switch d {
 	case "postgres":
@@ -527,5 +509,5 @@ func validateDriver(d string) (string, error) {
 }
 
 func init() {
-	topdown.RegisterBuiltinFunc(sqlSendName, builtinSQLSend)
+	RegisterBuiltinFunc(sqlSendName, builtinSQLSend)
 }

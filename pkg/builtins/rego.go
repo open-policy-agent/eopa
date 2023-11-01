@@ -5,6 +5,7 @@ import (
 	"github.com/open-policy-agent/opa/types"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins/rego"
+	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
 var (
@@ -19,3 +20,7 @@ var (
 		Nondeterministic: true,
 	}
 )
+
+func init() {
+	RegisterBuiltinFunc(rego.RegoEvalName, vm.BuiltinRegoEval)
+}
