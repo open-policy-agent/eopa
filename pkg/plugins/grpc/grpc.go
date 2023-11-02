@@ -25,6 +25,7 @@ import (
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
+	"github.com/open-policy-agent/opa/logging"
 	metrics "github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/plugins"
 	opa_bundle_plugin "github.com/open-policy-agent/opa/plugins/bundle"
@@ -34,6 +35,7 @@ import (
 	"github.com/open-policy-agent/opa/server/types"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/topdown"
+	"github.com/open-policy-agent/opa/topdown/builtins"
 	iCache "github.com/open-policy-agent/opa/topdown/cache"
 
 	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
@@ -741,7 +743,7 @@ type decisionLogger struct {
 	logger    func(context.Context, *opa_server.Info) error
 }
 
-func (l decisionLogger) Log(ctx context.Context, txn storage.Transaction, decisionID, remoteAddr, path string, query string, goInput *interface{}, astInput ast.Value, goResults *interface{}, err error, m metrics.Metrics) error {
+func (l decisionLogger) Log(ctx context.Context, txn storage.Transaction, decisionID, remoteAddr, path string, query string, goInput *interface{}, astInput ast.Value, goResults *interface{}, ndbCache builtins.NDBCache, err error, m metrics.Metrics) error {
 	if l.logger == nil {
 		return nil
 	}
@@ -749,6 +751,11 @@ func (l decisionLogger) Log(ctx context.Context, txn storage.Transaction, decisi
 	bundles := make(map[string]opa_server.BundleInfo, len(l.revisions))
 	for name, rev := range l.revisions {
 		bundles[name] = opa_server.BundleInfo{Revision: rev}
+	}
+
+	rctx := logging.RequestContext{}
+	if r, ok := logging.FromContext(ctx); ok {
+		rctx = *r
 	}
 
 	info := &opa_server.Info{
@@ -765,6 +772,15 @@ func (l decisionLogger) Log(ctx context.Context, txn storage.Transaction, decisi
 		Results:    goResults,
 		Error:      err,
 		Metrics:    m,
+		RequestID:  rctx.ReqID,
+	}
+
+	if ndbCache != nil {
+		x, err := ast.JSON(ndbCache.AsValue())
+		if err != nil {
+			return err
+		}
+		info.NDBuiltinCache = &x
 	}
 
 	if sctx := trace.SpanFromContext(ctx).SpanContext(); sctx.IsValid() {

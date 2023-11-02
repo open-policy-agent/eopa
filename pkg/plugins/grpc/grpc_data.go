@@ -95,8 +95,14 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid input")
 	}
-	// TODO(philip): Resolve this to the correct interface type for DL.
 	var goInput *interface{}
+	if input != nil {
+		x, err := ast.JSON(input)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not marshal input: %s", err)
+		}
+		goInput = &x
+	}
 
 	var ndbCache builtins.NDBCache
 	if s.ndbCacheEnabled {
@@ -144,13 +150,13 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 
 		rego, err := s.makeRego(ctx, strictBuiltinErrors, txn, input, path, includeInstrumentation, buf, opts)
 		if err != nil {
-			_ = logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, nil, err, m)
+			_ = logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, nil, ndbCache, err, m)
 			return nil, status.Errorf(codes.Internal, "failed to create Rego evaluator: %v", err)
 		}
 
 		pq, err := rego.PrepareForEval(ctx)
 		if err != nil {
-			_ = logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, nil, err, m)
+			_ = logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, nil, ndbCache, err, m)
 			return nil, status.Errorf(codes.Internal, "failed to parse Rego query: %v", err)
 		}
 		preparedQuery = &pq
@@ -174,7 +180,7 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 	// m.Timer(metrics.ServerHandler).Stop()
 	// Handle results.
 	if err != nil {
-		_ = logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, nil, err, m)
+		_ = logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, nil, ndbCache, err, m)
 		return nil, status.Errorf(codes.Internal, "evaluation failed: %v", err)
 	}
 
@@ -184,7 +190,7 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 
 	// TODO: Skip metrics and provenance for now...
 	if len(rs) == 0 {
-		err = logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, nil, err, m)
+		err = logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, nil, ndbCache, err, m)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "evaluation failed: %v", err)
 		}
@@ -207,7 +213,7 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	// Log successful decision:
-	if err := logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, resultValue, nil, m); err != nil {
+	if err := logger.Log(ctx, txn, decisionID, remoteAddr, path, "", goInput, input, resultValue, ndbCache, nil, m); err != nil {
 		return nil, status.Errorf(codes.Internal, "evaluation failed: %v", err)
 	}
 	return &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: path, Document: bv}}, nil

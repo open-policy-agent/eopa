@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -151,6 +152,7 @@ plugins:
 	}
 	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
+	messageCount := 0
 	for i := 0; i < 3; i++ {
 		if err := grpcurlSimpleCheck("-plaintext", "localhost:9090", "list"); err != nil {
 			if i == 2 {
@@ -159,29 +161,32 @@ plugins:
 			time.Sleep(time.Second)
 			continue
 		}
+		messageCount++
 	}
 
 	{
-		_ = grpcurl(t, "-d", `{"policy": {"path": "/test", "text": "package foo allow := x {x = true}"}}`, "-plaintext", "localhost:9090", "eopa.policy.v1.PolicyService/CreatePolicy")
+		expectedReqID := messageCount + 2
+		_ = grpcurl(t, "-d", `{"policy": {"path": "/test", "text": "package bar allow := x {x = true}"}}`, "-plaintext", "localhost:9090", "eopa.policy.v1.PolicyService/CreatePolicy")
 		// "msg":"Received request.", "req_id":5, "req_method":"/eopa.policy.v1.PolicyService/CreatePolicy"
 		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
 			return fieldContainsString(m, "msg", "Received request.") &&
-				fieldEqualsInt(m, "req_id", 5) &&
+				fieldEqualsInt(m, "req_id", expectedReqID) &&
 				fieldContainsString(m, "req_method", "/eopa.policy.v1.PolicyService/CreatePolicy")
 		}, time.Second)
 		// "msg":"Sent response.", "req_id":5, "req_method":"/eopa.policy.v1.PolicyService/CreatePolicy"
 		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
 			return fieldContainsString(m, "msg", "Sent response.") &&
-				fieldEqualsInt(m, "req_id", 5) &&
+				fieldEqualsInt(m, "req_id", expectedReqID) &&
 				fieldContainsString(m, "req_method", "/eopa.policy.v1.PolicyService/CreatePolicy")
 		}, time.Second)
 	}
 	{
+		expectedReqID := messageCount + 4
 		_ = grpcurl(t, "-d", `{"path": "/foo"}`, "-plaintext", "localhost:9090", "eopa.data.v1.DataService/GetData")
 		// "msg":"Received request.", "req_id":7, "req_method":"/eopa.data.v1.DataService/GetData"
 		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
 			return fieldContainsString(m, "msg", "Received request.") &&
-				fieldEqualsInt(m, "req_id", 7) &&
+				fieldEqualsInt(m, "req_id", expectedReqID) &&
 				fieldContainsString(m, "req_method", "/eopa.data.v1.DataService/GetData")
 		}, time.Second)
 		// {"decision_id":"a5d51764-b1ce-4d80-8c0f-0e96b0ed4f04", "msg":"Decision Log", "path":"/foo", "type":"openpolicyagent.org/decision_logs"}
@@ -196,10 +201,100 @@ plugins:
 		// "msg":"Sent response.", "req_id":7, "req_method":"/eopa.data.v1.DataService/GetData"
 		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
 			return fieldContainsString(m, "msg", "Sent response.") &&
-				fieldEqualsInt(m, "req_id", 7) &&
+				fieldEqualsInt(m, "req_id", expectedReqID) &&
 				fieldContainsString(m, "req_method", "/eopa.data.v1.DataService/GetData")
 		}, time.Second)
+	}
+}
 
+func TestGRPCDecisionLogsStreamingRW(t *testing.T) {
+	data := `{}`
+	policy := `package test
+import future.keywords
+p if rand.intn("coin", 2) == 0
+`
+	config := `
+distributed_tracing:
+  type: grpc
+  address: 127.0.0.1:4317
+  sample_percentage: 100
+
+decision_logs:
+  console: true
+
+plugins:
+  grpc:
+    addr: localhost:9090
+`
+	eopa, eopaOut := eopaRun(t, policy, data, config)
+	if err := eopa.Start(); err != nil {
+		t.Fatal(err)
+	}
+	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+
+	messageCount := 0
+	for i := 0; i < 3; i++ {
+		if err := grpcurlSimpleCheck("-plaintext", "localhost:9090", "list"); err != nil {
+			if i == 2 {
+				t.Fatalf("wait for gRPC endpoint: %v", err)
+			}
+			time.Sleep(time.Second)
+			continue
+		}
+		messageCount++
+	}
+
+	{
+		expectedReqID := messageCount + 2
+		_ = grpcurl(t, "-d", `{"policy": {"path": "/test_streaming", "text": "package bar\nmain[\"allowed\"] := allow\ndefault allow := false\nallow {input.user == \"bob\"}"}}`, "-plaintext", "localhost:9090", "eopa.policy.v1.PolicyService/CreatePolicy")
+		// "msg":"Received request.", "req_id":5, "req_method":"/eopa.policy.v1.PolicyService/CreatePolicy"
+		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
+			return fieldContainsString(m, "msg", "Received request.") &&
+				fieldEqualsInt(m, "req_id", expectedReqID) &&
+				fieldContainsString(m, "req_method", "/eopa.policy.v1.PolicyService/CreatePolicy")
+		}, time.Second)
+		// "msg":"Sent response.", "req_id":5, "req_method":"/eopa.policy.v1.PolicyService/CreatePolicy"
+		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
+			return fieldContainsString(m, "msg", "Sent response.") &&
+				fieldEqualsInt(m, "req_id", expectedReqID) &&
+				fieldContainsString(m, "req_method", "/eopa.policy.v1.PolicyService/CreatePolicy")
+		}, time.Second)
+	}
+	{
+		expectedReqID := messageCount + 4
+		_ = grpcurl(t, "-d", `{"reads":[{"get":{"path":"/bar/main","input":{"document":{"user":"alice"}}}},{"get":{"path":"/bar/main","input":{"document":{"user":"bob"}}}}]}`, "-plaintext", "localhost:9090", "eopa.data.v1.DataService/StreamingDataRW")
+		// "msg":"Received request.", "req_id":7, "req_method":"/eopa.data.v1.DataService/StreamingDataRW"
+		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
+			return fieldContainsString(m, "msg", "Received request.") &&
+				fieldEqualsInt(m, "req_id", expectedReqID) &&
+				fieldContainsString(m, "req_method", "/eopa.data.v1.DataService/StreamingDataRW")
+		}, time.Second)
+		// {"decision_id":"a5d51764-b1ce-4d80-8c0f-0e96b0ed4f04", "msg":"Decision Log", "path":"/foo", "type":"openpolicyagent.org/decision_logs"}
+		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
+			return fieldContainsString(m, "msg", "Decision Log") &&
+				fieldContainsString(m, "path", "/bar") &&
+				fieldRegexMatch(m, "decision_id", `[[:alnum:]]{8}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{12}`) &&
+				fieldContainsString(m, "type", "openpolicyagent.org/decision_logs") &&
+				fieldRegexMatch(m, "trace_id", `[0-9a-f]{32}`) &&
+				fieldEqualsInt(m, "req_id", expectedReqID) &&
+				fieldRegexMatch(m, "span_id", `[0-9a-f]{16}`)
+		}, time.Second)
+		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
+			return fieldContainsString(m, "msg", "Decision Log") &&
+				fieldContainsString(m, "path", "/bar") &&
+				fieldRegexMatch(m, "decision_id", `[[:alnum:]]{8}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{12}`) &&
+				fieldContainsString(m, "type", "openpolicyagent.org/decision_logs") &&
+				fieldRegexMatch(m, "trace_id", `[0-9a-f]{32}`) &&
+				fieldEqualsInt(m, "req_id", expectedReqID) &&
+				fieldRegexMatch(m, "span_id", `[0-9a-f]{16}`)
+		}, time.Second)
+		fmt.Println("Waiting for Log...")
+		// "msg":"Sent response.", "req_id":7, "req_method":"/eopa.data.v1.DataService/StreamingDataRW"
+		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
+			return fieldContainsString(m, "msg", "Sent response.") &&
+				fieldEqualsInt(m, "req_id", expectedReqID) &&
+				fieldContainsString(m, "req_method", "/eopa.data.v1.DataService/StreamingDataRW")
+		}, time.Second)
 	}
 }
 

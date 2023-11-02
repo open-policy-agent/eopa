@@ -65,6 +65,17 @@ func NewLoggingUnaryServerInterceptor(counter *uint64, logger logging.Logger) gr
 	}
 }
 
+// Borrowed straight from the Go gRPC examples.
+// Ref: https://github.com/grpc/grpc-go/examples/features/metadata_interceptor/server/main.go
+type wrappedStream struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (s *wrappedStream) Context() context.Context {
+	return s.ctx
+}
+
 // Reduced version of the OPA HTTP request logging wrapper. The function
 // generates a stream request interceptor for the gRPC server that is
 // pre-loaded with the correct logger to use.
@@ -87,7 +98,8 @@ func NewLoggingStreamServerInterceptor(counter *uint64, logger logging.Logger) g
 
 		// Note(philip): Can't pre-load the merged logging context here.
 		// gRPC streams don't let you mangle the context, unfortunately.
-		err := handler(srv, ss)
+		updatedCtx := logging.NewContext(ctx, &rctx)
+		err := handler(srv, &wrappedStream{ss, updatedCtx})
 		dt := time.Since(t0)
 
 		if logging.Info <= logger.GetLevel() {
