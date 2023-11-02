@@ -993,80 +993,66 @@ func (with with) upsert(state *State, original Local, pathLen uint32, value Loca
 		return nil, err
 	}
 
-	nested := result
-	var last int
+	// We insert sthe values/nested objects into their parents
+	// starting from the leaf: this accommodates the insert
+	// operations which may return a new object instance.
 
-	type entry struct {
-		value    Value
-		modified bool
-		key      *fjson.String
+	insertToParent := func(obj Value) error {
+		result = obj
+		return nil
 	}
 
-	var path []entry
-
+	obj := result
 	pathLen-- // upto last item
 	if err := with.PathIter(func(i uint32, arg int) error {
-		if i == pathLen {
-			last = arg
-			return nil
-		}
 		key := state.String(StringIndexConst(arg))
-		next, ok, err := ops.Get(state.Globals.Ctx, nested, key)
+
+		if i == pathLen {
+			obj, _, err := ops.ObjectInsert(state.Globals.Ctx, obj, key, state.Value(value))
+			if err != nil {
+				return err
+			}
+
+			return insertToParent(obj)
+		}
+
+		child, ok, err := ops.Get(state.Globals.Ctx, obj, key)
 		if err != nil {
 			return err
 		}
 
 		var isObject bool
 		if !ok {
-			next = ops.MakeObject()
-			nested, ok, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
-		} else if isObject, err = ops.IsObject(state.Globals.Ctx, next); err != nil {
+			child = ops.MakeObject()
+		} else if isObject, err = ops.IsObject(state.Globals.Ctx, child); err != nil {
 			return err
 		} else if !isObject {
-			next = ops.MakeObject()
-			nested, ok, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
+			child = ops.MakeObject()
 		} else {
-			next, err = ops.CopyShallow(state.Globals.Ctx, next)
-			if err == nil {
-				nested, ok, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, next)
-			}
+			child, err = ops.CopyShallow(state.Globals.Ctx, child)
 		}
 
 		if err != nil {
 			return err
 		}
 
-		path = append(path, entry{nested, ok, key})
-		nested = next
+		curr, i2p := obj, insertToParent
+		insertToParent = func(child Value) error {
+			curr, _, err := ops.ObjectInsert(state.Globals.Ctx, curr, key, child)
+			if err != nil {
+				return err
+			}
+
+			return i2p(curr)
+		}
+
+		obj = child
 		return nil
 	}); err != nil {
 		return nil, err
 	}
 
-	key := state.String(StringIndexConst(last))
-	nested, ok, err = ops.ObjectInsert(state.Globals.Ctx, nested, key, state.Value(value))
-	path = append(path, entry{nested, ok, key})
-
-	if err != nil {
-		return nil, err
-	}
-
-	var rest bool
-	for i := range path {
-		e := path[len(path)-i-1]
-		if rest || e.modified {
-			rest = true
-
-			if i > 0 {
-				path[i-1].value, _, err = ops.ObjectInsert(state.Globals.Ctx, path[i-1].value, path[i-1].key, path[i].value)
-				if err != nil {
-					return nil, err
-				}
-			}
-		}
-	}
-
-	return path[0].value, nil
+	return result, nil
 }
 
 // noescape hides a pointer from escape analysis.  noescape is
