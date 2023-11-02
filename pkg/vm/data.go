@@ -404,7 +404,8 @@ func (*DataOperations) MakeBoolean(v bool) fjson.Json {
 }
 
 func (*DataOperations) MakeObject() Object {
-	return NewObject()
+	// TODO: Use NewObject() once the with statement is fixed.
+	return newObjectLarge(0)
 }
 
 func (*DataOperations) MakeNull() fjson.Json {
