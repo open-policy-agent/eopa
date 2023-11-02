@@ -205,6 +205,10 @@ func (o *objectCompact[T]) Append(hash uint64, k, v interface{}) error {
 }
 
 func (o *objectCompact[T]) Get(ctx context.Context, k interface{}) (interface{}, bool, error) {
+	if o.n == 0 {
+		return nil, false, nil
+	}
+
 	hash, err := o.hash(ctx, k)
 	if err != nil {
 		return nil, false, err

@@ -227,6 +227,10 @@ func (o *setCompact[T]) Append(hash uint64, v fjson.Json) error {
 }
 
 func (o *setCompact[T]) Get(ctx context.Context, v fjson.Json) (fjson.Json, bool, error) {
+	if o.n == 0 {
+		return nil, false, nil
+	}
+
 	hash, err := o.hash(ctx, v)
 	if err != nil {
 		return nil, false, err
