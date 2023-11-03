@@ -789,21 +789,12 @@ func binaryOrBuiltin(state *State, args []Value) error {
 	}
 
 	result := newSet(n)
-
-	_, err = a.Iter(func(x fjson.Json) (bool, error) {
-		var err error
-		result, err = result.Add(state.Globals.Ctx, x)
-		return false, err
-	})
+	result, err = result.MergeWith(state.Globals.Ctx, a)
 	if err != nil {
 		return err
 	}
 
-	_, err = b.Iter(func(x fjson.Json) (bool, error) {
-		var err error
-		result, err = result.Add(state.Globals.Ctx, x)
-		return false, err
-	})
+	result, err = result.MergeWith(state.Globals.Ctx, b)
 	if err != nil {
 		return err
 	}
