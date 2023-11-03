@@ -2,10 +2,13 @@ package vm
 
 import (
 	"context"
+	"errors"
 	"math/big"
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
+
+var errNotEqual = errors.New("not equal")
 
 func equalOp(ctx context.Context, a, b interface{}) (bool, error) {
 	switch x := a.(type) {
@@ -77,84 +80,160 @@ func equalObject(ctx context.Context, a, b interface{}) (bool, error) {
 		case fjson.Object:
 			return a.Compare(b) == 0, nil
 
-		case IterableObject:
-			return equalObject(ctx, b, a)
+		case Object:
+			nb, err := b.Len(ctx)
+			if err != nil {
+				return false, err
+			}
 
-		default:
-			return false, nil
+			if nb != a.Len() {
+				return false, nil
+			}
+
+			if err := b.Iter(ctx, func(k, vb T) (bool, error) {
+				s, ok := k.(*fjson.String)
+				if !ok {
+					return true, errNotEqual
+				}
+
+				va := a.Value(s.Value())
+				if va == nil {
+					return true, errNotEqual
+				}
+
+				if eq, err := equalOp(ctx, va, vb); err != nil {
+					return true, err
+				} else if !eq {
+					return true, errNotEqual
+				}
+
+				return false, nil
+			}); errors.Is(err, errNotEqual) {
+				return false, nil
+			} else if err != nil {
+				return false, err
+			}
+
+			return true, nil
+
+		case IterableObject:
+			nb := 0
+			if err := b.Iter(ctx, func(k, vb T) (bool, error) {
+				s, ok := k.(*fjson.String)
+				if !ok {
+					return true, errNotEqual
+				}
+
+				va := a.Value(s.Value())
+				if va == nil {
+					return true, errNotEqual
+				}
+
+				nb++
+
+				if eq, err := equalOp(ctx, va, vb); err != nil {
+					return true, err
+				} else if !eq {
+					return true, errNotEqual
+				}
+
+				return false, nil
+			}); errors.Is(err, errNotEqual) {
+				return false, nil
+			} else if err != nil {
+				return false, err
+			}
+
+			return a.Len() == nb, nil
+		}
+
+	case Object:
+		switch b := b.(type) {
+		case fjson.Object:
+			return equalOp(ctx, b, a)
+
+		case Object:
+			na, err := a.Len(ctx)
+			if err != nil {
+				return false, err
+			}
+
+			nb, err := b.Len(ctx)
+			if err != nil {
+				return false, err
+			}
+
+			if na != nb {
+				return false, nil
+			}
+
+			if err := b.Iter(ctx, func(k, vb T) (bool, error) {
+				va, ok, err := a.Get(ctx, k)
+				if err != nil {
+					return true, err
+				} else if !ok {
+					return true, errNotEqual
+				}
+
+				if eq, err := equalOp(ctx, va, vb); err != nil {
+					return true, err
+				} else if !eq {
+					return true, errNotEqual
+				}
+
+				return false, nil
+
+			}); errors.Is(err, errNotEqual) {
+				return false, nil
+			} else if err != nil {
+				return false, err
+			}
+
+			return true, nil
+
+		case IterableObject:
+			return equalOp(ctx, b, a)
 		}
 
 	case IterableObject:
 		switch b := b.(type) {
 		case fjson.Object:
-			n := 0
-			err := a.Iter(ctx, func(k, va T) (bool, error) {
-				s, ok := k.(*fjson.String)
-				if !ok {
-					n = -1
-					return true, nil
-				}
+			return equalOp(ctx, b, a)
 
-				vb := b.Value(s.Value())
-				if vb == nil {
-					n = -1
-					return true, nil
-				}
-
-				n++
-
-				eq, err := equalOp(ctx, va, vb)
-				if err != nil {
-					return true, err
-				} else if !eq {
-					n = -1
-				}
-
-				return !eq, nil
-			})
-			if n < 0 {
-				return false, nil
-			}
-
-			return b.Len() == n, err
+		case Object:
+			return equalOp(ctx, b, a)
 
 		case IterableObject:
-			n := 0
-			if err := a.Iter(ctx, func(k, va T) (bool, error) {
-				vb, ok, err := b.Get(ctx, k)
+			nb := 0
+			if err := b.Iter(ctx, func(k, vb T) (bool, error) {
+				va, ok, err := a.Get(ctx, k)
 				if err != nil {
 					return true, err
 				} else if !ok {
-					n = -1
-					return true, nil
+					return true, errNotEqual
 				}
 
-				n++
+				nb++
 
-				eq, err := equalOp(ctx, va, vb)
-				if err != nil {
+				if eq, err := equalOp(ctx, va, vb); err != nil {
 					return true, err
 				} else if !eq {
-					n = -1
+					return true, errNotEqual
 				}
 
-				return !eq, nil
-			}); err != nil {
-				return false, err
-			} else if n < 0 {
 				return false, nil
+			}); errors.Is(err, errNotEqual) {
+				return false, nil
+			} else if err != nil {
+				return false, err
 			}
 
-			m, err := b.Len(ctx)
-			return n == m, err
-
-		default:
-			return false, nil
+			na, err := a.Len(ctx)
+			return na == nb, err
 		}
-
-	default:
-		return false, nil
 	}
+
+	return false, nil
 }
 
 func compare(x, y fjson.Float) int {
