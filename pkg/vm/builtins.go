@@ -783,7 +783,12 @@ func binaryOrBuiltin(state *State, args []Value) error {
 		return err
 	}
 
-	result := NewSet()
+	n := a.Len()
+	if m := b.Len(); m > n {
+		n = m
+	}
+
+	result := newSet(n)
 
 	_, err = a.Iter(func(x fjson.Json) (bool, error) {
 		var err error
@@ -830,10 +835,12 @@ func objectUnionBuiltin(state *State, args []Value) error {
 }
 
 func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
-	result := NewObject()
+	var result Object
 
 	switch a := a.(type) {
 	case fjson.Object:
+		result = newObject(a.Len())
+
 		var getValue func(key string) (fjson.Json, bool, error)
 
 		switch b := b.(type) {
@@ -903,6 +910,8 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 	case IterableObject:
 		switch b := b.(type) {
 		case fjson.Object:
+			result = newObject(b.Len())
+
 			for _, key := range b.Names() {
 				if _, ok, err := a.Get(ctx, fjson.NewString(key)); err != nil {
 					return nil, err
@@ -951,6 +960,8 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 			}
 
 		case IterableObject:
+			result = NewObject()
+
 			if err := b.Iter(ctx, func(key, value interface{}) (bool, error) {
 				if _, ok, err := a.Get(ctx, key); err != nil {
 					return true, err

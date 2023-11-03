@@ -169,13 +169,31 @@ func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (inte
 	case fjson.Object:
 		return v.Clone(false), nil
 	case Set:
-		set := NewSet()
+		set := newSet(v.Len())
 		_, err := v.Iter(func(v fjson.Json) (bool, error) {
 			var err error
 			set, err = set.Add(ctx, v)
 			return err != nil, err
 		})
 		return set, err
+	case Object:
+		// TODO: Return a copy-on-write object.
+		n, err := v.Len(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		obj := newObject(n)
+		if err := v.Iter(ctx, func(k, v interface{}) (bool, error) {
+			var err error
+			obj, err = obj.Insert(ctx, k, v)
+			return err != nil, err
+		}); err != nil {
+			return nil, err
+		}
+
+		return obj, nil
+
 	case IterableObject:
 		// TODO: Return a copy-on-write object.
 		obj := NewObject()
@@ -254,7 +272,7 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 		}
 		return arr, nil
 	case map[string]interface{}:
-		obj := NewObject()
+		obj := newObject(len(x))
 		for k, v := range x {
 			y, err := o.FromInterface(ctx, v)
 			if err != nil {
@@ -276,7 +294,7 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 		}
 		return fjson.NewArray(values, len(x)), nil
 	case map[string]string:
-		obj := NewObject()
+		obj := newObject(len(x))
 		for k, v := range x {
 			var err error
 			if obj, err = obj.Insert(ctx, fjson.NewString(k), fjson.NewString(v)); err != nil {
@@ -285,7 +303,7 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 		}
 		return obj, nil
 	case ast.Object:
-		obj := NewObject()
+		obj := newObject(x.Len())
 		if err := x.Iter(func(k, v *ast.Term) error {
 			kj, err := o.FromInterface(ctx, k)
 			if err != nil {
@@ -304,7 +322,7 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (inte
 	case ast.Ref:
 		notImplemented()
 	case ast.Set:
-		set := NewSet()
+		set := newSet(x.Len())
 		err := x.Iter(func(v *ast.Term) error {
 			y, err := o.FromInterface(ctx, v)
 			if err != nil {
