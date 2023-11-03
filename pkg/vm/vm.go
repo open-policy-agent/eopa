@@ -32,6 +32,14 @@ var (
 	DefaultLimits = Limits{
 		Instructions: 100000000,
 	}
+
+	registersPool = sync.Pool{
+		New: newRegisterPoolElement,
+	}
+
+	statePool = sync.Pool{
+		New: newStateElement,
+	}
 )
 
 type (
@@ -68,8 +76,6 @@ type (
 	}
 
 	Globals struct {
-		registersPool          sync.Pool
-		statePool              sync.Pool
 		Time                   time.Time
 		Metrics                metrics.Metrics
 		PrintHook              print.Hook
@@ -250,27 +256,21 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 		}
 
 		globals := &Globals{
-			vm:                  vm,
-			Limits:              *opts.Limits,
-			memoize:             []map[k]Value{{}},
-			Ctx:                 ctx,
-			Input:               input,
-			Metrics:             opts.Metrics,
-			Time:                opts.Time,
-			Seed:                opts.Seed,
-			Runtime:             runtime,
-			PrintHook:           opts.PrintHook,
-			StrictBuiltinErrors: opts.StrictBuiltinErrors,
-			NDBCache:            opts.NDBCache,
-			Capabilities:        opts.Capabilities,
-			TracingOpts:         opts.TracingOpts,
-			BuiltinFuncs:        opts.BuiltinFuncs,
-			registersPool: sync.Pool{
-				New: newRegisterPoolElement,
-			},
-			statePool: sync.Pool{
-				New: newStateElement,
-			},
+			vm:                     vm,
+			Limits:                 *opts.Limits,
+			memoize:                []map[k]Value{{}},
+			Ctx:                    ctx,
+			Input:                  input,
+			Metrics:                opts.Metrics,
+			Time:                   opts.Time,
+			Seed:                   opts.Seed,
+			Runtime:                runtime,
+			PrintHook:              opts.PrintHook,
+			StrictBuiltinErrors:    opts.StrictBuiltinErrors,
+			NDBCache:               opts.NDBCache,
+			Capabilities:           opts.Capabilities,
+			TracingOpts:            opts.TracingOpts,
+			BuiltinFuncs:           opts.BuiltinFuncs,
 			ResultSet:              vm.ops.MakeSet(),
 			Cache:                  opts.Cache,
 			InterQueryBuiltinCache: opts.InterQueryBuiltinCache,
@@ -405,7 +405,7 @@ func (b *bitset) isSet(i int) bool {
 }
 
 func newState(globals *Globals, stats *Statistics) *State {
-	s := globals.statePool.Get().(*State)
+	s := statePool.Get().(*State)
 
 	s.Globals = globals
 	s.locals = Locals{ret: -1}
@@ -432,10 +432,11 @@ func (s *State) Release() {
 		}
 		next = p.next
 		p.next = nil
-		s.Globals.registersPool.Put(p) //nolint: staticcheck
+		registersPool.Put(p) //nolint: staticcheck
 	}
 
-	s.Globals.statePool.Put(s)
+	*s = State{}
+	statePool.Put(s)
 }
 
 func (s *State) New() *State {
@@ -709,7 +710,7 @@ func (s *State) findReg(v Local) *registersList {
 	r := &s.locals.registers
 	for i := 0; i < buckets; i++ {
 		if r.next == nil {
-			r.next = s.Globals.registersPool.Get().(*registersList)
+			r.next = registersPool.Get().(*registersList)
 		}
 		r = r.next
 	}
@@ -727,7 +728,7 @@ func (s *State) find2Regs(v1, v2 Local) (*registersList, *registersList) {
 	for i := 0; i < buckets1 || i < buckets2; {
 		next := r.next
 		if next == nil {
-			next = s.Globals.registersPool.Get().(*registersList)
+			next = registersPool.Get().(*registersList)
 			r.next = next
 		}
 
