@@ -26,6 +26,8 @@ type Set interface {
 	Equal(ctx context.Context, other Set) (bool, error)
 	Len() int
 	Hash(ctx context.Context) (uint64, error)
+	MergeWith(ctx context.Context, other Set) (Set, error)
+	mergeTo(ctx context.Context, other Set) (Set, error)
 }
 
 func NewSet() Set {
@@ -86,6 +88,19 @@ func (o *setLarge) Add(ctx context.Context, v fjson.Json) (Set, error) {
 	o.n++
 
 	return o, nil
+}
+
+func (o *setLarge) MergeWith(ctx context.Context, other Set) (Set, error) {
+	return other.mergeTo(ctx, o)
+}
+
+func (o *setLarge) mergeTo(ctx context.Context, other Set) (Set, error) {
+	_, err := o.Iter(func(v fjson.Json) (bool, error) {
+		var err error
+		other, err = other.Add(ctx, v) // TODO: Avoid recomputing the hash.
+		return false, err
+	})
+	return other, err
 }
 
 func (o *setLarge) Append(hash uint64, v fjson.Json) error {
@@ -232,6 +247,19 @@ func (o *setCompact[T]) Add(ctx context.Context, v fjson.Json) (Set, error) {
 	o.table[o.n] = hashSetCompactEntry{hash: hash, v: v}
 	o.n++
 	return o, nil
+}
+
+func (o *setCompact[T]) MergeWith(ctx context.Context, other Set) (Set, error) {
+	return other.mergeTo(ctx, o)
+}
+
+func (o *setCompact[T]) mergeTo(ctx context.Context, other Set) (Set, error) {
+	_, err := o.Iter(func(v fjson.Json) (bool, error) {
+		var err error
+		other, err = other.Add(ctx, v) // TODO: Avoid recomputing the hash.
+		return false, err
+	})
+	return other, err
 }
 
 func (o *setCompact[T]) Append(hash uint64, v fjson.Json) error {

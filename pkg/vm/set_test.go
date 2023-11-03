@@ -96,6 +96,30 @@ func TestSet(t *testing.T) {
 				t.Fatal("unexpected hash")
 			}
 
+			// MergeWith
+			merged := NewSet()
+			merged, err := merged.Add(ctx, fjson.NewString("merge"))
+			if err != nil {
+				t.Fatal("unexpected add error")
+			}
+
+			expected["merge"] = struct{}{}
+
+			merged, err = merged.MergeWith(ctx, set)
+			if err != nil {
+				t.Fatal("unexpected merge error")
+			}
+
+			contents = make(map[string]struct{})
+			merged.Iter(func(v fjson.Json) (bool, error) {
+				contents[v.(*fjson.String).Value()] = struct{}{}
+				return false, nil
+			})
+
+			if !reflect.DeepEqual(contents, expected) {
+				t.Fatal("unexpected set contents")
+			}
+
 			// Add
 			set, _ = set.Add(ctx, fjson.NewString(fmt.Sprintf("%d", i)))
 		})
