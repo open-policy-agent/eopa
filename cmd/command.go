@@ -147,6 +147,12 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 			c.Flags().Var(logFormat, "log-format", "set log format") // NOTE(sr): we don't support "text" here
 
 			root.AddCommand(setDefaults(c))
+		case "exec":
+			addLicenseFlags(c, lparams)
+			addLicenseFallbackFlags(c)
+			addInstructionLimitFlag(c, &instructionLimit)
+			addOptimizationFlagsAndDescription(c, &optLevel, &enableOptPassFlags, &disableOptPassFlags)
+			root.AddCommand(initExec(c, lic, lparams)) // wrap OPA exec
 		case "version":
 			root.AddCommand(initVersion()) // override version
 		default:

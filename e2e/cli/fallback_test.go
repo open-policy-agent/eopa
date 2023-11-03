@@ -17,12 +17,15 @@ import (
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
+// server CLI args used in these tests
+var server = []string{"run", "--server", "--addr", "localhost:38181", "--disable-telemetry", "--log-level", "debug"}
+
 func TestRunServerFallbackSuccess(t *testing.T) {
 	config := `` // no plugins
 	policy := `package test
 p := true` // no builtins called
 
-	eopa, eopaOut := eopaRunSansEnv(t, policy, config)
+	eopa, eopaOut := eopaSansEnv(t, policy, config, server...)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +94,7 @@ plugins:
 	policy := `package test
 p := true` // no builtins called
 
-	eopa, _ := eopaRunSansEnv(t, policy, config)
+	eopa, _ := eopaSansEnv(t, policy, config, server...)
 	out, err := eopa.Output()
 	if err == nil {
 		t.Fatal("expected error")
@@ -112,7 +115,7 @@ func TestRunServerFallbackFailBuiltin(t *testing.T) {
 p := sql.send({})
 `
 
-	eopa, _ := eopaRunSansEnv(t, policy, config)
+	eopa, _ := eopaSansEnv(t, policy, config, server...)
 	out, err := eopa.Output()
 	if err == nil {
 		t.Fatal("expected error")
@@ -128,22 +131,17 @@ p := sql.send({})
 	}
 }
 
-func eopaRunSansEnv(t *testing.T, policy, config string, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
-	logLevel := "debug"
+func eopaSansEnv(t *testing.T, policy, config string, args ...string) (*exec.Cmd, *bytes.Buffer) {
+	return eopaFilterEnv(t, policy, config, filter, args...)
+}
+
+func eopaCmd(t *testing.T, policy, config string, args ...string) (*exec.Cmd, *bytes.Buffer) {
+	return eopaFilterEnv(t, policy, config, nil, args...)
+}
+
+func eopaFilterEnv(t *testing.T, policy, config string, f func([]string) []string, args ...string) (*exec.Cmd, *bytes.Buffer) {
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
-	policyPath := filepath.Join(dir, "eval.rego")
-	if err := os.WriteFile(policyPath, []byte(policy), 0x777); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
-
-	args := []string{
-		"run",
-		"--server",
-		"--addr", "localhost:38181",
-		"--log-level", logLevel,
-		"--disable-telemetry",
-	}
 	if config != "" {
 		configPath := filepath.Join(dir, "config.yml")
 		if err := os.WriteFile(configPath, []byte(config), 0x777); err != nil {
@@ -151,10 +149,17 @@ func eopaRunSansEnv(t *testing.T, policy, config string, extraArgs ...string) (*
 		}
 		args = append(args, "--config-file", configPath)
 	}
-	args = append(args, extraArgs...)
-	args = append(args, policyPath)
+	if policy != "" {
+		policyPath := filepath.Join(dir, "eval.rego")
+		if err := os.WriteFile(policyPath, []byte(policy), 0x777); err != nil {
+			t.Fatalf("write policy: %v", err)
+		}
+		args = append(args, policyPath)
+	}
 	eopa := exec.Command(binary(), args...)
-	eopa.Env = filter(eopa.Env)
+	if f != nil {
+		eopa.Env = f(eopa.Env)
+	}
 	eopa.Stderr = &buf
 
 	t.Cleanup(func() {
