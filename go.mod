@@ -56,7 +56,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/vault v0.26.0
 	github.com/twmb/franz-go v1.15.2
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
-	go.mongodb.org/mongo-driver v1.12.1
+	go.mongodb.org/mongo-driver v1.13.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.45.0
 	go.opentelemetry.io/otel v1.19.0
 	go.opentelemetry.io/otel/trace v1.19.0
