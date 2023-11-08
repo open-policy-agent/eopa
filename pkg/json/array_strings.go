@@ -258,16 +258,8 @@ func (a *ArraySliceCompactStrings[T]) extractImpl(ptr []string) (Json, error) {
 	return arraySliceBase[*ArraySliceCompactStrings[T]]{}.extractImpl(a, ptr)
 }
 
-func (a *ArraySliceCompactStrings[T]) Find(search Path, finder Finder) {
-	find(search, []byte{'$'}, a, finder)
-}
-
 func (a *ArraySliceCompactStrings[T]) Compare(other Json) int {
 	return compare(a, other)
-}
-
-func (a *ArraySliceCompactStrings[T]) Walk(state *DecodingState, walker Walker) {
-	arrayWalk(a, state, walker)
 }
 
 func (a *ArraySliceCompactStrings[T]) Clone(deepCopy bool) File {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
-	"strconv"
 	"testing"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -113,17 +112,6 @@ func TestObjectSizes(t *testing.T) {
 
 			}
 
-			// Find
-
-			var found Json
-			p, _ := ParsePath("$")
-			obj.Find(p, func(v Json) {
-				found = v
-			})
-			if found.Compare(obj) != 0 {
-				t.Error("broken find")
-			}
-
 			// Set
 
 			if o, ok := obj.Set("a", NewString("b")); ok {
@@ -148,42 +136,6 @@ func TestObjectSizes(t *testing.T) {
 			if !reflect.DeepEqual(obj.JSON(), nativeObj) {
 				t.Error("broken remove idx")
 			}
-
-			// Walk
-
-			var walker testObjectWalker
-			obj.Walk(NewDecodingState(), &walker)
-			if walker.decoded != test.json {
-				t.Error("broken walk: " + walker.decoded)
-			}
 		})
 	}
-}
-
-type testObjectWalker struct {
-	Walker
-	decoded string
-}
-
-func (t *testObjectWalker) StartObject(*DecodingState)       { t.decoded += "{" }
-func (t *testObjectWalker) EndObject(*DecodingState, Object) { t.decoded += "}" }
-
-func (t *testObjectWalker) String(d *DecodingState, s String) {
-	if len(t.decoded) > 1 {
-		t.decoded += ","
-	}
-
-	segs := d.PathSegments()
-	t.decoded += strconv.Quote(segs[len(segs)-1].Property())
-	t.decoded += ":" + strconv.Quote(s.Value())
-}
-
-func (t *testObjectWalker) Number(d *DecodingState, f Float) {
-	if len(t.decoded) > 1 {
-		t.decoded += ","
-	}
-
-	segs := d.PathSegments()
-	t.decoded += strconv.Quote(segs[len(segs)-1].Property())
-	t.decoded += ":" + f.String()
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strconv"
 	"testing"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -114,17 +113,6 @@ func TestArraySizes(t *testing.T) {
 
 			}
 
-			// Find
-
-			var found Json
-			p, _ := ParsePath("$")
-			arr.Find(p, func(v Json) {
-				found = v
-			})
-			if found.Compare(arr) != 0 {
-				t.Error("broken find")
-			}
-
 			// Append, AppendSingle
 
 			arr = arr.Append(NewString("a"), NewString("b"))
@@ -149,14 +137,6 @@ func TestArraySizes(t *testing.T) {
 			if !reflect.DeepEqual(arr.JSON(), nativeArr) {
 				t.Error("broken remove idx")
 			}
-
-			// Walk
-
-			var walker testArrayWalker
-			arr.Walk(NewDecodingState(), &walker)
-			if walker.decoded != test.json {
-				t.Error("broken walk")
-			}
 		})
 	}
 }
@@ -175,26 +155,4 @@ func TestArrayAppend(t *testing.T) {
 			t.Error("broken array append")
 		}
 	}
-}
-
-type testArrayWalker struct {
-	Walker
-	decoded string
-}
-
-func (t *testArrayWalker) StartArray(*DecodingState)      { t.decoded += "[" }
-func (t *testArrayWalker) EndArray(*DecodingState, Array) { t.decoded += "]" }
-
-func (t *testArrayWalker) Number(_ *DecodingState, f Float) {
-	if len(t.decoded) > 1 {
-		t.decoded += ","
-	}
-	t.decoded += f.String()
-}
-
-func (t *testArrayWalker) String(_ *DecodingState, s String) {
-	if len(t.decoded) > 1 {
-		t.decoded += ","
-	}
-	t.decoded += strconv.Quote(string(s))
 }

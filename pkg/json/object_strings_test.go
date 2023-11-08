@@ -112,17 +112,6 @@ func TestObjectStringsSizes(t *testing.T) {
 
 			}
 
-			// Find
-
-			var found Json
-			p, _ := ParsePath("$")
-			obj.Find(p, func(v Json) {
-				found = v
-			})
-			if found.Compare(obj) != 0 {
-				t.Error("broken find")
-			}
-
 			// Set
 
 			if o, ok := obj.Set("a", NewString("b")); ok {
@@ -146,14 +135,6 @@ func TestObjectStringsSizes(t *testing.T) {
 			delete(nativeObj, "a")
 			if !reflect.DeepEqual(obj.JSON(), nativeObj) {
 				t.Error("broken remove idx")
-			}
-
-			// Walk
-
-			var walker testObjectWalker
-			obj.Walk(NewDecodingState(), &walker)
-			if walker.decoded != test.json {
-				t.Error("broken walk: " + walker.decoded)
 			}
 		})
 	}

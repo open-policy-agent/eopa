@@ -35,14 +35,8 @@ type Json interface {
 	// extract is the internal implementation of the Extract.
 	extractImpl(ptr []string) (Json, error)
 
-	// Find finds all JSON elements matching the JSON search path provided. It invokes the finder callback for each of the element found.
-	Find(search Path, finder Finder)
-
 	// Compare compares this JSON node ('a') to another JSON ('b'), returning -1, 0, 1 if 'a' is less than 'b', 'a' equals to 'b', or 'a' is more than 'b', respectively.
 	Compare(other Json) int
-
-	// Walk traverses the JSON document recursively, reporting each element to walker.
-	Walk(state *DecodingState, walker Walker)
 }
 
 var (
@@ -69,8 +63,6 @@ type Iterable interface {
 	RemoveIdx(i int) Json
 	SetIdx(i int, j File) Json
 }
-
-type Finder func(value Json)
 
 func corrupted(err error) {
 	if err != nil {
@@ -130,16 +122,8 @@ func (n Null) extractImpl(ptr []string) (Json, error) {
 	return nil, errPathNotFound
 }
 
-func (n Null) Find(search Path, finder Finder) {
-	find(search, []byte{'$'}, n, finder)
-}
-
 func (n Null) Compare(other Json) int {
 	return compare(n, other)
-}
-
-func (n Null) Walk(state *DecodingState, walker Walker) {
-	walker.Nil(state)
 }
 
 func (n Null) Clone(bool) File {
@@ -207,16 +191,8 @@ func (b Bool) extractImpl(ptr []string) (Json, error) {
 	return nil, errPathNotFound
 }
 
-func (b Bool) Find(search Path, finder Finder) {
-	find(search, []byte{'$'}, b, finder)
-}
-
 func (b Bool) Compare(other Json) int {
 	return compare(b, other)
-}
-
-func (b Bool) Walk(state *DecodingState, walker Walker) {
-	walker.Boolean(state, b)
 }
 
 func (b Bool) Clone(bool) File {
@@ -284,16 +260,8 @@ func (f Float) extractImpl(ptr []string) (Json, error) {
 	return nil, errPathNotFound
 }
 
-func (f Float) Find(search Path, finder Finder) {
-	find(search, []byte{'$'}, f, finder)
-}
-
 func (f Float) Compare(other Json) int {
 	return compare(f, other)
-}
-
-func (f Float) Walk(state *DecodingState, walker Walker) {
-	walker.Number(state, f)
 }
 
 func (f Float) Clone(bool) File {
@@ -510,16 +478,8 @@ func (s *String) extractImpl(ptr []string) (Json, error) {
 	return nil, errPathNotFound
 }
 
-func (s *String) Find(search Path, finder Finder) {
-	find(search, []byte{'$'}, s, finder)
-}
-
 func (s *String) Compare(other Json) int {
 	return compare(s, other)
-}
-
-func (s *String) Walk(state *DecodingState, walker Walker) {
-	walker.String(state, *s)
 }
 
 func (s *String) Clone(bool) File {
@@ -670,16 +630,8 @@ func (a ArrayBinary) extractImpl(ptr []string) (Json, error) {
 	return a.Value(i).extractImpl(ptr[1:])
 }
 
-func (a ArrayBinary) Find(search Path, finder Finder) {
-	find(search, []byte{'$'}, a, finder)
-}
-
 func (a ArrayBinary) Compare(other Json) int {
 	return compare(a, other)
-}
-
-func (a ArrayBinary) Walk(state *DecodingState, walker Walker) {
-	arrayWalk(a, state, walker)
 }
 
 func (a ArrayBinary) Clone(bool) File {
@@ -796,16 +748,8 @@ func (a *ArraySlice) extractImpl(ptr []string) (Json, error) {
 	return arraySliceBase[*ArraySlice]{}.extractImpl(a, ptr)
 }
 
-func (a *ArraySlice) Find(search Path, finder Finder) {
-	find(search, []byte{'$'}, a, finder)
-}
-
 func (a *ArraySlice) Compare(other Json) int {
 	return compare(a, other)
-}
-
-func (a *ArraySlice) Walk(state *DecodingState, walker Walker) {
-	arrayWalk(a, state, walker)
 }
 
 func (a *ArraySlice) Clone(deepCopy bool) File {
@@ -1001,16 +945,8 @@ func (o ObjectBinary) extractImpl(ptr []string) (Json, error) {
 	return v.extractImpl(ptr[1:])
 }
 
-func (o ObjectBinary) Find(search Path, finder Finder) {
-	find(search, []byte{'$'}, o, finder)
-}
-
 func (o ObjectBinary) Compare(other Json) int {
 	return compare(o, other)
-}
-
-func (o ObjectBinary) Walk(state *DecodingState, walker Walker) {
-	objectWalk(o, state, walker)
 }
 
 func (o ObjectBinary) Clone(bool) File {
@@ -1221,16 +1157,8 @@ func (o *ObjectMap) extractImpl(ptr []string) (Json, error) {
 	return objectMapBase[*ObjectMap]{}.extractImpl(o, ptr)
 }
 
-func (o *ObjectMap) Find(search Path, finder Finder) {
-	find(search, []byte{'$'}, o, finder)
-}
-
 func (o *ObjectMap) Compare(other Json) int {
 	return compare(o, other)
-}
-
-func (o *ObjectMap) Walk(state *DecodingState, walker Walker) {
-	objectWalk(o, state, walker)
 }
 
 func (o *ObjectMap) Clone(deepCopy bool) File {
@@ -1373,93 +1301,6 @@ func jsonType(j File) int {
 
 	corrupted(nil)
 	return -1
-}
-
-// find finds the JSON elements referred by the search path from the doc, invoking finder for each.
-func find(search Path, path []byte, doc Json, finder Finder) {
-	if len(search) == 0 {
-		finder(doc)
-		return
-	}
-
-	pl := len(path)
-
-	switch j := doc.(type) {
-	case Array:
-		start := 0
-		end := 0
-		drop := 1
-
-		if search[0].IsRecursive() {
-			find(search[1:], path, j, finder)
-
-			drop = 0
-			end = j.Len()
-
-		} else if search[0].IsArray() && search[0].Index() == -1 {
-			// Wildcards (-1) indicates iteration over each array element
-			end = j.Len()
-		} else if search[0].IsObjectWildcard() {
-			end = j.Len()
-		} else if search[0].IsArray() {
-			start = search[0].Index()
-			end = start + 1
-		}
-		// else: Path does not match the document.
-
-		path = append(path, []byte("[")...)
-
-		for k := start; k < end && k < j.Len(); k++ {
-			path = strconv.AppendInt(path, int64(k), 10)
-			path = append(path, []byte("]")...)
-
-			find(search[drop:], path, j.Value(k), finder)
-
-			// Drop the the array index and ']' so
-			// that the next round will correctly
-			// again add the index and ']'.
-			path = path[0 : pl+1]
-		}
-
-		return
-
-	case Object:
-		var keys []string
-		drop := 1
-
-		if search[0].IsRecursive() {
-			find(search[1:], path, j, finder)
-
-			keys = j.Names()
-			drop = 0
-
-		} else if search[0].IsObjectWildcard() {
-			keys = j.Names()
-		} else if key := search[0].Property(); search[0].IsObject() {
-			v := j.Value(key)
-			if v != nil {
-				keys = []string{key}
-			}
-		}
-
-		for _, key := range keys {
-			v := j.Value(key)
-			path = append(path, []byte(".")...)
-			path = append(path, []byte(key)...)
-
-			find(search[drop:], path, v, finder)
-
-			path = path[0:pl]
-		}
-
-		return
-	}
-
-	// String, Float, Bool, Null: consume the recursive segment if one available.
-
-	if search[0].IsRecursive() {
-		find(search[1:], path, doc, finder)
-	}
 }
 
 type unmarshaller struct {

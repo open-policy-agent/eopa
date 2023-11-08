@@ -265,16 +265,8 @@ func (o *ObjectMapCompactStrings[T]) extractImpl(ptr []string) (Json, error) {
 	return objectMapBase[*ObjectMapCompactStrings[T]]{}.extractImpl(o, ptr)
 }
 
-func (o *ObjectMapCompactStrings[T]) Find(search Path, finder Finder) {
-	find(search, []byte{'$'}, o, finder)
-}
-
 func (o *ObjectMapCompactStrings[T]) Compare(other Json) int {
 	return compare(o, other)
-}
-
-func (o *ObjectMapCompactStrings[T]) Walk(state *DecodingState, walker Walker) {
-	objectWalk(o, state, walker)
 }
 
 func (o *ObjectMapCompactStrings[T]) Clone(bool) File {
