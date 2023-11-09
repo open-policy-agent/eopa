@@ -118,12 +118,7 @@ func builtinMongoDBFind(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 		return builtins.NewOperandErr(pos, "missing required request parameter(s): %v", missingKeys)
 	}
 
-	// find, err := getRequestObjectWithDefault(obj, "find", nil)
-	// if err != nil {
-	// 	return err
-	// }
-
-	cacheKey := ast.NewObject()
+	cacheKey := obj
 	var credential []byte
 	if auth, err := getRequestObjectWithDefault(obj, "auth", nil); err != nil {
 		return err
@@ -137,8 +132,6 @@ func builtinMongoDBFind(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 		if err != nil {
 			return err
 		}
-
-		cacheKey.Insert(ast.StringTerm("auth"), ast.StringTerm(string(credential)))
 	}
 
 	uri, err := getRequestString(obj, "uri")
@@ -334,7 +327,7 @@ func builtinMongoDBFindOne(bctx topdown.BuiltinContext, operands []*ast.Term, it
 		return builtins.NewOperandErr(pos, "missing required request parameter(s): %v", missingKeys)
 	}
 
-	cacheKey := ast.NewObject()
+	cacheKey := obj
 	var credential []byte
 	if auth, err := getRequestObjectWithDefault(obj, "auth", nil); err != nil {
 		return err
@@ -348,8 +341,6 @@ func builtinMongoDBFindOne(bctx topdown.BuiltinContext, operands []*ast.Term, it
 		if err != nil {
 			return err
 		}
-
-		cacheKey.Insert(ast.StringTerm("auth"), ast.StringTerm(string(credential)))
 	}
 
 	uri, err := getRequestString(obj, "uri")
