@@ -2,7 +2,6 @@ package vm
 
 import (
 	"errors"
-	"strconv"
 	"unsafe"
 
 	"github.com/open-policy-agent/opa/ast"
@@ -338,85 +337,64 @@ func (b block) Execute(state *State) (bool, uint32, error) {
 	return false, 0, nil
 }
 
-func (s statement) Execute(state *State) (bool, uint32, int, error) {
-	var stop bool
-	var index uint32
-	var err error
+type exec interface {
+	Execute(*State) (stop bool, index uint32, err error)
+}
 
-	t, size := s.Type()
+type N interface {
+	~[]byte
+	exec
+}
 
-	switch t {
-	case typeStatementArrayAppend:
-		stop, index, err = arrayAppend(s).Execute(state)
-	case typeStatementAssignInt:
-		stop, index, err = assignInt(s).Execute(state)
-	case typeStatementAssignVar:
-		stop, index, err = assignVar(s).Execute(state)
-	case typeStatementAssignVarOnce:
-		stop, index, err = assignVarOnce(s).Execute(state)
-	case typeStatementBlockStmt:
-		stop, index, err = blockStmt(s).Execute(state)
-	case typeStatementBreakStmt:
-		stop, index, err = breakStmt(s).Execute(state)
-	case typeStatementCall:
-		stop, index, err = call(s).Execute(state)
-	case typeStatementCallDynamic:
-		stop, index, err = callDynamic(s).Execute(state)
-	case typeStatementDot:
-		stop, index, err = dot(s).Execute(state)
-	case typeStatementEqual:
-		stop, index, err = equal(s).Execute(state)
-	case typeStatementIsArray:
-		stop, index, err = isArray(s).Execute(state)
-	case typeStatementIsDefined:
-		stop, index, err = isDefined(s).Execute(state)
-	case typeStatementIsObject:
-		stop, index, err = isObject(s).Execute(state)
-	case typeStatementIsUndefined:
-		stop, index, err = isUndefined(s).Execute(state)
-	case typeStatementLen:
-		stop, index, err = lenStmt(s).Execute(state)
-	case typeStatementMakeArray:
-		stop, index, err = makeArray(s).Execute(state)
-	case typeStatementMakeNull:
-		stop, index, err = makeNull(s).Execute(state)
-	case typeStatementMakeNumberInt:
-		stop, index, err = makeNumberInt(s).Execute(state)
-	case typeStatementMakeNumberRef:
-		stop, index, err = makeNumberRef(s).Execute(state)
-	case typeStatementMakeObject:
-		stop, index, err = makeObject(s).Execute(state)
-	case typeStatementMakeSet:
-		stop, index, err = makeSet(s).Execute(state)
-	case typeStatementNop:
-		stop, index, err = nop(s).Execute(state)
-	case typeStatementNot:
-		stop, index, err = not(s).Execute(state)
-	case typeStatementNotEqual:
-		stop, index, err = notEqual(s).Execute(state)
-	case typeStatementObjectInsert:
-		stop, index, err = objectInsert(s).Execute(state)
-	case typeStatementObjectInsertOnce:
-		stop, index, err = objectInsertOnce(s).Execute(state)
-	case typeStatementObjectMerge:
-		stop, index, err = objectMerge(s).Execute(state)
-	case typeStatementResetLocal:
-		stop, index, err = resetLocal(s).Execute(state)
-	case typeStatementResultSetAdd:
-		stop, index, err = resultSetAdd(s).Execute(state)
-	case typeStatementReturnLocal:
-		stop, index, err = returnLocal(s).Execute(state)
-	case typeStatementScan:
-		stop, index, err = scan(s).Execute(state)
-	case typeStatementSetAdd:
-		stop, index, err = setAdd(s).Execute(state)
-	case typeStatementWith:
-		stop, index, err = with(s).Execute(state)
-	default:
-		panic("unsupported statement: " + strconv.Itoa(int(t)))
-	}
+func n[T N](xs []byte, s *State) (bool, uint32, error) {
+	return T(xs).Execute(s)
+}
 
-	return stop, index, size, err
+var exs = [...]func([]byte, *State) (bool, uint32, error){
+	typeStatementArrayAppend:      n[arrayAppend],
+	typeStatementAssignInt:        n[assignInt],
+	typeStatementAssignVar:        n[assignVar],
+	typeStatementAssignVarOnce:    n[assignVarOnce],
+	typeStatementBlockStmt:        n[blockStmt],
+	typeStatementBreakStmt:        n[breakStmt],
+	typeStatementCall:             n[call],
+	typeStatementCallDynamic:      n[callDynamic],
+	typeStatementDot:              n[dot],
+	typeStatementEqual:            n[equal],
+	typeStatementIsArray:          n[isArray],
+	typeStatementIsDefined:        n[isDefined],
+	typeStatementIsObject:         n[isObject],
+	typeStatementIsUndefined:      n[isUndefined],
+	typeStatementLen:              n[lenStmt],
+	typeStatementMakeArray:        n[makeArray],
+	typeStatementMakeNull:         n[makeNull],
+	typeStatementMakeNumberInt:    n[makeNumberInt],
+	typeStatementMakeNumberRef:    n[makeNumberRef],
+	typeStatementMakeObject:       n[makeObject],
+	typeStatementMakeSet:          n[makeSet],
+	typeStatementNop:              n[nop],
+	typeStatementNot:              n[not],
+	typeStatementNotEqual:         n[notEqual],
+	typeStatementObjectInsert:     n[objectInsert],
+	typeStatementObjectInsertOnce: n[objectInsertOnce],
+	typeStatementObjectMerge:      n[objectMerge],
+	typeStatementResetLocal:       n[resetLocal],
+	typeStatementResultSetAdd:     n[resultSetAdd],
+	typeStatementReturnLocal:      n[returnLocal],
+	typeStatementScan:             n[scan],
+	typeStatementSetAdd:           n[setAdd],
+	typeStatementWith:             n[with],
+	// ...
+	64: nil,
+}
+
+func (s statement) Execute(state *State) (stop bool, index uint32, size int, err error) {
+	var t uint32
+	t, size = s.Type()
+	t = t & 63
+	ex := exs[t]
+	stop, index, err = ex(s, state)
+	return
 }
 
 func (nop) Execute(*State) (bool, uint32, error) {

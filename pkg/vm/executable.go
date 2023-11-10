@@ -1713,10 +1713,10 @@ func getStringArray(data []byte, offset uint32) []string {
 
 	n := getUint32(data, 0)
 
-	a := make([]string, 0, n)
+	a := make([]string, n)
 	for i := uint32(0); i < n; i++ {
 		stringOffset := getOffsetIndex(data, 4, int(i))
-		a = append(a, getString(data, stringOffset))
+		a[i] = getString(data, stringOffset)
 	}
 
 	return a
@@ -1843,9 +1843,9 @@ func getLocalOrConst(data []byte, offset uint32) LocalOrConst {
 func getLocalOrConstArray(data []byte, offset uint32) []LocalOrConst {
 	n := getUint32(data, offset)
 
-	l := make([]LocalOrConst, 0, n)
+	l := make([]LocalOrConst, n)
 	for i := uint32(0); i < n; i++ {
-		l = append(l, getLocalOrConst(data, offset+4+i*sizeofLocalOrConst))
+		l[i] = getLocalOrConst(data, offset+4+i*sizeofLocalOrConst)
 	}
 
 	return l
