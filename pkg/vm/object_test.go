@@ -22,12 +22,12 @@ func TestObject(t *testing.T) {
 
 			// Iter
 			contents := make(map[string]string)
-			obj.Iter(ctx, func(k, v interface{}) (bool, error) {
+			obj.Iter(func(k, v fjson.Json) (bool, error) {
 				contents[k.(*fjson.String).Value()] = v.(*fjson.String).Value()
 				return false, nil
 			})
 			c := 0
-			obj.Iter(ctx, func(_, _ interface{}) (bool, error) {
+			obj.Iter(func(_, _ fjson.Json) (bool, error) {
 				c++
 				return true, nil
 			})
@@ -40,7 +40,7 @@ func TestObject(t *testing.T) {
 			}
 
 			// Len
-			if n, _ := obj.Len(ctx); n != len(expected) {
+			if n := obj.Len(); n != len(expected) {
 				t.Fatal("unxpected map length")
 			}
 

@@ -105,28 +105,6 @@ func (n *tree) Iter(ctx context.Context, f func(key, value interface{}) (bool, e
 	}
 }
 
-func (n *tree) Len(ctx context.Context) (int, error) {
-	i := 0
-	err := n.Iter(ctx, func(_, _ interface{}) (bool, error) {
-		i++
-		return false, nil
-	})
-	return i, err
-}
-
-func (n *tree) Hash(ctx context.Context) (uint64, error) {
-	var h uint64
-	if err := n.Iter(ctx, func(k, v interface{}) (bool, error) {
-		var err error
-		h, err = vm.ObjectHashEntry(ctx, h, k, v)
-		return err != nil, err
-	}); err != nil {
-		return 0, err
-	}
-
-	return h, nil
-}
-
 // Find returns the store corresping the path.
 func (n *tree) Find(path storage.Path) (storage.Store, error) {
 	if len(path) == 0 {
@@ -209,28 +187,6 @@ func (t *lazyTree) Iter(ctx context.Context, f func(key, value interface{}) (boo
 	}
 
 	return t.txn.store.ops.Iter(ctx, doc, f)
-}
-
-func (t *lazyTree) Len(ctx context.Context) (int, error) {
-	n := 0
-	err := t.Iter(ctx, func(_, _ interface{}) (bool, error) {
-		n++
-		return false, nil
-	})
-	return n, err
-}
-
-func (t *lazyTree) Hash(ctx context.Context) (uint64, error) {
-	var h uint64
-	if err := t.Iter(ctx, func(k, v interface{}) (bool, error) {
-		var err error
-		h, err = vm.ObjectHashEntry(ctx, h, k, v)
-		return err != nil, err
-	}); err != nil {
-		return 0, err
-	}
-
-	return h, nil
 }
 
 func (t *lazyTree) Insert(storage.Path, node) error {

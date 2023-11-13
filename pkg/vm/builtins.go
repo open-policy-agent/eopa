@@ -141,6 +141,15 @@ func objectKeysBuiltin(state *State, args []Value) error {
 				return err
 			}
 		}
+	case Object:
+		err := o.Iter(func(key fjson.Json, _ fjson.Json) (bool, error) {
+			var err error
+			set, err = state.ValueOps().SetAdd(state.Globals.Ctx, set, key)
+			return err != nil, err
+		})
+		if err != nil {
+			return err
+		}
 	case IterableObject:
 		err := o.Iter(state.Globals.Ctx, func(key any, _ any) (bool, error) {
 			var err error
@@ -183,6 +192,11 @@ func objectSelect(state *State, args []Value, keep bool) error {
 			_, ok, err := coll.Get(state.Globals.Ctx, key)
 			return err == nil && ok, err
 		}
+	case Object:
+		selected = func(key fjson.Json) (bool, error) {
+			_, ok, err := coll.Get(state.Globals.Ctx, key)
+			return err == nil && ok, err
+		}
 	case fjson.Object:
 		selected = func(key fjson.Json) (bool, error) {
 			skey, ok := key.(*fjson.String)
@@ -219,16 +233,25 @@ func objectSelect(state *State, args []Value, keep bool) error {
 	}
 
 	if err := state.ValueOps().Iter(state.Globals.Ctx, obj, func(k, v any) (bool, error) {
-		key := k.(fjson.Json)
+		key, err := castJSON(state.Globals.Ctx, k)
+		if err != nil {
+			return true, err
+		}
+
+		value, err := castJSON(state.Globals.Ctx, v)
+		if err != nil {
+			return true, err
+		}
+
 		ok, err := selected(key)
 		if err != nil {
 			return true, err // abort
 		}
 		if !ok && !keep {
-			result, err = result.Insert(state.Globals.Ctx, k, v)
+			result, err = result.Insert(state.Globals.Ctx, key, value)
 		}
 		if ok && keep {
-			result, err = result.Insert(state.Globals.Ctx, k, v)
+			result, err = result.Insert(state.Globals.Ctx, key, value)
 		}
 		return false, err // continue
 	}); err != nil {
@@ -469,13 +492,20 @@ func countBuiltin(state *State, args []Value) error {
 	case fjson.Object:
 		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(a.Len())))
 		return nil
-	case IterableObject:
-		n, err := a.Len(state.Globals.Ctx)
-		if err != nil {
-			return err
-		}
-		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(n)))
+	case Object:
+		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(a.Len())))
 		return nil
+	case IterableObject:
+		var n int64
+		err := a.Iter(state.Globals.Ctx, func(_ any, _ any) (bool, error) {
+			n++
+			return false, nil
+		})
+
+		if err == nil {
+			state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(n))
+		}
+		return err
 	case Set:
 		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(a.Len())))
 		return nil
@@ -534,7 +564,7 @@ func builtinSetOperand(state *State, value Value, pos int) (Set, error) {
 
 func builtinObjectOperand(state *State, value Value, pos int) (bool, error) {
 	switch value.(type) {
-	case fjson.Object, IterableObject:
+	case fjson.Object, IterableObject, Object:
 		return true, nil
 	default:
 		v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
@@ -747,7 +777,18 @@ func equalBuiltin(state *State, args []Value) error {
 	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
-	ret, err := equalOp(state.Globals.Ctx, args[0], args[1])
+
+	a, err := castJSON(state.Globals.Ctx, args[0])
+	if err != nil {
+		return err
+	}
+
+	b, err := castJSON(state.Globals.Ctx, args[1])
+	if err != nil {
+		return err
+	}
+
+	ret, err := equalOp(state.Globals.Ctx, a, b)
 	if err == nil {
 		state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(ret))
 	}
@@ -760,7 +801,17 @@ func notEqualBuiltin(state *State, args []Value) error {
 		return nil
 	}
 
-	ret, err := equalOp(state.Globals.Ctx, args[0], args[1])
+	a, err := castJSON(state.Globals.Ctx, args[0])
+	if err != nil {
+		return err
+	}
+
+	b, err := castJSON(state.Globals.Ctx, args[1])
+	if err != nil {
+		return err
+	}
+
+	ret, err := equalOp(state.Globals.Ctx, a, b)
 	if err == nil {
 		state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(!ret))
 	}
@@ -816,7 +867,17 @@ func objectUnionBuiltin(state *State, args []Value) error {
 		return err
 	}
 
-	result, err := objectUnion(state.Globals.Ctx, args[0], args[1])
+	arg0, err := castJSON(state.Globals.Ctx, args[0])
+	if err != nil {
+		return err
+	}
+
+	arg1, err := castJSON(state.Globals.Ctx, args[1])
+	if err != nil {
+		return err
+	}
+
+	result, err := objectUnion(state.Globals.Ctx, arg0, arg1)
 	if err != nil {
 		return err
 	}
@@ -825,12 +886,10 @@ func objectUnionBuiltin(state *State, args []Value) error {
 	return nil
 }
 
-func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
-	var result Object
-
+func objectUnion(ctx context.Context, a, b fjson.Json) (fjson.Json, error) {
 	switch a := a.(type) {
 	case fjson.Object:
-		result = newObject(a.Len())
+		result := newObject(a.Len())
 
 		var getValue func(key string) (fjson.Json, bool, error)
 
@@ -851,17 +910,17 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 				}
 			}
 
-		case IterableObject:
+		case Object:
 			getValue = func(key string) (fjson.Json, bool, error) {
 				value, ok, err := b.Get(ctx, fjson.NewString(key))
 				if !ok || err != nil {
 					return nil, ok, err
 				}
 
-				return value.(fjson.Json), true, nil
+				return value, true, nil
 			}
 
-			if err := b.Iter(ctx, func(key, value interface{}) (bool, error) {
+			if err := b.Iter(func(key, value fjson.Json) (bool, error) {
 				var err error
 				if key, ok := key.(*fjson.String); !ok || a.Value(key.Value()) == nil {
 					result, err = result.Insert(ctx, key, value)
@@ -898,62 +957,21 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 			}
 		}
 
-	case IterableObject:
+		return result, nil
+
+	case Object:
 		switch b := b.(type) {
 		case fjson.Object:
-			result = newObject(b.Len())
-
-			for _, key := range b.Names() {
-				if _, ok, err := a.Get(ctx, fjson.NewString(key)); err != nil {
-					return nil, err
-				} else if !ok {
-					var err error
-					result, err = result.Insert(ctx, key, b.Value(key))
-					if err != nil {
-						return nil, err
-					}
-				}
+			return objectUnion(ctx, b, a)
+		case Object:
+			n := a.Len()
+			if m := b.Len(); m > n {
+				n = m
 			}
 
-			err := a.Iter(ctx, func(key, value interface{}) (bool, error) {
-				k, ok := key.(fjson.Json)
-				if !ok {
-					var err error
-					result, err = result.Insert(ctx, key, value)
-					return false, err
-				}
+			result := newObject(n)
 
-				getValue := func(key fjson.Json) (fjson.Json, bool) {
-					var v2 fjson.Json
-					if skey, ok := key.(*fjson.String); ok {
-						v2 = b.Value(skey.Value())
-					}
-					return v2, v2 != nil
-				}
-
-				v2, ok := getValue(k)
-				if !ok {
-					var err error
-					result, err = result.Insert(ctx, key, value)
-					return false, err
-				}
-
-				m, err := objectUnion(ctx, value, v2)
-				if err != nil {
-					return true, err
-				}
-
-				result, err = result.Insert(ctx, key, m)
-				return false, err
-			})
-			if err != nil {
-				return nil, err
-			}
-
-		case IterableObject:
-			result = NewObject()
-
-			if err := b.Iter(ctx, func(key, value interface{}) (bool, error) {
+			if err := b.Iter(func(key, value fjson.Json) (bool, error) {
 				if _, ok, err := a.Get(ctx, key); err != nil {
 					return true, err
 				} else if !ok {
@@ -968,28 +986,20 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 				return nil, err
 			}
 
-			err := a.Iter(ctx, func(key, value interface{}) (bool, error) {
-				k, ok := key.(fjson.Json)
-				if !ok {
-					var err error
-					result, err = result.Insert(ctx, key, value)
-					return false, err
-				}
-
+			err := a.Iter(func(key, value fjson.Json) (bool, error) {
 				getValue := func(key fjson.Json) (fjson.Json, bool, error) {
 					value, ok, err := b.Get(ctx, key)
 					if !ok || err != nil {
 						return nil, ok, err
 					}
 
-					return value.(fjson.Json), true, nil
+					return value, true, nil
 				}
 
-				v2, ok, err := getValue(k)
+				v2, ok, err := getValue(key)
 				if err != nil {
 					return true, err
 				} else if !ok {
-					var err error
 					result, err = result.Insert(ctx, key, value)
 					return false, err
 				}
@@ -1005,15 +1015,12 @@ func objectUnion(ctx context.Context, a, b interface{}) (interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
-		default:
-			return b, nil
-		}
 
-	default:
-		return b, nil
+			return result, nil
+		}
 	}
 
-	return result, nil
+	return b, nil
 }
 
 func typeArray(v Value) bool {
@@ -1033,7 +1040,7 @@ func typeBoolean(v Value) bool {
 
 func typeObject(v Value) bool {
 	switch v.(type) {
-	case fjson.Object, IterableObject:
+	case fjson.Object, IterableObject, Object:
 		return true
 	}
 	return false
@@ -1074,7 +1081,7 @@ func typename(v Value) string {
 		return "null"
 	case fjson.Float:
 		return "number"
-	case fjson.Object, IterableObject:
+	case fjson.Object, IterableObject, Object:
 		return "object"
 	case Set:
 		return "set"

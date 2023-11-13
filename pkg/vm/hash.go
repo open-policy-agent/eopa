@@ -66,7 +66,7 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.Digest) err
 
 		return err
 
-	case IterableObject:
+	case Object:
 		// The two object implementation should have equal
 		// hash implementation
 

@@ -44,7 +44,7 @@ func isHashable(as []Value) bool {
 	}
 	for i := range as {
 		switch as[i].(type) {
-		case IterableObject, fjson.Array, Set, fjson.Object:
+		case IterableObject, fjson.Array, Set, fjson.Object, Object:
 			return false
 		}
 	}

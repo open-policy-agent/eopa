@@ -56,18 +56,6 @@ func TestTransactionGet(t *testing.T) {
 	assertIterableValue(ctx, t, transaction, "key3", "preview value 2")
 }
 
-func TestTransactionLength(t *testing.T) {
-	ctx := context.Background()
-	transaction := iterableTestTransaction(ctx, t, testStore(t))
-	tLen, err := transaction.Len(ctx)
-	if err != nil {
-		t.Fatalf("Unable to get transaction length: %v", err)
-	}
-	if tLen != 4 {
-		t.Errorf("Expected 4 elements in the transaction, but had %d", tLen)
-	}
-}
-
 func TestTransactionIter(t *testing.T) {
 	type kvPair struct {
 		Key   string

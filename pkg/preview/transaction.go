@@ -80,44 +80,6 @@ func (t *PreviewTransaction) Iter(ctx context.Context, f func(key, value any) (b
 	return nil
 }
 
-// Len will provide the total combined length of both the preview and primary transactions.
-//
-// This method does not deduplicate when a key is declared in both transactions.
-func (t *PreviewTransaction) Len(ctx context.Context) (int, error) {
-	final := 0
-	f := func(iterable vm.IterableObject) error {
-		iLen, err := iterable.Len(ctx)
-		if err != nil {
-			return err
-		}
-		final += iLen
-		return nil
-	}
-	err := t.asIterable(t.previewTransaction, f)
-	if err != nil {
-		return 0, err
-	}
-	err = t.asIterable(t.primaryTransaction, f)
-	if err != nil {
-		return 0, err
-	}
-
-	return final, nil
-}
-
-func (t *PreviewTransaction) Hash(ctx context.Context) (uint64, error) {
-	var h uint64
-	if err := t.Iter(ctx, func(k, v interface{}) (bool, error) {
-		var err error
-		h, err = vm.ObjectHashEntry(ctx, h, k, v)
-		return err != nil, err
-	}); err != nil {
-		return 0, err
-	}
-
-	return h, nil
-}
-
 // asIterable type asserts the provided transaction matches the vm.IterableObject interface,
 // and if it does, it will call `f` supplying the transaction as a vm.IterableObject.
 func (t *PreviewTransaction) asIterable(txn storage.Transaction, f func(vm.IterableObject) error) error {

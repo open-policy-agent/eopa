@@ -326,14 +326,6 @@ func (txn *transaction) Iter(ctx context.Context, f func(key, value interface{})
 	return txn.tree.Iter(ctx, f)
 }
 
-func (txn *transaction) Len(ctx context.Context) (int, error) {
-	return txn.tree.Len(ctx)
-}
-
-func (txn *transaction) Hash(ctx context.Context) (uint64, error) {
-	return txn.tree.Hash(ctx)
-}
-
 func (txn *transaction) ID() uint64 {
 	return txn.xid
 }

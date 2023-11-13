@@ -25,8 +25,6 @@ func TestTree(t *testing.T) {
 		result  string
 		iter    string
 		results interface{} // expected iteration keys or an error
-		len     string
-		n       int
 		find    string
 		store   string // reference to the store to return
 		err     error
@@ -49,8 +47,6 @@ func TestTree(t *testing.T) {
 				{get: "/a/b", result: `"c"`},
 				{iter: "/", results: []string{"a"}},
 				{iter: "/a", results: []string{"b"}},
-				{len: "/", n: 1},
-				{len: "/a", n: 1},
 				// find backs the Read/Write operations and what these operations can access.
 				{find: "/", store: "/"},  // specific enough to match to root
 				{find: "/a", store: "/"}, // ditto
@@ -74,11 +70,6 @@ func TestTree(t *testing.T) {
 				{iter: "/a/b", results: []string{"c"}},
 				{iter: "/a/c", results: []string{"d"}},
 				{iter: "/a/c/d", results: []string{"e"}},
-				{len: "/", err: &storage.Error{Code: readsNotSupportedErr, Message: "/"}},
-				{len: "/a", err: &storage.Error{Code: readsNotSupportedErr, Message: "/a"}},
-				{len: "/a/b", n: 1},
-				{len: "/a/c", n: 1},
-				{len: "/a/c/d", n: 1},
 				{find: "/", err: &storage.Error{Code: readsNotSupportedErr, Message: "/"}},   // not specific enough to determine the store
 				{find: "/a", err: &storage.Error{Code: readsNotSupportedErr, Message: "/a"}}, // no store at this level
 				{find: "/a/b", store: "/a/b"},
@@ -157,26 +148,6 @@ func TestTree(t *testing.T) {
 					}
 
 					// TODO: check iteration values
-
-				case op.len != "":
-					result := traverse(ctx, tree, txn, op.len)
-					var n int
-					var err error
-
-					switch i := result.(type) {
-					case node:
-						n, err = i.Len(ctx)
-					case json.Object:
-						n = i.Len()
-					}
-
-					if !reflect.DeepEqual(err, op.err) {
-						t.Errorf("unexpected error for %s: %v", op.len, err)
-					}
-
-					if n != op.n {
-						t.Errorf("unexpected len for %s: %v", op.len, n)
-					}
 
 				case op.find != "":
 					found, err := tree.Find(storage.MustParsePath(op.find))

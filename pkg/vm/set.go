@@ -6,6 +6,8 @@ import (
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 
 	"github.com/cespare/xxhash/v2"
+	"github.com/open-policy-agent/opa/ast"
+	"golang.org/x/exp/slices"
 )
 
 var (
@@ -26,6 +28,7 @@ type Set interface {
 	Equal(ctx context.Context, other Set) (bool, error)
 	Len() int
 	Hash(ctx context.Context) (uint64, error)
+	AST() ast.Value
 	MergeWith(ctx context.Context, other Set) (Set, error)
 	mergeTo(ctx context.Context, other Set) (Set, error)
 }
@@ -196,12 +199,28 @@ func (o *setLarge) Hash(ctx context.Context) (uint64, error) {
 	return m, err
 }
 
+func (o *setLarge) AST() ast.Value {
+	// TODO: Sorting is for deterministic tests.
+	// We prealloc the Term array and sort it here to trim down the total number of allocs.
+	terms := make([]*ast.Term, 0, o.Len())
+	for _, entry := range o.table {
+		for ; entry != nil; entry = entry.next {
+			terms = append(terms, ast.NewTerm(entry.v.AST()))
+		}
+	}
+
+	slices.SortFunc(terms, func(a, b *ast.Term) int {
+		return a.Value.Compare(b.Value)
+	})
+	return ast.NewSet(terms...)
+}
+
 func (o *setLarge) hash(ctx context.Context, k interface{}) (uint64, error) {
 	x, err := hash(ctx, k)
 	return x, err
 }
 
-func (o *setLarge) eq(ctx context.Context, a, b interface{}) (bool, error) {
+func (o *setLarge) eq(ctx context.Context, a, b fjson.Json) (bool, error) {
 	return equalOp(ctx, a, b)
 }
 
@@ -361,12 +380,26 @@ func (o *setCompact[T]) Hash(ctx context.Context) (uint64, error) {
 	return m, err
 }
 
+func (o *setCompact[T]) AST() ast.Value {
+	// TODO: Sorting is for deterministic tests.
+	// We prealloc the Term array and sort it here to trim down the total number of allocs.
+	terms := make([]*ast.Term, 0, o.Len())
+	for i := 0; i < o.n; i++ {
+		terms = append(terms, ast.NewTerm(o.table[i].v.AST()))
+	}
+
+	slices.SortFunc(terms, func(a, b *ast.Term) int {
+		return a.Value.Compare(b.Value)
+	})
+	return ast.NewSet(terms...)
+}
+
 func (o *setCompact[T]) hash(ctx context.Context, k interface{}) (uint64, error) {
 	x, err := hash(ctx, k)
 	return x, err
 }
 
-func (o *setCompact[T]) eq(ctx context.Context, a, b interface{}) (bool, error) {
+func (o *setCompact[T]) eq(ctx context.Context, a, b fjson.Json) (bool, error) {
 	return equalOp(ctx, a, b)
 }
 
