@@ -5,6 +5,9 @@ updates:
   schedule:
     interval: daily
   groups:
+    go.opentelemetry.io:
+      patterns:
+      - "go.opentelemetry.io/*"
     testcontainers:
       patterns:
       - "github.com/testcontainers/*"
@@ -13,6 +16,9 @@ updates:
   schedule:
     interval: daily
   groups:
+    go.opentelemetry.io:
+      patterns:
+      - "go.opentelemetry.io/*"
     testcontainers:
       patterns:
       - "github.com/testcontainers/*"

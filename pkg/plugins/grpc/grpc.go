@@ -217,8 +217,7 @@ func New(manager *plugins.Manager, config Config) *Server {
 			otelgrpc.WithTracerProvider(tp),
 			otelgrpc.WithPropagators(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})),
 		}
-		unaryInterceptors = append(unaryInterceptors, otelgrpc.UnaryServerInterceptor(tracing...))
-		streamInterceptors = append(streamInterceptors, otelgrpc.StreamServerInterceptor(tracing...))
+		options = append(options, grpc.StatsHandler(otelgrpc.NewServerHandler(tracing...)))
 	}
 
 	// Logging interceptor hooks:
