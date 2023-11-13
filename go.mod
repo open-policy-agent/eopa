@@ -5,7 +5,7 @@ go 1.20
 require (
 	git.sr.ht/~charles/graph v0.0.1
 	github.com/OneOfOne/xxhash v1.2.8
-	github.com/aws/aws-sdk-go v1.47.3
+	github.com/aws/aws-sdk-go v1.47.9
 	github.com/benthosdev/benthos/v4 v4.23.0
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/charmbracelet/bubbles v0.16.1
