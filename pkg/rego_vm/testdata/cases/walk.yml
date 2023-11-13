@@ -1,0 +1,21 @@
+cases:
+- modules:
+  - |
+    package test
+    p(xs) := [ value | walk(xs, [path, value]) ]
+    q := p(input)
+  input:
+    a:
+      aa: true
+      ab: false
+  note: "walkbuiltin/no duplicates in comprehension (EOPA-152)"
+  query: x = data.test.q
+  want_result:
+  - x:
+    - a:
+        aa: true
+        ab: false
+    - aa: true
+      ab: false
+    - true
+    - false

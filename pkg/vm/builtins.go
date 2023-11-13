@@ -630,7 +630,7 @@ func walkBuiltin(state *State, args []Value) error {
 		return nil
 	}
 
-	var arr Value = state.ValueOps().MakeArray(0)
+	arr := Value(state.ValueOps().MakeArray(0))
 
 	err := do(state, state.ValueOps().MakeArray(0), args[0], func(state *State, path, val Value) error {
 		tuple, _, err := state.ValueOps().ArrayAppend(state.Globals.Ctx, state.ValueOps().MakeArray(2), path)
@@ -661,9 +661,6 @@ func do(state *State, path Value, val Value, record func(*State, Value, Value) e
 			}
 			p, _, err = state.ValueOps().ArrayAppend(state.Globals.Ctx, p, k)
 			if err != nil {
-				return err
-			}
-			if err := record(state, p, v); err != nil {
 				return err
 			}
 			return do(state, p, v, record) // recurse

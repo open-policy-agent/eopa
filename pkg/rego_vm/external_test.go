@@ -31,6 +31,14 @@ func init() {
 	addTestSleepBuiltin()
 }
 
+func readEOPACases(t testing.TB) []cases.TestCase {
+	c, err := cases.Load("testdata/cases")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c.Sorted().Cases
+}
+
 func readCases(t testing.TB) ([]cases.TestCase, map[string]string) {
 	opaRootDir := os.Getenv("OPA_ROOT")
 	if opaRootDir == "" {
@@ -59,6 +67,7 @@ func TestRegoE2E(t *testing.T) {
 	SetDefault(true)
 	cases, exceptions := readCases(t)
 	ctx := context.Background()
+	cases = append(cases, readEOPACases(t)...)
 
 	for _, tc := range cases {
 		name := tc.Filename + "/" + tc.Note
