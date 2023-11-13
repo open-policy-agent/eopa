@@ -11,6 +11,34 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.13.0
+
+This release contains a security fix for gRPC handlers used with OpenTelemetry, various performance
+enhancements, bug fixes, third-party dependency updates, and a way to have Enterprise OPA fall back
+to "OPA-mode" when there is no valid license.
+
+### OpenTelemetry CVE-2023-47108
+
+This release updates the gRPC handlers used with OpenTelemetry to address a security vulnerability (CVE-2023-47108, https://github.com/advisories/GHSA-8pgv-569h-w5rw).
+
+### Fallback to OPA
+
+When using `eopa run` and `eopa exec` without a valid license, Enterprise OPA will now log a message,
+and continue executing as if it was an ordinary instance of OPA.
+
+This is enabled by running the license check synchronously. It'll be quick for missing files and environment
+variables.
+
+**If you don't want to fallback to OPA**, because you expect your license to be present and valid, you can
+pass `--no-license-fallback` to both `eopa run` and `eopa exec`: the license validation will run asynchronously,
+and stop the process on failures.
+
+### Bug Fixes
+
+1. The gRPC API's decision logs now include the `input` sent with the request.
+2. An issue with the `mongodb.find` and `mongodb.find_one` caching has been resolved.
+
+
 ## v1.12.0
 
 This release updates the OPA version used in Enterprise OPA to [v0.58.0](https://github.com/open-policy-agent/opa/releases/tag/v0.58.0),
