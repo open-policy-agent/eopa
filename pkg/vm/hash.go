@@ -34,42 +34,41 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.Digest) err
 		hasher.Write([]byte{typeHashNull})
 
 	case fjson.Bool:
-		hasher.Write([]byte{typeHashBool})
 		if value.Value() {
-			hasher.Write([]byte{1})
+			hasher.Write([]byte{typeHashBool, 1})
 		} else {
-			hasher.Write([]byte{0})
+			hasher.Write([]byte{typeHashBool, 0})
 		}
 
 	case fjson.Float:
-		hasher.Write([]byte{typeHashFloat})
 		f, err := value.Value().Float64()
 		if err != nil {
 			panic("invalid float")
 		}
 		// NOTE(sr): Picked BigEndian here because we've done it below. It shouldn't matter
 		// for the hashing here.
-		b := make([]byte, 8)
-		binary.BigEndian.PutUint64(b, math.Float64bits(f))
+		b := make([]byte, 9)
+		b[0] = typeHashFloat
+		binary.BigEndian.PutUint64(b[1:], math.Float64bits(f))
 		hasher.Write(b)
 
 	case *fjson.String:
 		hashString(value, hasher)
 
 	case fjson.Array:
-		hasher.Write([]byte{typeHashArray})
-
 		n := value.Len()
 		var err error
 		for i := 0; i < n && err == nil; i++ {
 			err = hashImpl(ctx, value.Iterate(i), hasher)
 		}
+
+		hasher.Write([]byte{typeHashArray})
+
 		return err
 
 	case IterableObject:
 		// The two object implementation should have equal
 		// hash implementation
-		hasher.Write([]byte{typeHashObject})
 
 		h, err := value.Hash(ctx)
 		if err != nil {
@@ -78,11 +77,10 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.Digest) err
 
 		b := make([]byte, 8)
 		binary.BigEndian.PutUint64(b, h)
+		b[0] = typeHashObject
 		hasher.Write(b)
 
 	case fjson.Object:
-		hasher.Write([]byte{typeHashObject})
-
 		var m uint64
 		names := value.Names()
 		var err error
@@ -96,11 +94,10 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.Digest) err
 
 		b := make([]byte, 8)
 		binary.BigEndian.PutUint64(b, m)
+		b[0] = typeHashObject
 		hasher.Write(b)
 
 	case Set:
-		hasher.Write([]byte{typeHashSet})
-
 		m, err := value.Hash(ctx)
 		if err != nil {
 			return err
@@ -108,6 +105,7 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.Digest) err
 
 		b := make([]byte, 8)
 		binary.BigEndian.PutUint64(b, m)
+		b[0] = typeHashSet
 		hasher.Write(b)
 
 	default:
