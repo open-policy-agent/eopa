@@ -65,13 +65,6 @@ func equalOp(ctx context.Context, a, b interface{}) (bool, error) {
 
 		return false, nil
 
-	case hashable:
-		if y, ok := b.(hashable); ok {
-			return x.Equal(y), nil
-		}
-
-		return false, nil
-
 	default:
 		panic("unsupported type")
 	}

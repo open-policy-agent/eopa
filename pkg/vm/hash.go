@@ -20,12 +20,6 @@ const (
 	typeHashSet
 )
 
-// hashable is for testing purposes, to allow hash function customization.
-type hashable interface {
-	Equal(other hashable) bool
-	Hash() uint64
-}
-
 func hash(ctx context.Context, value interface{}) (uint64, error) {
 	hasher := xxhash.New()
 	err := hashImpl(ctx, value, hasher)
@@ -114,11 +108,6 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.Digest) err
 
 		b := make([]byte, 8)
 		binary.BigEndian.PutUint64(b, m)
-		hasher.Write(b)
-
-	case hashable:
-		b := make([]byte, 8)
-		binary.BigEndian.PutUint64(b, value.Hash())
 		hasher.Write(b)
 
 	default:
