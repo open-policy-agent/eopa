@@ -41,6 +41,28 @@ func TestSet(t *testing.T) {
 				t.Fatal("unexpected set contents")
 			}
 
+			// Iter2
+			contents = make(map[string]struct{})
+			set.Iter2(func(v, vv interface{}) (bool, error) {
+				if v.(*fjson.String).Value() != vv.(*fjson.String).Value() {
+					t.Fatal("unexpected iteration")
+				}
+				contents[v.(*fjson.String).Value()] = struct{}{}
+				return false, nil
+			})
+			c = 0
+			set.Iter2(func(_, _ interface{}) (bool, error) {
+				c++
+				return true, nil
+			})
+			if c > 1 {
+				t.Fatal("unexpected iteration")
+			}
+
+			if !reflect.DeepEqual(contents, expected) {
+				t.Fatal("unexpected set contents")
+			}
+
 			// Len
 			if n := set.Len(); n != len(expected) {
 				t.Fatal("unxpected set length")

@@ -22,6 +22,7 @@ type Set interface {
 	Append(hash uint64, v fjson.Json) error
 	Get(ctx context.Context, v fjson.Json) (fjson.Json, bool, error)
 	Iter(iter func(v fjson.Json) (bool, error)) (bool, error)
+	Iter2(iter func(v, vv interface{}) (bool, error)) (bool, error)
 	Equal(ctx context.Context, other Set) (bool, error)
 	Len() int
 	Hash(ctx context.Context) (uint64, error)
@@ -114,6 +115,19 @@ func (o *setLarge) Iter(iter func(v fjson.Json) (bool, error)) (bool, error) {
 	for _, entry := range o.table {
 		for ; entry != nil; entry = entry.next {
 			if stop, err := iter(entry.v); err != nil {
+				return false, err
+			} else if stop {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+func (o *setLarge) Iter2(iter func(v, vv interface{}) (bool, error)) (bool, error) {
+	for _, entry := range o.table {
+		for ; entry != nil; entry = entry.next {
+			if stop, err := iter(entry.v, entry.v); err != nil {
 				return false, err
 			} else if stop {
 				return true, nil
@@ -257,6 +271,19 @@ func (o *setCompact[T]) Iter(iter func(v fjson.Json) (bool, error)) (bool, error
 
 	for i := 0; i < o.n && !stop && err == nil; i++ {
 		stop, err = iter(o.table[i].v)
+	}
+
+	return stop, err
+}
+
+func (o *setCompact[T]) Iter2(iter func(v, vv interface{}) (bool, error)) (bool, error) {
+	var (
+		stop bool
+		err  error
+	)
+
+	for i := 0; i < o.n && !stop && err == nil; i++ {
+		stop, err = iter(o.table[i].v, o.table[i].v)
 	}
 
 	return stop, err

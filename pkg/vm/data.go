@@ -352,14 +352,7 @@ func (o *DataOperations) Iter(ctx context.Context, v interface{}, f func(key, va
 			}
 		}
 	case Set:
-		_, err := v.Iter(func(v fjson.Json) (bool, error) {
-			stop, err := f(v, v)
-			if err != nil {
-				return true, err
-			}
-
-			return stop, nil
-		})
+		_, err := v.Iter2(f)
 		return err
 
 	case IterableObject:
