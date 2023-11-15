@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -67,7 +66,7 @@ func (p *grpcServerPlugin) Start(context.Context) error {
 		addr := p.config.Addr
 		listener, err = net.Listen("tcp", addr)
 		if err != nil {
-			panic(fmt.Errorf("failed to listen on %s: %w", addr, err))
+			return err
 		}
 	}
 	// Fire up server goroutine.
