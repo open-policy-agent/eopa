@@ -1,0 +1,4 @@
+! exec eopa login
+stderr 'Error: URL not provided: use .styra.yaml or pass `--url`' 
+! stderr 'Usage:'
+! stdout .

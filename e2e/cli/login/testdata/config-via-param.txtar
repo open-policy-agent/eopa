@@ -1,0 +1,3 @@
+exec eopa login --url https://my.styra.com
+stderr 'would be connecting to https://my.styra.com'
+! stdout .

@@ -188,6 +188,7 @@ jobs:
         run: |
           echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
           echo "binary=$(pwd)/eopa" >> $GITHUB_OUTPUT
+          pwd >> $GITHUB_PATH
           chmod +x eopa
       - run: make e2e
         env:

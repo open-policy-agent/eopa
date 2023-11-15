@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/open-policy-agent/opa/cmd"
 	"github.com/open-policy-agent/opa/util"
@@ -163,6 +164,18 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	// New Enterprise OPA commands
 	root.AddCommand(initBundle())
 	root.AddCommand(liaCtl())
+
+	// NOTE(sr): viper supports a bunch of config file formats, but let's decide
+	//           which formats we'd like to support, not just take them all as-is.
+	viper.SupportedExts = []string{"yaml"}
+
+	// NOTE(sr): for config file debugging, use this
+	// cfg := viper.NewWithOptions(viper.WithLogger(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))))
+	cfg := viper.New()
+	cfg.SetConfigName(".styra")
+	cfg.SetConfigType("yaml")
+	cfg.AddConfigPath(".") // TODO(sr): add more, like home dir
+	root.AddCommand(loginCmd(cfg))
 
 	licenseCmd := LicenseCmd(lic, lparams)
 	addLicenseFlags(licenseCmd, lparams)
