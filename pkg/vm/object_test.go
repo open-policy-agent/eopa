@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -10,7 +9,6 @@ import (
 )
 
 func TestObject(t *testing.T) {
-	ctx := context.Background()
 	obj := zeroObject
 
 	for i := 0; i < 32; i++ {
@@ -47,7 +45,7 @@ func TestObject(t *testing.T) {
 			// Get
 			var hash uint64
 			for k, v := range expected {
-				found, ok, err := obj.Get(ctx, fjson.NewString(k))
+				found, ok, err := obj.Get(fjson.NewString(k))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -60,16 +58,16 @@ func TestObject(t *testing.T) {
 					t.Fatal("value not found")
 				}
 
-				hash, _ = ObjectHashEntry(ctx, hash, fjson.NewString(k), fjson.NewString(v))
+				hash, _ = objectHashEntry(hash, fjson.NewString(k), fjson.NewString(v))
 			}
 
 			// Hash
-			if h, err := obj.Hash(ctx); h != hash || err != nil {
+			if h, err := obj.Hash(); h != hash || err != nil {
 				t.Fatal("unexpected hash")
 			}
 
 			// Insert
-			obj, _ = obj.Insert(ctx, fjson.NewString(fmt.Sprintf("%d", i)), fjson.NewString(fmt.Sprintf("%d", i*2)))
+			obj, _ = obj.Insert(fjson.NewString(fmt.Sprintf("%d", i)), fjson.NewString(fmt.Sprintf("%d", i*2)))
 		})
 	}
 }

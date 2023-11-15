@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"context"
 	"encoding/binary"
 	"math"
 
@@ -20,13 +19,13 @@ const (
 	typeHashSet
 )
 
-func hash(ctx context.Context, value interface{}) (uint64, error) {
+func hash(value interface{}) (uint64, error) {
 	hasher := xxhash.New()
-	err := hashImpl(ctx, value, hasher)
+	err := hashImpl(value, hasher)
 	return hasher.Sum64(), err
 }
 
-func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.Digest) error {
+func hashImpl(value interface{}, hasher *xxhash.Digest) error {
 	// Note Hasher writer below never returns an error.
 
 	switch value := value.(type) {
@@ -59,7 +58,7 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.Digest) err
 		n := value.Len()
 		var err error
 		for i := 0; i < n && err == nil; i++ {
-			err = hashImpl(ctx, value.Iterate(i), hasher)
+			err = hashImpl(value.Iterate(i), hasher)
 		}
 
 		hasher.Write([]byte{typeHashArray})
@@ -70,7 +69,7 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.Digest) err
 		// The two object implementation should have equal
 		// hash implementation
 
-		h, err := value.Hash(ctx)
+		h, err := value.Hash()
 		if err != nil {
 			return err
 		}
@@ -85,7 +84,7 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.Digest) err
 		names := value.Names()
 		var err error
 		for i := 0; i < len(names) && err == nil; i++ {
-			m, err = ObjectHashEntry(ctx, m, fjson.NewString(names[i]), value.Iterate(i))
+			m, err = objectHashEntry(m, fjson.NewString(names[i]), value.Iterate(i))
 		}
 
 		if err != nil {
@@ -98,7 +97,7 @@ func hashImpl(ctx context.Context, value interface{}, hasher *xxhash.Digest) err
 		hasher.Write(b)
 
 	case Set:
-		m, err := value.Hash(ctx)
+		m, err := value.Hash()
 		if err != nil {
 			return err
 		}
@@ -125,14 +124,14 @@ func hashString(value *fjson.String, hasher *xxhash.Digest) {
 	hasher.WriteString(string(*value))
 }
 
-// ObjectHashEntry hashes an object key-value pair. To be used with
+// objectHashEntry hashes an object key-value pair. To be used with
 // any object implementation, to guarantee identical hashing across
 // different object implementations.
-func ObjectHashEntry(ctx context.Context, h uint64, k, v interface{}) (uint64, error) {
+func objectHashEntry(h uint64, k, v interface{}) (uint64, error) {
 	hasher := xxhash.New()
-	err := hashImpl(ctx, k, hasher)
+	err := hashImpl(k, hasher)
 	if err == nil {
-		err = hashImpl(ctx, v, hasher)
+		err = hashImpl(v, hasher)
 	}
 
 	return h + hasher.Sum64(), err

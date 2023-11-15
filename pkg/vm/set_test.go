@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -12,7 +11,6 @@ import (
 )
 
 func TestSet(t *testing.T) {
-	ctx := context.Background()
 	set := zeroSet
 
 	for i := 0; i < 32; i++ {
@@ -71,7 +69,7 @@ func TestSet(t *testing.T) {
 			// Get
 			var hash uint64
 			for v := range expected {
-				found, ok, err := set.Get(ctx, fjson.NewString(v))
+				found, ok, err := set.Get(fjson.NewString(v))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -85,27 +83,27 @@ func TestSet(t *testing.T) {
 				}
 
 				h := xxhash.New()
-				if err := hashImpl(ctx, fjson.NewString(v), h); err != nil {
+				if err := hashImpl(fjson.NewString(v), h); err != nil {
 					t.Fatal(err)
 				}
 				hash += h.Sum64()
 			}
 
 			// Hash
-			if h, err := set.Hash(ctx); h != hash || err != nil {
+			if h, err := set.Hash(); h != hash || err != nil {
 				t.Fatal("unexpected hash")
 			}
 
 			// MergeWith
 			merged := NewSet()
-			merged, err := merged.Add(ctx, fjson.NewString("merge"))
+			merged, err := merged.Add(fjson.NewString("merge"))
 			if err != nil {
 				t.Fatal("unexpected add error")
 			}
 
 			expected["merge"] = struct{}{}
 
-			merged, err = merged.MergeWith(ctx, set)
+			merged, err = merged.MergeWith(set)
 			if err != nil {
 				t.Fatal("unexpected merge error")
 			}
@@ -121,7 +119,7 @@ func TestSet(t *testing.T) {
 			}
 
 			// Add
-			set, _ = set.Add(ctx, fjson.NewString(fmt.Sprintf("%d", i)))
+			set, _ = set.Add(fjson.NewString(fmt.Sprintf("%d", i)))
 		})
 	}
 }

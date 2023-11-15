@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"math/big"
@@ -194,7 +193,7 @@ func objectSelect(state *State, args []Value, keep bool) error {
 		}
 	case Object:
 		selected = func(key fjson.Json) (bool, error) {
-			_, ok, err := coll.Get(state.Globals.Ctx, key)
+			_, ok, err := coll.Get(key)
 			return err == nil && ok, err
 		}
 	case fjson.Object:
@@ -204,19 +203,19 @@ func objectSelect(state *State, args []Value, keep bool) error {
 		}
 	case Set:
 		selected = func(key fjson.Json) (bool, error) {
-			_, ok, err := coll.Get(state.Globals.Ctx, key)
+			_, ok, err := coll.Get(key)
 			return err == nil && ok, err
 		}
 	case fjson.Array:
 		s := NewSet()
 		for i := 0; i < coll.Len(); i++ {
 			var err error
-			if s, err = s.Add(state.Globals.Ctx, coll.Iterate(i)); err != nil {
+			if s, err = s.Add(coll.Iterate(i)); err != nil {
 				return err
 			}
 		}
 		selected = func(key fjson.Json) (bool, error) {
-			_, ok, err := s.Get(state.Globals.Ctx, key)
+			_, ok, err := s.Get(key)
 			return err == nil && ok, err
 		}
 	default:
@@ -248,10 +247,10 @@ func objectSelect(state *State, args []Value, keep bool) error {
 			return true, err // abort
 		}
 		if !ok && !keep {
-			result, err = result.Insert(state.Globals.Ctx, key, value)
+			result, err = result.Insert(key, value)
 		}
 		if ok && keep {
-			result, err = result.Insert(state.Globals.Ctx, key, value)
+			result, err = result.Insert(key, value)
 		}
 		return false, err // continue
 	}); err != nil {
@@ -788,7 +787,7 @@ func equalBuiltin(state *State, args []Value) error {
 		return err
 	}
 
-	ret, err := equalOp(state.Globals.Ctx, a, b)
+	ret, err := equalOp(a, b)
 	if err == nil {
 		state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(ret))
 	}
@@ -811,7 +810,7 @@ func notEqualBuiltin(state *State, args []Value) error {
 		return err
 	}
 
-	ret, err := equalOp(state.Globals.Ctx, a, b)
+	ret, err := equalOp(a, b)
 	if err == nil {
 		state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(!ret))
 	}
@@ -840,12 +839,12 @@ func binaryOrBuiltin(state *State, args []Value) error {
 	}
 
 	result := newSet(n)
-	result, err = result.MergeWith(state.Globals.Ctx, a)
+	result, err = result.MergeWith(a)
 	if err != nil {
 		return err
 	}
 
-	result, err = result.MergeWith(state.Globals.Ctx, b)
+	result, err = result.MergeWith(b)
 	if err != nil {
 		return err
 	}
@@ -877,7 +876,7 @@ func objectUnionBuiltin(state *State, args []Value) error {
 		return err
 	}
 
-	result, err := objectUnion(state.Globals.Ctx, arg0, arg1)
+	result, err := objectUnion(arg0, arg1)
 	if err != nil {
 		return err
 	}
@@ -886,7 +885,7 @@ func objectUnionBuiltin(state *State, args []Value) error {
 	return nil
 }
 
-func objectUnion(ctx context.Context, a, b fjson.Json) (fjson.Json, error) {
+func objectUnion(a, b fjson.Json) (fjson.Json, error) {
 	switch a := a.(type) {
 	case fjson.Object:
 		result := newObject(a.Len())
@@ -903,7 +902,7 @@ func objectUnion(ctx context.Context, a, b fjson.Json) (fjson.Json, error) {
 			for _, key := range b.Names() {
 				if a.Value(key) == nil {
 					var err error
-					result, err = result.Insert(ctx, fjson.NewString(key), b.Value(key))
+					result, err = result.Insert(fjson.NewString(key), b.Value(key))
 					if err != nil {
 						return nil, err
 					}
@@ -912,7 +911,7 @@ func objectUnion(ctx context.Context, a, b fjson.Json) (fjson.Json, error) {
 
 		case Object:
 			getValue = func(key string) (fjson.Json, bool, error) {
-				value, ok, err := b.Get(ctx, fjson.NewString(key))
+				value, ok, err := b.Get(fjson.NewString(key))
 				if !ok || err != nil {
 					return nil, ok, err
 				}
@@ -923,7 +922,7 @@ func objectUnion(ctx context.Context, a, b fjson.Json) (fjson.Json, error) {
 			if err := b.Iter(func(key, value fjson.Json) (bool, error) {
 				var err error
 				if key, ok := key.(*fjson.String); !ok || a.Value(key.Value()) == nil {
-					result, err = result.Insert(ctx, key, value)
+					result, err = result.Insert(key, value)
 				}
 				return false, err
 			}); err != nil {
@@ -939,19 +938,19 @@ func objectUnion(ctx context.Context, a, b fjson.Json) (fjson.Json, error) {
 			if err != nil {
 				return nil, err
 			} else if !ok {
-				result, err = result.Insert(ctx, fjson.NewString(key), a.Value(key))
+				result, err = result.Insert(fjson.NewString(key), a.Value(key))
 				if err != nil {
 					return nil, err
 				}
 				continue
 			}
 
-			m, err := objectUnion(ctx, a.Value(key), v2)
+			m, err := objectUnion(a.Value(key), v2)
 			if err != nil {
 				return nil, err
 			}
 
-			result, err = result.Insert(ctx, fjson.NewString(key), m)
+			result, err = result.Insert(fjson.NewString(key), m)
 			if err != nil {
 				return nil, err
 			}
@@ -962,7 +961,7 @@ func objectUnion(ctx context.Context, a, b fjson.Json) (fjson.Json, error) {
 	case Object:
 		switch b := b.(type) {
 		case fjson.Object:
-			return objectUnion(ctx, b, a)
+			return objectUnion(b, a)
 		case Object:
 			n := a.Len()
 			if m := b.Len(); m > n {
@@ -972,10 +971,10 @@ func objectUnion(ctx context.Context, a, b fjson.Json) (fjson.Json, error) {
 			result := newObject(n)
 
 			if err := b.Iter(func(key, value fjson.Json) (bool, error) {
-				if _, ok, err := a.Get(ctx, key); err != nil {
+				if _, ok, err := a.Get(key); err != nil {
 					return true, err
 				} else if !ok {
-					result, err = result.Insert(ctx, key, value)
+					result, err = result.Insert(key, value)
 					if err != nil {
 						return false, err
 					}
@@ -988,7 +987,7 @@ func objectUnion(ctx context.Context, a, b fjson.Json) (fjson.Json, error) {
 
 			err := a.Iter(func(key, value fjson.Json) (bool, error) {
 				getValue := func(key fjson.Json) (fjson.Json, bool, error) {
-					value, ok, err := b.Get(ctx, key)
+					value, ok, err := b.Get(key)
 					if !ok || err != nil {
 						return nil, ok, err
 					}
@@ -1000,16 +999,16 @@ func objectUnion(ctx context.Context, a, b fjson.Json) (fjson.Json, error) {
 				if err != nil {
 					return true, err
 				} else if !ok {
-					result, err = result.Insert(ctx, key, value)
+					result, err = result.Insert(key, value)
 					return false, err
 				}
 
-				m, err := objectUnion(ctx, value, v2)
+				m, err := objectUnion(value, v2)
 				if err != nil {
 					return true, err
 				}
 
-				result, err = result.Insert(ctx, key, m)
+				result, err = result.Insert(key, m)
 				return false, err
 			})
 			if err != nil {

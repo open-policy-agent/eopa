@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"context"
 	"errors"
 	"math/big"
 
@@ -10,7 +9,7 @@ import (
 
 var errNotEqual = errors.New("not equal")
 
-func equalOp(ctx context.Context, a, b fjson.Json) (bool, error) {
+func equalOp(a, b fjson.Json) (bool, error) {
 	switch x := a.(type) {
 	case fjson.Null:
 		_, ok := b.(fjson.Null)
@@ -44,7 +43,7 @@ func equalOp(ctx context.Context, a, b fjson.Json) (bool, error) {
 			}
 
 			for i := 0; i < x.Len(); i++ {
-				ok, err := equalOp(ctx, x.Iterate(i), y.Iterate(i))
+				ok, err := equalOp(x.Iterate(i), y.Iterate(i))
 				if !ok || err != nil {
 					return false, err
 				}
@@ -56,14 +55,14 @@ func equalOp(ctx context.Context, a, b fjson.Json) (bool, error) {
 		return false, nil
 
 	case fjson.Object:
-		return equalObject(ctx, a, b)
+		return equalObject(a, b)
 
 	case Object:
-		return equalObject(ctx, a, b)
+		return equalObject(a, b)
 
 	case Set:
 		if y, ok := b.(Set); ok {
-			return x.Equal(ctx, y)
+			return x.Equal(y)
 		}
 
 		return false, nil
@@ -73,7 +72,7 @@ func equalOp(ctx context.Context, a, b fjson.Json) (bool, error) {
 	}
 }
 
-func equalObject(ctx context.Context, a, b interface{}) (bool, error) {
+func equalObject(a, b interface{}) (bool, error) {
 	switch a := a.(type) {
 	case fjson.Object:
 		switch b := b.(type) {
@@ -96,7 +95,7 @@ func equalObject(ctx context.Context, a, b interface{}) (bool, error) {
 					return true, errNotEqual
 				}
 
-				if eq, err := equalOp(ctx, va, vb); err != nil {
+				if eq, err := equalOp(va, vb); err != nil {
 					return true, err
 				} else if !eq {
 					return true, errNotEqual
@@ -115,10 +114,10 @@ func equalObject(ctx context.Context, a, b interface{}) (bool, error) {
 	case Object:
 		switch b := b.(type) {
 		case fjson.Object:
-			return equalOp(ctx, b, a)
+			return equalOp(b, a)
 
 		case Object:
-			return a.Equal(ctx, b)
+			return a.Equal(b)
 		}
 	}
 
