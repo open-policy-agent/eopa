@@ -84,14 +84,14 @@ plugins:
 				w.WriteHeader(http.StatusInternalServerError)
 			}))
 			t.Cleanup(ts.Close)
-			eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(tc.configFmt, ts.URL), policy, false)
+			eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(tc.configFmt, ts.URL), policy, eopaHTTPPort, false)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
 			wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			{ // act: send request
-				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/p", strings.NewReader(`{"input": {"a": "b"}}`))
+				req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/p", eopaHTTPPort), strings.NewReader(`{"input": {"a": "b"}}`))
 				if err != nil {
 					t.Fatalf("http request: %v", err)
 				}

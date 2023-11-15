@@ -172,14 +172,14 @@ plugins:
 				}
 			}()
 
-			eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(tc.config, broker), policy, false)
+			eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(tc.config, broker), policy, eopaHTTPPort, false)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
 			wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			for i := 0; i < 2; i++ { // act: send API requests
-				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin",
+				req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/coin", eopaHTTPPort),
 					strings.NewReader(fmt.Sprintf(`{"input":%d}`, i)))
 				if err != nil {
 					t.Fatalf("http request: %v", err)

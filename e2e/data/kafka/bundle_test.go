@@ -45,7 +45,7 @@ func TestTransformFromBundle(t *testing.T) {
 		t.Fatalf("produce msg: %v", err)
 	}
 
-	eopa, eopaOut := eopaRun(t, config("transform", testserver.URL))
+	eopa, eopaOut := eopaRun(t, config("transform", testserver.URL), eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +84,7 @@ func TestTransformFromBundle(t *testing.T) {
 	}
 
 	if err := util.WaitFunc(func() bool {
-		resp, err := http.Get("http://127.0.0.1:8181/v1/data/kafka/messages")
+		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/v1/data/kafka/messages", eopaHTTPPort))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -106,7 +106,7 @@ func TestTransformFromBundle(t *testing.T) {
 
 // The bundle used in this test declares no roots, so it owns all of 'data'.
 func TestOverlapBundleWithoutRoots(t *testing.T) {
-	eopa, eopaOut := eopaRun(t, config("no-roots", testserver.URL))
+	eopa, eopaOut := eopaRun(t, config("no-roots", testserver.URL), eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestOverlapBundleWithoutRoots(t *testing.T) {
 
 // The bundle used here declares the root "data.kafka.messages"
 func TestOverlapBundleOverlappingRoots(t *testing.T) {
-	eopa, eopaOut := eopaRun(t, config("overlap", testserver.URL))
+	eopa, eopaOut := eopaRun(t, config("overlap", testserver.URL), eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func TestOverlapBundleOverlappingRoots(t *testing.T) {
 // The bundle used here declares the root "data.kafka", a prefix of "data.kafka.messages"
 func TestOverlapBundlePrefixRoot(t *testing.T) {
 	config := fmt.Sprintf(config("prefix", testserver.URL))
-	eopa, eopaOut := eopaRun(t, config)
+	eopa, eopaOut := eopaRun(t, config, eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ plugins:
 }
 
 func assertStatus(t *testing.T, exp map[string]any) {
-	resp, err := http.Get("http://127.0.0.1:8181/v1/status")
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/v1/status", eopaHTTPPort))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,13 +220,13 @@ func network(t *testing.T) *docker.Network {
 	return network
 }
 
-func eopaRun(t *testing.T, config string, extra ...string) (*exec.Cmd, *bytes.Buffer) {
+func eopaRun(t *testing.T, config string, httpPort int, extra ...string) (*exec.Cmd, *bytes.Buffer) {
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
 	args := []string{
 		"run",
 		"--server",
-		"--addr", "localhost:8181",
+		"--addr", fmt.Sprintf("localhost:%d", httpPort),
 		"--disable-telemetry",
 		"--log-level", "debug",
 	}

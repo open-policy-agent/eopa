@@ -28,6 +28,7 @@ import (
 
 	"github.com/open-policy-agent/opa/version"
 
+	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
@@ -56,6 +57,21 @@ var standardLabels = payloadLabels{
 }
 
 var stdIgnores = cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "DecisionID", "Labels.ID", "NDBC")
+
+var eopaHTTPPort int
+
+func TestMain(m *testing.M) {
+	r := rand.New(rand.NewSource(2908))
+	for {
+		port := r.Intn(38181) + 1
+		if utils.IsTCPPortBindable(port) {
+			eopaHTTPPort = port
+			break
+		}
+	}
+
+	os.Exit(m.Run())
+}
 
 // This tests sends three API requests: one is logged as-is, one is dropped, and one is masked.
 // It uses each of the three different buffer options (unbuffered, memory, disk).
@@ -96,14 +112,14 @@ plugins:
 	for _, tc := range tests {
 		t.Run("buffer="+tc.buffer, func(t *testing.T) {
 			config := fmt.Sprintf(configFmt, tc.buffer)
-			eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, false)
+			eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
 			wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			{ // act 1: request is logged as-is
-				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
+				req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/coin", eopaHTTPPort), nil)
 				if err != nil {
 					t.Fatalf("http request: %v", err)
 				}
@@ -119,7 +135,7 @@ plugins:
 
 			{ // act 2: request is dropped
 				payload := strings.NewReader(`{"input": {"drop": "nooo"}}`)
-				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", payload)
+				req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/coin", eopaHTTPPort), payload)
 				if err != nil {
 					t.Fatalf("http request: %v", err)
 				}
@@ -135,7 +151,7 @@ plugins:
 
 			{ // act 3: request is masked
 				payload := strings.NewReader(`{"input": {"replace": ":)", "remove": ":)", "erase": ":)"}}`)
-				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", payload)
+				req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/coin", eopaHTTPPort), payload)
 				if err != nil {
 					t.Fatalf("http request: %v", err)
 				}
@@ -254,14 +270,14 @@ plugins:
       type: console
 `
 
-	eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, false)
+	eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	{ // act: send request
-		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/p", strings.NewReader(`{"input": {"a": "b"}}`))
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/p", eopaHTTPPort), strings.NewReader(`{"input": {"a": "b"}}`))
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -318,14 +334,14 @@ plugins:
     output:
       type: console
 `
-		eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, false)
+		eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
 		if err := eopa.Start(); err != nil {
 			t.Fatal(err)
 		}
 		wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 		{ // act 1: first request, not logged yet
-			resp, err := http.Post("http://localhost:28181/v1/data/test/coin", jsonType, nil)
+			resp, err := http.Post(fmt.Sprintf("http://localhost:%d/v1/data/test/coin", eopaHTTPPort), jsonType, nil)
 			if err != nil {
 				t.Fatalf("http request: %v", err)
 			}
@@ -344,7 +360,7 @@ plugins:
 		}
 
 		{ // act 2: second request, triggers flush
-			resp, err := http.Post("http://localhost:28181/v1/data/test/coin", jsonType, nil)
+			resp, err := http.Post(fmt.Sprintf("http://localhost:%d/v1/data/test/coin", eopaHTTPPort), jsonType, nil)
 			if err != nil {
 				t.Fatalf("http request: %v", err)
 			}
@@ -371,14 +387,14 @@ plugins:
     output:
       type: console
 `
-		eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, false)
+		eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
 		if err := eopa.Start(); err != nil {
 			t.Fatal(err)
 		}
 		wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 		{ // act 1: first request, not logged yet
-			resp, err := http.Post("http://localhost:28181/v1/data/test/coin", jsonType, nil)
+			resp, err := http.Post(fmt.Sprintf("http://localhost:%d/v1/data/test/coin", eopaHTTPPort), jsonType, nil)
 			if err != nil {
 				t.Fatalf("http request: %v", err)
 			}
@@ -463,14 +479,14 @@ plugins:
 				w.WriteHeader(http.StatusInternalServerError)
 			}))
 			t.Cleanup(ts.Close)
-			eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(tc.configFmt, ts.URL), policy, false)
+			eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(tc.configFmt, ts.URL), policy, eopaHTTPPort, false)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
 			wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			{ // act: send API request
-				req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
+				req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/coin", eopaHTTPPort), nil)
 				if err != nil {
 					t.Fatalf("http request: %v", err)
 				}
@@ -545,7 +561,7 @@ plugins:
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	t.Cleanup(ts.Close)
-	eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(config, ts.URL, expectedRetries), policy, false)
+	eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(config, ts.URL, expectedRetries), policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -554,7 +570,7 @@ plugins:
 	}, 5*time.Second)
 
 	act := func() {
-		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/coin", eopaHTTPPort), nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -626,14 +642,14 @@ plugins:
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	t.Cleanup(ts.Close)
-	eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(configFmt, ts.URL), policy, false)
+	eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(configFmt, ts.URL), policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	{ // act: send API request
-		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/coin", eopaHTTPPort), nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -705,14 +721,14 @@ plugins:
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	t.Cleanup(ts.Close)
-	eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(configFmt, ts.URL), policy, false)
+	eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(configFmt, ts.URL), policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	{ // act: send API request
-		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/coin", eopaHTTPPort), nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -786,14 +802,14 @@ plugins:
 	t.Cleanup(func() { _ = srv.Close() })
 
 	config := fmt.Sprintf(configFmt, "https://127.0.0.1:9999")
-	eopa, _, eopaErr := loadEnterpriseOPA(t, config, policy, false)
+	eopa, _, eopaErr := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	{ // act: send API request
-		req, err := http.NewRequest("POST", "http://localhost:28181/v1/data/test/coin", nil)
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/coin", eopaHTTPPort), nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -810,7 +826,7 @@ plugins:
 	_ = collectDL(t, &buf, true, 1)
 }
 
-func loadEnterpriseOPA(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
+func loadEnterpriseOPA(t *testing.T, config, policy string, httpPort int, opts ...any) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	var silent bool
 	logLevel := "debug" // Needed for checking if server is ready
 	for _, o := range opts {
@@ -834,7 +850,7 @@ func loadEnterpriseOPA(t *testing.T, config, policy string, opts ...any) (*exec.
 	args := []string{
 		"run",
 		"--server",
-		"--addr", "localhost:28181",
+		"--addr", fmt.Sprintf("localhost:%d", httpPort),
 		"--config-file", confPath,
 		"--log-level", logLevel,
 		"--disable-telemetry",
