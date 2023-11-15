@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
@@ -18,14 +19,15 @@ import (
 )
 
 // server CLI args used in these tests
-var server = []string{"run", "--server", "--addr", "localhost:38181", "--disable-telemetry", "--log-level", "debug"}
+var server = []string{"run", "--server", "--disable-telemetry", "--log-level", "debug"}
 
 func TestRunServerFallbackSuccess(t *testing.T) {
 	config := `` // no plugins
 	policy := `package test
 p := true` // no builtins called
 
-	eopa, eopaOut := eopaSansEnv(t, policy, config, server...)
+	serverArgs := append(server, "--addr", fmt.Sprintf(":%d", eopaHTTPPort))
+	eopa, eopaOut := eopaSansEnv(t, policy, config, serverArgs...)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +52,7 @@ p := true` // no builtins called
 
 	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-	req, err := http.NewRequest("POST", "http://localhost:38181/v1/data/test/p?metrics&instrument", nil)
+	req, err := http.NewRequest("POST", "http://localhost:"+fmt.Sprintf("%d", eopaHTTPPort)+"/v1/data/test/p?metrics&instrument", nil)
 	if err != nil {
 		t.Fatalf("http request: %v", err)
 	}
@@ -94,7 +96,8 @@ plugins:
 	policy := `package test
 p := true` // no builtins called
 
-	eopa, _ := eopaSansEnv(t, policy, config, server...)
+	serverArgs := append(server, "--addr", fmt.Sprintf(":%d", eopaHTTPPort))
+	eopa, _ := eopaSansEnv(t, policy, config, serverArgs...)
 	out, err := eopa.Output()
 	if err == nil {
 		t.Fatal("expected error")
@@ -115,7 +118,8 @@ func TestRunServerFallbackFailBuiltin(t *testing.T) {
 p := sql.send({})
 `
 
-	eopa, _ := eopaSansEnv(t, policy, config, server...)
+	serverArgs := append(server, "--addr", fmt.Sprintf(":%d", eopaHTTPPort))
+	eopa, _ := eopaSansEnv(t, policy, config, serverArgs...)
 	out, err := eopa.Output()
 	if err == nil {
 		t.Fatal("expected error")

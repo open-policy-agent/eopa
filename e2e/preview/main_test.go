@@ -5,6 +5,9 @@ package preview
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"math/rand"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -15,8 +18,24 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
+
+var eopaHTTPPort int
+
+func TestMain(m *testing.M) {
+	r := rand.New(rand.NewSource(2912))
+	for {
+		port := r.Intn(38181) + 1
+		if utils.IsTCPPortBindable(port) {
+			eopaHTTPPort = port
+			break
+		}
+	}
+
+	os.Exit(m.Run())
+}
 
 func TestHelloWorld(t *testing.T) {
 	policy := `
@@ -24,13 +43,13 @@ package test
 
 hello := "world"
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, policy)
+	eopa, eopaOut := loadEnterpriseOPA(t, policy, eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-	req, err := http.NewRequest("POST", "http://localhost:48181/v0/preview/test", nil)
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v0/preview/test", eopaHTTPPort), nil)
 	if err != nil {
 		t.Fatalf("http request: %v", err)
 	}
@@ -61,7 +80,7 @@ package test
 
 hello := "world"
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, policy)
+	eopa, eopaOut := loadEnterpriseOPA(t, policy, eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +94,7 @@ rego_modules:
     import future.keywords.if
     z := input if input.z
 `
-	req, err := http.NewRequest("POST", "http://localhost:48181/v0/preview/x/y/z", strings.NewReader(body))
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v0/preview/x/y/z", eopaHTTPPort), strings.NewReader(body))
 	if err != nil {
 		t.Fatalf("http request: %v", err)
 	}
@@ -107,7 +126,7 @@ package test
 
 hello := "world"
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, policy)
+	eopa, eopaOut := loadEnterpriseOPA(t, policy, eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +148,7 @@ rego_modules:
     }
     z := vault_secret("secret/path")
 `
-	req, err := http.NewRequest("POST", "http://localhost:48181/v0/preview/x/y/z?strict-builtin-errors", strings.NewReader(body))
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v0/preview/x/y/z?strict-builtin-errors", eopaHTTPPort), strings.NewReader(body))
 	if err != nil {
 		t.Fatalf("http request: %v", err)
 	}
@@ -172,7 +191,7 @@ rego_modules:
 	}
 }
 
-func loadEnterpriseOPA(t *testing.T, policy string) (*exec.Cmd, *bytes.Buffer) {
+func loadEnterpriseOPA(t *testing.T, policy string, httpPort int) (*exec.Cmd, *bytes.Buffer) {
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
 	policyPath := filepath.Join(dir, "eval.rego")
@@ -183,7 +202,7 @@ func loadEnterpriseOPA(t *testing.T, policy string) (*exec.Cmd, *bytes.Buffer) {
 	args := []string{
 		"run",
 		"--server",
-		"--addr", "localhost:48181",
+		"--addr", fmt.Sprintf("localhost:%d", httpPort),
 		"--log-level", "debug",
 		"--disable-telemetry",
 	}
@@ -216,4 +235,18 @@ func binary() string {
 		return "eopa"
 	}
 	return bin
+}
+
+// Tries an open port 3x times with short delays between each time to ensure the port is really free.
+func isTCPPortOpen(port int) bool {
+	portOpen := true
+	for i := 0; i < 3; i++ {
+		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err == nil {
+			ln.Close()
+		}
+		portOpen = portOpen && err == nil
+		time.Sleep(time.Millisecond) // Adjust the delay as needed
+	}
+	return portOpen
 }

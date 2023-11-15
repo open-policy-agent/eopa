@@ -20,7 +20,7 @@ p := true`
 
 	for _, flag := range []string{"--disable-telemetry", "--skip-version-check"} {
 		t.Run(flag, func(t *testing.T) {
-			eopa, eopaOut := eopaRun(t, policy, data, config, flag)
+			eopa, eopaOut := eopaRun(t, policy, data, config, eopaHTTPPort, flag)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}

@@ -5,6 +5,8 @@
 package envoy
 
 import (
+	"fmt"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,9 +15,25 @@ import (
 
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
+	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 )
 
 const defaultImage = "ko.local/enterprise-opa-private:edge" // built via `make build-local`
+
+var eopaHTTPPort int
+
+func TestMain(m *testing.M) {
+	r := rand.New(rand.NewSource(2908))
+	for {
+		port := r.Intn(38181) + 1
+		if utils.IsTCPPortBindable(port) {
+			eopaHTTPPort = port
+			break
+		}
+	}
+
+	os.Exit(m.Run())
+}
 
 var dockerPool = func() *dockertest.Pool {
 	p, err := dockertest.NewPool("")
@@ -88,7 +106,8 @@ func loadEnterpriseOPA(t *testing.T, tempfileMounts map[string]string, image str
 		mounts = append(mounts, tpath+":"+v)
 	}
 
-	eopa, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
+	dockerHTTPPortBinding := fmt.Sprintf("%d/tcp", eopaHTTPPort)
+	opts := &dockertest.RunOptions{
 		Name:       "eopa-e2e",
 		Repository: img[0],
 		Tag:        img[1],
@@ -101,11 +120,13 @@ func loadEnterpriseOPA(t *testing.T, tempfileMounts map[string]string, image str
 		Mounts: mounts,
 		PortBindings: map[docker.Port][]docker.PortBinding{
 			"9191/tcp": {{HostIP: "localhost", HostPort: "9191/tcp"}}, // gRPC
-			"8181/tcp": {{HostIP: "localhost", HostPort: "8181/tcp"}}, // HTTP
 		},
-		ExposedPorts: []string{"9191/tcp", "8181/tcp"},
-		Cmd:          strings.Split(`run --server --addr :8181 --log-level debug --disable-telemetry --config-file=/opa.yaml /policy.rego`, " "),
-	})
+		ExposedPorts: []string{"9191/tcp", fmt.Sprintf("%d/tcp", eopaHTTPPort)},
+		Cmd:          strings.Split(fmt.Sprintf(`run --server --addr :%d --log-level debug --disable-telemetry --config-file=/opa.yaml /policy.rego`, eopaHTTPPort), " "),
+	}
+	// Late-bind the HTTP port to be the dynamically-selected one for the package.
+	opts.PortBindings[docker.Port(dockerHTTPPortBinding)] = []docker.PortBinding{{HostIP: "localhost", HostPort: fmt.Sprintf("%d/tcp", eopaHTTPPort)}} // HTTP
+	eopa, err := dockerPool.RunWithOptions(opts)
 	if err != nil {
 		t.Fatalf("could not start %s: %s", image, err)
 	}

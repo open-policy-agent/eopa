@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -22,6 +23,7 @@ import (
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/rs/zerolog"
+	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/plugin/kzerolog"
 
@@ -32,6 +34,21 @@ const defaultImage = "ko.local/enterprise-opa-private:edge" // built via `make b
 
 // number of messages to produce
 const messageCount = 1_000
+
+var eopaHTTPPort int
+
+func TestMain(m *testing.M) {
+	r := rand.New(rand.NewSource(2909))
+	for {
+		port := r.Intn(38181) + 1
+		if utils.IsTCPPortBindable(port) {
+			eopaHTTPPort = port
+			break
+		}
+	}
+
+	os.Exit(m.Run())
+}
 
 var dockerPool = func() *dockertest.Pool {
 	p, err := dockertest.NewPool("")
@@ -114,7 +131,7 @@ transform[key] := val if {
 	}
 }
 `
-			eopa := loadEnterpriseOPA(t, config, policy, image, network)
+			eopa := loadEnterpriseOPA(t, config, policy, image, network, eopaHTTPPort)
 
 			// produce a bunch of messages, fire and forget asynchronously
 			for i := 0; i < messageCount; i++ {
@@ -138,7 +155,7 @@ transform[key] := val if {
 
 			if err := util.WaitFunc(func() bool {
 				// check store response (TODO: check metrics/status when we have them)
-				resp, err := http.Get("http://" + eopa.GetHostPort("8181/tcp") + "/v1/data/messages")
+				resp, err := http.Get("http://localhost:" + eopa.GetPort(fmt.Sprintf("%d/tcp", eopaHTTPPort)) + "/v1/data/messages")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -161,7 +178,7 @@ transform[key] := val if {
 	}
 }
 
-func loadEnterpriseOPA(t *testing.T, config, policy, image string, network *docker.Network) *dockertest.Resource {
+func loadEnterpriseOPA(t *testing.T, config, policy, image string, network *docker.Network, httpPort int) *dockertest.Resource {
 	img := strings.Split(image, ":")
 
 	dir := t.TempDir()
@@ -188,8 +205,8 @@ func loadEnterpriseOPA(t *testing.T, config, policy, image string, network *dock
 			confPath + ":/config.yml",
 			policyPath + ":/eval.rego",
 		},
-		ExposedPorts: []string{"8181/tcp"},
-		Cmd:          strings.Split("run --server --addr :8181 --config-file /config.yml --log-level debug --disable-telemetry /eval.rego", " "),
+		ExposedPorts: []string{fmt.Sprintf("%d/tcp", httpPort)},
+		Cmd:          strings.Split("run --server --addr "+fmt.Sprintf(":%d", httpPort)+" --config-file /config.yml --log-level debug --disable-telemetry /eval.rego", " "),
 	})
 	if err != nil {
 		t.Fatalf("could not start %s: %s", image, err)
@@ -204,7 +221,7 @@ func loadEnterpriseOPA(t *testing.T, config, policy, image string, network *dock
 	if err := dockerPool.Retry(func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		req, err := http.NewRequest("GET", "http://localhost:"+eopa.GetPort("8181/tcp")+"/v1/data/system", nil)
+		req, err := http.NewRequest("GET", "http://localhost:"+eopa.GetPort(fmt.Sprintf("%d/tcp", httpPort))+"/v1/data/system", nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}

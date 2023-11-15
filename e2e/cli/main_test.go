@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
@@ -59,7 +60,7 @@ p { data.xs[_] }`
 	ctx := context.Background()
 
 	t.Run("limit=1", func(t *testing.T) {
-		eopa, eopaOut := eopaRun(t, policy, data, config, "--instruction-limit", "1")
+		eopa, eopaOut := eopaRun(t, policy, data, config, eopaHTTPPort, "--instruction-limit", "1")
 		if err := eopa.Start(); err != nil {
 			t.Fatal(err)
 		}
@@ -67,7 +68,7 @@ p { data.xs[_] }`
 
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
-		req, err := http.NewRequest("POST", "http://localhost:38181/v1/data/test/p", nil)
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/p", eopaHTTPPort), nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -95,7 +96,7 @@ p { data.xs[_] }`
 	})
 
 	t.Run("limit=10000", func(t *testing.T) {
-		eopa, eopaOut := eopaRun(t, policy, data, config, "--instruction-limit", "10000")
+		eopa, eopaOut := eopaRun(t, policy, data, config, eopaHTTPPort, "--instruction-limit", "10000")
 		if err := eopa.Start(); err != nil {
 			t.Fatal(err)
 		}
@@ -103,7 +104,7 @@ p { data.xs[_] }`
 
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
-		req, err := http.NewRequest("POST", "http://localhost:38181/v1/data/test/p", nil)
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/p", eopaHTTPPort), nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -136,10 +137,10 @@ func TestRunWithAllPlugins(t *testing.T) {
 plugins:
   impact_analysis: {}
   grpc:
-    addr: "127.0.0.1:9191"
+    addr: "127.0.0.1:%d"
   data: {}
 `
-	eopa, eopaOut := eopaRun(t, policy, data, config)
+	eopa, eopaOut := eopaRun(t, policy, data, fmt.Sprintf(config, eopaGRPCPort), eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +156,7 @@ func eopaEval(t *testing.T, limit, data string) *exec.Cmd {
 	return exec.Command(binary(), strings.Split("eval --instruction-limit "+limit+" --data "+dataPath+" data.xs[_]", " ")...)
 }
 
-func eopaRun(t *testing.T, policy, data, config string, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
+func eopaRun(t *testing.T, policy, data, config string, httpPort int, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
 	logLevel := "debug"
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
@@ -171,7 +172,7 @@ func eopaRun(t *testing.T, policy, data, config string, extraArgs ...string) (*e
 	args := []string{
 		"run",
 		"--server",
-		"--addr", "localhost:38181",
+		"--addr", fmt.Sprintf("localhost:%d", httpPort),
 		"--log-level", logLevel,
 		"--disable-telemetry",
 	}

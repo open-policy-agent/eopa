@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,8 +20,35 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
+
+var (
+	eopaHTTPPort int
+	eopaGRPCPort int
+)
+
+func TestMain(m *testing.M) {
+	r := rand.New(rand.NewSource(2911))
+	for {
+		port := r.Intn(38181) + 1
+		if utils.IsTCPPortBindable(port) {
+			eopaHTTPPort = port
+			break
+		}
+	}
+
+	for {
+		port := r.Intn(38181) + 1
+		if utils.IsTCPPortBindable(port) {
+			eopaGRPCPort = port
+			break
+		}
+	}
+
+	os.Exit(m.Run())
+}
 
 func TestGRPCSmokeTest(t *testing.T) {
 	data := `{}`
@@ -28,14 +56,14 @@ func TestGRPCSmokeTest(t *testing.T) {
 import future.keywords
 p if rand.intn("coin", 2) == 0
 `
-	eopa, eopaOut := eopaRun(t, policy, data, "", "--set", "plugins.grpc.addr=localhost:9090")
+	eopa, eopaOut := eopaRun(t, policy, data, "", eopaHTTPPort, "--set", fmt.Sprintf("plugins.grpc.addr=localhost:%d", eopaGRPCPort))
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	for i := 0; i < 3; i++ {
-		if err := grpcurlSimpleCheck("-plaintext", "localhost:9090", "list"); err != nil {
+		if err := grpcurlSimpleCheck("-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "list"); err != nil {
 			if i == 2 {
 				t.Fatalf("wait for gRPC endpoint: %v", err)
 			}
@@ -45,7 +73,7 @@ p if rand.intn("coin", 2) == 0
 	}
 
 	{
-		out := grpcurl(t, "-d", `{"policy": {"path": "/test", "text": "package foo allow := x {x = true}"}}`, "-plaintext", "localhost:9090", "eopa.policy.v1.PolicyService/CreatePolicy")
+		out := grpcurl(t, "-d", `{"policy": {"path": "/test", "text": "package foo allow := x {x = true}"}}`, "-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "eopa.policy.v1.PolicyService/CreatePolicy")
 		var m map[string]any
 		if err := json.NewDecoder(out).Decode(&m); err != nil {
 			t.Fatal(err)
@@ -55,7 +83,7 @@ p if rand.intn("coin", 2) == 0
 		}
 	}
 	{
-		out := grpcurl(t, "-d", `{"path": "/foo"}`, "-plaintext", "localhost:9090", "eopa.data.v1.DataService/GetData")
+		out := grpcurl(t, "-d", `{"path": "/foo"}`, "-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "eopa.data.v1.DataService/GetData")
 		var act map[string]any
 		if err := json.NewDecoder(out).Decode(&act); err != nil {
 			t.Fatal(err)
@@ -94,14 +122,14 @@ allow {
 		t.Fatal(err)
 	}
 
-	eopa, eopaOut := eopaRun(t, "", "", "", "-b", bundlePath, "--set", "plugins.grpc.addr=localhost:9090")
+	eopa, eopaOut := eopaRun(t, "", "", "", eopaHTTPPort, "-b", bundlePath, "--set", fmt.Sprintf("plugins.grpc.addr=localhost:%d", eopaGRPCPort))
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	for i := 0; i < 3; i++ {
-		if err := grpcurlSimpleCheck("-plaintext", "localhost:9090", "list"); err != nil {
+		if err := grpcurlSimpleCheck("-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "list"); err != nil {
 			if i == 2 {
 				t.Fatalf("wait for gRPC endpoint: %v", err)
 			}
@@ -110,7 +138,7 @@ allow {
 		}
 	}
 	{
-		out := grpcurl(t, "-d", `{"path": "/rules/main", "input": {"document": {"user":"kurt"}}}`, "-plaintext", "localhost:9090", "eopa.data.v1.DataService/GetData")
+		out := grpcurl(t, "-d", `{"path": "/rules/main", "input": {"document": {"user":"kurt"}}}`, "-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "eopa.data.v1.DataService/GetData")
 		var act map[string]any
 		if err := json.NewDecoder(out).Decode(&act); err != nil {
 			t.Fatal(err)
@@ -144,9 +172,9 @@ decision_logs:
 
 plugins:
   grpc:
-    addr: localhost:9090
+    addr: localhost:%d
 `
-	eopa, eopaOut := eopaRun(t, policy, data, config)
+	eopa, eopaOut := eopaRun(t, policy, data, fmt.Sprintf(config, eopaGRPCPort), eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +182,7 @@ plugins:
 
 	messageCount := 0
 	for i := 0; i < 3; i++ {
-		if err := grpcurlSimpleCheck("-plaintext", "localhost:9090", "list"); err != nil {
+		if err := grpcurlSimpleCheck("-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "list"); err != nil {
 			if i == 2 {
 				t.Fatalf("wait for gRPC endpoint: %v", err)
 			}
@@ -166,7 +194,7 @@ plugins:
 
 	{
 		expectedReqID := messageCount + 2
-		_ = grpcurl(t, "-d", `{"policy": {"path": "/test", "text": "package bar allow := x {x = true}"}}`, "-plaintext", "localhost:9090", "eopa.policy.v1.PolicyService/CreatePolicy")
+		_ = grpcurl(t, "-d", `{"policy": {"path": "/test", "text": "package bar allow := x {x = true}"}}`, "-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "eopa.policy.v1.PolicyService/CreatePolicy")
 		// "msg":"Received request.", "req_id":5, "req_method":"/eopa.policy.v1.PolicyService/CreatePolicy"
 		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
 			return fieldContainsString(m, "msg", "Received request.") &&
@@ -182,7 +210,7 @@ plugins:
 	}
 	{
 		expectedReqID := messageCount + 4
-		_ = grpcurl(t, "-d", `{"path": "/foo"}`, "-plaintext", "localhost:9090", "eopa.data.v1.DataService/GetData")
+		_ = grpcurl(t, "-d", `{"path": "/foo"}`, "-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "eopa.data.v1.DataService/GetData")
 		// "msg":"Received request.", "req_id":7, "req_method":"/eopa.data.v1.DataService/GetData"
 		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
 			return fieldContainsString(m, "msg", "Received request.") &&
@@ -224,9 +252,9 @@ decision_logs:
 
 plugins:
   grpc:
-    addr: localhost:9090
+    addr: localhost:%d
 `
-	eopa, eopaOut := eopaRun(t, policy, data, config)
+	eopa, eopaOut := eopaRun(t, policy, data, fmt.Sprintf(config, eopaGRPCPort), eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +262,7 @@ plugins:
 
 	messageCount := 0
 	for i := 0; i < 3; i++ {
-		if err := grpcurlSimpleCheck("-plaintext", "localhost:9090", "list"); err != nil {
+		if err := grpcurlSimpleCheck("-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "list"); err != nil {
 			if i == 2 {
 				t.Fatalf("wait for gRPC endpoint: %v", err)
 			}
@@ -246,7 +274,7 @@ plugins:
 
 	{
 		expectedReqID := messageCount + 2
-		_ = grpcurl(t, "-d", `{"policy": {"path": "/test_streaming", "text": "package bar\nmain[\"allowed\"] := allow\ndefault allow := false\nallow {input.user == \"bob\"}"}}`, "-plaintext", "localhost:9090", "eopa.policy.v1.PolicyService/CreatePolicy")
+		_ = grpcurl(t, "-d", `{"policy": {"path": "/test_streaming", "text": "package bar\nmain[\"allowed\"] := allow\ndefault allow := false\nallow {input.user == \"bob\"}"}}`, "-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "eopa.policy.v1.PolicyService/CreatePolicy")
 		// "msg":"Received request.", "req_id":5, "req_method":"/eopa.policy.v1.PolicyService/CreatePolicy"
 		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
 			return fieldContainsString(m, "msg", "Received request.") &&
@@ -262,7 +290,7 @@ plugins:
 	}
 	{
 		expectedReqID := messageCount + 4
-		_ = grpcurl(t, "-d", `{"reads":[{"get":{"path":"/bar/main","input":{"document":{"user":"alice"}}}},{"get":{"path":"/bar/main","input":{"document":{"user":"bob"}}}}]}`, "-plaintext", "localhost:9090", "eopa.data.v1.DataService/StreamingDataRW")
+		_ = grpcurl(t, "-d", `{"reads":[{"get":{"path":"/bar/main","input":{"document":{"user":"alice"}}}},{"get":{"path":"/bar/main","input":{"document":{"user":"bob"}}}}]}`, "-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "eopa.data.v1.DataService/StreamingDataRW")
 		// "msg":"Received request.", "req_id":7, "req_method":"/eopa.data.v1.DataService/StreamingDataRW"
 		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
 			return fieldContainsString(m, "msg", "Received request.") &&
@@ -298,7 +326,7 @@ plugins:
 	}
 }
 
-func eopaRun(t *testing.T, policy, data, config string, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
+func eopaRun(t *testing.T, policy, data, config string, httpPort int, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
 	logLevel := "debug"
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
@@ -324,7 +352,7 @@ func eopaRun(t *testing.T, policy, data, config string, extraArgs ...string) (*e
 	args := []string{
 		"run",
 		"--server",
-		"--addr", "localhost:38181",
+		"--addr", fmt.Sprintf("localhost:%d", httpPort),
 		"--log-level", logLevel,
 		"--disable-telemetry",
 	}

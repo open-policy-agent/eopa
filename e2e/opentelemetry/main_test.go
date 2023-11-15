@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -20,8 +21,24 @@ import (
 	tc_wait "github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/styrainc/enterprise-opa-private/e2e/retry"
+	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
+
+var eopaHTTPPort int
+
+func TestMain(m *testing.M) {
+	r := rand.New(rand.NewSource(2908))
+	for {
+		port := r.Intn(38181) + 1
+		if utils.IsTCPPortBindable(port) {
+			eopaHTTPPort = port
+			break
+		}
+	}
+
+	os.Exit(m.Run())
+}
 
 func TestSpansEmitted(t *testing.T) {
 	ctx := context.Background()
@@ -49,14 +66,14 @@ import future.keywords.if
 p if http.send({"url":"%[1]s", "method":"GET"})
 `, ts.URL)
 
-	eopa, _, eopaErr := loadEnterpriseOPA(t, config, policy)
+	eopa, _, eopaErr := loadEnterpriseOPA(t, config, policy, eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	{ // act: send request
-		req, err := http.NewRequest("POST", "http://localhost:38181/v1/data/test/p", nil)
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/p", eopaHTTPPort), nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -119,7 +136,7 @@ func findAllOccurrences(data []byte, searches []string) map[string][]int { // ht
 	return results
 }
 
-func loadEnterpriseOPA(t *testing.T, config, policy string) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
+func loadEnterpriseOPA(t *testing.T, config, policy string, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	logLevel := "debug" // Needed for checking if server is ready
 
 	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}
@@ -136,7 +153,7 @@ func loadEnterpriseOPA(t *testing.T, config, policy string) (*exec.Cmd, *bytes.B
 	args := []string{
 		"run",
 		"--server",
-		"--addr", "localhost:38181",
+		"--addr", fmt.Sprintf("localhost:%d", httpPort),
 		"--config-file", confPath,
 		"--log-level", logLevel,
 		"--disable-telemetry",

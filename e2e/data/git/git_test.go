@@ -27,6 +27,7 @@ import (
 	"github.com/open-policy-agent/opa/util"
 	"github.com/ory/dockertest/v3"
 
+	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/plugins/data/git"
 )
 
@@ -45,6 +46,21 @@ plugins:
       polling_interval: 10s
 `
 )
+
+var eopaHTTPPort int
+
+func TestMain(m *testing.M) {
+	r := rand.New(rand.NewSource(2908))
+	for {
+		port := r.Intn(38181) + 1
+		if utils.IsTCPPortBindable(port) {
+			eopaHTTPPort = port
+			break
+		}
+	}
+
+	os.Exit(m.Run())
+}
 
 var dockerPool = func() *dockertest.Pool {
 	p, err := dockertest.NewPool("")
@@ -147,8 +163,8 @@ func TestGitPlugin(t *testing.T) {
 
 			// run enterprise OPA on the new branch
 			config := fmt.Sprintf(configTemplate, tt.url, tt.username, tt.token, branch)
-			eopa := loadEnterpriseOPA(t, config, image)
-			host := eopa.GetHostPort("8181/tcp")
+			eopa := loadEnterpriseOPA(t, config, image, eopaHTTPPort)
+			host := eopa.GetHostPort(fmt.Sprintf("%d/tcp", eopaHTTPPort))
 			checkEnterpriseOPA(t, host, map[string]any{"foo1": "bar1"})
 
 			// update remote branch and check for the updates
@@ -192,7 +208,7 @@ func TestGitPlugin(t *testing.T) {
 	}
 }
 
-func loadEnterpriseOPA(t *testing.T, config, image string) *dockertest.Resource {
+func loadEnterpriseOPA(t *testing.T, config, image string, httpPort int) *dockertest.Resource {
 	img := strings.Split(image, ":")
 
 	dir := t.TempDir()
@@ -213,8 +229,8 @@ func loadEnterpriseOPA(t *testing.T, config, image string) *dockertest.Resource 
 		Mounts: []string{
 			confPath + ":/config.yml",
 		},
-		ExposedPorts: []string{"8181/tcp"},
-		Cmd:          strings.Split("run --server --addr :8181 --config-file /config.yml --log-level debug --disable-telemetry", " "),
+		ExposedPorts: []string{fmt.Sprintf("%d/tcp", httpPort)},
+		Cmd:          strings.Split("run --server --addr "+fmt.Sprintf(":%d", httpPort)+" --config-file /config.yml --log-level debug --disable-telemetry", " "),
 	})
 	if err != nil {
 		t.Fatalf("could not start %s: %s", image, err)
@@ -229,7 +245,7 @@ func loadEnterpriseOPA(t *testing.T, config, image string) *dockertest.Resource 
 	if err := dockerPool.Retry(func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		req, err := http.NewRequest("GET", "http://localhost:"+eopa.GetPort("8181/tcp")+"/v1/data/system", nil)
+		req, err := http.NewRequest("GET", "http://localhost:"+eopa.GetPort(fmt.Sprintf("%d/tcp", httpPort))+"/v1/data/system", nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -266,7 +282,6 @@ func checkEnterpriseOPA(t *testing.T, host string, exp any) {
 	}, 50*time.Millisecond, 30*time.Second); err != nil {
 		t.Error(err)
 	}
-
 }
 
 func cleanupPrevious(t *testing.T) {

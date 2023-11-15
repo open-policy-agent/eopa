@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
@@ -25,6 +26,7 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
+	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
@@ -45,6 +47,21 @@ type liaResponse struct {
 	ReqID         int    `json:"req_id"`
 	DecisionID    string `json:"decision_id"`
 	NodeID        string `json:"node_id"`
+}
+
+var eopaHTTPPort int
+
+func TestMain(m *testing.M) {
+	r := rand.New(rand.NewSource(2908))
+	for {
+		port := r.Intn(38181) + 1
+		if utils.IsTCPPortBindable(port) {
+			eopaHTTPPort = port
+			break
+		}
+	}
+
+	os.Exit(m.Run())
 }
 
 // NOTE(sr): These three tests check the following:
@@ -69,14 +86,14 @@ import future.keywords
 
 p := rand.intn("test", 2)
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, false)
+	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	// arrange: enable LIA via CLI
-	ctl, ctlOut := eopaCtl(t, "http://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
+	ctl, ctlOut := eopaCtl(t, fmt.Sprintf("http://127.0.0.1:%d", eopaHTTPPort), "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
 	ctl.Stderr = os.Stderr
 	if err := ctl.Start(); err != nil {
 		t.Fatal(err)
@@ -87,7 +104,7 @@ p := rand.intn("test", 2)
 	{ // act: evaluate the policy via the v1 data API
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
-		req, err := http.NewRequest("GET", "http://localhost:18181/v1/data/test/p", nil)
+		req, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d/v1/data/test/p", eopaHTTPPort), nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -206,14 +223,14 @@ import future.keywords
 
 q := true
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, false)
+	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	// arrange: enable LIA via CLI
-	ctl, ctlOut := eopaCtl(t, "http://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1")
+	ctl, ctlOut := eopaCtl(t, fmt.Sprintf("http://127.0.0.1:%d", eopaHTTPPort), "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1")
 	ctl.Stderr = os.Stderr
 	if err := ctl.Start(); err != nil {
 		t.Fatal(err)
@@ -225,7 +242,7 @@ q := true
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
 		in := `{"input": {"a": true}}`
-		req, err := http.NewRequest("POST", "http://localhost:18181/v1/data/test/q", strings.NewReader(in))
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/q", eopaHTTPPort), strings.NewReader(in))
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -243,7 +260,7 @@ q := true
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
 		in := `{"input": {}}`
-		req, err := http.NewRequest("POST", "http://localhost:18181/v1/data/test/q", strings.NewReader(in))
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/q", eopaHTTPPort), strings.NewReader(in))
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -322,14 +339,14 @@ import future.keywords
 
 q := true
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, true)
+	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, true)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 	// arrange: enable LIA via CLI
-	ctl, ctlOut := eopaCtl(t, "http://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 0.1")
+	ctl, ctlOut := eopaCtl(t, fmt.Sprintf("http://127.0.0.1:%d", eopaHTTPPort), "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 0.1")
 	ctl.Stderr = os.Stderr
 	if err := ctl.Start(); err != nil {
 		t.Fatal(err)
@@ -341,7 +358,7 @@ q := true
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
 		in := `{"input": {}}`
-		req, err := http.NewRequest("POST", "http://localhost:18181/v1/data/test/q", strings.NewReader(in))
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/q", eopaHTTPPort), strings.NewReader(in))
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -521,7 +538,7 @@ p := rand.intn("test", 2)
 		},
 	} {
 		t.Run(fmt.Sprintf("format=%s/group=%v", tc.format, tc.group), func(t *testing.T) {
-			eopa, eopaOut := loadEnterpriseOPA(t, config, policy, false)
+			eopa, eopaOut := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
@@ -532,7 +549,7 @@ p := rand.intn("test", 2)
 			if tc.group {
 				extraArgs += " --group"
 			}
-			ctl, ctlOut := eopaCtl(t, "http://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", extraArgs)
+			ctl, ctlOut := eopaCtl(t, fmt.Sprintf("http://127.0.0.1:%d", eopaHTTPPort), "testdata/eopa-bundle.tar.gz", extraArgs)
 			ctl.Stderr = os.Stderr
 			if err := ctl.Start(); err != nil {
 				t.Fatal(err)
@@ -542,7 +559,7 @@ p := rand.intn("test", 2)
 
 			for i := 0; i < count; i++ { // act: evaluate the policy via the v1 data API, provide empty input, many times
 				in := `{"input": {}}`
-				req, err := http.NewRequest("POST", "http://localhost:18181/v1/data/test/p", strings.NewReader(in))
+				req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/p", eopaHTTPPort), strings.NewReader(in))
 				if err != nil {
 					t.Fatalf("http request: %v", err)
 				}
@@ -568,7 +585,7 @@ p := rand.intn("test", 2)
 
 type extra string
 
-func loadEnterpriseOPA(t *testing.T, config, policy string, opts ...any) (*exec.Cmd, *bytes.Buffer) {
+func loadEnterpriseOPA(t *testing.T, config, policy string, httpPort int, opts ...any) (*exec.Cmd, *bytes.Buffer) {
 	var silent bool
 	var extraArgs string
 	logLevel := "debug"
@@ -597,7 +614,7 @@ func loadEnterpriseOPA(t *testing.T, config, policy string, opts ...any) (*exec.
 	args := []string{
 		"run",
 		"--server",
-		"--addr", "localhost:18181",
+		"--addr", fmt.Sprintf("localhost:%d", httpPort),
 		"--config-file", confPath,
 		"--log-level", logLevel,
 		"--disable-telemetry",
@@ -658,13 +675,13 @@ import future.keywords
 
 q := true
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, false)
+	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-	ctl, ctlOut := eopaCtl(t, "http://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
+	ctl, ctlOut := eopaCtl(t, fmt.Sprintf("http://127.0.0.1:%d", eopaHTTPPort), "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
 	ctl.Stderr = os.Stderr
 	if err := ctl.Start(); err != nil {
 		t.Fatal(err)
@@ -699,13 +716,13 @@ import future.keywords
 
 q := true
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, false, extra(`--tls-ca-cert-file testdata/tls/ca.pem --tls-cert-file testdata/tls/server-cert.pem --tls-private-key-file testdata/tls/server-key.pem`))
+	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false, extra(`--tls-ca-cert-file testdata/tls/ca.pem --tls-cert-file testdata/tls/server-cert.pem --tls-private-key-file testdata/tls/server-key.pem`))
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-	ctl, ctlOut := eopaCtl(t, "https://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals "+
+	ctl, ctlOut := eopaCtl(t, fmt.Sprintf("https://127.0.0.1:%d", eopaHTTPPort), "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals "+
 		"--tls-ca-cert-file testdata/tls/ca.pem --tls-cert-file testdata/tls/client-cert.pem --tls-private-key-file testdata/tls/client-key.pem")
 	ctl.Stderr = os.Stderr
 	if err := ctl.Start(); err != nil {
@@ -740,7 +757,7 @@ import future.keywords
 
 q := true
 `
-	eopa, _ := loadEnterpriseOPA(t, config, policy, true, errorLogging{})
+	eopa, _ := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, true, errorLogging{})
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -748,7 +765,7 @@ q := true
 	// So we'll be gracious with waiting times, and very loose in our assertions.
 	time.Sleep(time.Second)
 
-	ctl, ctlOut := eopaCtl(t, "http://127.0.0.1:18181", "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
+	ctl, ctlOut := eopaCtl(t, fmt.Sprintf("http://127.0.0.1:%d", eopaHTTPPort), "testdata/eopa-bundle.tar.gz", "--duration 10s --sample-rate 1 --equals")
 	ctl.Stderr = os.Stderr
 	if err := ctl.Start(); err != nil {
 		t.Fatal(err)
@@ -762,7 +779,7 @@ q := true
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
 		in := `{"input": {}}`
-		req, err := http.NewRequest("POST", "http://localhost:18181/v1/data/test/q", strings.NewReader(in))
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v1/data/test/q", eopaHTTPPort), strings.NewReader(in))
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}

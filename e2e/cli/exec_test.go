@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,12 +18,34 @@ import (
 	sdk_test "github.com/open-policy-agent/opa/sdk/test"
 	"github.com/open-policy-agent/opa/version"
 
+	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
+)
+
+var (
+	eopaHTTPPort int
+	eopaGRPCPort int
 )
 
 func TestMain(m *testing.M) {
 	builtins.Init() // sdk_test needs to know the builtins to build a bundle on-demand
 
+	r := rand.New(rand.NewSource(2907))
+	for {
+		port := r.Intn(38181) + 1
+		if utils.IsTCPPortBindable(port) {
+			eopaHTTPPort = port
+			break
+		}
+	}
+
+	for {
+		port := r.Intn(38181) + 1
+		if utils.IsTCPPortBindable(port) {
+			eopaGRPCPort = port
+			break
+		}
+	}
 	os.Exit(m.Run())
 }
 

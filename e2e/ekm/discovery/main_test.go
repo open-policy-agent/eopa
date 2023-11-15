@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"mime"
 	"net"
 	"net/http"
@@ -21,6 +22,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	testcontainervault "github.com/testcontainers/testcontainers-go/modules/vault"
 
+	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
@@ -29,6 +31,21 @@ const (
 
 	token = "dev-only-token"
 )
+
+var eopaHTTPPort int
+
+func TestMain(m *testing.M) {
+	r := rand.New(rand.NewSource(2910))
+	for {
+		port := r.Intn(38181) + 1
+		if utils.IsTCPPortBindable(port) {
+			eopaHTTPPort = port
+			break
+		}
+	}
+
+	os.Exit(m.Run())
+}
 
 var testserver = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/status" {
@@ -45,7 +62,7 @@ func TestEKM(t *testing.T) {
 	vault := startVaultServer(t, ctx)
 	defer vault.Terminate(ctx)
 
-	eopa, eopaOut := eopaRun(t)
+	eopa, eopaOut := eopaRun(t, eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +81,7 @@ func TestEKM(t *testing.T) {
 		const policy = `package test
 result := http.send({"method": "GET", "url": "http://127.0.0.1:9999/test"}).body
 `
-		req, err := http.NewRequest("PUT", "http://127.0.0.1:8181/v1/policies/test", strings.NewReader(policy))
+		req, err := http.NewRequest("PUT", fmt.Sprintf("http://127.0.0.1:%d/v1/policies/test", eopaHTTPPort), strings.NewReader(policy))
 		if err != nil {
 			t.Fatalf("send policy: %v", err)
 		}
@@ -74,7 +91,7 @@ result := http.send({"method": "GET", "url": "http://127.0.0.1:9999/test"}).body
 		}
 	}
 	{ // query policy
-		resp, err := http.Post("http://127.0.0.1:8181/v1/data/test/result", "application/json", nil)
+		resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/v1/data/test/result", eopaHTTPPort), "application/json", nil)
 		if err != nil {
 			t.Fatalf("send policy: %v", err)
 		}
@@ -176,7 +193,7 @@ func startVaultServer(t *testing.T, ctx context.Context) *testcontainervault.Vau
 	return cluster
 }
 
-func eopaRun(t *testing.T, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
+func eopaRun(t *testing.T, httpPort int, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
 	logLevel := "debug"
 	buf := bytes.Buffer{}
 	std := bytes.Buffer{}
@@ -184,6 +201,7 @@ func eopaRun(t *testing.T, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
 	args := []string{
 		"run",
 		"--server",
+		"--addr", fmt.Sprintf("localhost:%d", httpPort),
 		"--log-level", logLevel,
 		"--config-file", "ekm.yaml",
 		"--disable-telemetry",
