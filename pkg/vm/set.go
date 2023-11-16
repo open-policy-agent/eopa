@@ -19,7 +19,7 @@ var (
 type Set interface {
 	fjson.Json
 	Add(v fjson.Json) (Set, error)
-	Append(hash uint64, v fjson.Json) error
+	add(hash uint64, v fjson.Json) (Set, error)
 	Get(v fjson.Json) (fjson.Json, bool, error)
 	Iter(iter func(v fjson.Json) (bool, error)) (bool, error)
 	Iter2(iter func(v, vv interface{}) (bool, error)) (bool, error)
@@ -74,6 +74,10 @@ func (o *setLarge) Add(v fjson.Json) (Set, error) {
 		return o, err
 	}
 
+	return o.add(hash, v)
+}
+
+func (o *setLarge) add(hash uint64, v fjson.Json) (Set, error) {
 	head := o.table[hash]
 	for entry := head; entry != nil; entry = entry.next {
 		eq, err := o.eq(entry.v, v)
@@ -96,18 +100,17 @@ func (o *setLarge) MergeWith(other Set) (Set, error) {
 }
 
 func (o *setLarge) mergeTo(other Set) (Set, error) {
-	_, err := o.Iter(func(v fjson.Json) (bool, error) {
-		var err error
-		other, err = other.Add(v) // TODO: Avoid recomputing the hash.
-		return false, err
-	})
-	return other, err
-}
+	for hash, entry := range o.table {
+		for ; entry != nil; entry = entry.next {
+			var err error
+			other, err = other.add(hash, entry.v)
+			if err != nil {
+				return other, err
+			}
+		}
+	}
 
-func (o *setLarge) Append(hash uint64, v fjson.Json) error {
-	o.table[hash] = &hashSetLargeEntry{v: v, next: o.table[hash]}
-	o.n++
-	return nil
+	return other, nil
 }
 
 func (o *setLarge) Get(v fjson.Json) (fjson.Json, bool, error) {
@@ -235,20 +238,28 @@ type hashSetCompactEntry struct {
 }
 
 func (o *setCompact[T]) Add(v fjson.Json) (Set, error) {
-	if o.n == len(o.table) {
-		set := newSet(o.n + 1)
-		for i := 0; i < o.n; i++ {
-			if err := set.Append(o.table[i].hash, o.table[i].v); err != nil {
-				return o, err
-			}
-		}
-
-		return set.Add(v)
-	}
-
 	hash, err := o.hash(v)
 	if err != nil {
 		return o, err
+	}
+
+	return o.add(hash, v)
+}
+
+func (o *setCompact[T]) add(hash uint64, v fjson.Json) (Set, error) {
+	if o.n == len(o.table) {
+		set := newSet(o.n + 1)
+
+		var err error
+		for i := 0; i < o.n && err == nil; i++ {
+			set, err = set.add(o.table[i].hash, o.table[i].v)
+		}
+
+		if err != nil {
+			return set, err
+		}
+
+		return set.add(hash, v)
 	}
 
 	for i := 0; i < o.n; i++ {
@@ -271,18 +282,11 @@ func (o *setCompact[T]) MergeWith(other Set) (Set, error) {
 }
 
 func (o *setCompact[T]) mergeTo(other Set) (Set, error) {
-	_, err := o.Iter(func(v fjson.Json) (bool, error) {
-		var err error
-		other, err = other.Add(v) // TODO: Avoid recomputing the hash.
-		return false, err
-	})
+	var err error
+	for i := 0; i < o.n && err == nil; i++ {
+		other, err = other.add(o.table[i].hash, o.table[i].v)
+	}
 	return other, err
-}
-
-func (o *setCompact[T]) Append(hash uint64, v fjson.Json) error {
-	o.table[o.n] = hashSetCompactEntry{hash: hash, v: v}
-	o.n++
-	return nil
 }
 
 func (o *setCompact[T]) Get(v fjson.Json) (fjson.Json, bool, error) {
