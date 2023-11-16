@@ -32,20 +32,16 @@ p := true` // no builtins called
 		t.Fatal(err)
 	}
 
-	// NOTE(sr): wait.ForLog will skip anything non-JSON from the output, so we cannot see the warning.
-	// So we'll first check the output and then wait for successful (OPA) server init.
-	for eopaOut.Len() < 100 {
-		time.Sleep(10 * time.Millisecond)
-	}
-	for _, exp := range []string{
-		"no license provided",
-		"Sign up for a free trial now by running `eopa license trial`",
-		"Switching to OPA mode",
-	} {
-		if !strings.Contains(eopaOut.String(), exp) {
-			t.Errorf("expected %q in output, haven't found it", exp)
-		}
-	}
+	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "no license provided") }, time.Second)
+	wait.ForLog(t, eopaOut, func(s string) bool {
+		return strings.Contains(s, "Sign up for a free trial now by running `eopa license trial`")
+	}, time.Second)
+	wait.ForLog(t, eopaOut, func(s string) bool {
+		return strings.Contains(s, "Switching to OPA mode. Enterprise OPA functionality will be disabled.")
+	}, time.Second)
+
+	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+
 	if t.Failed() {
 		t.Logf("early output: %s", eopaOut.String())
 	}

@@ -57,13 +57,17 @@ func initRun(opa *cobra.Command, brand string, license license.Checker, lparams 
 			panic(err)
 		}
 		params.rt.Brand = brand
+		logger, err := getLogger(params.rt.Logging.Level, params.rt.Logging.Format, params.rt.Logging.TimestampFormat)
+		if err != nil {
+			return err
+		}
 
 		strict, _ := c.Flags().GetBool("no-license-fallback")
 		license.SetStrict(strict)
 		if !strict { // validate license synchronously
 			if err := license.ValidateLicense(lparams); err != nil { // TODO(sr): context? timeout?
-				fmt.Fprintln(os.Stderr, err.Error()) // TODO(sr): better logging setup?
-				fmt.Fprintln(os.Stderr, "Switching to OPA mode")
+				logger.Warn(err.Error())
+				logger.Warn("Switching to OPA mode. Enterprise OPA functionality will be disabled.")
 
 				c.SilenceErrors = false
 				return fallback(c, args)
@@ -338,13 +342,10 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 
 	params.rt.Router = loadRouter()
 
-	logger := logging.New()
-	level, err := internal_logging.GetLevel(params.rt.Logging.Level)
+	logger, err := getLogger(params.rt.Logging.Level, params.rt.Logging.Format, params.rt.Logging.TimestampFormat)
 	if err != nil {
 		return nil, err
 	}
-	logger.SetLevel(level)
-	logger.SetFormatter(internal_logging.GetFormatter(params.rt.Logging.Format, params.rt.Logging.TimestampFormat))
 	params.rt.Logger = logger
 	lic.SetLogger(logger)
 	ekmHook.SetLogger(logger)
@@ -437,4 +438,16 @@ func buildVerificationConfig(pubKey, pubKeyID, alg, scope string, excludeFiles [
 	}
 	bs, err := bundleApi.NewVerificationConfig(map[string]*keys.Config{pubKeyID: keyConfig}, pubKeyID, scope, excludeFiles), nil
 	return bs, err
+}
+
+func getLogger(logLevel string, format, timestampFormat string) (logging.Logger, error) {
+	logger := logging.New()
+	level, err := internal_logging.GetLevel(logLevel)
+	if err != nil {
+		return nil, err
+	}
+	logger.SetLevel(logging.Level(level))
+	logger.SetFormatter(internal_logging.GetFormatter(format, timestampFormat))
+
+	return logger, nil
 }
