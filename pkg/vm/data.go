@@ -83,10 +83,12 @@ func (*DataOperations) Get(ctx context.Context, value, key interface{}) (interfa
 		return value, value != nil, nil
 
 	case fjson.Set:
-		return v.Get(jkey)
+		value, ok := v.Get(jkey)
+		return value, ok, nil
 
 	case fjson.Object2:
-		return v.Get(jkey)
+		value, ok := v.Get(jkey)
+		return value, ok, nil
 
 	case IterableObject:
 		return v.Get(ctx, jkey)
@@ -171,18 +173,16 @@ func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (inte
 	case fjson.Set:
 		set := fjson.NewSet(v.Len())
 		_, err := v.Iter(func(v fjson.Json) (bool, error) {
-			var err error
-			set, err = set.Add(v)
-			return err != nil, err
+			set = set.Add(v)
+			return false, nil
 		})
 		return set, err
 	case fjson.Object2:
 		// TODO: Return a copy-on-write object.
 		obj := fjson.NewObject2(v.Len())
 		if err := v.Iter(func(k, v fjson.Json) (bool, error) {
-			var err error
-			obj, err = obj.Insert(k, v)
-			return err != nil, err
+			obj = obj.Insert(k, v)
+			return false, nil
 		}); err != nil {
 			return nil, err
 		}
@@ -203,8 +203,8 @@ func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (inte
 				return true, err
 			}
 
-			obj, err = obj.Insert(kj, vj)
-			return err != nil, err
+			obj = obj.Insert(kj, vj)
+			return false, nil
 		}); err != nil {
 			return nil, err
 		}
@@ -228,7 +228,7 @@ func (*DataOperations) Equal(ctx context.Context, a, b interface{}) (bool, error
 		return false, err
 	}
 
-	return fjson.Equal(ja, jb)
+	return fjson.Equal(ja, jb), nil
 }
 
 // FromInterface converts a golang native data to internal representation.
@@ -292,9 +292,7 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (fjso
 			if err != nil {
 				return nil, err
 			}
-			if obj, err = obj.Insert(fjson.NewString(k), y); err != nil {
-				return nil, err
-			}
+			obj = obj.Insert(fjson.NewString(k), y)
 		}
 		return obj, nil
 	case []map[string]interface{}:
@@ -310,10 +308,7 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (fjso
 	case map[string]string:
 		obj := fjson.NewObject2(len(x))
 		for k, v := range x {
-			var err error
-			if obj, err = obj.Insert(fjson.NewString(k), fjson.NewString(v)); err != nil {
-				return nil, err
-			}
+			obj = obj.Insert(fjson.NewString(k), fjson.NewString(v))
 		}
 		return obj, nil
 	case ast.Object:
@@ -327,8 +322,8 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (fjso
 			if err != nil {
 				return err
 			}
-			obj, err = obj.Insert(kj, vj)
-			return err
+			obj = obj.Insert(kj, vj)
+			return nil
 		}); err != nil {
 			return nil, err
 		}
@@ -342,8 +337,8 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (fjso
 			if err != nil {
 				return err
 			}
-			set, err = set.Add(y)
-			return err
+			set = set.Add(y)
+			return nil
 		})
 		if err != nil {
 			return nil, err
@@ -511,8 +506,8 @@ func (*DataOperations) ObjectGet(ctx context.Context, object, key interface{}) (
 		return value, ok, err
 
 	case fjson.Object2:
-		value, ok, err := object.Get(jkey)
-		return value, ok, err
+		value, ok := object.Get(jkey)
+		return value, ok, nil
 
 	case fjson.Object:
 		s, ok := jkey.(*fjson.String)
@@ -540,8 +535,8 @@ func (*DataOperations) ObjectInsert(ctx context.Context, object, key, value inte
 			return nil, false, err
 		}
 
-		o, err = o.Insert(jkey, jvalue)
-		return o, o != object, err
+		o = o.Insert(jkey, jvalue)
+		return o, o != object, nil
 
 	case fjson.Object:
 		jvalue, err := castJSON(ctx, value)
@@ -587,8 +582,8 @@ func (o *DataOperations) ObjectMerge(ctx context.Context, a, b interface{}) (int
 		if err != nil {
 			return true, err
 		} else if !ok {
-			merged, err = merged.Insert(key, value)
-			return err != nil, err
+			merged = merged.Insert(key, value)
+			return false, nil
 		}
 
 		m, err := o.ObjectMerge(ctx, value, other)
@@ -601,8 +596,8 @@ func (o *DataOperations) ObjectMerge(ctx context.Context, a, b interface{}) (int
 			return true, err
 		}
 
-		merged, err = merged.Insert(key, mj)
-		return err != nil, err
+		merged = merged.Insert(key, mj)
+		return false, nil
 	}); err != nil {
 		return nil, err
 	}
@@ -613,10 +608,7 @@ func (o *DataOperations) ObjectMerge(ctx context.Context, a, b interface{}) (int
 			return true, err
 		}
 		if !ok {
-			merged, err = merged.Insert(key, value)
-			if err != nil {
-				return true, err
-			}
+			merged = merged.Insert(key, value)
 		}
 		return false, nil
 	}); err != nil {
@@ -669,7 +661,8 @@ func objectGet(ctx context.Context, obj interface{}, key fjson.Json) (interface{
 	}
 
 	if obj, ok := obj.(fjson.Object2); ok {
-		return obj.Get(key)
+		value, ok := obj.Get(key)
+		return value, ok, nil
 	}
 
 	return obj.(IterableObject).Get(ctx, key)
@@ -683,7 +676,7 @@ func (*DataOperations) SetAdd(ctx context.Context, set, value interface{}) (inte
 
 	switch set := set.(type) {
 	case fjson.Set:
-		return set.Add(jvalue)
+		return set.Add(jvalue), nil
 	default:
 		if _, err := castJSON(ctx, set); err != nil {
 			return nil, err
@@ -806,8 +799,8 @@ func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
 				return false, err
 			}
 
-			obj, err = obj.Insert(jk, jv)
-			return false, err
+			obj = obj.Insert(jk, jv)
+			return false, nil
 		})
 		if err != nil {
 			return nil, err

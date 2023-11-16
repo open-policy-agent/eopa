@@ -193,8 +193,8 @@ func objectSelect(state *State, args []Value, keep bool) error {
 		}
 	case fjson.Object2:
 		selected = func(key fjson.Json) (bool, error) {
-			_, ok, err := coll.Get(key)
-			return err == nil && ok, err
+			_, ok := coll.Get(key)
+			return ok, nil
 		}
 	case fjson.Object:
 		selected = func(key fjson.Json) (bool, error) {
@@ -203,20 +203,17 @@ func objectSelect(state *State, args []Value, keep bool) error {
 		}
 	case fjson.Set:
 		selected = func(key fjson.Json) (bool, error) {
-			_, ok, err := coll.Get(key)
-			return err == nil && ok, err
+			_, ok := coll.Get(key)
+			return ok, nil
 		}
 	case fjson.Array:
 		s := fjson.NewSet(0)
 		for i := 0; i < coll.Len(); i++ {
-			var err error
-			if s, err = s.Add(coll.Iterate(i)); err != nil {
-				return err
-			}
+			s = s.Add(coll.Iterate(i))
 		}
 		selected = func(key fjson.Json) (bool, error) {
-			_, ok, err := s.Get(key)
-			return err == nil && ok, err
+			_, ok := s.Get(key)
+			return ok, nil
 		}
 	default:
 		v, err := state.ValueOps().ToAST(state.Globals.Ctx, coll)
@@ -247,12 +244,12 @@ func objectSelect(state *State, args []Value, keep bool) error {
 			return true, err // abort
 		}
 		if !ok && !keep {
-			result, err = result.Insert(key, value)
+			result = result.Insert(key, value)
 		}
 		if ok && keep {
-			result, err = result.Insert(key, value)
+			result = result.Insert(key, value)
 		}
-		return false, err // continue
+		return false, nil // continue
 	}); err != nil {
 		return err
 	}
@@ -787,12 +784,9 @@ func equalBuiltin(state *State, args []Value) error {
 		return err
 	}
 
-	ret, err := fjson.Equal(a, b)
-	if err == nil {
-		state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(ret))
-	}
+	state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(fjson.Equal(a, b)))
 
-	return err
+	return nil
 }
 
 func notEqualBuiltin(state *State, args []Value) error {
@@ -810,12 +804,9 @@ func notEqualBuiltin(state *State, args []Value) error {
 		return err
 	}
 
-	ret, err := fjson.Equal(a, b)
-	if err == nil {
-		state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(!ret))
-	}
+	state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(!fjson.Equal(a, b)))
 
-	return err
+	return nil
 }
 
 func binaryOrBuiltin(state *State, args []Value) error {
@@ -839,15 +830,8 @@ func binaryOrBuiltin(state *State, args []Value) error {
 	}
 
 	result := fjson.NewSet(n)
-	result, err = result.MergeWith(a)
-	if err != nil {
-		return err
-	}
-
-	result, err = result.MergeWith(b)
-	if err != nil {
-		return err
-	}
+	result = result.MergeWith(a)
+	result = result.MergeWith(b)
 
 	state.SetReturnValue(Unused, result)
 	return nil
@@ -890,41 +874,36 @@ func objectUnion(a, b fjson.Json) (fjson.Json, error) {
 	case fjson.Object:
 		result := fjson.NewObject2(a.Len())
 
-		var getValue func(key string) (fjson.Json, bool, error)
+		var getValue func(key string) (fjson.Json, bool)
 
 		switch b := b.(type) {
 		case fjson.Object:
-			getValue = func(key string) (fjson.Json, bool, error) {
+			getValue = func(key string) (fjson.Json, bool) {
 				v2 := b.Value(key)
-				return v2, v2 != nil, nil
+				return v2, v2 != nil
 			}
 
 			for _, key := range b.Names() {
 				if a.Value(key) == nil {
-					var err error
-					result, err = result.Insert(fjson.NewString(key), b.Value(key))
-					if err != nil {
-						return nil, err
-					}
+					result = result.Insert(fjson.NewString(key), b.Value(key))
 				}
 			}
 
 		case fjson.Object2:
-			getValue = func(key string) (fjson.Json, bool, error) {
-				value, ok, err := b.Get(fjson.NewString(key))
-				if !ok || err != nil {
-					return nil, ok, err
+			getValue = func(key string) (fjson.Json, bool) {
+				value, ok := b.Get(fjson.NewString(key))
+				if !ok {
+					return nil, ok
 				}
 
-				return value, true, nil
+				return value, true
 			}
 
 			if err := b.Iter(func(key, value fjson.Json) (bool, error) {
-				var err error
 				if key, ok := key.(*fjson.String); !ok || a.Value(key.Value()) == nil {
-					result, err = result.Insert(key, value)
+					result = result.Insert(key, value)
 				}
-				return false, err
+				return false, nil
 			}); err != nil {
 				return nil, err
 			}
@@ -934,14 +913,9 @@ func objectUnion(a, b fjson.Json) (fjson.Json, error) {
 		}
 
 		for _, key := range a.Names() {
-			v2, ok, err := getValue(key)
-			if err != nil {
-				return nil, err
-			} else if !ok {
-				result, err = result.Insert(fjson.NewString(key), a.Value(key))
-				if err != nil {
-					return nil, err
-				}
+			v2, ok := getValue(key)
+			if !ok {
+				result = result.Insert(fjson.NewString(key), a.Value(key))
 				continue
 			}
 
@@ -950,10 +924,7 @@ func objectUnion(a, b fjson.Json) (fjson.Json, error) {
 				return nil, err
 			}
 
-			result, err = result.Insert(fjson.NewString(key), m)
-			if err != nil {
-				return nil, err
-			}
+			result = result.Insert(fjson.NewString(key), m)
 		}
 
 		return result, nil
@@ -963,27 +934,22 @@ func objectUnion(a, b fjson.Json) (fjson.Json, error) {
 		case fjson.Object:
 			return objectUnion(b, a)
 		case fjson.Object2:
-			result, err := b.Diff(a)
-			if err != nil {
-				return nil, err
-			}
+			result := b.Diff(a)
 
-			err = a.Iter(func(key, value fjson.Json) (bool, error) {
-				getValue := func(key fjson.Json) (fjson.Json, bool, error) {
-					value, ok, err := b.Get(key)
-					if !ok || err != nil {
-						return nil, ok, err
+			err := a.Iter(func(key, value fjson.Json) (bool, error) {
+				getValue := func(key fjson.Json) (fjson.Json, bool) {
+					value, ok := b.Get(key)
+					if !ok {
+						return nil, ok
 					}
 
-					return value, true, nil
+					return value, true
 				}
 
-				v2, ok, err := getValue(key)
-				if err != nil {
-					return true, err
-				} else if !ok {
-					result, err = result.Insert(key, value)
-					return false, err
+				v2, ok := getValue(key)
+				if !ok {
+					result = result.Insert(key, value)
+					return false, nil
 				}
 
 				m, err := objectUnion(value, v2)
@@ -991,8 +957,8 @@ func objectUnion(a, b fjson.Json) (fjson.Json, error) {
 					return true, err
 				}
 
-				result, err = result.Insert(key, m)
-				return false, err
+				result = result.Insert(key, m)
+				return false, nil
 			})
 			if err != nil {
 				return nil, err

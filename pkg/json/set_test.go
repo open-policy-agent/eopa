@@ -67,11 +67,7 @@ func TestSet(t *testing.T) {
 			// Get
 			var hash uint64
 			for v := range expected {
-				found, ok, err := set.Get(NewString(v))
-				if err != nil {
-					t.Fatal(err)
-				}
-
+				found, ok := set.Get(NewString(v))
 				if !ok {
 					t.Fatal("value not found")
 				}
@@ -81,30 +77,24 @@ func TestSet(t *testing.T) {
 				}
 
 				h := xxhash.New()
-				if err := hashImpl(NewString(v), h); err != nil {
-					t.Fatal(err)
-				}
+				hashImpl(NewString(v), h)
 				hash += h.Sum64()
 			}
 
 			// Hash
-			if h, err := set.Hash(); h != hash || err != nil {
+			if h := set.Hash(); h != hash {
 				t.Fatal("unexpected hash")
 			}
 
+			// Equal
+			// XXX
+
 			// MergeWith
-			merged := NewSet(0)
-			merged, err := merged.Add(NewString("merge"))
-			if err != nil {
-				t.Fatal("unexpected add error")
-			}
+			merged := NewSet(0).Add(NewString("merge"))
 
 			expected["merge"] = struct{}{}
 
-			merged, err = merged.MergeWith(set)
-			if err != nil {
-				t.Fatal("unexpected merge error")
-			}
+			merged = merged.MergeWith(set)
 
 			contents = make(map[string]struct{})
 			merged.Iter(func(v Json) (bool, error) {
@@ -117,7 +107,7 @@ func TestSet(t *testing.T) {
 			}
 
 			// Add
-			set, _ = set.Add(NewString(fmt.Sprintf("%d", i)))
+			set = set.Add(NewString(fmt.Sprintf("%d", i)))
 		})
 	}
 }

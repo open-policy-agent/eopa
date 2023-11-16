@@ -128,7 +128,7 @@ func (vm *VM) getEvalCacheKey(ctx context.Context, plan int, input *interface{})
 			switch curr := node.(type) {
 			case bjson.Object2: // no bjson.Object as the input is converted using FromInterface().
 				var ok bool
-				if node, ok, _ = curr.Get(bjson.NewString(key)); !ok {
+				if node, ok = curr.Get(bjson.NewString(key)); !ok {
 					values = append(values, ast.NewTerm(ast.NewSet()))
 					break next
 				}

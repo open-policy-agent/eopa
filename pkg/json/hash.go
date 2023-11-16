@@ -17,13 +17,13 @@ const (
 	typeHashSet
 )
 
-func hash(value interface{}) (uint64, error) {
+func hash(value interface{}) uint64 {
 	hasher := xxhash.New()
-	err := hashImpl(value, hasher)
-	return hasher.Sum64(), err
+	hashImpl(value, hasher)
+	return hasher.Sum64()
 }
 
-func hashImpl(value interface{}, hasher *xxhash.Digest) error {
+func hashImpl(value interface{}, hasher *xxhash.Digest) {
 	// Note Hasher writer below never returns an error.
 
 	switch value := value.(type) {
@@ -54,39 +54,26 @@ func hashImpl(value interface{}, hasher *xxhash.Digest) error {
 
 	case Array:
 		n := value.Len()
-		var err error
-		for i := 0; i < n && err == nil; i++ {
-			err = hashImpl(value.Iterate(i), hasher)
+		for i := 0; i < n; i++ {
+			hashImpl(value.Iterate(i), hasher)
 		}
 
 		hasher.Write([]byte{typeHashArray})
-
-		return err
 
 	case Object2:
 		// The two object implementation should have equal
 		// hash implementation
 
-		h, err := value.Hash()
-		if err != nil {
-			return err
-		}
-
 		b := make([]byte, 8)
-		binary.BigEndian.PutUint64(b, h)
+		binary.BigEndian.PutUint64(b, value.Hash())
 		b[0] = typeHashObject
 		hasher.Write(b)
 
 	case Object:
 		var m uint64
 		names := value.Names()
-		var err error
-		for i := 0; i < len(names) && err == nil; i++ {
-			m, err = objectHashEntry(m, NewString(names[i]), value.Iterate(i))
-		}
-
-		if err != nil {
-			return err
+		for i := 0; i < len(names); i++ {
+			m = objectHashEntry(m, NewString(names[i]), value.Iterate(i))
 		}
 
 		b := make([]byte, 8)
@@ -95,21 +82,14 @@ func hashImpl(value interface{}, hasher *xxhash.Digest) error {
 		hasher.Write(b)
 
 	case Set:
-		m, err := value.Hash()
-		if err != nil {
-			return err
-		}
-
 		b := make([]byte, 8)
-		binary.BigEndian.PutUint64(b, m)
+		binary.BigEndian.PutUint64(b, value.Hash())
 		b[0] = typeHashSet
 		hasher.Write(b)
 
 	default:
 		panic("json: unsupported type")
 	}
-
-	return nil
 }
 
 func hashString(value *String, hasher *xxhash.Digest) {
@@ -125,12 +105,10 @@ func hashString(value *String, hasher *xxhash.Digest) {
 // objectHashEntry hashes an object key-value pair. To be used with
 // any object implementation, to guarantee identical hashing across
 // different object implementations.
-func objectHashEntry(h uint64, k, v interface{}) (uint64, error) {
+func objectHashEntry(h uint64, k, v interface{}) uint64 {
 	hasher := xxhash.New()
-	err := hashImpl(k, hasher)
-	if err == nil {
-		err = hashImpl(v, hasher)
-	}
+	hashImpl(k, hasher)
+	hashImpl(v, hasher)
 
-	return h + hasher.Sum64(), err
+	return h + hasher.Sum64()
 }

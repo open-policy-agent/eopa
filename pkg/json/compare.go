@@ -7,54 +7,53 @@ import (
 
 var errNotEqual = errors.New("not equal")
 
-func Equal(a, b Json) (bool, error) {
+func Equal(a, b Json) bool {
 	return equalOp(a, b)
 }
 
-func equalOp(a, b Json) (bool, error) {
+func equalOp(a, b Json) bool {
 	switch x := a.(type) {
 	case Null:
 		_, ok := b.(Null)
-		return ok, nil
+		return ok
 
 	case Bool:
 		if y, ok := b.(Bool); ok {
-			return x.Value() == y.Value(), nil
+			return x.Value() == y.Value()
 		}
 
-		return false, nil
+		return false
 
 	case Float:
 		if y, ok := b.(Float); ok {
-			return compareFloat(x, y) == 0, nil
+			return compareFloat(x, y) == 0
 		}
 
-		return false, nil
+		return false
 
 	case *String:
 		if y, ok := b.(*String); ok {
-			return x.Value() == y.Value(), nil
+			return x.Value() == y.Value()
 		}
 
-		return false, nil
+		return false
 
 	case Array:
 		if y, ok := b.(Array); ok {
 			if x.Len() != y.Len() {
-				return false, nil
+				return false
 			}
 
 			for i := 0; i < x.Len(); i++ {
-				ok, err := equalOp(x.Iterate(i), y.Iterate(i))
-				if !ok || err != nil {
-					return false, err
+				if ok := equalOp(x.Iterate(i), y.Iterate(i)); !ok {
+					return false
 				}
 			}
 
-			return true, nil
+			return true
 		}
 
-		return false, nil
+		return false
 
 	case Object:
 		return equalObject(a, b)
@@ -67,23 +66,23 @@ func equalOp(a, b Json) (bool, error) {
 			return x.Equal(y)
 		}
 
-		return false, nil
+		return false
 
 	default:
 		panic("unsupported type")
 	}
 }
 
-func equalObject(a, b interface{}) (bool, error) {
+func equalObject(a, b interface{}) bool {
 	switch a := a.(type) {
 	case Object:
 		switch b := b.(type) {
 		case Object:
-			return a.Compare(b) == 0, nil
+			return a.Compare(b) == 0
 
 		case Object2:
 			if a.Len() != b.Len() {
-				return false, nil
+				return false
 			}
 
 			if err := b.Iter(func(k, vb Json) (bool, error) {
@@ -97,20 +96,18 @@ func equalObject(a, b interface{}) (bool, error) {
 					return true, errNotEqual
 				}
 
-				if eq, err := equalOp(va, vb); err != nil {
-					return true, err
-				} else if !eq {
+				if eq := equalOp(va, vb); !eq {
 					return true, errNotEqual
 				}
 
 				return false, nil
 			}); errors.Is(err, errNotEqual) {
-				return false, nil
+				return false
 			} else if err != nil {
-				return false, err
+				panic(err) // iteration itself never emits an error.
 			}
 
-			return true, nil
+			return true
 		}
 
 	case Object2:
@@ -123,7 +120,7 @@ func equalObject(a, b interface{}) (bool, error) {
 		}
 	}
 
-	return false, nil
+	return false
 }
 
 func compareFloat(x, y Float) int {

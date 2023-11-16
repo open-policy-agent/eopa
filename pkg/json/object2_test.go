@@ -43,11 +43,7 @@ func TestObject2(t *testing.T) {
 			// Get
 			var hash uint64
 			for k, v := range expected {
-				found, ok, err := obj.Get(NewString(k))
-				if err != nil {
-					t.Fatal(err)
-				}
-
+				found, ok := obj.Get(NewString(k))
 				if !ok {
 					t.Fatal("key not found")
 				}
@@ -56,21 +52,20 @@ func TestObject2(t *testing.T) {
 					t.Fatal("value not found")
 				}
 
-				hash, _ = objectHashEntry(hash, NewString(k), NewString(v))
+				hash = objectHashEntry(hash, NewString(k), NewString(v))
 			}
 
 			// Hash
-			if h, err := obj.Hash(); h != hash || err != nil {
+			if h := obj.Hash(); h != hash {
 				t.Fatal("unexpected hash")
 			}
 
-			// Diff
-			other, _ := NewObject2(0).Insert(NewString("0"), NewString("0"))
+			// Equal
+			// XXX
 
-			diff, err := obj.Diff(other)
-			if err != nil {
-				t.Fatal("unexpected diff")
-			}
+			// Diff
+			other := NewObject2(0).Insert(NewString("0"), NewString("0"))
+			diff := obj.Diff(other)
 
 			delete(expected, "0")
 			if n := diff.Len(); n != len(expected) {
@@ -78,7 +73,7 @@ func TestObject2(t *testing.T) {
 			}
 
 			// Insert
-			obj, _ = obj.Insert(NewString(fmt.Sprintf("%d", i)), NewString(fmt.Sprintf("%d", i*2)))
+			obj = obj.Insert(NewString(fmt.Sprintf("%d", i)), NewString(fmt.Sprintf("%d", i*2)))
 		})
 	}
 }

@@ -16,15 +16,15 @@ type T = interface{}
 
 type Object2 interface {
 	Json
-	Insert(k, v Json) (Object2, error)
-	Append(hash uint64, k, v Json) error
-	Get(k Json) (Json, bool, error)
+	Insert(k, v Json) Object2
+	add(hash uint64, k, v Json)
+	Get(k Json) (Json, bool)
 	Iter(iter func(key, value Json) (bool, error)) error
 	Iter2(iter func(key, value interface{}) (bool, error)) error
-	Equal(other Object2) (bool, error)
-	Diff(other Object2) (Object2, error)
+	Equal(other Object2) bool
+	Diff(other Object2) Object2
 	Len() int
-	Hash() (uint64, error)
+	Hash() uint64
 	AST() ast.Value
 }
 
@@ -62,50 +62,38 @@ func newObjectLarge(n int) *objectLarge {
 	return &objectLarge{table: make(map[uint64]*hashLargeEntry, n)}
 }
 
-func (o *objectLarge) Insert(k, v Json) (Object2, error) {
-	hash, err := o.hash(k)
-	if err != nil {
-		return o, err
-	}
+func (o *objectLarge) Insert(k, v Json) Object2 {
+	hash := o.hash(k)
 
 	head := o.table[hash]
 	for entry := head; entry != nil; entry = entry.next {
-		eq, err := o.eq(entry.k, k)
-		if err != nil {
-			return o, err
-		} else if eq {
+		if eq := o.eq(entry.k, k); eq {
 			entry.v = v
-			return o, nil
+			return o
 		}
 	}
 
 	o.table[hash] = &hashLargeEntry{k: k, v: v, next: head}
 	o.n++
 
-	return o, nil
+	return o
 }
 
-func (o *objectLarge) Append(hash uint64, k, v Json) error {
+func (o *objectLarge) add(hash uint64, k, v Json) {
 	o.table[hash] = &hashLargeEntry{k: k, v: v, next: o.table[hash]}
 	o.n++
-	return nil
 }
 
-func (o *objectLarge) Get(k Json) (Json, bool, error) {
-	hash, err := o.hash(k)
-	if err != nil {
-		return nil, false, err
-	}
+func (o *objectLarge) Get(k Json) (Json, bool) {
+	hash := o.hash(k)
 
 	for entry := o.table[hash]; entry != nil; entry = entry.next {
-		if eq, err := o.eq(entry.k, k); err != nil {
-			return nil, false, err
-		} else if eq {
-			return entry.v, true, nil
+		if eq := o.eq(entry.k, k); eq {
+			return entry.v, true
 		}
 	}
 
-	return nil, false, nil
+	return nil, false
 }
 
 func (o *objectLarge) Iter(iter func(key, value Json) (bool, error)) error {
@@ -136,32 +124,28 @@ func (o *objectLarge) Iter2(iter func(key, value interface{}) (bool, error)) err
 	return nil
 }
 
-func (o *objectLarge) Equal(other Object2) (bool, error) {
+func (o *objectLarge) Equal(other Object2) bool {
 	if o.Len() != other.Len() {
-		return false, nil
+		return false
 	}
 
 	for _, entry := range o.table {
 		for ; entry != nil; entry = entry.next {
-			v, ok, err := other.Get(entry.k)
-			if err != nil {
-				return false, err
-			} else if !ok {
-				return false, nil
+			v, ok := other.Get(entry.k)
+			if !ok {
+				return false
 			}
 
-			if eq, err := equalOp(entry.v, v); err != nil {
-				return false, err
-			} else if !eq {
-				return false, nil
+			if eq := equalOp(entry.v, v); !eq {
+				return false
 			}
 		}
 	}
 
-	return true, nil
+	return true
 }
 
-func (o *objectLarge) Diff(other Object2) (Object2, error) {
+func (o *objectLarge) Diff(other Object2) Object2 {
 	n := o.Len()
 	if m := other.Len(); m > n {
 		n = m
@@ -169,39 +153,32 @@ func (o *objectLarge) Diff(other Object2) (Object2, error) {
 
 	result := NewObject2(n)
 
-	if err := o.Iter(func(key, value Json) (bool, error) {
-		if _, ok, err := other.Get(key); err != nil {
-			return true, err
-		} else if !ok {
-			result, err = result.Insert(key, value)
-			if err != nil {
-				return false, err
+	for _, entry := range o.table {
+		for ; entry != nil; entry = entry.next {
+			if _, ok := other.Get(entry.k); !ok {
+				result = result.Insert(entry.k, entry.v)
 			}
 		}
-
-		return false, nil
-	}); err != nil {
-		return nil, err
 	}
 
-	return result, nil
+	return result
 }
 
 func (o *objectLarge) Len() int {
 	return o.n
 }
 
-func (o *objectLarge) Hash() (uint64, error) {
+func (o *objectLarge) Hash() uint64 {
 	var (
 		h uint64
 	)
-	err := o.Iter(func(key, value Json) (bool, error) {
-		var err error
-		h, err = objectHashEntry(h, key, value)
-		return err != nil, err
-	})
+	for _, entry := range o.table {
+		for ; entry != nil; entry = entry.next {
+			h = objectHashEntry(h, entry.k, entry.v) // TODO: Reuse the precomputed key hash?
+		}
+	}
 
-	return h, err
+	return h
 }
 
 func (o *objectLarge) AST() ast.Value {
@@ -213,12 +190,11 @@ func (o *objectLarge) AST() ast.Value {
 	return obj
 }
 
-func (o *objectLarge) hash(k interface{}) (uint64, error) {
-	x, err := hash(k)
-	return x, err
+func (o *objectLarge) hash(k interface{}) uint64 {
+	return hash(k)
 }
 
-func (o *objectLarge) eq(a, b Json) (bool, error) {
+func (o *objectLarge) eq(a, b Json) bool {
 	return equalOp(a, b)
 }
 
@@ -235,66 +211,54 @@ type hashObjectCompactEntry struct {
 	v    Json
 }
 
-func (o *objectCompact[T]) Insert(k, v Json) (Object2, error) {
+func (o *objectCompact[T]) Insert(k, v Json) Object2 {
 	if o.n == len(o.table) {
-		obj := NewObject2(o.n + 1)
+		obj := NewObject2(o.n + 1) // enough space for both appends and insert.
 		for i := 0; i < o.n; i++ {
-			if err := obj.Append(o.table[i].hash, o.table[i].k, o.table[i].v); err != nil {
-				return o, err
-			}
+			obj.add(o.table[i].hash, o.table[i].k, o.table[i].v)
 		}
 
 		return obj.Insert(k, v)
 	}
 
-	hash, err := o.hash(k)
-	if err != nil {
-		return o, err
-	}
+	hash := o.hash(k)
 
 	for i := 0; i < o.n; i++ {
 		if o.table[i].hash == hash {
-			if eq, err := o.eq(o.table[i].k, k); err != nil {
-				return o, err
-			} else if eq {
+			if eq := o.eq(o.table[i].k, k); eq {
 				o.table[i].v = v
-				return o, nil
+				return o
 			}
 		}
 	}
 
 	o.table[o.n] = hashObjectCompactEntry{hash: hash, k: k, v: v}
 	o.n++
-	return o, nil
+	return o
 }
 
-func (o *objectCompact[T]) Append(hash uint64, k, v Json) error {
+// add does not check over space left.
+func (o *objectCompact[T]) add(hash uint64, k, v Json) {
 	o.table[o.n] = hashObjectCompactEntry{hash: hash, k: k, v: v}
 	o.n++
-	return nil
 }
 
-func (o *objectCompact[T]) Get(k Json) (Json, bool, error) {
+func (o *objectCompact[T]) Get(k Json) (Json, bool) {
 	if o.n == 0 {
-		return nil, false, nil
+		return nil, false
 	}
 
-	hash, err := o.hash(k)
-	if err != nil {
-		return nil, false, err
-	}
+	hash := o.hash(k)
 
 	for i := 0; i < o.n; i++ {
 		if o.table[i].hash == hash {
-			if eq, err := o.eq(o.table[i].k, k); err != nil {
-				return nil, false, err
-			} else if eq {
-				return o.table[i].v, true, nil
+			if eq := o.eq(o.table[i].k, k); eq {
+				return o.table[i].v, true
 			}
 		}
 	}
 
-	return nil, false, nil
+	return nil, false
 }
 
 func (o *objectCompact[T]) Iter(iter func(key, value Json) (bool, error)) error {
@@ -323,30 +287,26 @@ func (o *objectCompact[T]) Iter2(iter func(key, value interface{}) (bool, error)
 	return err
 }
 
-func (o *objectCompact[T]) Equal(other Object2) (bool, error) {
+func (o *objectCompact[T]) Equal(other Object2) bool {
 	if o.Len() != other.Len() {
-		return false, nil
+		return false
 	}
 
 	for i := 0; i < o.n; i++ {
-		v, ok, err := other.Get(o.table[i].k)
-		if err != nil {
-			return false, err
-		} else if !ok {
-			return false, nil
+		v, ok := other.Get(o.table[i].k)
+		if !ok {
+			return false
 		}
 
-		if eq, err := equalOp(o.table[i].v, v); err != nil {
-			return false, err
-		} else if !eq {
-			return false, nil
+		if eq := equalOp(o.table[i].v, v); !eq {
+			return false
 		}
 	}
 
-	return true, nil
+	return true
 }
 
-func (o *objectCompact[T]) Diff(other Object2) (Object2, error) {
+func (o *objectCompact[T]) Diff(other Object2) Object2 {
 	n := o.Len()
 	if m := other.Len(); m > n {
 		n = m
@@ -354,39 +314,27 @@ func (o *objectCompact[T]) Diff(other Object2) (Object2, error) {
 
 	result := NewObject2(n)
 
-	if err := o.Iter(func(key, value Json) (bool, error) {
-		if _, ok, err := other.Get(key); err != nil {
-			return true, err
-		} else if !ok {
-			result, err = result.Insert(key, value)
-			if err != nil {
-				return false, err
-			}
+	for i := 0; i < o.n; i++ {
+		if _, ok := other.Get(o.table[i].k); !ok {
+			result = result.Insert(o.table[i].k, o.table[i].v)
 		}
-
-		return false, nil
-	}); err != nil {
-		return nil, err
 	}
 
-	return result, nil
+	return result
 }
 
 func (o *objectCompact[T]) Len() int {
 	return o.n
 }
 
-func (o *objectCompact[T]) Hash() (uint64, error) {
-	var (
-		h   uint64
-		err error
-	)
+func (o *objectCompact[T]) Hash() uint64 {
+	var h uint64
 
-	for i := 0; i < o.n && err == nil; i++ {
-		h, err = objectHashEntry(h, o.table[i].k, o.table[i].v)
+	for i := 0; i < o.n; i++ {
+		h = objectHashEntry(h, o.table[i].k, o.table[i].v)
 	}
 
-	return h, err
+	return h
 }
 
 func (o *objectCompact[T]) AST() ast.Value {
@@ -398,11 +346,11 @@ func (o *objectCompact[T]) AST() ast.Value {
 	return obj
 }
 
-func (o *objectCompact[T]) hash(k interface{}) (uint64, error) {
+func (o *objectCompact[T]) hash(k interface{}) uint64 {
 	return hash(k)
 }
 
-func (o *objectCompact[T]) eq(a, b Json) (bool, error) {
+func (o *objectCompact[T]) eq(a, b Json) bool {
 	return equalOp(a, b)
 }
 
