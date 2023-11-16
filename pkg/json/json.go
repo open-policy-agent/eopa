@@ -339,38 +339,6 @@ func (f Float) Divide(divisor Float) Float {
 	return NewFloat(gojson.Number(fmt.Sprintf("%g", fa/fb)))
 }
 
-func Compare(a, b Float) int {
-	ia, oka := a.value.Int64()
-	ib, okb := b.value.Int64()
-
-	if oka == nil && okb == nil {
-		switch {
-		case ia < ib:
-			return -1
-		case ia == ib:
-			return 0
-		case ia > ib:
-			return 1
-		}
-	}
-
-	fa, oka := a.value.Float64()
-	fb, okb := b.value.Float64()
-
-	if oka != nil || okb != nil {
-		panic("json: corrupted number")
-	}
-
-	switch {
-	case fa < fb:
-		return -1
-	case fa == fb:
-		return 0
-	default:
-		return 1
-	}
-}
-
 func Min(a, b Float) Float {
 	ia, oka := a.value.Int64()
 	ib, okb := b.value.Int64()
@@ -1252,7 +1220,7 @@ func compare(x File, y File) int {
 			}
 
 		case Float:
-			return Compare(x.(Float), y.(Float))
+			return compareFloat(x.(Float), y.(Float))
 
 		case *String:
 			return strings.Compare(x.(*String).Value(), y.(*String).Value())
