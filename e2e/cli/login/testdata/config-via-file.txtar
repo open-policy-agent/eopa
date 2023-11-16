@@ -1,6 +1,0 @@
-exec eopa login
-stderr 'would be connecting to http://my.styra.com'
-! stdout .
-
--- .styra.yaml --
-url: http://my.styra.com

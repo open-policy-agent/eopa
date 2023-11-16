@@ -15,6 +15,12 @@ import (
 // used to override the config (or define it if there is no config)
 const dasURL = "url"
 
+// secretFile determines where the secret gathered in the login flow is
+// written to.
+// TODO(sr): currently this is in the CWD, it should probably be in $HOME
+// or next to the .styra.yaml config file that was used.
+const secretFile = ".styra-session"
+
 func loginCmd(config *viper.Viper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "login",
@@ -40,7 +46,17 @@ func loginCmd(config *viper.Viper) *cobra.Command {
 			if url == "" {
 				return fmt.Errorf("URL not provided: use .styra.yaml or pass `--url`")
 			}
-			return login.Start(ctx, url)
+			secret, err := login.Start(ctx, url)
+			if err != nil {
+				return err
+			}
+			if err := storeSecret(secret); err != nil {
+				return err
+			}
+
+			// TODO(sr): add user name to response payload
+			fmt.Println("successfully logged in")
+			return nil
 		},
 	}
 
@@ -51,4 +67,8 @@ func loginCmd(config *viper.Viper) *cobra.Command {
 func addDASFlags(cfg *viper.Viper, c *cobra.Command) {
 	c.Flags().StringP(dasURL, "", "", `DAS address to connect to (e.g. "https://my-tenant.styra.com")`)
 	cfg.BindPFlag(dasURL, c.Flags().Lookup(dasURL))
+}
+
+func storeSecret(s string) error {
+	return os.WriteFile(secretFile, []byte(s), 0o700)
 }
