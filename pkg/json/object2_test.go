@@ -1,15 +1,13 @@
-package vm
+package json
 
 import (
 	"fmt"
 	"reflect"
 	"testing"
-
-	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
-func TestObject(t *testing.T) {
-	obj := zeroObject
+func TestObject2(t *testing.T) {
+	obj := zeroObject2
 
 	for i := 0; i < 32; i++ {
 		t.Run("", func(t *testing.T) {
@@ -20,12 +18,12 @@ func TestObject(t *testing.T) {
 
 			// Iter
 			contents := make(map[string]string)
-			obj.Iter(func(k, v fjson.Json) (bool, error) {
-				contents[k.(*fjson.String).Value()] = v.(*fjson.String).Value()
+			obj.Iter(func(k, v Json) (bool, error) {
+				contents[k.(*String).Value()] = v.(*String).Value()
 				return false, nil
 			})
 			c := 0
-			obj.Iter(func(_, _ fjson.Json) (bool, error) {
+			obj.Iter(func(_, _ Json) (bool, error) {
 				c++
 				return true, nil
 			})
@@ -45,7 +43,7 @@ func TestObject(t *testing.T) {
 			// Get
 			var hash uint64
 			for k, v := range expected {
-				found, ok, err := obj.Get(fjson.NewString(k))
+				found, ok, err := obj.Get(NewString(k))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -54,11 +52,11 @@ func TestObject(t *testing.T) {
 					t.Fatal("key not found")
 				}
 
-				if v != found.(*fjson.String).Value() {
+				if v != found.(*String).Value() {
 					t.Fatal("value not found")
 				}
 
-				hash, _ = objectHashEntry(hash, fjson.NewString(k), fjson.NewString(v))
+				hash, _ = objectHashEntry(hash, NewString(k), NewString(v))
 			}
 
 			// Hash
@@ -67,7 +65,7 @@ func TestObject(t *testing.T) {
 			}
 
 			// Diff
-			other, _ := NewObject().Insert(fjson.NewString("0"), fjson.NewString("0"))
+			other, _ := NewObject2(0).Insert(NewString("0"), NewString("0"))
 
 			diff, err := obj.Diff(other)
 			if err != nil {
@@ -80,7 +78,7 @@ func TestObject(t *testing.T) {
 			}
 
 			// Insert
-			obj, _ = obj.Insert(fjson.NewString(fmt.Sprintf("%d", i)), fjson.NewString(fmt.Sprintf("%d", i*2)))
+			obj, _ = obj.Insert(NewString(fmt.Sprintf("%d", i)), NewString(fmt.Sprintf("%d", i*2)))
 		})
 	}
 }

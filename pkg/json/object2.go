@@ -1,43 +1,37 @@
-package vm
+package json
 
 import (
-	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-
 	"github.com/open-policy-agent/opa/ast"
 )
 
 var (
-	_          fjson.Json = (*objectCompact[[0]hashObjectCompactEntry])(nil)
-	_          fjson.Json = (*objectLarge)(nil)
-	_          Object     = (*objectCompact[[0]hashObjectCompactEntry])(nil)
-	_          Object     = (*objectLarge)(nil)
-	zeroObject Object     = &objectCompact[[0]hashObjectCompactEntry]{}
+	_           Json    = (*objectCompact[[0]hashObjectCompactEntry])(nil)
+	_           Json    = (*objectLarge)(nil)
+	_           Object2 = (*objectCompact[[0]hashObjectCompactEntry])(nil)
+	_           Object2 = (*objectLarge)(nil)
+	zeroObject2 Object2 = &objectCompact[[0]hashObjectCompactEntry]{}
 )
 
 type T = interface{}
 
-type Object interface {
-	fjson.Json
-	Insert(k, v fjson.Json) (Object, error)
-	Append(hash uint64, k, v fjson.Json) error
-	Get(k fjson.Json) (fjson.Json, bool, error)
-	Iter(iter func(key, value fjson.Json) (bool, error)) error
+type Object2 interface {
+	Json
+	Insert(k, v Json) (Object2, error)
+	Append(hash uint64, k, v Json) error
+	Get(k Json) (Json, bool, error)
+	Iter(iter func(key, value Json) (bool, error)) error
 	Iter2(iter func(key, value interface{}) (bool, error)) error
-	Equal(other Object) (bool, error)
-	Diff(other Object) (Object, error)
+	Equal(other Object2) (bool, error)
+	Diff(other Object2) (Object2, error)
 	Len() int
 	Hash() (uint64, error)
 	AST() ast.Value
 }
 
-func NewObject() Object {
-	return newObject(0)
-}
-
-func newObject(n int) Object {
+func NewObject2(n int) Object2 {
 	switch {
 	case n == 0:
-		return zeroObject
+		return zeroObject2
 	case n <= 2:
 		return &objectCompact[[2]hashObjectCompactEntry]{}
 	case n <= 4:
@@ -53,14 +47,14 @@ func newObject(n int) Object {
 
 // objectLarge is the default implementation.
 type objectLarge struct {
-	fjson.Json
+	Json
 	table map[uint64]*hashLargeEntry
 	n     int
 }
 
 type hashLargeEntry struct {
-	k    fjson.Json
-	v    fjson.Json
+	k    Json
+	v    Json
 	next *hashLargeEntry
 }
 
@@ -68,7 +62,7 @@ func newObjectLarge(n int) *objectLarge {
 	return &objectLarge{table: make(map[uint64]*hashLargeEntry, n)}
 }
 
-func (o *objectLarge) Insert(k, v fjson.Json) (Object, error) {
+func (o *objectLarge) Insert(k, v Json) (Object2, error) {
 	hash, err := o.hash(k)
 	if err != nil {
 		return o, err
@@ -91,13 +85,13 @@ func (o *objectLarge) Insert(k, v fjson.Json) (Object, error) {
 	return o, nil
 }
 
-func (o *objectLarge) Append(hash uint64, k, v fjson.Json) error {
+func (o *objectLarge) Append(hash uint64, k, v Json) error {
 	o.table[hash] = &hashLargeEntry{k: k, v: v, next: o.table[hash]}
 	o.n++
 	return nil
 }
 
-func (o *objectLarge) Get(k fjson.Json) (fjson.Json, bool, error) {
+func (o *objectLarge) Get(k Json) (Json, bool, error) {
 	hash, err := o.hash(k)
 	if err != nil {
 		return nil, false, err
@@ -114,7 +108,7 @@ func (o *objectLarge) Get(k fjson.Json) (fjson.Json, bool, error) {
 	return nil, false, nil
 }
 
-func (o *objectLarge) Iter(iter func(key, value fjson.Json) (bool, error)) error {
+func (o *objectLarge) Iter(iter func(key, value Json) (bool, error)) error {
 	for _, entry := range o.table {
 		for ; entry != nil; entry = entry.next {
 			if stop, err := iter(entry.k, entry.v); err != nil {
@@ -142,7 +136,7 @@ func (o *objectLarge) Iter2(iter func(key, value interface{}) (bool, error)) err
 	return nil
 }
 
-func (o *objectLarge) Equal(other Object) (bool, error) {
+func (o *objectLarge) Equal(other Object2) (bool, error) {
 	if o.Len() != other.Len() {
 		return false, nil
 	}
@@ -167,15 +161,15 @@ func (o *objectLarge) Equal(other Object) (bool, error) {
 	return true, nil
 }
 
-func (o *objectLarge) Diff(other Object) (Object, error) {
+func (o *objectLarge) Diff(other Object2) (Object2, error) {
 	n := o.Len()
 	if m := other.Len(); m > n {
 		n = m
 	}
 
-	result := newObject(n)
+	result := NewObject2(n)
 
-	if err := o.Iter(func(key, value fjson.Json) (bool, error) {
+	if err := o.Iter(func(key, value Json) (bool, error) {
 		if _, ok, err := other.Get(key); err != nil {
 			return true, err
 		} else if !ok {
@@ -201,7 +195,7 @@ func (o *objectLarge) Hash() (uint64, error) {
 	var (
 		h uint64
 	)
-	err := o.Iter(func(key, value fjson.Json) (bool, error) {
+	err := o.Iter(func(key, value Json) (bool, error) {
 		var err error
 		h, err = objectHashEntry(h, key, value)
 		return err != nil, err
@@ -212,7 +206,7 @@ func (o *objectLarge) Hash() (uint64, error) {
 
 func (o *objectLarge) AST() ast.Value {
 	obj := ast.NewObject()
-	o.Iter(func(k, v fjson.Json) (bool, error) {
+	o.Iter(func(k, v Json) (bool, error) {
 		obj.Insert(ast.NewTerm(k.AST()), ast.NewTerm(v.AST()))
 		return false, nil
 	})
@@ -224,26 +218,26 @@ func (o *objectLarge) hash(k interface{}) (uint64, error) {
 	return x, err
 }
 
-func (o *objectLarge) eq(a, b fjson.Json) (bool, error) {
+func (o *objectLarge) eq(a, b Json) (bool, error) {
 	return equalOp(a, b)
 }
 
 // objectCompact is the compact implementation.
-type objectCompact[T indexable] struct {
-	fjson.Json
+type objectCompact[T indexable2] struct {
+	Json
 	table T
 	n     int
 }
 
 type hashObjectCompactEntry struct {
 	hash uint64
-	k    fjson.Json
-	v    fjson.Json
+	k    Json
+	v    Json
 }
 
-func (o *objectCompact[T]) Insert(k, v fjson.Json) (Object, error) {
+func (o *objectCompact[T]) Insert(k, v Json) (Object2, error) {
 	if o.n == len(o.table) {
-		obj := newObject(o.n + 1)
+		obj := NewObject2(o.n + 1)
 		for i := 0; i < o.n; i++ {
 			if err := obj.Append(o.table[i].hash, o.table[i].k, o.table[i].v); err != nil {
 				return o, err
@@ -274,13 +268,13 @@ func (o *objectCompact[T]) Insert(k, v fjson.Json) (Object, error) {
 	return o, nil
 }
 
-func (o *objectCompact[T]) Append(hash uint64, k, v fjson.Json) error {
+func (o *objectCompact[T]) Append(hash uint64, k, v Json) error {
 	o.table[o.n] = hashObjectCompactEntry{hash: hash, k: k, v: v}
 	o.n++
 	return nil
 }
 
-func (o *objectCompact[T]) Get(k fjson.Json) (fjson.Json, bool, error) {
+func (o *objectCompact[T]) Get(k Json) (Json, bool, error) {
 	if o.n == 0 {
 		return nil, false, nil
 	}
@@ -303,7 +297,7 @@ func (o *objectCompact[T]) Get(k fjson.Json) (fjson.Json, bool, error) {
 	return nil, false, nil
 }
 
-func (o *objectCompact[T]) Iter(iter func(key, value fjson.Json) (bool, error)) error {
+func (o *objectCompact[T]) Iter(iter func(key, value Json) (bool, error)) error {
 	var (
 		stop bool
 		err  error
@@ -329,7 +323,7 @@ func (o *objectCompact[T]) Iter2(iter func(key, value interface{}) (bool, error)
 	return err
 }
 
-func (o *objectCompact[T]) Equal(other Object) (bool, error) {
+func (o *objectCompact[T]) Equal(other Object2) (bool, error) {
 	if o.Len() != other.Len() {
 		return false, nil
 	}
@@ -352,15 +346,15 @@ func (o *objectCompact[T]) Equal(other Object) (bool, error) {
 	return true, nil
 }
 
-func (o *objectCompact[T]) Diff(other Object) (Object, error) {
+func (o *objectCompact[T]) Diff(other Object2) (Object2, error) {
 	n := o.Len()
 	if m := other.Len(); m > n {
 		n = m
 	}
 
-	result := newObject(n)
+	result := NewObject2(n)
 
-	if err := o.Iter(func(key, value fjson.Json) (bool, error) {
+	if err := o.Iter(func(key, value Json) (bool, error) {
 		if _, ok, err := other.Get(key); err != nil {
 			return true, err
 		} else if !ok {
@@ -397,7 +391,7 @@ func (o *objectCompact[T]) Hash() (uint64, error) {
 
 func (o *objectCompact[T]) AST() ast.Value {
 	obj := ast.NewObject()
-	o.Iter(func(k, v fjson.Json) (bool, error) {
+	o.Iter(func(k, v Json) (bool, error) {
 		obj.Insert(ast.NewTerm(k.AST()), ast.NewTerm(v.AST()))
 		return false, nil
 	})
@@ -408,11 +402,11 @@ func (o *objectCompact[T]) hash(k interface{}) (uint64, error) {
 	return hash(k)
 }
 
-func (o *objectCompact[T]) eq(a, b fjson.Json) (bool, error) {
+func (o *objectCompact[T]) eq(a, b Json) (bool, error) {
 	return equalOp(a, b)
 }
 
-type indexable interface {
+type indexable2 interface {
 	~[0]hashObjectCompactEntry |
 		~[2]hashObjectCompactEntry |
 		~[4]hashObjectCompactEntry |

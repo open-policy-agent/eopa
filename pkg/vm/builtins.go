@@ -140,7 +140,7 @@ func objectKeysBuiltin(state *State, args []Value) error {
 				return err
 			}
 		}
-	case Object:
+	case fjson.Object2:
 		err := o.Iter(func(key fjson.Json, _ fjson.Json) (bool, error) {
 			var err error
 			set, err = state.ValueOps().SetAdd(state.Globals.Ctx, set, key)
@@ -182,7 +182,7 @@ func objectSelect(state *State, args []Value, keep bool) error {
 		return err
 	}
 
-	result := NewObject()
+	result := fjson.NewObject2(0)
 	var selected func(key fjson.Json) (bool, error)
 
 	switch coll := coll.(type) {
@@ -191,7 +191,7 @@ func objectSelect(state *State, args []Value, keep bool) error {
 			_, ok, err := coll.Get(state.Globals.Ctx, key)
 			return err == nil && ok, err
 		}
-	case Object:
+	case fjson.Object2:
 		selected = func(key fjson.Json) (bool, error) {
 			_, ok, err := coll.Get(key)
 			return err == nil && ok, err
@@ -201,13 +201,13 @@ func objectSelect(state *State, args []Value, keep bool) error {
 			skey, ok := key.(*fjson.String)
 			return ok && coll.Value(skey.Value()) != nil, nil
 		}
-	case Set:
+	case fjson.Set:
 		selected = func(key fjson.Json) (bool, error) {
 			_, ok, err := coll.Get(key)
 			return err == nil && ok, err
 		}
 	case fjson.Array:
-		s := NewSet()
+		s := fjson.NewSet(0)
 		for i := 0; i < coll.Len(); i++ {
 			var err error
 			if s, err = s.Add(coll.Iterate(i)); err != nil {
@@ -317,7 +317,7 @@ func stringsConcatBuiltin(state *State, args []Value) error {
 		result := state.ValueOps().MakeString(gostrings.Join(strs, string(join)))
 		state.SetReturnValue(Unused, result)
 
-	case Set:
+	case fjson.Set:
 		set := x
 
 		var strs []string
@@ -460,7 +460,7 @@ func stringsSprintfBuiltin(state *State, args []Value) error {
 			}
 		case *fjson.String:
 			a[i] = v.Value()
-		case fjson.Array, fjson.Object, Object, Set:
+		case fjson.Array, fjson.Object, fjson.Object2, fjson.Set:
 			// TODO: Object, Set have no String() implementation at the moment, whereas fjson.Array/fjson.Object
 			// String()'s produce slightly different output from their AST versions.
 			c, err := state.ValueOps().ToAST(state.Globals.Ctx, elem)
@@ -491,7 +491,7 @@ func countBuiltin(state *State, args []Value) error {
 	case fjson.Object:
 		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(a.Len())))
 		return nil
-	case Object:
+	case fjson.Object2:
 		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(a.Len())))
 		return nil
 	case IterableObject:
@@ -505,7 +505,7 @@ func countBuiltin(state *State, args []Value) error {
 			state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(n))
 		}
 		return err
-	case Set:
+	case fjson.Set:
 		state.SetReturnValue(Unused, state.ValueOps().MakeNumberInt(int64(a.Len())))
 		return nil
 	case *fjson.String:
@@ -543,12 +543,12 @@ func builtinStringOperand(state *State, value Value, pos int) (string, error) {
 	return s.Value(), nil
 }
 
-func builtinSetOperand(state *State, value Value, pos int) (Set, error) {
-	s, ok := value.(Set)
+func builtinSetOperand(state *State, value Value, pos int) (fjson.Set, error) {
+	s, ok := value.(fjson.Set)
 	if !ok {
 		v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
 		if err != nil {
-			return NewSet(), err
+			return fjson.NewSet(0), err
 		}
 
 		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
@@ -563,7 +563,7 @@ func builtinSetOperand(state *State, value Value, pos int) (Set, error) {
 
 func builtinObjectOperand(state *State, value Value, pos int) (bool, error) {
 	switch value.(type) {
-	case fjson.Object, IterableObject, Object:
+	case fjson.Object, IterableObject, fjson.Object2:
 		return true, nil
 	default:
 		v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
@@ -787,7 +787,7 @@ func equalBuiltin(state *State, args []Value) error {
 		return err
 	}
 
-	ret, err := equalOp(a, b)
+	ret, err := fjson.Equal(a, b)
 	if err == nil {
 		state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(ret))
 	}
@@ -810,7 +810,7 @@ func notEqualBuiltin(state *State, args []Value) error {
 		return err
 	}
 
-	ret, err := equalOp(a, b)
+	ret, err := fjson.Equal(a, b)
 	if err == nil {
 		state.SetReturnValue(Unused, state.ValueOps().MakeBoolean(!ret))
 	}
@@ -838,7 +838,7 @@ func binaryOrBuiltin(state *State, args []Value) error {
 		n = m
 	}
 
-	result := newSet(n)
+	result := fjson.NewSet(n)
 	result, err = result.MergeWith(a)
 	if err != nil {
 		return err
@@ -888,7 +888,7 @@ func objectUnionBuiltin(state *State, args []Value) error {
 func objectUnion(a, b fjson.Json) (fjson.Json, error) {
 	switch a := a.(type) {
 	case fjson.Object:
-		result := newObject(a.Len())
+		result := fjson.NewObject2(a.Len())
 
 		var getValue func(key string) (fjson.Json, bool, error)
 
@@ -909,7 +909,7 @@ func objectUnion(a, b fjson.Json) (fjson.Json, error) {
 				}
 			}
 
-		case Object:
+		case fjson.Object2:
 			getValue = func(key string) (fjson.Json, bool, error) {
 				value, ok, err := b.Get(fjson.NewString(key))
 				if !ok || err != nil {
@@ -958,11 +958,11 @@ func objectUnion(a, b fjson.Json) (fjson.Json, error) {
 
 		return result, nil
 
-	case Object:
+	case fjson.Object2:
 		switch b := b.(type) {
 		case fjson.Object:
 			return objectUnion(b, a)
-		case Object:
+		case fjson.Object2:
 			result, err := b.Diff(a)
 			if err != nil {
 				return nil, err
@@ -1022,14 +1022,14 @@ func typeBoolean(v Value) bool {
 
 func typeObject(v Value) bool {
 	switch v.(type) {
-	case fjson.Object, IterableObject, Object:
+	case fjson.Object, IterableObject, fjson.Object2:
 		return true
 	}
 	return false
 }
 
 func typeSet(v Value) bool {
-	_, ok := v.(Set)
+	_, ok := v.(fjson.Set)
 	return ok
 }
 
@@ -1063,9 +1063,9 @@ func typename(v Value) string {
 		return "null"
 	case fjson.Float:
 		return "number"
-	case fjson.Object, IterableObject, Object:
+	case fjson.Object, IterableObject, fjson.Object2:
 		return "object"
-	case Set:
+	case fjson.Set:
 		return "set"
 	}
 	panic("unreachable")

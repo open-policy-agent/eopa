@@ -1,43 +1,45 @@
-package vm
+package json
 
 import (
 	"errors"
 	"math/big"
-
-	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
 var errNotEqual = errors.New("not equal")
 
-func equalOp(a, b fjson.Json) (bool, error) {
+func Equal(a, b Json) (bool, error) {
+	return equalOp(a, b)
+}
+
+func equalOp(a, b Json) (bool, error) {
 	switch x := a.(type) {
-	case fjson.Null:
-		_, ok := b.(fjson.Null)
+	case Null:
+		_, ok := b.(Null)
 		return ok, nil
 
-	case fjson.Bool:
-		if y, ok := b.(fjson.Bool); ok {
+	case Bool:
+		if y, ok := b.(Bool); ok {
 			return x.Value() == y.Value(), nil
 		}
 
 		return false, nil
 
-	case fjson.Float:
-		if y, ok := b.(fjson.Float); ok {
-			return compare(x, y) == 0, nil
+	case Float:
+		if y, ok := b.(Float); ok {
+			return compareFloat(x, y) == 0, nil
 		}
 
 		return false, nil
 
-	case *fjson.String:
-		if y, ok := b.(*fjson.String); ok {
+	case *String:
+		if y, ok := b.(*String); ok {
 			return x.Value() == y.Value(), nil
 		}
 
 		return false, nil
 
-	case fjson.Array:
-		if y, ok := b.(fjson.Array); ok {
+	case Array:
+		if y, ok := b.(Array); ok {
 			if x.Len() != y.Len() {
 				return false, nil
 			}
@@ -54,10 +56,10 @@ func equalOp(a, b fjson.Json) (bool, error) {
 
 		return false, nil
 
-	case fjson.Object:
+	case Object:
 		return equalObject(a, b)
 
-	case Object:
+	case Object2:
 		return equalObject(a, b)
 
 	case Set:
@@ -74,18 +76,18 @@ func equalOp(a, b fjson.Json) (bool, error) {
 
 func equalObject(a, b interface{}) (bool, error) {
 	switch a := a.(type) {
-	case fjson.Object:
+	case Object:
 		switch b := b.(type) {
-		case fjson.Object:
+		case Object:
 			return a.Compare(b) == 0, nil
 
-		case Object:
+		case Object2:
 			if a.Len() != b.Len() {
 				return false, nil
 			}
 
-			if err := b.Iter(func(k, vb fjson.Json) (bool, error) {
-				s, ok := k.(*fjson.String)
+			if err := b.Iter(func(k, vb Json) (bool, error) {
+				s, ok := k.(*String)
 				if !ok {
 					return true, errNotEqual
 				}
@@ -111,12 +113,12 @@ func equalObject(a, b interface{}) (bool, error) {
 			return true, nil
 		}
 
-	case Object:
+	case Object2:
 		switch b := b.(type) {
-		case fjson.Object:
+		case Object:
 			return equalOp(b, a)
 
-		case Object:
+		case Object2:
 			return a.Equal(b)
 		}
 	}
@@ -124,7 +126,7 @@ func equalObject(a, b interface{}) (bool, error) {
 	return false, nil
 }
 
-func compare(x, y fjson.Float) int {
+func compareFloat(x, y Float) int {
 	a, b := x.Value(), y.Value()
 
 	if ai, err := a.Int64(); err == nil {

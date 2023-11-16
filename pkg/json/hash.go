@@ -1,12 +1,10 @@
-package vm
+package json
 
 import (
 	"encoding/binary"
 	"math"
 
 	"github.com/cespare/xxhash/v2"
-
-	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
 const (
@@ -29,17 +27,17 @@ func hashImpl(value interface{}, hasher *xxhash.Digest) error {
 	// Note Hasher writer below never returns an error.
 
 	switch value := value.(type) {
-	case fjson.Null:
+	case Null:
 		hasher.Write([]byte{typeHashNull})
 
-	case fjson.Bool:
+	case Bool:
 		if value.Value() {
 			hasher.Write([]byte{typeHashBool, 1})
 		} else {
 			hasher.Write([]byte{typeHashBool, 0})
 		}
 
-	case fjson.Float:
+	case Float:
 		f, err := value.Value().Float64()
 		if err != nil {
 			panic("invalid float")
@@ -51,10 +49,10 @@ func hashImpl(value interface{}, hasher *xxhash.Digest) error {
 		binary.BigEndian.PutUint64(b[1:], math.Float64bits(f))
 		hasher.Write(b)
 
-	case *fjson.String:
+	case *String:
 		hashString(value, hasher)
 
-	case fjson.Array:
+	case Array:
 		n := value.Len()
 		var err error
 		for i := 0; i < n && err == nil; i++ {
@@ -65,7 +63,7 @@ func hashImpl(value interface{}, hasher *xxhash.Digest) error {
 
 		return err
 
-	case Object:
+	case Object2:
 		// The two object implementation should have equal
 		// hash implementation
 
@@ -79,12 +77,12 @@ func hashImpl(value interface{}, hasher *xxhash.Digest) error {
 		b[0] = typeHashObject
 		hasher.Write(b)
 
-	case fjson.Object:
+	case Object:
 		var m uint64
 		names := value.Names()
 		var err error
 		for i := 0; i < len(names) && err == nil; i++ {
-			m, err = objectHashEntry(m, fjson.NewString(names[i]), value.Iterate(i))
+			m, err = objectHashEntry(m, NewString(names[i]), value.Iterate(i))
 		}
 
 		if err != nil {
@@ -114,7 +112,7 @@ func hashImpl(value interface{}, hasher *xxhash.Digest) error {
 	return nil
 }
 
-func hashString(value *fjson.String, hasher *xxhash.Digest) {
+func hashString(value *String, hasher *xxhash.Digest) {
 	hasher.Write([]byte{typeHashString})
 
 	if len(*value) == 0 {

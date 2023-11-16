@@ -90,7 +90,7 @@ type (
 		Input                  *interface{}
 		NDBCache               builtins.NDBCache
 		Runtime                *ast.Term
-		ResultSet              Set
+		ResultSet              fjson.Set
 		BuiltinErrors          []error
 		TracingOpts            tracing.Options
 		memoize                []map[k]Value

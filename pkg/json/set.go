@@ -1,27 +1,25 @@
-package vm
+package json
 
 import (
-	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-
 	"github.com/cespare/xxhash/v2"
 	"github.com/open-policy-agent/opa/ast"
 	"golang.org/x/exp/slices"
 )
 
 var (
-	_       fjson.Json = (*setCompact[[0]hashSetCompactEntry])(nil)
-	_       fjson.Json = (*setLarge)(nil)
-	_       Set        = (*setCompact[[0]hashSetCompactEntry])(nil)
-	_       Set        = (*setLarge)(nil)
-	zeroSet Set        = &setCompact[[0]hashSetCompactEntry]{}
+	_       Json = (*setCompact[[0]hashSetCompactEntry])(nil)
+	_       Json = (*setLarge)(nil)
+	_       Set  = (*setCompact[[0]hashSetCompactEntry])(nil)
+	_       Set  = (*setLarge)(nil)
+	zeroSet Set  = &setCompact[[0]hashSetCompactEntry]{}
 )
 
 type Set interface {
-	fjson.Json
-	Add(v fjson.Json) (Set, error)
-	add(hash uint64, v fjson.Json) (Set, error)
-	Get(v fjson.Json) (fjson.Json, bool, error)
-	Iter(iter func(v fjson.Json) (bool, error)) (bool, error)
+	Json
+	Add(v Json) (Set, error)
+	add(hash uint64, v Json) (Set, error)
+	Get(v Json) (Json, bool, error)
+	Iter(iter func(v Json) (bool, error)) (bool, error)
 	Iter2(iter func(v, vv interface{}) (bool, error)) (bool, error)
 	Equal(other Set) (bool, error)
 	Len() int
@@ -31,11 +29,7 @@ type Set interface {
 	mergeTo(other Set) (Set, error)
 }
 
-func NewSet() Set {
-	return newSet(0)
-}
-
-func newSet(n int) Set {
+func NewSet(n int) Set {
 	switch {
 	case n == 0:
 		return zeroSet
@@ -54,13 +48,13 @@ func newSet(n int) Set {
 
 // setLarge is the default implementation.
 type setLarge struct {
-	fjson.Json
+	Json
 	table map[uint64]*hashSetLargeEntry
 	n     int
 }
 
 type hashSetLargeEntry struct {
-	v    fjson.Json
+	v    Json
 	next *hashSetLargeEntry
 }
 
@@ -68,7 +62,7 @@ func newSetLarge(n int) *setLarge {
 	return &setLarge{table: make(map[uint64]*hashSetLargeEntry, n)}
 }
 
-func (o *setLarge) Add(v fjson.Json) (Set, error) {
+func (o *setLarge) Add(v Json) (Set, error) {
 	hash, err := o.hash(v)
 	if err != nil {
 		return o, err
@@ -77,7 +71,7 @@ func (o *setLarge) Add(v fjson.Json) (Set, error) {
 	return o.add(hash, v)
 }
 
-func (o *setLarge) add(hash uint64, v fjson.Json) (Set, error) {
+func (o *setLarge) add(hash uint64, v Json) (Set, error) {
 	head := o.table[hash]
 	for entry := head; entry != nil; entry = entry.next {
 		eq, err := o.eq(entry.v, v)
@@ -113,7 +107,7 @@ func (o *setLarge) mergeTo(other Set) (Set, error) {
 	return other, nil
 }
 
-func (o *setLarge) Get(v fjson.Json) (fjson.Json, bool, error) {
+func (o *setLarge) Get(v Json) (Json, bool, error) {
 	hash, err := o.hash(v)
 	if err != nil {
 		return nil, false, err
@@ -130,7 +124,7 @@ func (o *setLarge) Get(v fjson.Json) (fjson.Json, bool, error) {
 	return nil, false, nil
 }
 
-func (o *setLarge) Iter(iter func(v fjson.Json) (bool, error)) (bool, error) {
+func (o *setLarge) Iter(iter func(v Json) (bool, error)) (bool, error) {
 	for _, entry := range o.table {
 		for ; entry != nil; entry = entry.next {
 			if stop, err := iter(entry.v); err != nil {
@@ -171,7 +165,7 @@ func (o *setLarge) Equal(other Set) (bool, error) {
 	}
 
 	match := true // TODO
-	_, err := o.Iter(func(v fjson.Json) (bool, error) {
+	_, err := o.Iter(func(v Json) (bool, error) {
 		var err error
 		_, match, err = other.Get(v)
 		if err != nil {
@@ -190,7 +184,7 @@ func (o *setLarge) Hash() (uint64, error) {
 	var (
 		m uint64
 	)
-	_, err := o.Iter(func(v fjson.Json) (bool, error) {
+	_, err := o.Iter(func(v Json) (bool, error) {
 		h := xxhash.New()
 		err := hashImpl(v, h)
 		m += h.Sum64()
@@ -221,23 +215,23 @@ func (o *setLarge) hash(k interface{}) (uint64, error) {
 	return x, err
 }
 
-func (o *setLarge) eq(a, b fjson.Json) (bool, error) {
+func (o *setLarge) eq(a, b Json) (bool, error) {
 	return equalOp(a, b)
 }
 
 // setCompact is the compact implementation.
 type setCompact[T indexableHashSetTable] struct {
-	fjson.Json
+	Json
 	table T
 	n     int
 }
 
 type hashSetCompactEntry struct {
 	hash uint64
-	v    fjson.Json
+	v    Json
 }
 
-func (o *setCompact[T]) Add(v fjson.Json) (Set, error) {
+func (o *setCompact[T]) Add(v Json) (Set, error) {
 	hash, err := o.hash(v)
 	if err != nil {
 		return o, err
@@ -246,9 +240,9 @@ func (o *setCompact[T]) Add(v fjson.Json) (Set, error) {
 	return o.add(hash, v)
 }
 
-func (o *setCompact[T]) add(hash uint64, v fjson.Json) (Set, error) {
+func (o *setCompact[T]) add(hash uint64, v Json) (Set, error) {
 	if o.n == len(o.table) {
-		set := newSet(o.n + 1)
+		set := NewSet(o.n + 1)
 
 		var err error
 		for i := 0; i < o.n && err == nil; i++ {
@@ -289,7 +283,7 @@ func (o *setCompact[T]) mergeTo(other Set) (Set, error) {
 	return other, err
 }
 
-func (o *setCompact[T]) Get(v fjson.Json) (fjson.Json, bool, error) {
+func (o *setCompact[T]) Get(v Json) (Json, bool, error) {
 	if o.n == 0 {
 		return nil, false, nil
 	}
@@ -312,7 +306,7 @@ func (o *setCompact[T]) Get(v fjson.Json) (fjson.Json, bool, error) {
 	return nil, false, nil
 }
 
-func (o *setCompact[T]) Iter(iter func(v fjson.Json) (bool, error)) (bool, error) {
+func (o *setCompact[T]) Iter(iter func(v Json) (bool, error)) (bool, error) {
 	var (
 		stop bool
 		err  error
@@ -352,7 +346,7 @@ func (o *setCompact[T]) Equal(other Set) (bool, error) {
 	}
 
 	match := true // TODO
-	_, err := o.Iter(func(v fjson.Json) (bool, error) {
+	_, err := o.Iter(func(v Json) (bool, error) {
 		var err error
 		_, match, err = other.Get(v)
 		if err != nil {
@@ -401,7 +395,7 @@ func (o *setCompact[T]) hash(k interface{}) (uint64, error) {
 	return x, err
 }
 
-func (o *setCompact[T]) eq(a, b fjson.Json) (bool, error) {
+func (o *setCompact[T]) eq(a, b Json) (bool, error) {
 	return equalOp(a, b)
 }
 

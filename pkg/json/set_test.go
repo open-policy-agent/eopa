@@ -1,11 +1,9 @@
-package vm
+package json
 
 import (
 	"fmt"
 	"reflect"
 	"testing"
-
-	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 
 	"github.com/cespare/xxhash/v2"
 )
@@ -22,12 +20,12 @@ func TestSet(t *testing.T) {
 
 			// Iter
 			contents := make(map[string]struct{})
-			set.Iter(func(v fjson.Json) (bool, error) {
-				contents[v.(*fjson.String).Value()] = struct{}{}
+			set.Iter(func(v Json) (bool, error) {
+				contents[v.(*String).Value()] = struct{}{}
 				return false, nil
 			})
 			c := 0
-			set.Iter(func(_ fjson.Json) (bool, error) {
+			set.Iter(func(_ Json) (bool, error) {
 				c++
 				return true, nil
 			})
@@ -42,10 +40,10 @@ func TestSet(t *testing.T) {
 			// Iter2
 			contents = make(map[string]struct{})
 			set.Iter2(func(v, vv interface{}) (bool, error) {
-				if v.(*fjson.String).Value() != vv.(*fjson.String).Value() {
+				if v.(*String).Value() != vv.(*String).Value() {
 					t.Fatal("unexpected iteration")
 				}
-				contents[v.(*fjson.String).Value()] = struct{}{}
+				contents[v.(*String).Value()] = struct{}{}
 				return false, nil
 			})
 			c = 0
@@ -69,7 +67,7 @@ func TestSet(t *testing.T) {
 			// Get
 			var hash uint64
 			for v := range expected {
-				found, ok, err := set.Get(fjson.NewString(v))
+				found, ok, err := set.Get(NewString(v))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -78,12 +76,12 @@ func TestSet(t *testing.T) {
 					t.Fatal("value not found")
 				}
 
-				if v != found.(*fjson.String).Value() {
+				if v != found.(*String).Value() {
 					t.Fatal("value not found")
 				}
 
 				h := xxhash.New()
-				if err := hashImpl(fjson.NewString(v), h); err != nil {
+				if err := hashImpl(NewString(v), h); err != nil {
 					t.Fatal(err)
 				}
 				hash += h.Sum64()
@@ -95,8 +93,8 @@ func TestSet(t *testing.T) {
 			}
 
 			// MergeWith
-			merged := NewSet()
-			merged, err := merged.Add(fjson.NewString("merge"))
+			merged := NewSet(0)
+			merged, err := merged.Add(NewString("merge"))
 			if err != nil {
 				t.Fatal("unexpected add error")
 			}
@@ -109,8 +107,8 @@ func TestSet(t *testing.T) {
 			}
 
 			contents = make(map[string]struct{})
-			merged.Iter(func(v fjson.Json) (bool, error) {
-				contents[v.(*fjson.String).Value()] = struct{}{}
+			merged.Iter(func(v Json) (bool, error) {
+				contents[v.(*String).Value()] = struct{}{}
 				return false, nil
 			})
 
@@ -119,7 +117,7 @@ func TestSet(t *testing.T) {
 			}
 
 			// Add
-			set, _ = set.Add(fjson.NewString(fmt.Sprintf("%d", i)))
+			set, _ = set.Add(NewString(fmt.Sprintf("%d", i)))
 		})
 	}
 }
