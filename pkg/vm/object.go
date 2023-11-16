@@ -24,6 +24,7 @@ type Object interface {
 	Iter(iter func(key, value fjson.Json) (bool, error)) error
 	Iter2(iter func(key, value interface{}) (bool, error)) error
 	Equal(other Object) (bool, error)
+	Diff(other Object) (Object, error)
 	Len() int
 	Hash() (uint64, error)
 	AST() ast.Value
@@ -164,6 +165,32 @@ func (o *objectLarge) Equal(other Object) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (o *objectLarge) Diff(other Object) (Object, error) {
+	n := o.Len()
+	if m := other.Len(); m > n {
+		n = m
+	}
+
+	result := newObject(n)
+
+	if err := o.Iter(func(key, value fjson.Json) (bool, error) {
+		if _, ok, err := other.Get(key); err != nil {
+			return true, err
+		} else if !ok {
+			result, err = result.Insert(key, value)
+			if err != nil {
+				return false, err
+			}
+		}
+
+		return false, nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (o *objectLarge) Len() int {
@@ -323,6 +350,32 @@ func (o *objectCompact[T]) Equal(other Object) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (o *objectCompact[T]) Diff(other Object) (Object, error) {
+	n := o.Len()
+	if m := other.Len(); m > n {
+		n = m
+	}
+
+	result := newObject(n)
+
+	if err := o.Iter(func(key, value fjson.Json) (bool, error) {
+		if _, ok, err := other.Get(key); err != nil {
+			return true, err
+		} else if !ok {
+			result, err = result.Insert(key, value)
+			if err != nil {
+				return false, err
+			}
+		}
+
+		return false, nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (o *objectCompact[T]) Len() int {

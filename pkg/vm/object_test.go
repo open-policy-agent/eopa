@@ -66,6 +66,19 @@ func TestObject(t *testing.T) {
 				t.Fatal("unexpected hash")
 			}
 
+			// Diff
+			other, _ := NewObject().Insert(fjson.NewString("0"), fjson.NewString("0"))
+
+			diff, err := obj.Diff(other)
+			if err != nil {
+				t.Fatal("unexpected diff")
+			}
+
+			delete(expected, "0")
+			if n := diff.Len(); n != len(expected) {
+				t.Fatalf("unxpected map length: %v %v", n, len(expected))
+			}
+
 			// Insert
 			obj, _ = obj.Insert(fjson.NewString(fmt.Sprintf("%d", i)), fjson.NewString(fmt.Sprintf("%d", i*2)))
 		})

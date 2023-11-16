@@ -963,29 +963,12 @@ func objectUnion(a, b fjson.Json) (fjson.Json, error) {
 		case fjson.Object:
 			return objectUnion(b, a)
 		case Object:
-			n := a.Len()
-			if m := b.Len(); m > n {
-				n = m
-			}
-
-			result := newObject(n)
-
-			if err := b.Iter(func(key, value fjson.Json) (bool, error) {
-				if _, ok, err := a.Get(key); err != nil {
-					return true, err
-				} else if !ok {
-					result, err = result.Insert(key, value)
-					if err != nil {
-						return false, err
-					}
-				}
-
-				return false, nil
-			}); err != nil {
+			result, err := b.Diff(a)
+			if err != nil {
 				return nil, err
 			}
 
-			err := a.Iter(func(key, value fjson.Json) (bool, error) {
+			err = a.Iter(func(key, value fjson.Json) (bool, error) {
 				getValue := func(key fjson.Json) (fjson.Json, bool, error) {
 					value, ok, err := b.Get(key)
 					if !ok || err != nil {
