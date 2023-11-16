@@ -207,7 +207,7 @@ func TestMysqlVaultSend(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	re := regexp.MustCompile(`^([a-z]+):([a-z]+)@tcp\(([a-z1-9:.]+)\)/([a-z]+)\?tls=([a-z-]+)$`)
+	re := regexp.MustCompile(`^([a-z]+):([a-z]+)@tcp\(([a-z0-9:.]+)\)/([a-z]+)\?tls=([a-z-]+)$`)
 	ms := re.FindStringSubmatch(be.conn)
 	if len(ms) < 6 {
 		t.Fatalf("failed to parse conn string %s => %v", be.conn, ms)
