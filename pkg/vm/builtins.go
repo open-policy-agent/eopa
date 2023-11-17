@@ -891,12 +891,7 @@ func objectUnion(a, b fjson.Json) (fjson.Json, error) {
 
 		case fjson.Object2:
 			getValue = func(key string) (fjson.Json, bool) {
-				value, ok := b.Get(fjson.NewString(key))
-				if !ok {
-					return nil, ok
-				}
-
-				return value, true
+				return b.Get(fjson.NewString(key))
 			}
 
 			if err := b.Iter(func(key, value fjson.Json) (bool, error) {
@@ -937,16 +932,7 @@ func objectUnion(a, b fjson.Json) (fjson.Json, error) {
 			result := b.Diff(a)
 
 			err := a.Iter(func(key, value fjson.Json) (bool, error) {
-				getValue := func(key fjson.Json) (fjson.Json, bool) {
-					value, ok := b.Get(key)
-					if !ok {
-						return nil, ok
-					}
-
-					return value, true
-				}
-
-				v2, ok := getValue(key)
+				v2, ok := b.Get(key)
 				if !ok {
 					result = result.Insert(key, value)
 					return false, nil
