@@ -17,8 +17,10 @@ type T = interface{}
 type Object2 interface {
 	Json
 	Insert(k, v Json) Object2
-	add(hash uint64, k, v Json)
+	// add adds a key-value pair into the object w/o checking its presence.
+	add(hash uint64, k, v Json) Object2
 	Get(k Json) (Json, bool)
+	get(hash uint64, k Json) (Json, bool)
 	Iter(iter func(key, value Json) (bool, error)) error
 	Iter2(iter func(key, value interface{}) (bool, error)) error
 	Equal(other Object2) bool
@@ -79,14 +81,25 @@ func (o *objectLarge) Insert(k, v Json) Object2 {
 	return o
 }
 
-func (o *objectLarge) add(hash uint64, k, v Json) {
+func (o *objectLarge) add(hash uint64, k, v Json) Object2 {
 	o.table[hash] = &hashLargeEntry{k: k, v: v, next: o.table[hash]}
 	o.n++
+	return o
 }
 
 func (o *objectLarge) Get(k Json) (Json, bool) {
 	hash := o.hash(k)
 
+	for entry := o.table[hash]; entry != nil; entry = entry.next {
+		if eq := o.eq(entry.k, k); eq {
+			return entry.v, true
+		}
+	}
+
+	return nil, false
+}
+
+func (o *objectLarge) get(hash uint64, k Json) (Json, bool) {
 	for entry := o.table[hash]; entry != nil; entry = entry.next {
 		if eq := o.eq(entry.k, k); eq {
 			return entry.v, true
@@ -129,9 +142,9 @@ func (o *objectLarge) Equal(other Object2) bool {
 		return false
 	}
 
-	for _, entry := range o.table {
+	for hash, entry := range o.table {
 		for ; entry != nil; entry = entry.next {
-			v, ok := other.Get(entry.k)
+			v, ok := other.get(hash, entry.k)
 			if !ok {
 				return false
 			}
@@ -153,10 +166,10 @@ func (o *objectLarge) Diff(other Object2) Object2 {
 
 	result := NewObject2(n)
 
-	for _, entry := range o.table {
+	for hash, entry := range o.table {
 		for ; entry != nil; entry = entry.next {
-			if _, ok := other.Get(entry.k); !ok {
-				result = result.Insert(entry.k, entry.v)
+			if _, ok := other.get(hash, entry.k); !ok {
+				result = result.add(hash, entry.k, entry.v)
 			}
 		}
 	}
@@ -215,7 +228,7 @@ func (o *objectCompact[T]) Insert(k, v Json) Object2 {
 	if o.n == len(o.table) {
 		obj := NewObject2(o.n + 1) // enough space for both appends and insert.
 		for i := 0; i < o.n; i++ {
-			obj.add(o.table[i].hash, o.table[i].k, o.table[i].v)
+			obj = obj.add(o.table[i].hash, o.table[i].k, o.table[i].v)
 		}
 
 		return obj.Insert(k, v)
@@ -237,10 +250,20 @@ func (o *objectCompact[T]) Insert(k, v Json) Object2 {
 	return o
 }
 
-// add does not check over space left.
-func (o *objectCompact[T]) add(hash uint64, k, v Json) {
+func (o *objectCompact[T]) add(hash uint64, k, v Json) Object2 {
+	if o.n == len(o.table) {
+		obj := NewObject2(o.n + 1)
+
+		for i := 0; i < o.n; i++ {
+			obj = obj.add(o.table[i].hash, o.table[i].k, o.table[i].v)
+		}
+
+		return obj.add(hash, k, v)
+	}
+
 	o.table[o.n] = hashObjectCompactEntry{hash: hash, k: k, v: v}
 	o.n++
+	return o
 }
 
 func (o *objectCompact[T]) Get(k Json) (Json, bool) {
@@ -249,6 +272,22 @@ func (o *objectCompact[T]) Get(k Json) (Json, bool) {
 	}
 
 	hash := o.hash(k)
+
+	for i := 0; i < o.n; i++ {
+		if o.table[i].hash == hash {
+			if eq := o.eq(o.table[i].k, k); eq {
+				return o.table[i].v, true
+			}
+		}
+	}
+
+	return nil, false
+}
+
+func (o *objectCompact[T]) get(hash uint64, k Json) (Json, bool) {
+	if o.n == 0 {
+		return nil, false
+	}
 
 	for i := 0; i < o.n; i++ {
 		if o.table[i].hash == hash {
@@ -293,7 +332,7 @@ func (o *objectCompact[T]) Equal(other Object2) bool {
 	}
 
 	for i := 0; i < o.n; i++ {
-		v, ok := other.Get(o.table[i].k)
+		v, ok := other.get(o.table[i].hash, o.table[i].k)
 		if !ok {
 			return false
 		}
@@ -315,8 +354,8 @@ func (o *objectCompact[T]) Diff(other Object2) Object2 {
 	result := NewObject2(n)
 
 	for i := 0; i < o.n; i++ {
-		if _, ok := other.Get(o.table[i].k); !ok {
-			result = result.Insert(o.table[i].k, o.table[i].v)
+		if _, ok := other.get(o.table[i].hash, o.table[i].k); !ok {
+			result = result.add(o.table[i].hash, o.table[i].k, o.table[i].v)
 		}
 	}
 
