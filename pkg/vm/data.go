@@ -689,54 +689,22 @@ func (*DataOperations) SetAdd(ctx context.Context, set, value interface{}) (inte
 func (o *DataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, error) {
 	switch v := v.(type) {
 	case fjson.Null:
-		return ast.Null{}, nil
+		return v.AST(), nil
 
 	case fjson.Bool:
-		return ast.Boolean(v.Value()), nil
+		return v.AST(), nil
 
 	case fjson.Float:
-		return ast.Number(string(v.Value())), nil
+		return v.AST(), nil
 
 	case *fjson.String:
-		return ast.String(v.Value()), nil
+		return v.AST(), nil
 
 	case fjson.Array:
-		n := v.Len()
-		terms := make([]*ast.Term, 0, n)
-		for i := 0; i < n; i++ {
-			x := v.Iterate(i)
-			a, err := o.ToAST(ctx, x)
-			if err != nil {
-				return nil, err
-			}
-
-			terms = append(terms, ast.NewTerm(a))
-		}
-		arr := ast.NewArray(terms...)
-		return arr, nil
+		return v.AST(), nil
 
 	case fjson.Object:
-		var err error
-
-		names := v.Names()
-		terms := make([][2]*ast.Term, 0, len(names))
-		for i, k := range names {
-			v := v.Iterate(i)
-			a := ast.String(k)
-
-			var b ast.Value
-			b, err = o.ToAST(ctx, v)
-			if err != nil {
-				break
-			}
-
-			terms = append(terms, [2]*ast.Term{ast.NewTerm(a), ast.NewTerm(b)})
-		}
-		obj := ast.NewObject(terms...)
-		if err != nil {
-			return nil, err
-		}
-		return obj, nil
+		return v.AST(), nil
 
 	case fjson.Set:
 		return v.AST(), nil
