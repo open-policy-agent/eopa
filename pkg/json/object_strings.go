@@ -285,6 +285,10 @@ func (o *ObjectMapCompactStrings[T]) Serialize(cache *encodingCache, buffer *byt
 	return objectMapBase[*ObjectMapCompactStrings[T]]{}.Serialize(o, cache, buffer, base)
 }
 
+func (o *ObjectMapCompactStrings[T]) Union(other Json) Json {
+	return objectMapBase[*ObjectMapCompactStrings[T]]{}.Union(o, other)
+}
+
 func (o *ObjectMapCompactStrings[T]) intern(s []string, keys map[interface{}]*[]string) *[]string {
 	return objectMapBase[*ObjectMapCompactStrings[T]]{}.intern(s, keys)
 }

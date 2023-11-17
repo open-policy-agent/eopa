@@ -154,6 +154,53 @@ func (objectMapBase[T]) String(o T) string {
 	return "{" + strings.Join(s, ",") + "}"
 }
 
+func (objectMapBase[T]) Union(o T, other Json) Json {
+	result := NewObject2(o.Len())
+
+	var getValue func(key string) (Json, bool)
+
+	switch other := other.(type) {
+	case Object:
+		getValue = func(key string) (Json, bool) {
+			v2 := other.Value(key)
+			return v2, v2 != nil
+		}
+
+		for _, key := range other.Names() {
+			if o.Value(key) == nil {
+				result = result.Insert(NewString(key), other.Value(key))
+			}
+		}
+
+	case Object2:
+		getValue = func(key string) (Json, bool) {
+			return other.Get(NewString(key))
+		}
+
+		other.iter(func(_ uint64, key, value Json) {
+			if key, ok := key.(*String); !ok || o.Value(key.Value()) == nil {
+				result = result.Insert(key, value)
+			}
+		})
+
+	default:
+		return other
+	}
+
+	for _, key := range o.Names() {
+		v2, ok := getValue(key)
+		if !ok {
+			result = result.Insert(NewString(key), o.Value(key))
+			continue
+		}
+
+		m := UnionObjects(o.Value(key), v2)
+		result = result.Insert(NewString(key), m)
+	}
+
+	return result
+}
+
 func (objectMapBase[T]) clone(o T, internedKeys *[]string, deepCopy bool) *ObjectMap {
 	values := make([]interface{}, len(*internedKeys))
 	for i := 0; i < len(values); i++ {
@@ -449,6 +496,10 @@ func (o *ObjectMapCompact[T]) String() string {
 
 func (o *ObjectMapCompact[T]) Serialize(cache *encodingCache, buffer *bytes.Buffer, base int32) (int32, error) {
 	return objectMapBase[*ObjectMapCompact[T]]{}.Serialize(o, cache, buffer, base)
+}
+
+func (o *ObjectMapCompact[T]) Union(other Json) Json {
+	return objectMapBase[*ObjectMapCompact[T]]{}.Union(o, other)
 }
 
 func (o *ObjectMapCompact[T]) intern(s []string, keys map[interface{}]*[]string) *[]string {

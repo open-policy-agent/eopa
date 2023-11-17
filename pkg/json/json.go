@@ -738,6 +738,7 @@ type Object interface {
 	valueImpl(name string) File
 	Remove(name string) Object
 	Serialize(cache *encodingCache, buffer *bytes.Buffer, base int32) (int32, error)
+	Union(other Json) Json
 
 	Iterable
 }
@@ -956,6 +957,10 @@ func (o ObjectBinary) Serialize(cache *encodingCache, buffer *bytes.Buffer, base
 	return serializeObject(properties, cache, buffer, base)
 }
 
+func (o ObjectBinary) Union(other Json) Json {
+	return objectMapBase[ObjectBinary]{}.Union(o, other)
+}
+
 type ObjectMap struct {
 	internedKeys *[]string
 	values       []interface{}
@@ -1138,6 +1143,10 @@ func (o *ObjectMap) String() string {
 
 func (o *ObjectMap) Serialize(cache *encodingCache, buffer *bytes.Buffer, base int32) (int32, error) {
 	return objectMapBase[*ObjectMap]{}.Serialize(o, cache, buffer, base)
+}
+
+func (o *ObjectMap) Union(other Json) Json {
+	return objectMapBase[*ObjectMap]{}.Union(o, other)
 }
 
 func (o *ObjectMap) intern(s []string, keys map[interface{}]*[]string) *[]string {
