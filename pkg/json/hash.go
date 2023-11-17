@@ -50,7 +50,11 @@ func hashImpl(value interface{}, hasher *xxhash.Digest) {
 		hasher.Write(b)
 
 	case *String:
-		hashString(value, hasher)
+		hasher.Write([]byte{typeHashString})
+
+		if len(*value) > 0 {
+			hasher.WriteString(string(*value))
+		}
 
 	case Array:
 		n := value.Len()
@@ -90,16 +94,6 @@ func hashImpl(value interface{}, hasher *xxhash.Digest) {
 	default:
 		panic("json: unsupported type")
 	}
-}
-
-func hashString(value *String, hasher *xxhash.Digest) {
-	hasher.Write([]byte{typeHashString})
-
-	if len(*value) == 0 {
-		return
-	}
-
-	hasher.WriteString(string(*value))
 }
 
 // objectHashEntry hashes an object key-value pair. To be used with
