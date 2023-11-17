@@ -67,9 +67,8 @@ type Iterable interface {
 func corrupted(err error) {
 	if err != nil {
 		panic(fmt.Sprintf("json: corrupted binary: %v", err))
-	} else {
-		panic("json: corrupted binary")
 	}
+	panic("json: corrupted binary")
 }
 
 func checkError(err error) {

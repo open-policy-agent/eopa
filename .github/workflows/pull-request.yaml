@@ -39,10 +39,10 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.54.2
+          version: v1.55.2
           skip-pkg-cache: true
           skip-build-cache: true
-          args: --timeout=10m
+          args: --timeout=10m --out-format=colored-line-number,github-actions
       # Do a pre-flight check to ensure we don't bother with `buf` unless
       # we have protobuf changes present.
       - name: Check for proto/ file changes in git diffs.

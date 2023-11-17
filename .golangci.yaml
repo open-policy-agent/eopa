@@ -11,6 +11,11 @@ linters-settings:
   misspell:
     locale: US
 
+output:
+  print-issued-lines: true
+  format: github-actions
+  sort-results: true
+
 linters:
   disable-all: true
   enable:

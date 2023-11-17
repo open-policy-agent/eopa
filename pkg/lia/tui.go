@@ -25,11 +25,11 @@ func TUI(ctx context.Context, rec Recorder) error {
 
 	if debug {
 		log.SetFlags(log.Lshortfile)
-		if f, err := tea.LogToFile("debug.log", "debug"); err != nil {
+		f, err := tea.LogToFile("debug.log", "debug")
+		if err != nil {
 			panic(err)
-		} else {
-			defer f.Close()
 		}
+		defer f.Close()
 	}
 
 	p := tea.NewProgram(model{

@@ -257,7 +257,6 @@ func createImpl2(obj Object, segs []string, i int) (Object, *resourceImpl) {
 	childo, r := createImpl2(NewObject(nil), segs, i+1)
 	obj, _ = obj.Set(prefix+segs[i], childo)
 	return obj, r
-
 }
 
 func (r *resourceImpl) Name() string {
@@ -381,13 +380,14 @@ func (r *resourceImpl) setJSON(j Json) {
 }
 
 func (r *resourceImpl) Meta(key string) (string, bool) {
-	if v := r.obj.Value(fmt.Sprintf("meta:%s", key)); v == nil {
-		return "", false
-	} else if s, ok := v.(*String); ok {
-		return s.Value(), true
-	} else {
+	v := r.obj.Value(fmt.Sprintf("meta:%s", key))
+	if v == nil {
 		return "", false
 	}
+	if s, ok := v.(*String); ok {
+		return s.Value(), true
+	}
+	return "", false
 }
 
 // setMeta expect the resource to be prepared for modification.
@@ -1013,7 +1013,8 @@ func newSnapshotObjectReader(content *utils.MultiReader, offset int64) (objectRe
 		return nil, err
 	}
 
-	if t == typeObjectFull {
+	switch t {
+	case typeObjectFull:
 		reader := newBinaryReader(content, offset+1)
 		n, err := reader.ReadVarint()
 		if err != nil {
@@ -1028,7 +1029,7 @@ func newSnapshotObjectReader(content *utils.MultiReader, offset int64) (objectRe
 		voffsets := noffsets + 4*n
 
 		return &snapshotObjectReader{content: content, n: int(n), noffsets: noffsets, voffsets: voffsets}, nil
-	} else if t == typeObjectThin {
+	case typeObjectThin:
 		p, err := content.Bytes(offset+1, 4)
 		if len(p) < 4 {
 			return nil, fmt.Errorf("object (thin) full offset not read: %w", err)
@@ -1051,7 +1052,7 @@ func newSnapshotObjectReader(content *utils.MultiReader, offset int64) (objectRe
 		voffsets := reader.Offset()
 
 		return &snapshotObjectReader{content: content, n: int(n), noffsets: noffsets, voffsets: voffsets}, nil
-	} else {
+	default:
 		return nil, fmt.Errorf("unknown object type: %d", t)
 	}
 }

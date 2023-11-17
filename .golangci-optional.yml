@@ -8,6 +8,8 @@ run:
   skip-files:
 
 output:
+  print-issued-lines: true
+  format: github-actions
   sort-results: true
 
 linters:
