@@ -22,6 +22,11 @@ func NewIROptLevel0Schedule(cliEnableFlags, _ *OptimizationPassFlags) []*IROptPa
 		}
 		out = append(out, p)
 	}
+	out = append(out, &IROptPass{
+		name:       "Empty Loop Replacement",
+		metricName: "eopa-iropt-pass-empty-loop-replace",
+		f:          EmptyLoopReplacementPass,
+	})
 	return out
 }
 
