@@ -56,7 +56,11 @@ func BundleFile(in, out string) error {
 		Manifest: b.Manifest,
 		Modules:  b.Modules,
 		Patch:    b.Patch, // TODO(sr): Anything to do for these?
-		Data:     bjson.MustNew(b.Data).(bjson.Object),
+	}
+	if b.Data != nil {
+		bb.Data = bjson.MustNew(b.Data).(bjson.Object)
+	} else {
+		bb.Data = bjson.NewObject(map[string]bjson.File{})
 	}
 
 	outFile, err := os.Create(out)
@@ -70,10 +74,9 @@ func BundleFile(in, out string) error {
 // writeFile adds a file header with content to the given tar writer
 // From github.com/open-policy-agent/opa/internal/file/archive
 func writeFile(tw *tar.Writer, path string, bs []byte) error {
-
 	hdr := &tar.Header{
 		Name:     "/" + strings.TrimLeft(path, "/"),
-		Mode:     0600,
+		Mode:     0o600,
 		Typeflag: tar.TypeReg,
 		Size:     int64(len(bs)),
 	}
