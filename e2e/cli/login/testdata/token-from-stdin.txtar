@@ -1,0 +1,7 @@
+ttyin -stdin pasted-token
+exec eopa login --read-token
+stderr 'Successfully stored token'
+cmp .styra-session pasted-token
+
+-- pasted-token --
+this is the token getting pasted

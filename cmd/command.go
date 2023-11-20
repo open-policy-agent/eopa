@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -174,8 +175,12 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	cfg := viper.New()
 	cfg.SetConfigName(".styra")
 	cfg.SetConfigType("yaml")
-	cfg.AddConfigPath(".") // TODO(sr): add more, like home dir
-	root.AddCommand(loginCmd(cfg))
+	paths := []string{"."}
+	if p := repoRootPath(); p != "" {
+		paths = append(paths, p)
+	}
+	paths = append(paths, "$HOME")
+	root.AddCommand(loginCmd(cfg, paths))
 
 	licenseCmd := LicenseCmd(lic, lparams)
 	addLicenseFlags(licenseCmd, lparams)
@@ -203,4 +208,25 @@ func setDefaults(c *cobra.Command) *cobra.Command {
 		}
 	}
 	return c
+}
+
+// repoRootPath traverses from the current working directory upwards, and
+// returns the first directory it finds that also contains a `.git` directory.
+func repoRootPath() string {
+	c, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	return traverseUp(c)
+}
+
+func traverseUp(c string) string {
+	c = filepath.Clean(c)
+	if filepath.ToSlash(c) == "/" {
+		return ""
+	}
+	if s, err := os.Stat(filepath.Join(c, ".git")); err == nil && s.IsDir() {
+		return c
+	}
+	return traverseUp(c + "/..")
 }

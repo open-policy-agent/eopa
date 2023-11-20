@@ -1,0 +1,21 @@
+! exec eopa login --no-open --url https://das.com --timeout 0.1s --log-level debug
+! stdout .
+stderr '\[DEBUG\] looking for config in \[\. \$HOME\]'
+! stderr 'used config file'
+
+! exec eopa login --no-open --url https://das.com --timeout 0.1s --log-level debug --log-format json
+! stdout .
+stderr '"msg":"looking for config in \[\. \$HOME\]"'
+stderr '"level":"debug"'
+
+cd $WORK/has-file
+! exec eopa login --no-open --timeout 0.1s --log-level debug
+! stdout .
+stderr '\[DEBUG\] looking for config in \[\. \$HOME\]'
+stderr '\[DEBUG\] used config file '
+stderr $WORK/has-file/\.styra\.yaml
+stderr '\[INFO\] Please navigate to the following URL in your browser:'
+stderr '\[ERROR\] Failed to receive token callback.'
+
+-- has-file/.styra.yaml --
+url: https://das.example.com

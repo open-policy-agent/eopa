@@ -1,0 +1,9 @@
+! exec eopa login --no-open --timeout 0.1s
+stderr 'Please navigate to the following URL in your browser:'
+stderr '  https://my\.styra\.com/\?callback=[0-9]+'
+stderr 'Failed to receive token callback\.'
+stderr 'Please copy the token manually and paste it into `eopa login --read-token`\.'
+stderr 'Error: context deadline exceeded'
+
+-- .styra.yaml --
+url: https://my.styra.com

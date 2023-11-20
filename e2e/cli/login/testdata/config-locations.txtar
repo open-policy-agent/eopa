@@ -1,0 +1,71 @@
+# current dir
+! exec eopa login --no-open --timeout 0.1s
+stderr 'https://example\.com/toplevel/\?callback=[0-9]+'
+stderr 'Error: context deadline exceeded'
+
+# nested cwd
+cd $WORK/nested
+! exec eopa login --no-open --timeout 0.1s
+stderr 'https://example\.com/nested/\?callback=[0-9]+'
+stderr 'Error: context deadline exceeded'
+ 
+# repo root
+cd $WORK/some-repo/nested/really/deeply
+! exec eopa login --no-open --timeout 0.1s
+stderr 'https://example\.com/reporoot/\?callback=[0-9]+'
+stderr 'Error: context deadline exceeded'
+
+# home
+env HOME=$WORK/home
+cd $WORK/nested/really/deeply
+! exec eopa login --no-open --timeout 0.1s
+stderr 'https://example\.com/home/\?callback=[0-9]+'
+stderr 'Error: context deadline exceeded'
+
+# repo trumps home
+env HOME=$WORK/home
+cd $WORK/some-repo/nested/really/deeply
+! exec eopa login --no-open --timeout 0.1s
+stderr 'https://example\.com/reporoot/\?callback=[0-9]+'
+stderr 'Error: context deadline exceeded'
+
+# cwd trumps repo
+cd $WORK/some-repo/nested/really/deeply/another
+! exec eopa login --no-open --timeout 0.1s
+stderr 'https://example\.com/nestedinrepo/\?callback=[0-9]+'
+stderr 'Error: context deadline exceeded'
+
+# arg trumps cwd
+cd $WORK
+! exec eopa login --no-open --timeout 0.1s --styra-config some-repo/nested/really/deeply/another/.styra.yaml
+stderr 'https://example\.com/nestedinrepo/\?callback=[0-9]+'
+stderr 'Error: context deadline exceeded'
+
+# arg needs to exist, no fallbacks
+cd $WORK
+! exec eopa login --no-open --timeout 0.1s --styra-config does/not/exist/.styra.yaml
+stderr 'Error: config file does/not/exist/\.styra\.yaml: open does/not/exist/\.styra\.yaml: no such file or directory'
+
+-- .styra.yaml --
+url: https://example.com/toplevel
+
+-- nested/.styra.yaml --
+url: https://example.com/nested
+
+-- some-repo/.git/dummy --
+dummy content
+
+-- some-repo/.styra.yaml --
+url: https://example.com/reporoot
+
+-- some-repo/nested/really/deeply/dummy --
+more dummy content
+
+-- some-repo/nested/really/deeply/another/.styra.yaml --
+url: https://example.com/nestedinrepo
+
+-- nested/really/deeply/dummy --
+more dummy content
+
+-- home/.styra.yaml --
+url: https://example.com/home
