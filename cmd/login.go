@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -23,6 +24,12 @@ const styraConfig = "styra-config"
 // dasURL both defines the key used in the styra.yaml and the CLI parameter
 // used to override the config (or define it if there is no config)
 const dasURL = "url"
+
+// secretFile defines where to put the secret and where to read it from.
+// It'll be parsed relative to the config file it was used in; or relative
+// to the CWD if used via a parameter.
+const secretFile = "secret-file"
+const defaultSessionFile = ".styra-session"
 
 // noOpen is the flag to inhibit attempts to open a browser tab. The command
 // will only show the URL instead.
@@ -43,12 +50,6 @@ const logLevel = "log-level"
 
 // logFormat is used to adjust the log format for the CLI login process.
 const logFormat = "log-format"
-
-// secretFile determines where the secret gathered in the login flow is
-// written to.
-// TODO(sr): currently this is in the CWD, it should probably be in $HOME
-// or next to the .styra.yaml config file that was used.
-const secretFile = ".styra-session"
 
 const callbackErrorMsg = `Failed to receive token callback.
 	
@@ -93,16 +94,20 @@ func loginCmd(config *viper.Viper, paths []string) *cobra.Command {
 			ctx, cancel := context.WithCancel(c.Context())
 			defer cancel()
 
+			f, _ := c.Flags().GetString(secretFile)
+			sf := sessionFile(f != "", config)
+
 			if config.GetBool(readToken) {
 				bs, err := io.ReadAll(os.Stdin)
 				if err != nil {
 					return err
 
 				}
-				if err := storeSecret(string(bs)); err != nil {
+				if err := storeSecret(sf, string(bs)); err != nil {
 					return err
 				}
 
+				logger.Debug("Using session file %s", sf)
 				logger.Info("Successfully stored token")
 				return nil
 			}
@@ -129,7 +134,9 @@ func loginCmd(config *viper.Viper, paths []string) *cobra.Command {
 				logger.Error(callbackErrorMsg)
 				return err
 			}
-			if err := storeSecret(secret); err != nil {
+
+			logger.Debug("Using session file %s", sf)
+			if err := storeSecret(sf, secret); err != nil {
 				return err
 			}
 
@@ -146,6 +153,8 @@ func loginCmd(config *viper.Viper, paths []string) *cobra.Command {
 func addDASFlags(cfg *viper.Viper, c *cobra.Command) {
 	c.Flags().String(dasURL, "", `DAS address to connect to (e.g. "https://my-tenant.styra.com")`)
 	cfg.BindPFlag(dasURL, c.Flags().Lookup(dasURL))
+	c.Flags().String(secretFile, "", "file to store the secret in")
+	cfg.BindPFlag(secretFile, c.Flags().Lookup(secretFile))
 	c.Flags().String(styraConfig, "", `Styra DAS config file to use`)
 	c.Flags().Bool(noOpen, false, "do not attempt to open a browser window")
 	cfg.BindPFlag(noOpen, c.Flags().Lookup(noOpen))
@@ -157,6 +166,29 @@ func addDASFlags(cfg *viper.Viper, c *cobra.Command) {
 	c.Flags().String(logFormat, "text", "log format")
 }
 
-func storeSecret(s string) error {
-	return os.WriteFile(secretFile, []byte(s), 0o700)
+func storeSecret(sessionFile, s string) error {
+	if err := os.Chmod(sessionFile, 0o700); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return os.WriteFile(sessionFile, []byte(s), 0o700)
+}
+
+func sessionFile(flag bool, config *viper.Viper) string {
+	sessionFile := config.GetString(secretFile)
+	if sessionFile == "" {
+		sessionFile = defaultSessionFile
+	}
+	if filepath.IsAbs(sessionFile) {
+		return sessionFile
+	}
+
+	// relative path -- relative to what?
+	if flag || config.ConfigFileUsed() == "" { // set via CLI flag, or by default => relative to cwd
+		a, _ := filepath.Abs(sessionFile)
+		return a
+	}
+
+	// not set via CLI flag => relative to config
+	dir := filepath.Dir(config.ConfigFileUsed())
+	return filepath.Join(dir, sessionFile)
 }
