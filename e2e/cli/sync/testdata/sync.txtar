@@ -1,0 +1,31 @@
+# syncmock is used by all commands in this file
+# it has to expect failure (the "!") because it's
+# killed at the end of the process
+! exec syncmock .styra-session &
+
+exec eopa sync --log-level warn
+! stderr .
+! stdout .
+exec diff -r exp act
+
+# once more with default logs
+exec eopa sync --libraries act0/libraries
+stderr '\[INFO\] Synchronizing 2 libraries: lib01, lib02'
+! stdout .
+exec diff -r exp act0
+
+-- .styra-session --
+opensesame
+
+-- .styra.yaml --
+url: http://127.0.0.1:9991
+libraries: act/libraries
+
+-- exp/libraries/lib02/envoy/policy.rego --
+package libraries.lib02.envoy
+import future.keywords
+allow if true
+-- exp/libraries/lib02/token --
+{"bearer_token":"testtoken"}
+-- exp/libraries/lib02/thing --
+{"data":{"one":{"foo":1},"two":{"foo":2}}}

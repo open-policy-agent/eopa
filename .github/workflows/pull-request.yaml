@@ -183,10 +183,11 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: binary
-      - name: Enterprise OPA image and binary
+      - name: Enterprise OPA image and binary, syncmock
         id: enterprise-opa
         run: |
           echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
+          go build -o syncmock ./extras/cmd/syncmock
           echo "binary=$(pwd)/eopa" >> $GITHUB_OUTPUT
           pwd >> $GITHUB_PATH
           chmod +x eopa

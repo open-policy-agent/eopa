@@ -68,6 +68,7 @@ func Start(ctx context.Context, opt ...Opt) (string, error) {
 	o := &opts{
 		open:    defaultOpener{},
 		timeout: timeout,
+		logger:  logging.NewNoOpLogger(),
 	}
 	for _, opt := range opt {
 		opt(o)

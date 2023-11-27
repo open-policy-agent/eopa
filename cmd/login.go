@@ -56,9 +56,6 @@ const callbackErrorMsg = `Failed to receive token callback.
 Please copy the token manually and paste it into ` + "`eopa login --read-token`."
 
 func loginCmd(config *viper.Viper, paths []string) *cobra.Command {
-	for _, p := range paths {
-		config.AddConfigPath(p)
-	}
 	var logger logging.Logger
 	var err error
 
@@ -67,7 +64,9 @@ func loginCmd(config *viper.Viper, paths []string) *cobra.Command {
 		Hidden: os.Getenv("EOPA_LOGIN") == "",
 		Short:  "Sign-in to DAS instance",
 		PreRunE: func(c *cobra.Command, _ []string) error {
+			bindDASFlags(config, c)
 			c.SilenceUsage = true
+
 			lvl, _ := c.Flags().GetString(logLevel)
 			format, _ := c.Flags().GetString("log-format")
 			logger, err = getLogger(lvl, format, "")
@@ -75,20 +74,8 @@ func loginCmd(config *viper.Viper, paths []string) *cobra.Command {
 				return err
 			}
 
-			if p, _ := c.Flags().GetString(styraConfig); p != "" {
-				config.SetConfigFile(p)
-			}
-			logger.Debug("looking for config in %v", paths)
-			if err := config.ReadInConfig(); err != nil {
-				_, ok := err.(viper.ConfigFileNotFoundError)
-				if !ok {
-					return fmt.Errorf("config file %s: %w", config.ConfigFileUsed(), err)
-				}
-			}
-			if used := config.ConfigFileUsed(); used != "" {
-				logger.Debug("used config file %s", used)
-			}
-			return nil
+			path, _ := c.Flags().GetString(styraConfig)
+			return readConfig(path, config, paths, logger)
 		},
 		RunE: func(c *cobra.Command, _ []string) error {
 			ctx, cancel := context.WithCancel(c.Context())
@@ -146,24 +133,51 @@ func loginCmd(config *viper.Viper, paths []string) *cobra.Command {
 		},
 	}
 
-	addDASFlags(config, cmd)
+	addDASFlags(cmd)
+
+	// login-specific flags
+	cmd.Flags().Bool(noOpen, false, "do not attempt to open a browser window")
+	config.BindPFlag(noOpen, cmd.Flags().Lookup(noOpen))
+	cmd.Flags().Duration(timeout, time.Minute, "timeout waiting for a browser callback event")
+	config.BindPFlag(timeout, cmd.Flags().Lookup(timeout))
+	cmd.Flags().Bool(readToken, false, "read token from stdin")
+	config.BindPFlag(readToken, cmd.Flags().Lookup(readToken))
 	return cmd
 }
 
-func addDASFlags(cfg *viper.Viper, c *cobra.Command) {
+func addDASFlags(c *cobra.Command) {
 	c.Flags().String(dasURL, "", `DAS address to connect to (e.g. "https://my-tenant.styra.com")`)
-	cfg.BindPFlag(dasURL, c.Flags().Lookup(dasURL))
 	c.Flags().String(secretFile, "", "file to store the secret in")
-	cfg.BindPFlag(secretFile, c.Flags().Lookup(secretFile))
 	c.Flags().String(styraConfig, "", `Styra DAS config file to use`)
-	c.Flags().Bool(noOpen, false, "do not attempt to open a browser window")
-	cfg.BindPFlag(noOpen, c.Flags().Lookup(noOpen))
-	c.Flags().Duration(timeout, time.Minute, "timeout waiting for a browser callback event")
-	cfg.BindPFlag(timeout, c.Flags().Lookup(timeout))
-	c.Flags().Bool(readToken, false, "read token from stdin")
-	cfg.BindPFlag(readToken, c.Flags().Lookup(readToken))
 	c.Flags().String(logLevel, "info", "log level")
 	c.Flags().String(logFormat, "text", "log format")
+}
+
+func bindDASFlags(cfg *viper.Viper, c *cobra.Command) {
+	cfg.BindPFlag(dasURL, c.Flags().Lookup(dasURL))
+	cfg.BindPFlag(secretFile, c.Flags().Lookup(secretFile))
+}
+
+func readConfig(flagPath string, config *viper.Viper, paths []string, logger logging.Logger) error {
+	if flagPath != "" {
+		config.SetConfigFile(flagPath)
+	} else {
+		for _, p := range paths {
+			config.AddConfigPath(p)
+		}
+	}
+
+	logger.Debug("looking for config in %v", paths)
+	if err := config.ReadInConfig(); err != nil {
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		if !ok {
+			return fmt.Errorf("config file %s: %w", config.ConfigFileUsed(), err)
+		}
+	}
+	if used := config.ConfigFileUsed(); used != "" {
+		logger.Debug("used config file %s", used)
+	}
+	return nil
 }
 
 func storeSecret(sessionFile, s string) error {
@@ -174,21 +188,25 @@ func storeSecret(sessionFile, s string) error {
 }
 
 func sessionFile(flag bool, config *viper.Viper) string {
-	sessionFile := config.GetString(secretFile)
-	if sessionFile == "" {
-		sessionFile = defaultSessionFile
+	return toAbs(flag, config, secretFile, defaultSessionFile)
+}
+
+func toAbs(flag bool, config *viper.Viper, name, def string) string {
+	file := config.GetString(name)
+	if file == "" {
+		file = def
 	}
-	if filepath.IsAbs(sessionFile) {
-		return sessionFile
+	if filepath.IsAbs(file) {
+		return file
 	}
 
 	// relative path -- relative to what?
 	if flag || config.ConfigFileUsed() == "" { // set via CLI flag, or by default => relative to cwd
-		a, _ := filepath.Abs(sessionFile)
+		a, _ := filepath.Abs(file)
 		return a
 	}
 
 	// not set via CLI flag => relative to config
 	dir := filepath.Dir(config.ConfigFileUsed())
-	return filepath.Join(dir, sessionFile)
+	return filepath.Join(dir, file)
 }

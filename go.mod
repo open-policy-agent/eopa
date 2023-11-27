@@ -12,6 +12,7 @@ require (
 	github.com/charmbracelet/bubbletea v0.24.1
 	github.com/docker/go-connections v0.4.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
+	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-git/go-billy/v5 v5.5.0
 	github.com/go-git/go-git/v5 v5.10.0
 	github.com/go-jose/go-jose/v3 v3.0.1
@@ -37,6 +38,7 @@ require (
 	github.com/mithrandie/csvq-driver v1.7.0
 	github.com/mithrandie/go-text v1.6.0
 	github.com/neo4j/neo4j-go-driver/v5 v5.14.0
+	github.com/oapi-codegen/runtime v1.1.0
 	github.com/okta/okta-sdk-golang/v3 v3.0.16
 	github.com/open-policy-agent/opa v0.58.0
 	github.com/open-policy-agent/opa-envoy-plugin v0.58.0-envoy
@@ -100,6 +102,7 @@ require (
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/apache/arrow/go/v12 v12.0.1 // indirect
 	github.com/apache/thrift v0.18.1 // indirect
+	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aws/aws-lambda-go v1.41.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.21.2 // indirect
@@ -232,7 +235,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
-	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.25 // indirect
 	github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8 // indirect

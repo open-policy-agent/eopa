@@ -1,0 +1,41 @@
+! exec eopa sync
+stderr 'target directory '
+stderr $WORK/here
+stderr 'already exists \(non-empty\)'
+! stdout .
+
+! exec eopa sync --libraries there
+stderr 'target'
+stderr $WORK/there
+stderr 'already exists, not a directory'
+! stdout .
+
+# force doesn't help here
+! exec eopa sync --libraries there --force
+stderr 'target'
+stderr $WORK/there
+stderr 'already exists, not a directory'
+! stdout .
+
+# it only matters that we've pushed through preflight checks
+! exec eopa sync --force
+stderr 'Error: list libraries: Get'
+! stdout .
+
+# empty existing dirs are OK
+mkdir libs
+! exec eopa sync --libraries libs
+stderr 'Error: list libraries: Get'
+! stdout .
+
+-- .styra-session --
+opensesame
+
+-- .styra.yaml --
+url: http://127.0.0.1:0
+libraries: here
+
+-- here/whatever --
+
+-- there --
+a file

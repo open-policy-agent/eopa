@@ -181,6 +181,7 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	}
 	paths = append(paths, "$HOME")
 	root.AddCommand(loginCmd(cfg, paths))
+	root.AddCommand(syncCmd(cfg, paths))
 
 	licenseCmd := LicenseCmd(lic, lparams)
 	addLicenseFlags(licenseCmd, lparams)
