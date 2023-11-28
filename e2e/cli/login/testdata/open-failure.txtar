@@ -1,3 +1,5 @@
+[windows] skip 'no way to check this on windows'
+
 env PATH=$WORK:$PATH
 chmod 755 $WORK/open
 chmod 755 $WORK/xdg-open

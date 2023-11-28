@@ -1,11 +1,12 @@
 # file already exists, updates perms
 chmod 777 .styra-session
-ttyin -stdin pasted-token
+stdin pasted-token
 exec eopa login --read-token
 stderr 'Successfully stored token'
 cmp .styra-session pasted-token
 exec ls -l .styra-session
-stdout '-rwx------'
+[!windows] stdout '-rwx------'
+[windows]  stdout '-rw-r--r--'
 
 -- pasted-token --
 uninteresting

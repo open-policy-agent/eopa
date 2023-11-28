@@ -2,6 +2,7 @@
 # it has to expect failure (the "!") because it's
 # killed at the end of the process
 ! exec syncmock .styra-session &
+[darwin] exec sleep 1
 
 exec eopa sync --log-level warn
 ! stderr .

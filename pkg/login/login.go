@@ -99,7 +99,7 @@ func Start(ctx context.Context, opt ...Opt) (string, error) {
 			o.logger.Warn("Could not open browser (%s).\n", err.Error())
 			o.logger.Info(navMsg, toOpen)
 		} else {
-			o.logger.Info("Opening", toOpen)
+			o.logger.Info("Opening %s", toOpen)
 		}
 	}
 

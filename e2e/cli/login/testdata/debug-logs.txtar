@@ -13,7 +13,8 @@ cd $WORK/has-file
 ! stdout .
 stderr '\[DEBUG\] looking for config in \[\. \$HOME\]'
 stderr '\[DEBUG\] used config file '
-stderr $WORK/has-file/\.styra\.yaml
+# windows-style absolute paths freak out testscript
+[!windows] stderr $WORK/has-file/\.styra\.yaml
 stderr '\[INFO\] Please navigate to the following URL in your browser:'
 stderr '\[ERROR\] Failed to receive token callback.'
 

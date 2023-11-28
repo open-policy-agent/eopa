@@ -1,0 +1,24 @@
+#!/usr/bin/env bb
+(ns tr
+  (:require [babashka.fs :as fs]
+            [babashka.process :refer [shell]]))
+
+(def testdir (System/getenv "TESTDIR"))
+(def reldir  (System/getenv "RELDIR"))
+(def extra
+  (let [testdir (fs/canonicalize testdir)
+        reldir  (fs/canonicalize reldir)
+        pathvar (if (fs/windows?) "Path" "PATH")]
+     {pathvar (str testdir fs/path-separator reldir fs/path-separator (System/getenv "PATH"))}))
+
+(defn run-test [ts] (shell {:extra-env extra} ts "-test.v"))
+
+(defn chmod+x [bin] (when (not (fs/windows?)) (fs/set-posix-file-permissions bin "rwxr--r--")))
+
+(defn -main [& args]
+  (run! chmod+x (fs/glob reldir "*"))
+  (run! chmod+x (fs/glob testdir "*"))
+  (run! run-test (fs/glob testdir "*.test*")))
+
+(when (= *file* (System/getProperty "babashka.file"))
+  (apply -main *command-line-args*))

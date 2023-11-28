@@ -1,8 +1,12 @@
 package utils
 
 import (
+	"embed"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
+	"testing"
 	"time"
 )
 
@@ -18,4 +22,22 @@ func IsTCPPortBindable(port int) bool {
 		time.Sleep(time.Millisecond) // Adjust the delay as needed
 	}
 	return portOpen
+}
+
+func ExplodeEmbed(t *testing.T, efs embed.FS) string {
+	dir := t.TempDir()
+	ds, err := efs.ReadDir(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range ds {
+		bs, err := efs.ReadFile(f.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, f.Name()), bs, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return dir
 }

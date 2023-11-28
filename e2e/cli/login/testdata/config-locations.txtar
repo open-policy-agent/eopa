@@ -16,14 +16,16 @@ stderr 'https://example\.com/reporoot/\?callback=[0-9]+'
 stderr 'Error: context deadline exceeded'
 
 # home
-env HOME=$WORK/home
+[!windows] env HOME=$WORK/home
+[windows]  env USERPROFILE=$WORK/home
 cd $WORK/nested/really/deeply
 ! exec eopa login --no-open --timeout 0.1s
 stderr 'https://example\.com/home/\?callback=[0-9]+'
 stderr 'Error: context deadline exceeded'
 
 # repo trumps home
-env HOME=$WORK/home
+[!windows] env HOME=$WORK/home
+[windows]  env USERPROFILE=$WORK/home
 cd $WORK/some-repo/nested/really/deeply
 ! exec eopa login --no-open --timeout 0.1s
 stderr 'https://example\.com/reporoot/\?callback=[0-9]+'
@@ -44,7 +46,9 @@ stderr 'Error: context deadline exceeded'
 # arg needs to exist, no fallbacks
 cd $WORK
 ! exec eopa login --no-open --timeout 0.1s --styra-config does/not/exist/.styra.yaml
-stderr 'Error: config file does/not/exist/\.styra\.yaml: open does/not/exist/\.styra\.yaml: no such file or directory'
+stderr 'Error: config file does/not/exist/\.styra\.yaml: open does/not/exist/\.styra\.yaml:'
+[!windows] stderr 'no such file or directory'
+[windows]  stderr 'The system cannot find the path specified.'
 
 -- .styra.yaml --
 url: https://example.com/toplevel

@@ -1,21 +1,21 @@
 # no cli/config: cwd session file
-ttyin -stdin pasted-token
+stdin pasted-token
 exec eopa login --read-token --log-level debug
 stderr '\[DEBUG\] Using session file'
-stderr $WORK/\.styra-session
+[!windows] stderr $WORK/\.styra-session
 stderr 'Successfully stored token'
 cmp .styra-session pasted-token
 
 # cli flag
 mkdir work
-ttyin -stdin pasted-token
+stdin pasted-token
 exec eopa login --read-token --secret-file work/.styra-sess
 stderr 'Successfully stored token'
 cmp work/.styra-sess pasted-token
 
 # config setting
 cd two
-ttyin -stdin $WORK/pasted-token
+stdin $WORK/pasted-token
 exec eopa login --read-token --log-level debug
 stderr 'Successfully stored token'
 cmp some/session $WORK/pasted-token

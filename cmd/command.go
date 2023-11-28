@@ -223,11 +223,12 @@ func repoRootPath() string {
 
 func traverseUp(c string) string {
 	c = filepath.Clean(c)
-	if filepath.ToSlash(c) == "/" {
-		return ""
-	}
 	if s, err := os.Stat(filepath.Join(c, ".git")); err == nil && s.IsDir() {
 		return c
 	}
-	return traverseUp(c + "/..")
+	ndir := filepath.Dir(c)
+	if len(ndir) == len(c) {
+		return ""
+	}
+	return traverseUp(ndir)
 }

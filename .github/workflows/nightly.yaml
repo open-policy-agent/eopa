@@ -150,25 +150,22 @@ jobs:
             dist/checksums.txt
             dist/*build_*/*
 
-  smoke-test-releases:
-    name: Smoke Test Releases
-    runs-on: ${{ matrix.os }}
-    needs: goreleaser
+  cross-build:
+    name: Cross Build
+    runs-on: ubuntu-22.04
     environment: ci
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
-          - os: ubuntu-22.04
-            exec: dist/linux-windows-build_linux_amd64_v1/eopa
-          - os: ubuntu-22.04
-            exec: dist/linux-windows-build_linux_arm64/eopa
-            arch: arm64
-          - os: macos-latest
-            exec: dist/darwin-build_darwin_amd64_v1/eopa
-          - os: windows-latest
-            exec: dist/linux-windows-build_windows_amd64_v1/eopa.exe
-
+          - GOOS: linux
+            GOARCH: amd64
+          - GOOS: linux
+            GOARCH: arm64
+          - GOOS: darwin
+            GOARCH: amd64
+          - GOOS: windows
+            GOARCH: amd64
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -178,22 +175,77 @@ jobs:
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
       - name: Override GH Token Env Var
         run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: setup github api token
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+      - name: Check out code
+        uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+      - run: |
+          mkdir -p test/${{ matrix.GOOS }}_${{ matrix.GOARCH }}
+          go test -c -tags e2e -o test/${{ matrix.GOOS }}_${{ matrix.GOARCH }}/ ./cli/login ./cli/sync
+          go build -o test/${{ matrix.GOOS }}_${{ matrix.GOARCH }}/ ../extras/cmd/syncmock
+          cp ../build/cross-run test/${{ matrix.GOOS }}_${{ matrix.GOARCH }}/
+          tree test
+        working-directory: e2e
+        env:
+          GOOS: ${{ matrix.GOOS }}
+          GOARCH: ${{ matrix.GOARCH }}
+      - name: Upload test binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-binaries
+          path: e2e/test
+
+  cross-test-releases:
+    name: Cross Test Releases
+    runs-on: ${{ matrix.os }}
+    needs:
+    - goreleaser
+    - cross-build
+    environment: ci
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            reldir: dist/linux-windows-build_linux_amd64_v1
+            testdir: test/linux_amd64
+          - os: ubuntu-22.04
+            reldir: dist/linux-windows-build_linux_arm64
+            testdir: test/linux_arm64
+            arch: arm64
+          - os: macos-latest
+            reldir: dist/darwin-build_darwin_amd64_v1
+            testdir: test/darwin_amd64
+          - os: windows-latest
+            reldir: dist/linux-windows-build_windows_amd64_v1
+            testdir: test/windows_amd64
+    steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
           platforms: arm64
         if: matrix.arch == 'arm64'
-      - name: Check out code
-        uses: actions/checkout@v4
       - name: Download release binaries
         uses: actions/download-artifact@v3
         with:
           name: binaries
           path: dist
-      - name: Test binaries
-        run: make ci-smoke-test BINARY=${{ matrix.exec }}
+      - name: Download test binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: test-binaries
+          path: test
+      - uses: turtlequeue/setup-babashka@v1.5.2
+        with:
+          babashka-version: 1.3.186
+      - run: bb ${{ matrix.testdir }}/cross-run
         env:
-          EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
+          TESTDIR: ${{ matrix.testdir }}
+          RELDIR: ${{ matrix.reldir }}
 
   regal:
     name: Regal e2e
