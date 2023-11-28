@@ -165,6 +165,7 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	// New Enterprise OPA commands
 	root.AddCommand(initBundle())
 	root.AddCommand(liaCtl())
+	root.AddCommand(regal())
 
 	// NOTE(sr): viper supports a bunch of config file formats, but let's decide
 	//           which formats we'd like to support, not just take them all as-is.
