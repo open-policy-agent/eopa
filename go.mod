@@ -88,8 +88,6 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.2.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
-	github.com/ClickHouse/ch-go v0.58.2 // indirect
-	github.com/ClickHouse/clickhouse-go/v2 v2.15.0 // indirect
 	github.com/IBM/sarama v1.42.1 // indirect
 	github.com/Jeffail/gabs/v2 v2.7.0 // indirect
 	github.com/Jeffail/grok v1.1.0 // indirect
@@ -140,7 +138,6 @@ require (
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/denisenkom/go-mssqldb v0.12.3 // indirect
 	github.com/dgraph-io/badger/v3 v3.2103.5 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/docker/cli v23.0.3+incompatible // indirect
@@ -161,8 +158,6 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.4 // indirect
-	github.com/go-faster/city v1.0.1 // indirect
-	github.com/go-faster/errors v0.6.1 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
@@ -269,7 +264,6 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
 	github.com/opencontainers/runc v1.1.7 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
-	github.com/paulmach/orb v0.10.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/peterh/liner v1.2.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect
@@ -294,13 +288,10 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sagikazarmark/locafero v0.3.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
-	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.23.9 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
-	github.com/shopspring/decimal v1.3.1 // indirect
-	github.com/sijms/go-ora/v2 v2.7.22 // indirect
 	github.com/skeema/knownhosts v1.2.1 // indirect
 	github.com/spf13/afero v1.10.0 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
@@ -310,7 +301,6 @@ require (
 	github.com/tilinna/z85 v1.0.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
-	github.com/trinodb/trino-go-client v0.313.0 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/urfave/cli/v2 v2.25.7 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
@@ -352,10 +342,6 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231030173426-d783a09b4405 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
-	gopkg.in/jcmturner/aescts.v1 v1.0.1 // indirect
-	gopkg.in/jcmturner/dnsutils.v1 v1.0.1 // indirect
-	gopkg.in/jcmturner/gokrb5.v6 v6.1.1 // indirect
-	gopkg.in/jcmturner/rpc.v1 v1.1.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

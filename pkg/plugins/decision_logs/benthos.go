@@ -10,8 +10,9 @@ import (
 	_ "github.com/benthosdev/benthos/v4/public/components/io"  // file/stdout cache/output
 	_ "github.com/benthosdev/benthos/v4/public/components/kafka"
 	_ "github.com/benthosdev/benthos/v4/public/components/otlp"
-	_ "github.com/benthosdev/benthos/v4/public/components/pure" // basics
-	_ "github.com/benthosdev/benthos/v4/public/components/sql"  // sqlite
+	_ "github.com/benthosdev/benthos/v4/public/components/pure"     // basics
+	_ "github.com/benthosdev/benthos/v4/public/components/sql/base" // SQL internals
+	_ "modernc.org/sqlite"                                          // SQLite support
 
 	"github.com/benthosdev/benthos/v4/public/service"
 	"go.opentelemetry.io/otel"
