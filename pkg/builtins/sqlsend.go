@@ -11,6 +11,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib" // database/sql compatible driver for pgx
+	_ "github.com/microsoft/go-mssqldb"
 	_ "github.com/snowflakedb/gosnowflake"
 	"modernc.org/sqlite"
 
@@ -228,6 +229,23 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 		if !ok {
 			return builtins.NewOperandErr(1, "'%s' must be array", "args")
 		}
+
+		// TODO: SQL database can be picky and require using
+		// query parameter types exactly matching the ones
+		// defined in schema. For that, we have two options:
+		//
+		// 1) We extend the argument passing mechanism, to
+		//    allow the type definitions. For example, it's an
+		//    option to render each argument an object which
+		//    holds "type" and "value" fields and then convert
+		//    here the arguments to their exact SQL driver go
+		//    types.
+		//
+		// 2) Using SQL convert/cast functions, the user does
+		//    any required conversion from the elementary JSON
+		//    types provided for the query to the exact SQL
+		//    types needed. For now, this is the only option
+		//    we provide.
 
 		args = arr
 	}
@@ -501,7 +519,7 @@ func validateDriver(d string) (string, error) {
 	switch d {
 	case "postgres":
 		d = "pgx"
-	case "mysql", "sqlite", "snowflake": // OK
+	case "mysql", "sqlite", "snowflake", "sqlserver": // OK
 	default:
 		return "", builtins.NewOperandErr(1, "unknown driver %s, must be one of %v", d, supportedDrivers)
 	}

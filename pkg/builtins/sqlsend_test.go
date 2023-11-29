@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/mysql"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+	extrawait "go.nhat.io/testcontainers-extra/wait"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/bundle"
@@ -36,6 +38,7 @@ func TestSQLSend(t *testing.T) {
 		sqlite typ = iota
 		mysql
 		postgres
+		sqlserver
 		none
 	)
 
@@ -46,9 +49,10 @@ func TestSQLSend(t *testing.T) {
 	}
 
 	backends := map[typ]backend{
-		sqlite:   setupSQLite(t),
-		mysql:    startMySQL(t),
-		postgres: startPostgreSQL(t),
+		sqlite:    setupSQLite(t),
+		mysql:     startMySQL(t),
+		postgres:  startPostgreSQL(t),
+		sqlserver: startMSSQL(t),
 	}
 
 	now := time.Now()
@@ -184,6 +188,25 @@ sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALU
 			backend:         postgres,
 			query:           `p = resp { sql.send({"driver": "postgres", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
 			result:          `{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
+			preparedQueries: 1,
+		},
+		{
+			note:            "sqlserver: a single row query",
+			backend:         sqlserver,
+			query:           `p = resp { sql.send({"driver": "sqlserver", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
+			result:          `{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
+			preparedQueries: 1,
+		},
+		{
+			note:    "sqlserver: query with args",
+			backend: sqlserver,
+			// In our test schema we use text column type for convenience as it's a string type supported across all the database types we test.
+			// In query processing, MS SQL Server driver converts any string query parameters automatically to varchars, which unfortunately creates
+			// a problem with our schema designed to be usable across database types: in MS SQL Server, the text column type can't be compared
+			// directly against varchar type. The text type is deprecated in MS SQL Server and any practical database schema would most likely
+			// use varchar and no casting would be required for a simple equal test.
+			query:           `p = resp { sql.send({"driver": "sqlserver", "data_source_name": "%s", "query": "SELECT VALUE FROM T1 WHERE CAST(ID AS VARCHAR) = @p1", "args": ["A"]}, resp)}`,
+			result:          `{{"result": {"p": {"rows": [["B"]]}}}}`,
 			preparedQueries: 1,
 		},
 	}
@@ -577,8 +600,118 @@ func startPostgreSQL(t *testing.T) backend {
 	return backend{conn: connStr, cleanup: func() { srv.Terminate(context.Background()) }}
 }
 
+func startMSSQL(t *testing.T) backend {
+	t.Helper()
+
+	srv, err := runMsSQLContainer(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connStr, err := srv.ConnectionString(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := sql.Open("sqlserver", connStr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, s := range strings.Split(initSQL, ";") {
+		if s := strings.TrimSpace(s); s != "" {
+			if _, err := db.Exec(s); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	return backend{conn: connStr, cleanup: func() { srv.Terminate(context.Background()) }}
+}
+
 func testLogger(t testing.TB) testcontainers.CustomizeRequestOption {
 	return testcontainers.CustomizeRequestOption(func(req *testcontainers.GenericContainerRequest) {
 		req.Logger = testcontainers.TestLogger(t)
 	})
+}
+
+func runMsSQLContainer(ctx context.Context, opts ...testcontainers.ContainerCustomizer) (*msSQLContainer, error) {
+	dbName := "testing"
+	user := "sa"
+	password := "dEa9de93391d4312b18!520"
+
+	req := testcontainers.ContainerRequest{
+		Name:         "mssql",
+		Image:        "mcr.microsoft.com/mssql/server:2019-latest",
+		ExposedPorts: []string{":1433"},
+		Env: map[string]string{
+			"LC_ALL":      "C.UTF-8",
+			"ACCEPT_EULA": "Y",
+			"SA_PASSWORD": password,
+			"MSSQL_PID":   "Developer",
+			"MSSQL_DB":    dbName,
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("Recovery is complete").
+				WithStartupTimeout(3*time.Minute),
+			extrawait.ForHealthCheckCmd("/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", user, "-P", password, "-Q", `"SELECT 1"`).
+				WithRetries(3).
+				WithStartPeriod(5*time.Minute).
+				WithTestTimeout(5*time.Second).
+				WithTestInterval(10*time.Second),
+		).WithDeadline(10 * time.Minute),
+	}
+
+	genericContainerReq := testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	}
+
+	for _, opt := range opts {
+		opt.Customize(&genericContainerReq)
+	}
+
+	container, err := testcontainers.GenericContainer(ctx, genericContainerReq)
+	if err != nil {
+		return nil, err
+	}
+
+	code, _, err := container.Exec(ctx, []string{
+		"/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", user, "-P", password, "-Q", `USE [master]; CREATE DATABASE ` + dbName + `;`,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if code > 0 {
+		return nil, fmt.Errorf("could not create database (code %d)", code) // nolint: goerr113
+	}
+
+	return &msSQLContainer{Container: container, dbName: dbName, user: user, password: password}, nil
+}
+
+type msSQLContainer struct {
+	testcontainers.Container
+	dbName   string
+	user     string
+	password string
+}
+
+func (c *msSQLContainer) ConnectionString(ctx context.Context, args ...string) (string, error) {
+	containerPort, err := c.MappedPort(ctx, "1433/tcp")
+	if err != nil {
+		return "", err
+	}
+
+	host, err := c.Host(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	extraArgs := strings.Join(args, "&")
+	if extraArgs != "" {
+		extraArgs = "&" + extraArgs
+	}
+
+	return fmt.Sprintf("sqlserver://sa:%s@%s?database=%s%s", c.password, net.JoinHostPort(host, containerPort.Port()), c.dbName, extraArgs), nil
 }

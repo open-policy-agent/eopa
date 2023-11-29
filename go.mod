@@ -32,6 +32,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/keygen-sh/keygen-go/v2 v2.7.0
 	github.com/lib/pq v1.10.9
+	github.com/microsoft/go-mssqldb v1.6.0
 	github.com/minio/minio-go/v7 v7.0.64
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mithrandie/csvq v1.18.1
@@ -62,6 +63,7 @@ require (
 	github.com/twmb/franz-go v1.15.2
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	go.mongodb.org/mongo-driver v1.13.0
+	go.nhat.io/testcontainers-extra v0.11.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.1
 	go.opentelemetry.io/otel v1.21.0
 	go.opentelemetry.io/otel/trace v1.21.0
@@ -84,7 +86,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.5.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.2.0 // indirect
-	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
+	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
 	github.com/ClickHouse/ch-go v0.58.2 // indirect
 	github.com/ClickHouse/clickhouse-go/v2 v2.15.0 // indirect
@@ -262,9 +264,10 @@ require (
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20211102120939-d5a936accd94 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/olivere/elastic/v7 v7.0.32 // indirect
+	github.com/onsi/ginkgo v1.16.4 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
-	github.com/opencontainers/runc v1.1.5 // indirect
+	github.com/opencontainers/runc v1.1.7 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/paulmach/orb v0.10.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
