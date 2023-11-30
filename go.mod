@@ -39,7 +39,7 @@ require (
 	github.com/mithrandie/go-text v1.6.0
 	github.com/neo4j/neo4j-go-driver/v5 v5.15.0
 	github.com/oapi-codegen/runtime v1.1.0
-	github.com/okta/okta-sdk-golang/v3 v3.0.16
+	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/open-policy-agent/opa v0.58.0
 	github.com/open-policy-agent/opa-envoy-plugin v0.58.0-envoy
 	github.com/ory/dockertest/v3 v3.10.0
