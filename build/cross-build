@@ -1,0 +1,31 @@
+#!/usr/bin/env bb
+(ns cross.build
+  (:require [babashka.fs :as fs]
+            [babashka.process :refer [shell]]
+            [clojure.string :refer [replace-first]]))
+
+(def testdir (System/getenv "TESTDIR"))
+(def reldir  (System/getenv "RELDIR"))
+(def goos    (System/getenv "GOOS"))
+(def name    (if (= goos "windows") "eopa.exe" "eopa"))
+(def testpkgs
+  (map #(replace-first % #"^e2e/(.+)/testdata$" "./$1")
+    (fs/glob "e2e/cli" "*/testdata")))
+
+(defn build-test [t]
+  (shell {:dir "e2e"} "go" "test" "-c" "-tags" "e2e" "-o" (fs/path ".." testdir) t))
+(defn build-sm []
+  (shell "go" "build" "-o" testdir "./extras/cmd/syncmock"))
+(defn build-bin []
+  (shell "go" "build" "-tags" "use_opa_fork" "-o" (fs/path reldir name) "."))
+
+(defn -main [& args]
+  (fs/create-dirs testdir)
+  (fs/create-dirs reldir)
+  (run! build-test testpkgs)
+  (fs/copy "build/cross-run" testdir)
+  (build-sm)
+  (build-bin))
+
+(when (= *file* (System/getProperty "babashka.file"))
+  (apply -main *command-line-args*))
