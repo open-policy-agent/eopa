@@ -11,6 +11,22 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+
+## v1.14.0
+
+This release updates the OPA version used in Enterprise OPA to [v0.59.0](https://github.com/open-policy-agent/opa/releases/tag/v0.59.0),
+and integrates some performance improvements and a few bug fixes.
+
+### CLI
+
+ - Fixed a panic when running `eopa bundle convert` on [Delta Bundles](https://www.openpolicyagent.org/docs/latest/management-bundles/#delta-bundles).
+
+### Runtime
+
+ - The Set and Object types received a few small performance optimizations in this release, which net out speedups of around 1-7% on some benchmarks.
+ - Set union operations are slightly faster now.
+
+
 ## v1.13.0
 
 This release contains a security fix for gRPC handlers used with OpenTelemetry, various performance
