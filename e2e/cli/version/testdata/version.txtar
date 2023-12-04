@@ -1,0 +1,11 @@
+exec eopa version
+! stderr .
+stdout '^Version: ' # empty in CI builds
+stdout '^OPA Version: [0-9]+\.[0-9]+\.[0-9]+' # could have ""-0.20231115111619-bcf82eb40572" trailer
+stdout '^Regal Version: [0-9]+\.[0-9]+\.[0-9]+' # same here
+stdout '^Build Timestamp: ' # don't care
+[darwin] [amd64] stdout 'Platform: darwin/amd64'
+[darwin] [arm64] stdout 'Platform: darwin/arm64'
+[linux] [amd64] stdout 'Platform: linux/amd64'
+[linux] [arm64] stdout 'Platform: linux/arm64'
+[windows] [amd64] stdout 'Platform: windows/amd64'

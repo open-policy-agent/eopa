@@ -4,10 +4,10 @@
             [babashka.process :refer [shell]]
             [clojure.string :refer [replace-first]]))
 
-(def testdir (System/getenv "TESTDIR"))
-(def reldir  (System/getenv "RELDIR"))
-(def goos    (System/getenv "GOOS"))
-(def name    (if (= goos "windows") "eopa.exe" "eopa"))
+(def testdir  (System/getenv "TESTDIR"))
+(def reldir   (System/getenv "RELDIR"))
+(def windows? (= "windows" (System/getenv "GOOS")))
+(def name     (if windows? "eopa.exe" "eopa"))
 (def testpkgs
   (map #(replace-first % #"^e2e/(.+)/testdata$" "./$1")
     (fs/glob "e2e/cli" "*/testdata")))
@@ -17,7 +17,8 @@
 (defn build-sm []
   (shell "go" "build" "-o" testdir "./extras/cmd/syncmock"))
 (defn build-bin []
-  (shell "go" "build" "-tags" "use_opa_fork" "-o" (fs/path reldir name) "."))
+  (shell "make" "eopa")
+  (fs/copy "bin/eopa" (fs/path reldir name)))
 
 (defn -main [& args]
   (fs/create-dirs testdir)

@@ -1,0 +1,37 @@
+! exec eopa lint policies/
+! stderr .
+stdout 'Rule:\s+opa-fmt'
+stdout 'Description:\s+File should be formatted with `opa fmt`'
+stdout 'Category:\s+style'
+[windows] stdout 'Location:\s+policies\\test.rego'
+[!windows] stdout 'Location:\s+policies/test.rego'
+stdout 'Documentation:\s+https://docs\.styra\.com/regal/rules/style/opa-fmt'
+stdout '1 file linted\. 1 violation found\.'
+
+exec eopa lint policies_pass
+! stderr .
+stdout '1 file linted\. No violations found\.'
+
+! exec eopa lint policies_sql
+! stderr .
+stdout 'Rule:\s+function-arg-return'
+stdout '1 file linted\. 1 violation found\.'
+
+-- policies/test.rego --
+package policies.test
+allow := true
+
+-- policies_pass/p.rego --
+package policies.test
+
+allow := true
+-- policies_sql/p.rego --
+package policies.test
+
+import future.keywords.if
+
+allow if {
+	some res
+	sql.send({}, res)
+	count(res.rows) > 1
+}

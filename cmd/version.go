@@ -15,18 +15,16 @@ func initVersion() *cobra.Command {
 		Use:   "version",
 		Short: `Print the version of Enterprise OPA`,
 		Long:  `Show version and build information for Enterprise OPA.`,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			cmd.SilenceErrors = true
-			cmd.SilenceUsage = true
-			return generateCmdOutput(os.Stdout)
+		Run: func(*cobra.Command, []string) {
+			generateCmdOutput(os.Stdout)
 		},
 	}
 }
 
-func generateCmdOutput(out io.Writer) error {
+func generateCmdOutput(out io.Writer) {
 	fmt.Fprintln(out, "Version: "+version.Version)
 	fmt.Fprintln(out, "OPA Version: "+version.AltVersion)
+	fmt.Fprintln(out, "Regal Version: "+regalVersion())
 	fmt.Fprintln(out, "Build Timestamp: "+version.Timestamp)
 	fmt.Fprintln(out, "Platform: "+version.Platform)
-	return nil
 }
