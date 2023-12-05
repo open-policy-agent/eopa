@@ -55,7 +55,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.17.0
 	github.com/stretchr/testify v1.8.4
-	github.com/styrainc/regal v0.13.1-0.20231130214742-b9342d48873d
+	github.com/styrainc/regal v0.14.0
 	github.com/testcontainers/testcontainers-go v0.26.0
 	github.com/testcontainers/testcontainers-go/modules/localstack v0.26.0
 	github.com/testcontainers/testcontainers-go/modules/mysql v0.26.0
