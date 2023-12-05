@@ -114,9 +114,6 @@ test-race:
 e2e:
 	cd e2e && go test -p 1 $(BUILD_ARGS) -tags e2e ./... -v -count=1
 
-ci-e2e-cross:
-	cd e2e && go test $(BUILD_ARGS) -tags e2e ./cli/login ./cli/sync -v -count=1
-
 benchmark:
 	go test $(BUILD_ARGS) -run=- -bench=. -benchmem ./...
 

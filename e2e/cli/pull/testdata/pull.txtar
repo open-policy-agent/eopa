@@ -4,14 +4,14 @@
 ! exec syncmock .styra-session &
 [darwin] exec sleep 1
 
-exec eopa sync --log-level warn
+exec eopa pull --log-level warn
 ! stderr .
 ! stdout .
 exec diff -r exp act
 
 # once more with default logs
-exec eopa sync --libraries act0/libraries
-stderr '\[INFO\] Synchronizing 2 libraries: lib01, lib02'
+exec eopa pull --libraries act0/libraries
+stderr '\[INFO\] Retrieving 2 libraries: lib01, lib02'
 ! stdout .
 exec diff -r exp act0
 

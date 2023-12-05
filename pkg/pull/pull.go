@@ -1,4 +1,4 @@
-package sync
+package pull
 
 import (
 	"context"
@@ -112,7 +112,7 @@ func Start(ctx context.Context, opt ...Opt) error {
 	for _, r := range libs.JSON200.Result {
 		libIDs = append(libIDs, r.Id)
 	}
-	hc.logger.Info("Synchronizing %d libraries: %s", len(libIDs), strings.Join(libIDs, ", "))
+	hc.logger.Info("Retrieving %d libraries: %s", len(libIDs), strings.Join(libIDs, ", "))
 
 	for _, id := range libIDs {
 		if err := hc.getLibrary(ctx, id); err != nil {

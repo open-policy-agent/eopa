@@ -4,8 +4,10 @@
             [babashka.process :refer [shell]]
             [clojure.string :refer [replace-first]]))
 
-(def testdir  (System/getenv "TESTDIR"))
-(def reldir   (System/getenv "RELDIR"))
+(def testdir        (System/getenv "TESTDIR"))
+(def reldir         (System/getenv "RELDIR"))
+(def build-release? (not (nil? reldir)))
+
 (def windows? (= "windows" (System/getenv "GOOS")))
 (def name     (if windows? "eopa.exe" "eopa"))
 (def testpkgs
@@ -22,11 +24,11 @@
 
 (defn -main [& args]
   (fs/create-dirs testdir)
-  (fs/create-dirs reldir)
+  (if build-release? (fs/create-dirs reldir))
   (run! build-test testpkgs)
   (fs/copy "build/cross-run" testdir)
   (build-sm)
-  (build-bin))
+  (if build-release? (build-bin)))
 
 (when (= *file* (System/getProperty "babashka.file"))
   (apply -main *command-line-args*))

@@ -14,6 +14,7 @@ concurrency:
 env:
   GOPRIVATE: github.com/StyraInc/opa
   GO_VERSION: 1.21
+  BB_VERSION: 1.3.186
 
 jobs:
   lint:
@@ -435,7 +436,7 @@ jobs:
           check-latest: true
       - uses: turtlequeue/setup-babashka@v1.5.2
         with:
-          babashka-version: 1.3.186
+          babashka-version: ${{ env.BB_VERSION }}
       - run: bb build/cross-build
         env:
           TESTDIR: test/${{ matrix.GOOS }}_${{ matrix.GOARCH }}
@@ -485,7 +486,7 @@ jobs:
           path: test
       - uses: turtlequeue/setup-babashka@v1.5.2
         with:
-          babashka-version: 1.3.186
+          babashka-version: ${{ env.BB_VERSION }}
       - run: bb ${{ matrix.testdir }}/cross-run
         env:
           TESTDIR: ${{ matrix.testdir }}

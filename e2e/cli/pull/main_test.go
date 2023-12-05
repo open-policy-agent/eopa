@@ -7,11 +7,11 @@ import (
 
 	"github.com/rogpeppe/go-internal/testscript"
 
-	"github.com/styrainc/enterprise-opa-private/e2e/cli/sync/testdata"
+	"github.com/styrainc/enterprise-opa-private/e2e/cli/pull/testdata"
 	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 )
 
-func TestSync(t *testing.T) {
+func TestPull(t *testing.T) {
 	testscript.Run(t, testscript.Params{
 		Dir: utils.ExplodeEmbed(t, testdata.FS),
 	})

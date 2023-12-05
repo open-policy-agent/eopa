@@ -11,43 +11,43 @@ import (
 
 	"github.com/open-policy-agent/opa/logging"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/sync"
+	"github.com/styrainc/enterprise-opa-private/pkg/pull"
 )
 
-// targetDir says where to sync libraries to
+// targetDir says where to pull libraries to
 const targetDir = "libraries"        // that's the flag, --libraries, and the config key
 const targetDirDefault = "libraries" // that's the folder, libraries/
 
-// force makes the sync command write to libraries even when it exists
+// force makes the pull command write to libraries even when it exists
 const force = "force"
 
-func syncCmd(config *viper.Viper, paths []string) *cobra.Command {
+func pullCmd(config *viper.Viper, paths []string) *cobra.Command {
 	var logger logging.Logger
 	var err error
 
 	cmd := &cobra.Command{
-		Use: "sync",
+		Use: "pull",
 		Example: `
-Synchronize all DAS libraries  using settings from .styra.yaml:
+Download all DAS libraries  using settings from .styra.yaml:
 
-    eopa sync
+    eopa pull
 
-Note: 'eopa sync' will look for .styra.yaml in the current directory,
+Note: 'eopa pull' will look for .styra.yaml in the current directory,
 the repository root, and your home directory. To use a different config
 file location, pass --styra-config:
 
-    eopa sync --styra-config ~/.styra-primary.yaml
+    eopa pull --styra-config ~/.styra-primary.yaml
 
-Synchronize to libs/, with debug logging enabled:
+Write all libraries to to libs/, with debug logging enabled:
 
-    eopa sync --libraries libs --log-level debug
+    eopa pull --libraries libs --log-level debug
 
 Ignore existing target directory:
 
-    eopa sync --force
+    eopa pull --force
 `,
-		Hidden: os.Getenv("EOPA_SYNC") == "",
-		Short:  "Sync libraries from DAS instance",
+		Hidden: os.Getenv("EOPA_PULL") == "",
+		Short:  "Pull libraries from DAS instance",
 		PreRunE: func(c *cobra.Command, _ []string) error {
 			bindDASFlags(config, c)
 			c.SilenceUsage = true
@@ -84,19 +84,19 @@ Ignore existing target directory:
 			t, _ := c.Flags().GetString(targetDir)
 			st := toAbs(t != "", config, targetDir, targetDirDefault)
 
-			return sync.Start(ctx,
-				sync.SessionFile(sf),
-				sync.URL(u),
-				sync.Logger(logger),
-				sync.TargetDir(st),
-				sync.Force(config.GetBool(force)),
+			return pull.Start(ctx,
+				pull.SessionFile(sf),
+				pull.URL(u),
+				pull.Logger(logger),
+				pull.TargetDir(st),
+				pull.Force(config.GetBool(force)),
 			)
 		},
 	}
 
 	addDASFlags(cmd)
 
-	cmd.Flags().String(targetDir, targetDirDefault, "where to sync libraries to")
+	cmd.Flags().String(targetDir, targetDirDefault, "where to copy libraries to")
 	config.BindPFlag(targetDir, cmd.Flags().Lookup(targetDir))
 	cmd.Flags().BoolP(force, "f", false, "ignore if libraries folder exists, overwrite existing content on conflict")
 	config.BindPFlag(force, cmd.Flags().Lookup(force))
