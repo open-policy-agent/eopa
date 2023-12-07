@@ -16,8 +16,8 @@
 
 (defn build-test [t]
   (shell {:dir "e2e"} "go" "test" "-c" "-tags" "e2e" "-o" (fs/path ".." testdir) t))
-(defn build-sm []
-  (shell "go" "build" "-o" testdir "./extras/cmd/syncmock"))
+(defn build-mock [mock]
+  (shell "go" "build" "-o" testdir (fs/path "./extras/cmd/" mock)))
 (defn build-bin []
   (shell "make" "eopa")
   (fs/copy "bin/eopa" (fs/path reldir name)))
@@ -27,7 +27,8 @@
   (if build-release? (fs/create-dirs reldir))
   (run! build-test testpkgs)
   (fs/copy "build/cross-run" testdir)
-  (build-sm)
+  (build-mock "syncmock")
+  (build-mock "loginmock")
   (if build-release? (build-bin)))
 
 (when (= *file* (System/getProperty "babashka.file"))

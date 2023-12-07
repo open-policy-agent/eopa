@@ -142,10 +142,8 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "HEAD", "OPTIONS":
-		s.logger.Info(r.Method)
 		return
 	case "POST":
-		s.logger.Info(r.Method)
 		rawBody, err := io.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)

@@ -1,0 +1,26 @@
+[windows] skip 'no way to check this on windows'
+
+env PATH=$WORK:$PATH
+env HOME=$WORK
+chmod 755 $WORK/open
+chmod 755 $WORK/xdg-open
+exec eopa login --url https://my.styra.com --timeout 1s --log-level debug
+! stdout .
+stderr '\[DEBUG\] Using session file'
+[!windows] stderr $WORK/\.styra-session
+stderr '\[INFO\] Successfully logged in'
+! stderr '\[INFO\] POST'
+
+# comparing against a file yields a diff because of a trailing newline
+exec echo -n opensesame
+cmp stdout .styra-session
+
+-- open --
+#!/bin/sh
+export COOKIE=opensesame
+loginmock "$*" &
+
+-- xdg-open --
+#!/bin/sh
+export COOKIE=opensesame
+loginmock "$*" &
