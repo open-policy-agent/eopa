@@ -491,3 +491,4 @@ jobs:
         env:
           TESTDIR: ${{ matrix.testdir }}
           RELDIR: ${{ matrix.reldir }}
+          EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}

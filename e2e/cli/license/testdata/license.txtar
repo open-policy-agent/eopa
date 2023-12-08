@@ -1,0 +1,4 @@
+exec eopa license
+stdout '^Online license expires in'
+stdout '^Max machines: [0-9]+, current machine count: [0-9]+$'
+! stderr .

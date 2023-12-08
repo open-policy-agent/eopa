@@ -6,8 +6,11 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/rogpeppe/go-internal/testscript"
 )
 
 // Tries an open port 3x times with short delays between each time to ensure the port is really free.
@@ -40,4 +43,13 @@ func ExplodeEmbed(t *testing.T, efs embed.FS) string {
 		}
 	}
 	return dir
+}
+
+func IncludeLicenseEnvVars(e *testscript.Env) error {
+	for _, kv := range os.Environ() {
+		if strings.HasPrefix(kv, "EOPA_") {
+			e.Vars = append(e.Vars, kv)
+		}
+	}
+	return nil
 }

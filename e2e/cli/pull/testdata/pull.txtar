@@ -15,8 +15,8 @@ cp exp/libraries/lib02/stale act/libraries/lib02/envoy/policy.rego
 
 exec eopa pull
 stderr '\[INFO\] Retrieving 2 libraries: lib01, lib02'
-[!windows] stderr '\[WARNING\] Found these files that don.t currently exist in the remote location: lib00, lib02/stale.'
-[windows]  stderr '\[WARNING\] Found these files that don.t currently exist in the remote location: lib00, lib02\\stale.'
+[!windows] stderr '\[WARNING\] Found these files that don''t currently exist in the remote location: lib00, lib02/stale.'
+[windows]  stderr '\[WARNING\] Found these files that don''t currently exist in the remote location: lib00, lib02\\stale.'
 stderr '\[WARNING\] If you were not expecting this message, please delete those files or run `eopa pull --force`'
 ! stdout .
 exec diff -r exp act
