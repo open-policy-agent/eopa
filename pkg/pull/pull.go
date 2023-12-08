@@ -1,15 +1,20 @@
 package pull
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/liamg/memoryfs"
 
 	"github.com/open-policy-agent/opa/logging"
 
@@ -19,6 +24,9 @@ import (
 const cookieName = "gosessid"
 const dirPermission = 0o700
 const filePermission = 0o600
+
+const warningStaleFiles = "Found these files that don't currently exist in the remote location: %s."
+const warningStaleFilesExtra = "If you were not expecting this message, please delete those files or run `eopa pull --force`"
 
 type opts struct {
 	url         *url.URL
@@ -65,7 +73,9 @@ type cl struct {
 	client *http.Client
 	logger logging.Logger
 	cl     *dasapi.Client
+	fs     *memoryfs.FS
 	target string
+	force  bool
 }
 
 func Start(ctx context.Context, opt ...Opt) error {
@@ -113,13 +123,16 @@ func Start(ctx context.Context, opt ...Opt) error {
 		libIDs = append(libIDs, r.Id)
 	}
 	hc.logger.Info("Retrieving %d libraries: %s", len(libIDs), strings.Join(libIDs, ", "))
-
 	for _, id := range libIDs {
 		if err := hc.getLibrary(ctx, id); err != nil {
 			return fmt.Errorf("get library %s: %w", id, err)
 		}
 	}
-	return nil
+
+	if err := hc.checkStaleFiles(); err != nil {
+		return fmt.Errorf("check stale files: %w", err)
+	}
+	return hc.writeToFS()
 }
 
 func (o *opts) preflight() error {
@@ -136,15 +149,6 @@ func (o *opts) preflight() error {
 	if !d.IsDir() {
 		return fmt.Errorf("target %s already exists, not a directory", o.target)
 
-	}
-	if d.IsDir() { // is it empty?
-		files, err := os.ReadDir(o.target)
-		if err != nil {
-			return err
-		}
-		if len(files) > 0 && !o.force {
-			return fmt.Errorf("target directory %s already exists (non-empty)", o.target)
-		}
 	}
 	return nil
 }
@@ -166,7 +170,22 @@ func (o *opts) newClient() (*cl, error) {
 		client: http.DefaultClient,
 		logger: o.logger,
 		target: o.target,
+		force:  o.force,
+		fs:     newMemFS(o.target),
 	}, nil
+}
+
+func newMemFS(tgt string) *memoryfs.FS {
+	m := memoryfs.New()
+	if err := m.MkdirAll(tgt, dirPermission); err != nil {
+		panic(err)
+	}
+	if err := m.WriteFile(filepath.Join(tgt, ".gitignore"),
+		[]byte("*\n"),
+		filePermission); err != nil {
+		panic(err)
+	}
+	return m
 }
 
 func (c *cl) Do(req *http.Request) (*http.Response, error) {
@@ -234,12 +253,13 @@ func (c *cl) getPolicy(ctx context.Context, id string) error {
 		return fmt.Errorf("unexpected result (%T)", m["modules"])
 	}
 	if len(modules) > 0 {
-		if err := os.MkdirAll(c.path(id), dirPermission); err != nil {
+		if err := c.fs.MkdirAll(c.path(id), dirPermission); err != nil {
 			return err
 		}
 	}
 	for file, mod := range modules {
-		if err := os.WriteFile(c.path(id, file), []byte(mod.(string)), filePermission); err != nil {
+		// NOTE(sr): if this already exists, it's overwritten
+		if err := c.fs.WriteFile(c.path(id, file), []byte(mod.(string)), filePermission); err != nil {
 			return err
 		}
 	}
@@ -266,18 +286,84 @@ func (c *cl) getData(ctx context.Context, id string) error {
 	}
 
 	if len(blob) > 0 {
-		if err := os.MkdirAll(c.path(filepath.Dir(id)), dirPermission); err != nil {
+		if err := c.fs.MkdirAll(c.path(filepath.Dir(id)), dirPermission); err != nil {
 			return err
 		}
 	}
-	f, err := os.OpenFile(c.path(id), os.O_RDWR|os.O_CREATE|os.O_TRUNC, filePermission)
-	if err != nil {
-		return fmt.Errorf("create file: %w", err)
-	}
-	if err := json.NewEncoder(f).Encode(blob); err != nil {
+	data := bytes.Buffer{}
+	if err := json.NewEncoder(&data).Encode(blob); err != nil {
 		return fmt.Errorf("encode data: %w", err)
 	}
-	return f.Close()
+	if err := c.fs.WriteFile(c.path(id), data.Bytes(), filePermission); err != nil {
+		return fmt.Errorf("create file: %w", err)
+	}
+	return nil
+}
+
+func (c *cl) checkStaleFiles() error {
+	// We walk the OS directory, and check if there is an incoming (memfs)
+	// file for each of the files/dirs in the target directory.
+	var warnFiles []string
+	err := fs.WalkDir(os.DirFS(c.target), ".", func(shortPath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		path := filepath.Join(c.target, shortPath)
+		_, err = fs.Stat(c.fs, path)
+		if os.IsNotExist(err) { // exists in fs, not in memfs
+			if c.force {
+				if err := os.RemoveAll(path); err != nil {
+					return fmt.Errorf("remove %s: %w", shortPath, err)
+				}
+			} else {
+				warnFiles = append(warnFiles, filepath.FromSlash(shortPath))
+			}
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	if len(warnFiles) > 0 {
+		c.logger.Warn(warningStaleFiles, strings.Join(warnFiles, ", "))
+		c.logger.Warn(warningStaleFilesExtra)
+	}
+	return nil
+}
+
+func (c *cl) writeToFS() error {
+	// We walk the memfs and create whatever we find in the OS target
+	// directory.
+	return fs.WalkDir(c.fs, c.target, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		src, err := c.fs.Open(path)
+		if err != nil {
+			panic(err) // Impossible: we're walking c.fs
+		}
+
+		fi, _ := src.Stat()
+		if fi.IsDir() { // deal with directories
+			if err := os.MkdirAll(path, dirPermission); err != nil {
+				return fmt.Errorf("create target dir %s: %w", path, err)
+			}
+			return nil
+		}
+
+		dst, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, filePermission)
+		if err != nil {
+			return fmt.Errorf("create target file %s: %w", path, err)
+		}
+		if _, err := io.Copy(dst, src); err != nil {
+			return fmt.Errorf("copy to target file %s: %w", path, err)
+		}
+		return dst.Close()
+	})
 }
 
 func (c *cl) path(policyID string, extra ...string) string {

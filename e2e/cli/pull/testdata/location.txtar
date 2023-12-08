@@ -1,9 +1,3 @@
-! exec eopa pull
-stderr 'target directory '
-[!windows] stderr $WORK/here
-stderr 'already exists \(non-empty\)'
-! stdout .
-
 ! exec eopa pull --libraries there
 stderr 'target'
 [!windows] stderr $WORK/there
@@ -18,7 +12,7 @@ stderr 'already exists, not a directory'
 ! stdout .
 
 # it only matters that we've pushed through preflight checks
-! exec eopa pull --force
+! exec eopa pull
 stderr 'Error: list libraries: Get'
 ! stdout .
 

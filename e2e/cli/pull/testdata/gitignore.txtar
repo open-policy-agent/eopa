@@ -1,0 +1,38 @@
+[!exec:git] skip "needs git binary for testing"
+
+cd new
+# syncmock is used by all commands in this file
+# it has to expect failure (the "!") because it's
+# killed at the end of the process
+! exec syncmock 9993 .styra-session &
+[darwin] exec sleep 1
+
+exec git init .
+exec git config --local user.email "ci@styra.com"
+exec git config --local user.name "CI run"
+exec git add .
+exec git commit -m initial
+exec eopa pull --log-level warn
+! stderr .
+! stdout .
+exec diff -r ../exp/libraries libraries
+exec git ls-files --others --exclude-standard
+! stdout .
+
+-- new/.styra-session --
+opensesame
+
+-- new/.styra.yaml --
+url: http://127.0.0.1:9993
+libraries: libraries
+
+-- exp/libraries/.gitignore --
+*
+-- exp/libraries/lib02/envoy/policy.rego --
+package libraries.lib02.envoy
+import future.keywords
+allow if true
+-- exp/libraries/lib02/token --
+{"bearer_token":"testtoken"}
+-- exp/libraries/lib02/thing --
+{"data":{"one":{"foo":1},"two":{"foo":2}}}

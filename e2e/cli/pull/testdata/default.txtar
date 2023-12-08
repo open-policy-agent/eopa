@@ -1,0 +1,27 @@
+# syncmock is used by all commands in this file
+# it has to expect failure (the "!") because it's
+# killed at the end of the process
+! exec syncmock 9992 .styra-session &
+[darwin] exec sleep 1
+
+exec eopa pull --log-level warn
+! stdout .
+! stderr .
+exec diff -r exp .styra/include
+
+-- .styra-session --
+opensesame
+
+-- .styra.yaml --
+url: http://127.0.0.1:9992
+
+-- exp/.gitignore --
+*
+-- exp/lib02/envoy/policy.rego --
+package libraries.lib02.envoy
+import future.keywords
+allow if true
+-- exp/lib02/token --
+{"bearer_token":"testtoken"}
+-- exp/lib02/thing --
+{"data":{"one":{"foo":1},"two":{"foo":2}}}

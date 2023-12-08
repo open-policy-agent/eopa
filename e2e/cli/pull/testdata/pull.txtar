@@ -1,19 +1,30 @@
 # syncmock is used by all commands in this file
 # it has to expect failure (the "!") because it's
 # killed at the end of the process
-! exec syncmock .styra-session &
+! exec syncmock 9991 .styra-session &
 [darwin] exec sleep 1
 
-exec eopa pull --log-level warn
-! stderr .
+# prep some stale data:
+mkdir act/libraries/lib00
+mkdir act/libraries/lib02/envoy
+cp exp/libraries/lib02/stale act/libraries/lib02/stale
+cp exp/libraries/lib00/old act/libraries/lib00/old
+
+# this file gets overwritten
+cp exp/libraries/lib02/stale act/libraries/lib02/envoy/policy.rego
+
+exec eopa pull
+stderr '\[INFO\] Retrieving 2 libraries: lib01, lib02'
+[!windows] stderr '\[WARNING\] Found these files that don.t currently exist in the remote location: lib00, lib02/stale.'
+[windows]  stderr '\[WARNING\] Found these files that don.t currently exist in the remote location: lib00, lib02\\stale.'
+stderr '\[WARNING\] If you were not expecting this message, please delete those files or run `eopa pull --force`'
 ! stdout .
 exec diff -r exp act
 
-# once more with default logs
-exec eopa pull --libraries act0/libraries
-stderr '\[INFO\] Retrieving 2 libraries: lib01, lib02'
+exec eopa pull --force --log-level warn
+! stderr .
 ! stdout .
-exec diff -r exp act0
+exec diff -r exp-clean act
 
 -- .styra-session --
 opensesame
@@ -22,11 +33,26 @@ opensesame
 url: http://127.0.0.1:9991
 libraries: act/libraries
 
+-- exp/libraries/.gitignore --
+*
+-- exp/libraries/lib00/old --
 -- exp/libraries/lib02/envoy/policy.rego --
 package libraries.lib02.envoy
 import future.keywords
 allow if true
+-- exp/libraries/lib02/stale --
+not in mock response
 -- exp/libraries/lib02/token --
 {"bearer_token":"testtoken"}
 -- exp/libraries/lib02/thing --
+{"data":{"one":{"foo":1},"two":{"foo":2}}}
+-- exp-clean/libraries/.gitignore --
+*
+-- exp-clean/libraries/lib02/envoy/policy.rego --
+package libraries.lib02.envoy
+import future.keywords
+allow if true
+-- exp-clean/libraries/lib02/token --
+{"bearer_token":"testtoken"}
+-- exp-clean/libraries/lib02/thing --
 {"data":{"one":{"foo":1},"two":{"foo":2}}}

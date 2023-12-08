@@ -31,6 +31,7 @@ require (
 	github.com/jarcoal/httpmock v1.2.0
 	github.com/json-iterator/go v1.1.12
 	github.com/keygen-sh/keygen-go/v2 v2.7.0
+	github.com/liamg/memoryfs v1.6.0
 	github.com/lib/pq v1.10.9
 	github.com/microsoft/go-mssqldb v1.6.0
 	github.com/minio/minio-go/v7 v7.0.65

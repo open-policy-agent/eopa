@@ -15,8 +15,8 @@ import (
 )
 
 // targetDir says where to pull libraries to
-const targetDir = "libraries"        // that's the flag, --libraries, and the config key
-const targetDirDefault = "libraries" // that's the folder, libraries/
+const targetDir = "libraries"             // that's the flag, --libraries, and the config key
+const targetDirDefault = ".styra/include" // that's the folder, libraries/
 
 // force makes the pull command write to libraries even when it exists
 const force = "force"

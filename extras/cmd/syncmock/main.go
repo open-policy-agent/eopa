@@ -14,10 +14,10 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		log.Fatalf("usage: %s <cookie-file>", os.Args[0])
+	if len(os.Args) != 3 {
+		log.Fatalf("usage: %s <port> <cookie-file>", os.Args[0])
 	}
-	secret := strings.TrimSpace(string(must(os.ReadFile(os.Args[1]))))
+	secret := strings.TrimSpace(string(must(os.ReadFile(os.Args[2]))))
 
 	s := &srv{}
 	mw := []dasapi.StrictMiddlewareFunc{
@@ -39,7 +39,7 @@ func main() {
 	}
 	http.Handle("/", dasapi.Handler(dasapi.NewStrictHandler(s, mw)))
 
-	log.Fatal(http.ListenAndServe("127.0.0.1:9991", nil))
+	log.Fatal(http.ListenAndServe("127.0.0.1:"+os.Args[1], nil))
 }
 
 type srv struct{}
