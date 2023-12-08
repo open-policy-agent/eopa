@@ -61,19 +61,12 @@ func TestLoginFlowSuccess(t *testing.T) {
 		port = u0.Query().Get("callback")
 	}
 
-	{ // send callback request with cookie
-		req, err := http.NewRequest("GET", fmt.Sprintf("http://127.0.0.1:%s", port), nil)
+	{ // send callback request with secret cookie value
+		payload := `{"secret": "pssstsecret"}`
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://127.0.0.1:%s", port), strings.NewReader(payload))
 		if err != nil {
 			t.Fatalf("callback request: %v", err)
 		}
-		c := http.Cookie{
-			Name:     "gossid",
-			Value:    "pssstsecret",
-			Secure:   true,
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-		}
-		req.AddCookie(&c)
 		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
 		if err != nil {
 			t.Fatalf("send callback: %v", err)
@@ -108,7 +101,7 @@ func TestLoginFlowNoBrowserSuccess(t *testing.T) {
 	logger := logging_test.New()
 	urlc := make(chan string)
 
-	r := regexp.MustCompile(`(https://my\.das\.server/\?callback=[0-9]+)$`)
+	r := regexp.MustCompile(`(https://my\.das\.server/cli-sign-in\?callback=[0-9]+)$`)
 
 	go func() {
 		for {
@@ -144,19 +137,12 @@ func TestLoginFlowNoBrowserSuccess(t *testing.T) {
 		port = u0.Query().Get("callback")
 	}
 
-	{ // send callback request with cookie
-		req, err := http.NewRequest("GET", fmt.Sprintf("http://127.0.0.1:%s", port), nil)
+	{ // send callback request with secret cookie value
+		payload := `{"secret": "pssstsecret"}`
+		req, err := http.NewRequest("POST", fmt.Sprintf("http://127.0.0.1:%s", port), strings.NewReader(payload))
 		if err != nil {
 			t.Fatalf("callback request: %v", err)
 		}
-		c := http.Cookie{
-			Name:     "gossid",
-			Value:    "pssstsecret",
-			Secure:   true,
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-		}
-		req.AddCookie(&c)
 		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
 		if err != nil {
 			t.Fatalf("send callback: %v", err)

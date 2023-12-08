@@ -2,7 +2,9 @@ package login
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -14,9 +16,6 @@ import (
 // timeout determines how long the CLI command will wait for
 // an incoming request
 const timeout = time.Minute
-
-// cookie is the name of the secret session cookie we're retrieving
-const cookie = "gossid"
 
 // navMsg is what we display if we're not instructed to open a browser
 // or if a problem occurred trying to open the browser. Whitespace matters!
@@ -86,11 +85,11 @@ func Start(ctx context.Context, opt ...Opt) (string, error) {
 	defer listener.Close()
 
 	port := listener.Addr().(*net.TCPAddr).Port
-	srv := newServer(listener, url)
+	srv := newServer(listener, url, o.logger)
 	srv.Start()
 	defer srv.Stop()
 
-	toOpen := fmt.Sprintf("%s/?callback=%d", url, port)
+	toOpen := fmt.Sprintf("%s/cli-sign-in?callback=%d", url, port)
 
 	if !o.browser {
 		o.logger.Info(navMsg, toOpen)
@@ -117,30 +116,59 @@ func Start(ctx context.Context, opt ...Opt) (string, error) {
 }
 
 type server struct {
-	l    net.Listener
-	url  *url.URL
-	c    chan string
-	errc chan error
-	s    *http.Server
+	l      net.Listener
+	url    *url.URL
+	c      chan string
+	errc   chan error
+	s      *http.Server
+	logger logging.Logger
 }
 
-func newServer(l net.Listener, u *url.URL) *server {
-	return &server{l: l,
-		c:    make(chan string),
-		errc: make(chan error),
-		url:  u,
+func newServer(l net.Listener, u *url.URL, logger logging.Logger) *server {
+	return &server{
+		l:      l,
+		c:      make(chan string),
+		errc:   make(chan error),
+		url:    u,
+		logger: logger,
 	}
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.Header().Set("Access-Control-Allow-Method", "OPTIONS, HEAD, POST")
 	w.Header().Set("Access-Control-Allow-Origin", s.url.String())
-	c, err := r.Cookie(cookie)
-	if err != nil {
+
+	switch r.Method {
+	case "HEAD", "OPTIONS":
+		s.logger.Info(r.Method)
+		return
+	case "POST":
+		s.logger.Info(r.Method)
+		rawBody, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		var payload map[string]string
+		if err := json.Unmarshal(rawBody, &payload); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		if value, ok := payload["secret"]; ok {
+			s.c <- value
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	default:
+		s.logger.Error("Bad request with method: %s", r.Method)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	s.c <- c.Value
 }
 
 func (s *server) Start() {

@@ -6,7 +6,7 @@ chmod 755 $WORK/xdg-open
 ! exec eopa login --timeout 0.1s
 stderr 'Could not open browser \(exit status 1\)\.'
 stderr 'Please navigate to the following URL in your browser:'
-stderr '  https://my\.styra\.com/\?callback=[0-9]+'
+stderr '  https://my\.styra\.com/cli-sign-in\?callback=[0-9]+'
 stderr 'Error: context deadline exceeded'
 
 -- .styra.yaml --

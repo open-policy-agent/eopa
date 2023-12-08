@@ -1,18 +1,18 @@
 # current dir
 ! exec eopa login --no-open --timeout 0.1s
-stderr 'https://example\.com/toplevel/\?callback=[0-9]+'
+stderr 'https://example\.com/toplevel/cli-sign-in\?callback=[0-9]+'
 stderr 'Error: context deadline exceeded'
 
 # nested cwd
 cd $WORK/nested
 ! exec eopa login --no-open --timeout 0.1s
-stderr 'https://example\.com/nested/\?callback=[0-9]+'
+stderr 'https://example\.com/nested/cli-sign-in\?callback=[0-9]+'
 stderr 'Error: context deadline exceeded'
  
 # repo root
 cd $WORK/some-repo/nested/really/deeply
 ! exec eopa login --no-open --timeout 0.1s
-stderr 'https://example\.com/reporoot/\?callback=[0-9]+'
+stderr 'https://example\.com/reporoot/cli-sign-in\?callback=[0-9]+'
 stderr 'Error: context deadline exceeded'
 
 # home
@@ -20,7 +20,7 @@ stderr 'Error: context deadline exceeded'
 [windows]  env USERPROFILE=$WORK/home
 cd $WORK/nested/really/deeply
 ! exec eopa login --no-open --timeout 0.1s
-stderr 'https://example\.com/home/\?callback=[0-9]+'
+stderr 'https://example\.com/home/cli-sign-in\?callback=[0-9]+'
 stderr 'Error: context deadline exceeded'
 
 # repo trumps home
@@ -28,19 +28,19 @@ stderr 'Error: context deadline exceeded'
 [windows]  env USERPROFILE=$WORK/home
 cd $WORK/some-repo/nested/really/deeply
 ! exec eopa login --no-open --timeout 0.1s
-stderr 'https://example\.com/reporoot/\?callback=[0-9]+'
+stderr 'https://example\.com/reporoot/cli-sign-in\?callback=[0-9]+'
 stderr 'Error: context deadline exceeded'
 
 # cwd trumps repo
 cd $WORK/some-repo/nested/really/deeply/another
 ! exec eopa login --no-open --timeout 0.1s
-stderr 'https://example\.com/nestedinrepo/\?callback=[0-9]+'
+stderr 'https://example\.com/nestedinrepo/cli-sign-in\?callback=[0-9]+'
 stderr 'Error: context deadline exceeded'
 
 # arg trumps cwd
 cd $WORK
 ! exec eopa login --no-open --timeout 0.1s --styra-config some-repo/nested/really/deeply/another/.styra.yaml
-stderr 'https://example\.com/nestedinrepo/\?callback=[0-9]+'
+stderr 'https://example\.com/nestedinrepo/cli-sign-in\?callback=[0-9]+'
 stderr 'Error: context deadline exceeded'
 
 # arg needs to exist, no fallbacks
