@@ -17,7 +17,7 @@ import (
 func IsTCPPortBindable(port int) bool {
 	portOpen := true
 	for i := 0; i < 3; i++ {
-		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 		if err == nil {
 			ln.Close()
 		}

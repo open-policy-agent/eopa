@@ -108,6 +108,7 @@ type Checker interface {
 	Policy() (*KeygenLicense, error)
 	SetStrict(bool)
 	Strict() bool
+	ID() string
 
 	ReleaseLicense()
 	Wait(time.Duration) bool
@@ -182,6 +183,13 @@ func (l *checker) SetStrict(x bool) {
 
 func (l *checker) Strict() bool {
 	return l.strict
+}
+
+func (l *checker) ID() string {
+	if l.license != nil {
+		return l.license.ID
+	}
+	return ""
 }
 
 func (l *checker) IsOnline() bool {

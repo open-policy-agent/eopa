@@ -37,8 +37,8 @@ EOPA_LDFLAGS := "-X=github.com/open-policy-agent/opa/version.Program=Enterprise 
 ALT_EOPA_LDFLAGS := "-X=github.com/open-policy-agent/opa/version.AltProgram=Open Policy Agent"
 VERSION_LDFLAGS := -X=github.com/open-policy-agent/opa/version.Version=$(EOPA_VERSION)
 ALT_VERSION_LDFLAGS := -X=github.com/open-policy-agent/opa/version.AltVersion=$(OPA_VERSION)
-# TODO: Update this URL when a new address for the telemetry service is available
-TELEMETRY_LDFLAGS := -X=github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=https://load-telemetry.corp.styra.com
+EOPA_TELEMETRY_URL ?= https://load-telemetry.corp.styra.com
+TELEMETRY_LDFLAGS := -X=github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=$(EOPA_TELEMETRY_URL)
 HOSTNAME_LDFLAGS := -X=github.com/open-policy-agent/opa/version.Hostname=$(HOSTNAME)
 
 LDFLAGS := $(VERSION_LDFLAGS) $(EOPA_LDFLAGS) $(ALT_EOPA_LDFLAGS) $(ALT_VERSION_LDFLAGS) $(TELEMETRY_LDFLAGS) $(HOSTNAME_LDFLAGS)

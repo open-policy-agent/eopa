@@ -1,3 +1,5 @@
+//go:build use_opa_fork
+
 package cmd
 
 import (
@@ -350,6 +352,11 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 	lic.SetLogger(logger)
 	ekmHook.SetLogger(logger)
 
+	runtime.RegisterGatherers(map[string]func() (any, error){
+		"license": func() (any, error) {
+			return lic.ID(), nil
+		},
+	})
 	rt, err := runtime.NewRuntime(ctx, params.rt)
 	if err != nil {
 		return nil, err

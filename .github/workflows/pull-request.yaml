@@ -308,6 +308,7 @@ jobs:
         env:
           HOSTNAME: github.actions.local
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          EOPA_TELEMETRY_URL: http://127.0.0.1:9191
       - name: Upload binary tarball
         uses: actions/upload-artifact@v3
         with:
