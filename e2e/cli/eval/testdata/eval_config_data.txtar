@@ -1,0 +1,24 @@
+# This test ensures that `eopa eval` correctly accepts extra data to insert
+# into the `data.` hierarchy from the .styra.yaml config file.
+#
+# We also make sure to test loading more than one path, one of which is a
+# directory, to make sure nothing in the way we handled the config file
+# broke that functionality.
+exec eopa eval -f pretty '[data.foo.bar, data.coolstuff.foobar]'
+! stderr .
+cmp stdout exp/stdout
+-- dummy1.rego --
+package foo
+bar := "abc"
+-- cooldir/dummy2.rego --
+package coolstuff
+foobar := "quux"
+-- .styra.yaml --
+data:
+  ./dummy1.rego
+  ./cooldir
+-- exp/stdout --
+[
+  "abc",
+  "quux"
+]

@@ -21,6 +21,11 @@ import (
 
 const brand = "Enterprise OPA"
 
+// Key for matching up --data with the config. The semantics are a little weird
+// because some subcommand receive the extra data paths as extra CLI arguments,
+// while others actually define a --data flag.
+const dataKey = "data"
+
 func addLicenseFlags(c *cobra.Command, licenseParams *keygen.LicenseParams) {
 	c.Flags().StringVar(&licenseParams.Key, "license-key", "", "Location of file containing EOPA_LICENSE_KEY")
 	c.Flags().StringVar(&licenseParams.Token, "license-token", "", "Location of file containing EOPA_LICENSE_TOKEN")
@@ -93,11 +98,27 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 
 	lparams := keygen.NewLicenseParams()
 
+	// NOTE(sr): viper supports a bunch of config file formats, but let's decide
+	//           which formats we'd like to support, not just take them all as-is.
+	viper.SupportedExts = []string{"yaml"}
+
+	// NOTE(sr): for config file debugging, use this
+	//cfg := viper.NewWithOptions(viper.WithLogger(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))))
+	cfg := viper.New()
+
+	cfg.SetConfigName(".styra")
+	cfg.SetConfigType("yaml")
+	paths := []string{"."}
+	if p := repoRootPath(); p != "" {
+		paths = append(paths, p)
+	}
+	paths = append(paths, "$HOME")
+
 	root := &cobra.Command{
 		Use:   path.Base(os.Args[0]),
 		Short: "Enterprise OPA",
 
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if instructionLimit > 0 {
 				rego_vm.SetLimits(instructionLimit)
 			}
@@ -114,9 +135,10 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 			iropt.RegoVMIROptimizationPassSchedule = optimizationSchedule
 
 			switch cmd.CalledAs() {
+
 			case "eval":
 				if lic == nil {
-					return
+					return nil
 				}
 
 				lvl, _ := internal_logging.GetLevel(logLevel.String())
@@ -124,11 +146,102 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 				lic.SetFormatter(format)
 				lic.SetLevel(lvl)
 
+				logger, err := getLogger(logLevel.String(), logFormat.String(), "")
+				if err != nil {
+					return err
+				}
+
+				selectedPath, _ := cmd.Flags().GetString(styraConfig)
+				if err := readConfig(selectedPath, cfg, paths, logger); err != nil {
+					return err
+				}
+
+				// Note that we don't use cfg.BindPFlag() here,
+				// it seems that when we do this, it can cause
+				// merge errors while loading data, which I
+				// suspect is due to trying to load the same
+				// data file more than once. Viper appears to
+				// have some issue with our repeated string
+				// flag type. Instead, we directly read the
+				// values out of the config as a slice and
+				// insert them into the flag here.
+				//
+				// -- CAD 2023-12-12
+
+				for _, s := range cfg.GetStringSlice(dataKey) {
+					// Note that in the OPA implementation
+					// of repeated string arguments, the
+					// .Set() function actually appends
+					// to the slice of values, it does not
+					// replace the existing contents.
+					//
+					// -- CAD 2023-12-07
+					cmd.Flags().Lookup(dataKey).Value.Set(s)
+				}
+
 				// do the license validate and activate asynchronously; so user doesn't have to wait
 				go lic.ValidateLicenseOrDie(lparams) // calls os.Exit if license isn't valid
+
+			case "test":
+				if lic == nil {
+					return nil
+				}
+
+				lvl, _ := internal_logging.GetLevel(logLevel.String())
+				format := internal_logging.GetFormatter(logFormat.String(), "")
+				lic.SetFormatter(format)
+				lic.SetLevel(lvl)
+
+				logger, err := getLogger(logLevel.String(), logFormat.String(), "")
+				if err != nil {
+					return err
+				}
+
+				selectedPath, _ := cmd.Flags().GetString(styraConfig)
+				if err := readConfig(selectedPath, cfg, paths, logger); err != nil {
+					return err
+				}
+
+				// We have to monkey-patch the `opa test`
+				// command's RunE() function, because there is
+				// no other way to mutate the arguments passed
+				// to it. The command's args are already read
+				// in Cobra _before_ any pre-run functions are
+				// called, so attempting to use cmd.SetArgs()
+				// or mutating os.Args won't work at this
+				// stage. The only way we can properly interdict
+				// the arguments is to insert them into the
+				// RunE callback itself. See the
+				// `*Command.execute()` implementation in
+				// Cobra:
+				//
+				// https://github.com/spf13/cobra/blob/3d8ac432bdad89db04ab0890754b2444d7b4e1cf/command.go#L874
+				//
+				// When I wrote this, it looked like the test
+				// command in the OPA source tree was defining
+				// .Run, not .RunE. Yet, the .Run pointer is
+				// nil while RunE was non-nil. Maybe we patched
+				// it in the fork, or there are other
+				// shenanigans afoot.
+				//
+				// -- CAD 2023-12-07
+				extraDataArgs := cfg.GetStringSlice("data")
+				oldRunE := cmd.RunE
+				cmd.RunE = func(cmd *cobra.Command, args []string) error {
+					return oldRunE(cmd, append(args, extraDataArgs...))
+				}
+
+				// do the license validate and activate asynchronously; so user doesn't have to wait
+				go lic.ValidateLicenseOrDie(lparams) // calls os.Exit if license isn't valid
+
 			}
+			return nil
 		},
 	}
+
+	// New Enterprise OPA commands
+	root.AddCommand(initBundle())
+	root.AddCommand(liaCtl())
 
 	// add OPA commands to root
 	opa := cmd.Command(brand)
@@ -149,6 +262,15 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 			c.Flags().Var(logFormat, "log-format", "set log format") // NOTE(sr): we don't support "text" here
 
 			root.AddCommand(setDefaults(c))
+
+		case "test":
+			addLicenseFlags(c, lparams)
+
+			c.Flags().VarP(logLevel, "log-level", "l", "set log level")
+			c.Flags().Var(logFormat, "log-format", "set log format") // NOTE(sr): we don't support "text" here
+
+			root.AddCommand(setDefaults(c))
+
 		case "exec":
 			addLicenseFlags(c, lparams)
 			addLicenseFallbackFlags(c)
@@ -167,20 +289,6 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	root.AddCommand(liaCtl())
 	root.AddCommand(regal())
 
-	// NOTE(sr): viper supports a bunch of config file formats, but let's decide
-	//           which formats we'd like to support, not just take them all as-is.
-	viper.SupportedExts = []string{"yaml"}
-
-	// NOTE(sr): for config file debugging, use this
-	// cfg := viper.NewWithOptions(viper.WithLogger(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))))
-	cfg := viper.New()
-	cfg.SetConfigName(".styra")
-	cfg.SetConfigType("yaml")
-	paths := []string{"."}
-	if p := repoRootPath(); p != "" {
-		paths = append(paths, p)
-	}
-	paths = append(paths, "$HOME")
 	root.AddCommand(loginCmd(cfg, paths))
 	root.AddCommand(pullCmd(cfg, paths))
 

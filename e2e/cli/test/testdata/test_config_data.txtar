@@ -1,0 +1,29 @@
+# This test ensures that `eopa test` correctly accepts extra data to insert
+# into the `data.` hierarchy from the .styra.yaml config file.
+#
+# We also make sure to test loading more than one path, one of which is a
+# directory, to make sure nothing in the way we handled the config file
+# broke that functionality.
+exec eopa test ./test1.rego
+! stderr .
+cmp stdout exp/stdout
+-- test1.rego --
+package testpkg
+test_data_access_1 {
+	"abc" == data.foo.bar
+}
+test_data_access_2 {
+	"quux" == data.coolstuff.foobar
+}
+-- dummy1.rego --
+package foo
+bar := "abc"
+-- cooldir/dummy2.rego --
+package coolstuff
+foobar := "quux"
+-- .styra.yaml --
+data:
+  ./dummy1.rego
+  ./cooldir
+-- exp/stdout --
+PASS: 2/2

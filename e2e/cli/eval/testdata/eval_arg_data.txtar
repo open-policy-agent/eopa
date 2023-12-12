@@ -1,0 +1,13 @@
+# This test ensures that `eopa eval` correctly accepts extra data to insert
+# into the `data.` hierarchy from the `--data` flag. This functionality
+# is part of baseline OPA, but this is a good sanity check.
+exec eopa eval -f pretty --data dummy:./dummy1.rego 'data.foo'
+! stderr .
+cmp stdout exp/stdout
+-- dummy1.rego --
+package foo
+bar := "abc"
+-- exp/stdout --
+{
+  "bar": "abc"
+}
