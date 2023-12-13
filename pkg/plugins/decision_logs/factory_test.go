@@ -59,6 +59,23 @@ func withResources(exp map[string]any) func(testing.TB, any, error) {
 	}
 }
 
+func withExtra(exp []map[string]any) func(testing.TB, any, error) {
+	return withExtraForOutput(0, exp)
+}
+
+func withExtraForOutput(i int, exp []map[string]any) func(testing.TB, any, error) {
+	return func(tb testing.TB, c any, err error) {
+		tb.Helper()
+		if err != nil {
+			tb.Fatalf("unexpected error: %v", err)
+		}
+		act := c.(Config).outputs[i].(extraProcessing).Extra()
+		if d := cmp.Diff(exp, act); d != "" {
+			tb.Errorf("Extra mismatch for output %d (-want +got):\n%s", i, d)
+		}
+	}
+}
+
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		note   string
@@ -168,6 +185,55 @@ output:
 			},
 		},
 		{
+			note: "per-output drop/mask: one output",
+			config: `output:
+- type: console
+  mask_decision: system/mask
+  drop_decision: system/drop
+`,
+			checks: func(t testing.TB, a any, err error) {
+				isConfig(Config{
+					memoryBuffer: &memBufferOpts{
+						MaxBytes: defaultMemoryMaxBytes,
+					},
+					outputs: []output{
+						&outputConsoleOpts{OutputProcessors: &OutputProcessors{Drop: "system/drop", Mask: "system/mask"}},
+					},
+				})
+				withExtra([]map[string]any{
+					{"dl_drop": map[string]any{"decision": "system/drop"}},
+					{"dl_mask": map[string]any{"decision": "system/mask"}},
+				})(t, a, err)
+			},
+		},
+		{
+			note: "per-output drop/mask: two outputs, mixed",
+			config: `output:
+- type: console
+  mask_decision: system/mask
+- type: splunk
+  drop_decision: system/drop
+`,
+			checks: func(t testing.TB, a any, err error) {
+				isConfig(Config{
+					memoryBuffer: &memBufferOpts{
+						MaxBytes: defaultMemoryMaxBytes,
+					},
+					outputs: []output{
+						&outputConsoleOpts{OutputProcessors: &OutputProcessors{Mask: "system/mask"}},
+						&outputSplunkOpts{OutputProcessors: &OutputProcessors{Drop: "system/drop"}},
+					},
+				})(t, a, err)
+				withExtra([]map[string]any{
+					{"dl_mask": map[string]any{"decision": "system/mask"}},
+				})(t, a, err)
+				withExtraForOutput(1, []map[string]any{
+					{"dl_drop": map[string]any{"decision": "system/drop"}},
+					{"mapping": `{ "event": this, "time": timestamp_unix() }`},
+				})(t, a, err)
+			},
+		},
+		{
 			note: "no output",
 			config: `
 output: []
@@ -235,6 +301,40 @@ output:
 						Period:   "10ms",
 						Format:   "array",
 						Compress: true,
+					},
+				}},
+			}),
+		},
+		{
+			note: "service output, per-output drop/mask",
+			mgr: `services:
+- name: knownservice
+  url: "http://knownservice/prefix"
+  response_header_timeout_seconds: 12
+`,
+			config: `
+output:
+  type: service
+  service: knownservice
+  resource: decisionlogs
+  drop_decision: system/drop
+  mask_decision: system/mask
+`,
+			checks: isConfig(Config{
+				memoryBuffer: &memBufferOpts{
+					MaxBytes: defaultMemoryMaxBytes,
+				},
+				outputs: []output{&outputHTTPOpts{
+					URL:     "http://knownservice/prefix/decisionlogs",
+					Timeout: "12s",
+					Batching: &batchOpts{
+						Period:   "10ms",
+						Format:   "array",
+						Compress: true,
+					},
+					OutputProcessors: &OutputProcessors{
+						Drop: "system/drop",
+						Mask: "system/mask",
 					},
 				}},
 			}),
@@ -474,7 +574,7 @@ output:
 						"output": map[string]any{
 							"http_client": map[string]any{
 								"url":        "https://logs.logs.logs:1234/post",
-								"rate_limit": ResourceKey([]byte("https://logs.logs.logs:1234/post")),
+								"rate_limit": ResourceKey("https://logs.logs.logs:1234/post"),
 							},
 						},
 					},
@@ -483,7 +583,7 @@ output:
 				withResources(map[string]any{
 					"rate_limit_resources": []map[string]any{
 						{
-							"label": ResourceKey([]byte("https://logs.logs.logs:1234/post")),
+							"label": ResourceKey("https://logs.logs.logs:1234/post"),
 							"local": map[string]any{
 								"count":    200,
 								"interval": "1s",

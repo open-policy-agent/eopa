@@ -45,8 +45,8 @@ func (rs *resources) Merge(r *resources) *resources {
 	return rs
 }
 
-func ResourceKey(input []byte) string {
-	hash := md5.Sum(input)
+func ResourceKey(input string) string {
+	hash := md5.Sum([]byte(input))
 	return hex.EncodeToString(hash[:])
 }
 
@@ -57,7 +57,9 @@ func (x outputs) Benthos() map[string]any {
 	for i, y := range x {
 		outputs[i] = y.Benthos()
 		if ep, ok := y.(extraProcessing); ok {
-			outputs[i]["processors"] = ep.Extra()
+			if ex := ep.Extra(); len(ex) > 0 {
+				outputs[i]["processors"] = ex
+			}
 		}
 	}
 	return map[string]any{
@@ -122,6 +124,8 @@ type outputServiceOpts struct {
 	Service  string `json:"service"`
 	Resource string `json:"resource"`
 	// TODO(sr): add retry
+
+	*OutputProcessors
 }
 
 type outputHTTPOpts struct {
@@ -134,6 +138,8 @@ type outputHTTPOpts struct {
 	Batching  *batchOpts      `json:"batching,omitempty"`
 	Retry     *retryOpts      `json:"retry,omitempty"`
 	RateLimit *rateLimitOpts  `json:"rate_limit,omitempty"`
+
+	*OutputProcessors
 }
 
 type httpAuthOAuth2 struct {
@@ -171,6 +177,7 @@ type certs struct {
 	Key  string `json:"key"`
 	Cert string `json:"cert"`
 }
+
 type rateLimitOpts struct {
 	Count    int    `json:"count"`
 	Interval string `json:"interval"`
@@ -214,7 +221,7 @@ func (s *outputHTTPOpts) Benthos() map[string]any {
 		m["batching"] = b.Benthos()
 	}
 	if s.RateLimit != nil {
-		m["rate_limit"] = ResourceKey([]byte(s.URL))
+		m["rate_limit"] = ResourceKey(s.URL)
 	}
 	if r := s.Retry; r != nil {
 		for key, value := range r.Benthos() {
@@ -231,12 +238,33 @@ func (s *outputHTTPOpts) Benthos() map[string]any {
 
 func (s *outputHTTPOpts) Resources() *resources {
 	if s.RateLimit != nil {
-		return s.RateLimit.Resources(ResourceKey([]byte(s.URL)))
+		return s.RateLimit.Resources(ResourceKey(s.URL))
 	}
 	return nil
 }
 
-type outputConsoleOpts struct{}
+type OutputProcessors struct {
+	Mask string `json:"mask_decision,omitempty"`
+	Drop string `json:"drop_decision,omitempty"`
+}
+
+func (s *OutputProcessors) Extra() []map[string]any {
+	if s == nil {
+		return nil
+	}
+	extras := []map[string]any{}
+	if s.Drop != "" {
+		extras = append(extras, map[string]any{drop: map[string]any{"decision": s.Drop}})
+	}
+	if s.Mask != "" {
+		extras = append(extras, map[string]any{mask: map[string]any{"decision": s.Mask}})
+	}
+	return extras
+}
+
+type outputConsoleOpts struct {
+	*OutputProcessors
+}
 
 func (*outputConsoleOpts) Benthos() map[string]any {
 	return map[string]any{"stdout": struct{}{}}
@@ -250,6 +278,8 @@ type outputKafkaOpts struct {
 	SASL    []saslOpts `json:"sasl,omitempty"`
 
 	Batching *batchOpts `json:"batching,omitempty"`
+
+	*OutputProcessors
 
 	// NOTE(sr): There are just too many configurables if we care about all of them
 	// at once. Let's introduce batching when someone needs it.
@@ -384,6 +414,8 @@ type outputSplunkOpts struct {
 	TLS      *tlsOpts   `json:"tls,omitempty"`
 	Batching *batchOpts `json:"batching,omitempty"`
 
+	*OutputProcessors
+
 	// TODO(sr): rate limit, retries, max_in_flight
 	tls *sinkAuthTLS
 }
@@ -414,9 +446,7 @@ var _ extraProcessing = (*outputSplunkOpts)(nil)
 
 // Splunk expects payloads that at least have "time" (epoch) and "event" set
 func (s *outputSplunkOpts) Extra() []map[string]any {
-	return []map[string]any{
-		{"mapping": `{ "event": this, "time": timestamp_unix() }`},
-	}
+	return append(s.OutputProcessors.Extra(), map[string]any{"mapping": `{ "event": this, "time": timestamp_unix() }`})
 }
 
 type outputS3Opts struct {
@@ -430,6 +460,8 @@ type outputS3Opts struct {
 
 	TLS      *tlsOpts   `json:"tls,omitempty"`
 	Batching *batchOpts `json:"batching,omitempty"`
+
+	*OutputProcessors
 
 	tls *sinkAuthTLS
 }

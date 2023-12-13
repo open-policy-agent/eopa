@@ -133,6 +133,7 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 			Compress: true,
 			Period:   "10ms", // TODO(sr): make this configurable for services
 		}
+		outputHTTP.OutputProcessors = service.OutputProcessors
 
 		if oauth2 := cfg.Credentials.OAuth2; oauth2 != nil {
 			outputHTTP.OAuth2 = &httpAuthOAuth2{

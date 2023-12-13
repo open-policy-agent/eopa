@@ -249,7 +249,10 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (fjso
 	case int64:
 		return o.MakeNumberInt(x), nil
 	case uint64:
-		notImplemented()
+		if x < uint64(len(prebuiltInts)) {
+			return prebuiltInts[x], nil
+		}
+		return fjson.NewFloat(gojson.Number(strconv.FormatUint(x, 10))), nil
 	case float64:
 		return o.MakeNumberFloat(x), nil
 	case int:

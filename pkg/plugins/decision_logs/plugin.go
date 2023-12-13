@@ -3,15 +3,29 @@ package decisionlogs
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
+	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/plugins/logs"
+	"github.com/open-policy-agent/opa/storage"
 )
 
 const DLPluginName = "eopa_dl" // OPA DL plugin
 
+type Logger struct {
+	manager   *plugins.Manager
+	mtx       sync.Mutex
+	config    Config
+	stream    *stream
+	callbacks []trigger
+}
+
 var _ logs.Logger = (*Logger)(nil)
+
+type trigger func(storage.Transaction) error
+type registerer func(trigger)
 
 func (p *Logger) Start(ctx context.Context) error {
 	if logs.Lookup(p.manager) == nil {
@@ -27,14 +41,35 @@ func (p *Logger) Start(ctx context.Context) error {
 		buffer = p.config.memoryBuffer
 	}
 
-	p.stream, err = NewStream(ctx, buffer, p.config.outputs, p.manager.Logger())
+	// clear out callbacks
+	p.callbacks = nil
+	reg := func(t trigger) {
+		if err := storage.Txn(ctx, p.manager.Store, storage.TransactionParams{}, func(txn storage.Transaction) error {
+			return t(txn)
+		}); err != nil {
+			p.manager.Logger().Error("compiler trigger: %v", err)
+		}
+		p.callbacks = append(p.callbacks, t)
+	}
+
+	p.stream, err = newStream(ctx, buffer, p.config.outputs, p.manager, reg, p.manager.Logger())
 	if err != nil {
 		return err
 	}
+
+	p.manager.RegisterCompilerTrigger(p.compilerTrigger)
 	go p.stream.Run(ctx)
 
 	p.manager.UpdatePluginStatus(DLPluginName, &plugins.Status{State: plugins.StateOK})
 	return nil
+}
+
+func (p *Logger) compilerTrigger(txn storage.Transaction) {
+	for _, cb := range p.callbacks {
+		if err := cb(txn); err != nil {
+			p.manager.Logger().Error("compiler trigger: %v", err)
+		}
+	}
 }
 
 func (p *Logger) Log(ctx context.Context, e logs.EventV1) error {
@@ -71,14 +106,14 @@ func (p *Logger) Log(ctx context.Context, e logs.EventV1) error {
 		"nd_builtin_cache": e.NDBuiltinCache,
 	} {
 		if v != nil {
-			ev[k] = v
+			ev[k] = *v
 		}
 	}
 	if e.RequestID != 0 {
 		ev["req_id"] = e.RequestID
 	}
 	if !e.Timestamp.IsZero() {
-		ev["timestamp"] = e.Timestamp // TODO(sr): encoding
+		ev["timestamp"] = e.Timestamp
 	}
 	if len(e.Erased) > 0 {
 		ev["erased"] = e.Erased
@@ -99,13 +134,6 @@ func (p *Logger) Log(ctx context.Context, e logs.EventV1) error {
 	return p.stream.Consume(ctx, ev)
 }
 
-type Logger struct {
-	manager *plugins.Manager
-	mtx     sync.Mutex
-	config  Config
-	stream  Stream
-}
-
 func (p *Logger) Stop(ctx context.Context) {
 	p.stream.Stop(ctx)
 	p.manager.UpdatePluginStatus(DLPluginName, &plugins.Status{State: plugins.StateNotReady})
@@ -122,4 +150,18 @@ func (p *Logger) Reconfigure(ctx context.Context, config interface{}) {
 		p.manager.UpdatePluginStatus(DLPluginName, &plugins.Status{State: plugins.StateErr})
 		p.manager.Logger().Error("Reconfigure: %v", err)
 	}
+}
+
+// TODO: validate config beforehand
+// parseDataPath returns a ref from the slash separated path s rooted at data.
+// All path segments are treated as identifier strings.
+func parseDataPath(s string) (ast.Ref, error) {
+	s = "/" + strings.TrimPrefix(s, "/")
+
+	path, ok := storage.ParsePath(s)
+	if !ok {
+		return nil, fmt.Errorf("invalid path: %s", s)
+	}
+
+	return path.Ref(ast.DefaultRootDocument), nil
 }

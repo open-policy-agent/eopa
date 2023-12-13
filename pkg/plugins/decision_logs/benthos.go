@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/open-policy-agent/opa/logging"
+	"github.com/open-policy-agent/opa/plugins"
 )
 
 type Stream interface {
@@ -28,11 +29,43 @@ type Stream interface {
 }
 
 const tracing = "eopa_otel_global"
+const drop = "dl_drop"
+const mask = "dl_mask"
+
+// NOTE(sr): These regretably have to be a global. It's OK since we only ever
+// instantiate one stream. Also, we're limiting the usage to this specific point:
+// NewStream will set them, the registered constructors for `dl_drop` and `dl_mask`
+// will read them (from init()).
+//
+// NOTE(sr): `registerer` needs to be a separate thing because the plugins.Manager
+// won't let us _unregister_ a callback. So if a config changes and we no longer
+// have that specific drop/mask processor, we wouldn't be able to unregister the
+// previous instances' callbacks. Instead, we only register the Logger plugin with
+// the plugins.Manager, and have the Logger plugin take care of calling all the
+// callbacks.
+var (
+	reg registerer
+	pm  *plugins.Manager
+)
 
 func init() {
-	service.RegisterOtelTracerProvider(tracing, &service.ConfigSpec{}, func(_ *service.ParsedConfig) (trace.TracerProvider, error) {
+	service.RegisterOtelTracerProvider(tracing, service.NewConfigSpec(), func(*service.ParsedConfig) (trace.TracerProvider, error) {
 		return otel.GetTracerProvider(), nil
 	})
+
+	decisionConfig := service.NewConfigSpec().Field(
+		service.NewStringField("decision"),
+	)
+	if err := service.RegisterProcessor(drop, decisionConfig, func(pc *service.ParsedConfig, _ *service.Resources) (service.Processor, error) {
+		return NewDrop(pc, pm, reg)
+	}); err != nil {
+		panic(err)
+	}
+	if err := service.RegisterProcessor(mask, decisionConfig, func(pc *service.ParsedConfig, _ *service.Resources) (service.Processor, error) {
+		return NewMask(pc, pm, reg)
+	}); err != nil {
+		panic(err)
+	}
 }
 
 type stream struct {
@@ -46,11 +79,15 @@ func (s *stream) Consume(ctx context.Context, msg map[string]any) error {
 	return s.prod(ctx, m.WithContext(ctx))
 }
 
-func NewStream(_ context.Context, buf fmt.Stringer, out output, logger logging.Logger) (Stream, error) {
+func newStream(_ context.Context, buf fmt.Stringer, out output, p *plugins.Manager, r0 registerer, logger logging.Logger) (*stream, error) {
+	reg = r0
+	pm = p
+	st := &stream{}
 	builder := service.NewStreamBuilder()
 	builder.SetPrintLogger(&wrap{logger})
 
-	produce, err := builder.AddProducerFunc()
+	var err error
+	st.prod, err = builder.AddProducerFunc()
 	if err != nil {
 		return nil, err
 	}
@@ -98,12 +135,12 @@ func NewStream(_ context.Context, buf fmt.Stringer, out output, logger logging.L
 		}
 	}
 
-	s, err := builder.Build()
+	st.Stream, err = builder.Build()
 	if err != nil {
 		return nil, err
 	}
 
-	return &stream{Stream: s, prod: produce}, nil
+	return st, nil
 }
 
 type wrap struct {
