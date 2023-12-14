@@ -183,10 +183,6 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 				go lic.ValidateLicenseOrDie(lparams) // calls os.Exit if license isn't valid
 
 			case "test":
-				if lic == nil {
-					return nil
-				}
-
 				lvl, _ := internal_logging.GetLevel(logLevel.String())
 				format := internal_logging.GetFormatter(logFormat.String(), "")
 				lic.SetFormatter(format)
@@ -230,10 +226,6 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 				cmd.RunE = func(cmd *cobra.Command, args []string) error {
 					return oldRunE(cmd, append(args, extraDataArgs...))
 				}
-
-				// do the license validate and activate asynchronously; so user doesn't have to wait
-				go lic.ValidateLicenseOrDie(lparams) // calls os.Exit if license isn't valid
-
 			}
 			return nil
 		},
