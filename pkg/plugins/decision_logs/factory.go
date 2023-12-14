@@ -165,6 +165,30 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 				outputHTTP.TLS.RootCAs = string(caCert)
 			}
 		}
+		if bearer := cfg.Credentials.Bearer; bearer != nil {
+			var token string
+			if bearer.Token != "" {
+				token = bearer.Token
+			} else if tp := bearer.TokenPath; tp != "" {
+				// TODO(sr): Think about this: OPA will read the token from disk
+				// for every request, allowing to rotate it. We only read it during
+				// init here.
+				tok, err := os.ReadFile(tp)
+				if err != nil {
+					return nil, err
+				}
+				token = strings.TrimSpace(string(tok))
+			}
+			scheme := "Bearer "
+			if s := bearer.Scheme; s != "" {
+				scheme = s + " "
+			}
+
+			if outputHTTP.Headers == nil {
+				outputHTTP.Headers = make(map[string]string, 1)
+			}
+			outputHTTP.Headers["Authorization"] = scheme + token
+		}
 		return outputHTTP, nil
 	case "console":
 		outputConsole := new(outputConsoleOpts)

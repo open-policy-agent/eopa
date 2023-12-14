@@ -378,24 +378,51 @@ output:
   type: service
   service: knownservice
   resource: decisionlogs`,
-			checks: isConfig(Config{
-				memoryBuffer: &memBufferOpts{
-					MaxBytes: defaultMemoryMaxBytes,
-				},
-				outputs: []output{&outputHTTPOpts{
-					URL:     "http://knownservice/prefix/decisionlogs",
-					Timeout: "10s",
-					Headers: map[string]string{
-						"content-type": "application/foobear",
-						"x-token":      "y",
+			checks: func(t testing.TB, a any, err error) {
+				isConfig(Config{
+					memoryBuffer: &memBufferOpts{
+						MaxBytes: defaultMemoryMaxBytes,
 					},
-					Batching: &batchOpts{
-						Period:   "10ms",
-						Format:   "array",
-						Compress: true,
+					outputs: []output{&outputHTTPOpts{
+						URL:     "http://knownservice/prefix/decisionlogs",
+						Timeout: "10s",
+						Headers: map[string]string{
+							"content-type": "application/foobear",
+							"x-token":      "y",
+						},
+						Batching: &batchOpts{
+							Period:   "10ms",
+							Format:   "array",
+							Compress: true,
+						},
+					}},
+				})(t, a, err)
+
+				isBenthos(map[string]any{
+					"drop_on": map[string]any{
+						"error": true,
+						"output": map[string]any{
+							"http_client": map[string]any{
+								"batching": map[string]any{
+									"byte_size": 0,
+									"count":     0,
+									"period":    "10ms",
+									"processors": []map[string]any{
+										{"archive": map[string]any{"format": "json_array"}},
+										{"compress": map[string]any{"algorithm": "gzip"}},
+									},
+								},
+								"url":     "http://knownservice/prefix/decisionlogs",
+								"timeout": "10s",
+								"headers": map[string]string{
+									"content-type": "application/foobear",
+									"x-token":      "y",
+								},
+							},
+						},
 					},
-				}},
-			}),
+				})(t, a, err)
+			},
 		},
 		{
 			note: "service output with oauth2",
@@ -478,17 +505,68 @@ output:
 			}),
 		},
 		{
-			note: "http output",
+			note: "service output with bearer token",
+			mgr: `services:
+- name: knownservice
+  url: "http://knownservice/prefix"
+  credentials:
+    bearer:
+      scheme: secret
+      token: opensesame
+`,
 			config: `
 output:
-  type: http
-  url: https://logs.logs.logs:1234/post`,
+  type: service
+  service: knownservice
+  resource: decisionlogs`,
 			checks: isConfig(Config{
 				memoryBuffer: &memBufferOpts{
 					MaxBytes: defaultMemoryMaxBytes,
 				},
-				outputs: []output{&outputHTTPOpts{URL: "https://logs.logs.logs:1234/post"}},
+				outputs: []output{&outputHTTPOpts{
+					URL:     "http://knownservice/prefix/decisionlogs",
+					Timeout: "10s",
+					Batching: &batchOpts{
+						Period:   "10ms",
+						Format:   "array",
+						Compress: true,
+					},
+					Headers: map[string]string{"Authorization": "secret opensesame"},
+				}},
 			}),
+		},
+		{
+			note: "http output",
+			config: `
+output:
+  type: http
+  url: https://logs.logs.logs:1234/post
+  headers:
+    foo: bear
+`,
+			checks: func(t testing.TB, a any, err error) {
+				isConfig(Config{
+					memoryBuffer: &memBufferOpts{
+						MaxBytes: defaultMemoryMaxBytes,
+					},
+					outputs: []output{&outputHTTPOpts{
+						URL:     "https://logs.logs.logs:1234/post",
+						Headers: map[string]string{"foo": "bear"},
+					}},
+				})(t, a, err)
+
+				isBenthos(map[string]any{
+					"drop_on": map[string]any{
+						"error": true,
+						"output": map[string]any{
+							"http_client": map[string]any{
+								"url":     "https://logs.logs.logs:1234/post",
+								"headers": map[string]string{"foo": "bear"},
+							},
+						},
+					},
+				})(t, a, err)
+			},
 		},
 		{
 			note: "http retries",

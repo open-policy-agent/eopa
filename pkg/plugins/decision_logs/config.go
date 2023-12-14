@@ -208,6 +208,9 @@ func (s *outputHTTPOpts) Benthos() map[string]any {
 	m := map[string]any{
 		"url": s.URL,
 	}
+	if len(s.Headers) > 0 {
+		m["headers"] = s.Headers
+	}
 	if s.Timeout != "" {
 		m["timeout"] = s.Timeout
 	}

@@ -470,6 +470,10 @@ coin if rand.intn("coin", 2)
 services:
 - name: "dl-sink"
   url: "%s/prefix"
+  credentials:
+    bearer:
+      token: opensesame
+      scheme: Secret
 decision_logs:
   plugin: eopa_dl
 plugins:
@@ -489,6 +493,8 @@ plugins:
     output:
       type: http
       url: "%s/prefix/logs"
+      headers:
+        Authorization: Secret opensesame
 `,
 		},
 	} {
@@ -498,6 +504,7 @@ plugins:
 				switch {
 				case r.URL.Path != "/prefix/logs":
 				case r.Method != http.MethodPost:
+				case r.Header.Get("Authorization") != "Secret opensesame":
 				default: // all matches
 					var src io.ReadCloser
 					if tc.compressed {
