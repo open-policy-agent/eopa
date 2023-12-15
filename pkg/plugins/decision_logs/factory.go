@@ -3,6 +3,7 @@ package decisionlogs
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
@@ -127,7 +128,17 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 		} else {
 			outputHTTP.Timeout = "10s"
 		}
-		outputHTTP.Headers = cfg.Headers
+
+		// 3 = content-type, content-encoding, and maybe "Authorization" below
+		outputHTTP.Headers = make(map[string]string, 3+len(cfg.Headers))
+		outputHTTP.Headers["Content-Type"] = "application/json" // default, could be overridden
+		outputHTTP.Headers["Content-Encoding"] = "gzip"
+
+		for k, v := range cfg.Headers {
+			// NOTE(sr): canonicalize, so we can't end up with "content-type" AND "Content-Type"
+			outputHTTP.Headers[http.CanonicalHeaderKey(k)] = v
+		}
+
 		outputHTTP.Batching = &batchOpts{
 			Format:   "array",
 			Compress: true,

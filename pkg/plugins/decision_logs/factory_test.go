@@ -302,6 +302,10 @@ output:
 						Format:   "array",
 						Compress: true,
 					},
+					Headers: map[string]string{
+						"Content-Type":     "application/json",
+						"Content-Encoding": "gzip",
+					},
 				}},
 			}),
 		},
@@ -332,6 +336,10 @@ output:
 						Format:   "array",
 						Compress: true,
 					},
+					Headers: map[string]string{
+						"Content-Type":     "application/json",
+						"Content-Encoding": "gzip",
+					},
 					OutputProcessors: &OutputProcessors{
 						Drop: "system/drop",
 						Mask: "system/mask",
@@ -361,6 +369,10 @@ output:
 						Format:   "array",
 						Compress: true,
 					},
+					Headers: map[string]string{
+						"Content-Type":     "application/json",
+						"Content-Encoding": "gzip",
+					},
 				}},
 			}),
 		},
@@ -387,8 +399,9 @@ output:
 						URL:     "http://knownservice/prefix/decisionlogs",
 						Timeout: "10s",
 						Headers: map[string]string{
-							"content-type": "application/foobear",
-							"x-token":      "y",
+							"Content-Type":     "application/foobear",
+							"Content-Encoding": "gzip",
+							"X-Token":          "y",
 						},
 						Batching: &batchOpts{
 							Period:   "10ms",
@@ -415,8 +428,9 @@ output:
 								"url":     "http://knownservice/prefix/decisionlogs",
 								"timeout": "10s",
 								"headers": map[string]string{
-									"content-type": "application/foobear",
-									"x-token":      "y",
+									"Content-Type":     "application/foobear",
+									"Content-Encoding": "gzip",
+									"X-Token":          "y",
 								},
 							},
 						},
@@ -462,6 +476,10 @@ output:
 						ClientSecret: "sesamememe",
 						Scopes:       []string{"foo", "bar"},
 					},
+					Headers: map[string]string{
+						"Content-Encoding": "gzip",
+						"Content-Type":     "application/json",
+					},
 				}},
 			}),
 		},
@@ -501,6 +519,10 @@ output:
 						},
 						RootCAs: "ca\n",
 					},
+					Headers: map[string]string{
+						"Content-Encoding": "gzip",
+						"Content-Type":     "application/json",
+					},
 				}},
 			}),
 		},
@@ -531,7 +553,11 @@ output:
 						Format:   "array",
 						Compress: true,
 					},
-					Headers: map[string]string{"Authorization": "secret opensesame"},
+					Headers: map[string]string{
+						"Authorization":    "secret opensesame",
+						"Content-Encoding": "gzip",
+						"Content-Type":     "application/json",
+					},
 				}},
 			}),
 		},

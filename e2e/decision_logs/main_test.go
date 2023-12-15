@@ -14,6 +14,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -495,16 +496,21 @@ plugins:
       url: "%s/prefix/logs"
       headers:
         Authorization: Secret opensesame
+        Content-Type: application/json
 `,
 		},
 	} {
 		t.Run(tc.note, func(t *testing.T) {
 			buf := bytes.Buffer{}
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				d, _ := httputil.DumpRequest(r, !tc.compressed)
+				t.Log(string(d))
 				switch {
 				case r.URL.Path != "/prefix/logs":
 				case r.Method != http.MethodPost:
 				case r.Header.Get("Authorization") != "Secret opensesame":
+				case r.Header.Get("Content-Type") != "application/json":
+				case tc.compressed && r.Header.Get("Content-Encoding") != "gzip":
 				default: // all matches
 					var src io.ReadCloser
 					if tc.compressed {
