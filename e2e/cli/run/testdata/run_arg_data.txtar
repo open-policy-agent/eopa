@@ -1,0 +1,37 @@
+# This test ensures that the `eopa run` command correctly accepts extra data to
+# insert into the `data.` hierarchy from argv.
+#
+# NOTE: port 61595 was chosen at random, so that if we run in parallel with
+# other tests, we won't fail to bind to the interface.
+
+# we expect a nonzero exit code on windows
+[windows] ! exec eopa run --log-level error --addr :61595 --server dummy1.rego cooldir &eopa&
+[!windows]  exec eopa run --log-level error --addr :61595 --server dummy1.rego cooldir &eopa&
+! stdout .
+! stderr .
+
+# block until the server reports health OK
+httpwait 'http://localhost:61595/health' '{}'
+
+# query out data we expect to be present
+exec curl -Ss --request GET --url http://localhost:61595/v1/data/foo/bar
+! stderr .
+cmp stdout exp/stdout_bar
+exec curl -Ss --request GET --url http://localhost:61595/v1/data/coolstuff/foobar
+! stderr .
+cmp stdout exp/stdout_foobar
+
+stop eopa
+! stdout .
+! stderr .
+
+-- dummy1.rego --
+package foo
+bar := "abc"
+-- cooldir/dummy2.rego --
+package coolstuff
+foobar := "quux"
+-- exp/stdout_bar --
+{"result":"abc"}
+-- exp/stdout_foobar --
+{"result":"quux"}

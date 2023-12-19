@@ -221,11 +221,54 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 				// shenanigans afoot.
 				//
 				// -- CAD 2023-12-07
-				extraDataArgs := cfg.GetStringSlice("data")
+				extraDataArgs := cfg.GetStringSlice(dataKey)
+
+				bundle, err := cmd.Flags().GetBool("bundle")
+				if err != nil {
+					return err
+				}
+				if (len(extraDataArgs) > 0) && bundle {
+					logger.Warn("--bundle is asserted and %d additional data paths picked up from config file, this is likely to cause an overlapping roots error", len(extraDataArgs))
+				}
+
 				oldRunE := cmd.RunE
 				cmd.RunE = func(cmd *cobra.Command, args []string) error {
 					return oldRunE(cmd, append(args, extraDataArgs...))
 				}
+
+			case "run":
+				lvl, _ := internal_logging.GetLevel(logLevel.String())
+				format := internal_logging.GetFormatter(logFormat.String(), "")
+				lic.SetFormatter(format)
+				lic.SetLevel(lvl)
+
+				logger, err := getLogger(logLevel.String(), logFormat.String(), "")
+				if err != nil {
+					return err
+				}
+
+				selectedPath, _ := cmd.Flags().GetString(styraConfig)
+				if err := readConfig(selectedPath, cfg, paths, logger); err != nil {
+					return err
+				}
+
+				// See corresponding implementation for `eopa
+				// test` above.
+				extraDataArgs := cfg.GetStringSlice(dataKey)
+
+				bundle, err := cmd.Flags().GetBool("bundle")
+				if err != nil {
+					return err
+				}
+				if (len(extraDataArgs) > 0) && bundle {
+					logger.Warn("--bundle is asserted and %d additional data paths picked up from config file, this is likely to cause an overlapping roots error", len(extraDataArgs))
+				}
+
+				oldRunE := cmd.RunE
+				cmd.RunE = func(cmd *cobra.Command, args []string) error {
+					return oldRunE(cmd, append(args, extraDataArgs...))
+				}
+
 			}
 			return nil
 		},

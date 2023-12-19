@@ -1,0 +1,27 @@
+# This test checks for behavior when loading data from the config file is
+# combined with the --bundle option. We expect this should break because
+# ./test1.rego isn't a valid bundle.
+
+! exec eopa test --bundle ./test1.rego
+stderr '^unable to load bundle'
+stderr '.*warning.*'
+stderr '.*additional data paths picked up from config file, this is likely to cause an overlapping roots error.*'
+
+-- test1.rego --
+package testpkg
+test_data_access_1 {
+	"abc" == data.foo.bar
+}
+test_data_access_2 {
+	"quux" == data.coolstuff.foobar
+}
+-- niftydir/dummy1.rego --
+package foo
+bar := "abc"
+-- cooldir/dummy2.rego --
+package coolstuff
+foobar := "quux"
+-- .styra.yaml --
+data:
+  ./niftydir
+  ./cooldir

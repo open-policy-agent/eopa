@@ -1,0 +1,24 @@
+# This test checks for behavior when loading data from the config file is
+# combined with the --bundle option. We expect this should break during
+# because a plain .rego file is not a valid bundle.
+#
+# NOTE: port 52463 was chosen at random, so that if we run in parallel with
+# other tests, we won't fail to bind to the interface.
+
+! exec eopa run --log-level error --addr :52463 --server --bundle
+cmp stdout exp/stdout
+stderr '.*warning.*'
+stderr '.*additional data paths picked up from config file, this is likely to cause an overlapping roots error.*'
+
+-- dummy1.rego --
+package foo
+bar := "abc"
+-- cooldir/dummy2.rego --
+package coolstuff
+foobar := "quux"
+-- .styra.yaml --
+data:
+  ./dummy1.rego
+  ./cooldir
+-- exp/stdout --
+run error: load error: bundle ./dummy1.rego: bundle read failed: archive read failed: gzip: invalid header

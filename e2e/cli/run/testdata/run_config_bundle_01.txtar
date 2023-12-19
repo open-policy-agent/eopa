@@ -1,0 +1,22 @@
+# This test checks for behavior when loading data from the config file is
+# combined with the --bundle option. We expect this should break during
+# bundle merging, since no bundle roots have been explicitly configured.
+#
+# NOTE: port 41413 was chosen at random, so that if we run in parallel with
+# other tests, we won't fail to bind to the interface.
+
+! exec eopa run --log-level error --addr :41413 --server --bundle
+stdout '^run error: initialization error: detected overlapping roots'
+stderr '.*warning.*'
+stderr '.*additional data paths picked up from config file, this is likely to cause an overlapping roots error.*'
+
+-- niftydir/dummy1.rego --
+package foo
+bar := "abc"
+-- cooldir/dummy2.rego --
+package coolstuff
+foobar := "quux"
+-- .styra.yaml --
+data:
+  ./niftydir
+  ./cooldir
