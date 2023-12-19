@@ -6,6 +6,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 
@@ -24,6 +25,7 @@ import (
 func TestNDBCache(t *testing.T) {
 	ndbc := builtins.NDBCache{}
 	r := rego.New(
+		rego.Target(rego_vm.Target),
 		rego.Query("data.x.p = x"),
 		rego.Module("test.rego", `package x
 import future.keywords.if
@@ -65,6 +67,7 @@ func TestStorageTransactionRead(t *testing.T) {
 			defer store.Abort(ctx, txn)
 
 			pq, err := rego.New(
+				rego.Target(rego_vm.Target),
 				rego.Store(store),
 				rego.Transaction(txn),
 				rego.Query("data.foo = x"),
@@ -167,26 +170,154 @@ p := numbers.range(0, 10)
 func TestEvalInputWithCustomType(t *testing.T) {
 	ctx := context.Background()
 
-	type xt map[string][]string
-	var x xt = map[string][]string{"foo": {"bar", "baz"}}
-	r := rego.New(
-		rego.Target(rego_vm.Target),
-		rego.Query("result = input"),
-		rego.Input(x),
+	type (
+		xt map[string][]string
+		yt []bool
+		zt string
+		ut [2]bool
+		wt struct {
+			Foo string `json:"foo"`
+		}
 	)
 
-	pr, err := r.PrepareForEval(ctx)
-	if err != nil {
-		t.Fatal(err)
+	now := time.Now()
+	bs, _ := now.MarshalText()
+	expTS := string(bs)
+
+	err := ast.NewError(
+		ast.TypeErr,
+		ast.NewLocation([]byte(""), "foo.rego", 1, 2),
+		"something went wrong: %s",
+		"ohno",
+	)
+	err.Details = &ast.RefErrInvalidDetail{
+		Ref:   ast.MustParseRef("data[1]"),
+		Pos:   1,
+		Have:  types.N,
+		OneOf: []ast.Value{ast.String("system")},
 	}
-	res, err := pr.Eval(ctx, rego.EvalInput(x))
-	if err != nil {
-		t.Fatal(err)
+
+	tests := []struct {
+		note  string
+		input any
+		exp   any
+		vmExp any // known discrepancies between rego and VM result
+	}{
+		{
+			note:  "custom type, map",
+			input: xt(map[string][]string{"foo": {"bar", "baz"}}),
+			exp:   map[string]any{"foo": []any{"bar", "baz"}},
+		},
+		{
+			note:  "custom type, slice",
+			input: yt([]bool{true, true, false}),
+			exp:   []any{true, true, false},
+		},
+		{
+			note:  "custom type, string",
+			input: zt("foo"),
+			exp:   any("foo"),
+		},
+		{
+			note:  "custom type, array",
+			input: ut([2]bool{true, true}),
+			exp:   []any{true, true},
+		},
+		{
+			note:  "custom type, struct",
+			input: wt{Foo: "fox"},
+			exp:   map[string]any{"foo": "fox"},
+		},
+		{
+			note:  "custom type, struct ptr",
+			input: &wt{Foo: "fox"},
+			exp:   map[string]any{"foo": "fox"},
+		},
+		{
+			note:  "time.Time",
+			input: map[string]any{"now": now},
+			exp:   map[string]any{"now": expTS},
+		},
+		{ // DL feeds errors into the mask/drop eval
+			// So the concrete representation as the VM sees it is not super important:
+			// drop reduces its into to a boolean; mask to a set of json pointers.
+			// It's very unlikely that someone worries much about specific nested error details
+			// when masking.
+			note:  "ast errors",
+			input: map[string]any{"error": err},
+			exp: map[string]any{
+				"error": map[string]any{
+					"code": "rego_type_error",
+					"details": map[string]any{
+						"ref": []any{
+							map[string]any{"type": "var", "value": "data"},
+							map[string]any{"type": "number", "value": json.Number("1")},
+						},
+						"pos":  json.Number("1"),
+						"have": map[string]any{"type": "number"},
+						"want": nil,
+
+						"oneOf": []any{"system"},
+					},
+					"location": map[string]any{
+						"col":  json.Number("2"),
+						"file": "foo.rego",
+						"row":  json.Number("1"),
+					},
+					"message": "something went wrong: ohno",
+				},
+			},
+			vmExp: map[string]any{
+				"error": map[string]any{
+					"code": "rego_type_error",
+					"details": map[string]any{
+						"ref":  []any{"data", json.Number("1")}, // ast.Ref -> []*ast.Term -> []any
+						"pos":  json.Number("1"),
+						"have": map[string]any{}, // NOTE(sr): I don't know why this happens.
+						"want": nil,
+
+						"oneOf": []any{"system"},
+					},
+					"location": map[string]any{
+						"col":  json.Number("2"),
+						"file": "foo.rego",
+						"row":  json.Number("1"),
+					},
+					"message": "something went wrong: ohno",
+				},
+			},
+		},
 	}
-	exp := map[string]any{"foo": []any{"bar", "baz"}}
-	act := res[0].Bindings["result"]
-	if diff := cmp.Diff(exp, act); diff != "" {
-		t.Errorf("unexpected result (-want, +got):\n%s", diff)
+
+	for _, tc := range tests {
+		t.Run(tc.note, func(t *testing.T) {
+
+			for _, tgt := range []string{"rego", rego_vm.Target} {
+				t.Run(tgt, func(t *testing.T) {
+					r := rego.New(
+						rego.Target(tgt),
+						rego.Query("result = input"),
+					)
+					pr, err := r.PrepareForEval(ctx)
+					if err != nil {
+						t.Fatal(err)
+					}
+					res, err := pr.Eval(ctx, rego.EvalInput(tc.input))
+					if err != nil {
+						t.Fatal(err)
+					}
+					act := res[0].Bindings["result"]
+					exp := tc.exp
+					if tc.vmExp != nil && tgt == rego_vm.Target {
+						exp = tc.vmExp
+					}
+					if diff := cmp.Diff(exp, act); diff != "" {
+						t.Errorf("unexpected result (-want, +got):\n%s", diff)
+					}
+				})
+			}
+
+		})
 	}
 }
 

@@ -2,7 +2,6 @@ package decisionlogs
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -129,15 +128,7 @@ func (p *Logger) Log(ctx context.Context, e logs.EventV1) error {
 		ev["metrics"] = e.Metrics
 	}
 	if e.Error != nil {
-		var m []any
-		b, err := json.Marshal(e.Error)
-		if err != nil {
-			return fmt.Errorf("roundtrip error: %w", err)
-		}
-		if err := json.Unmarshal(b, &m); err != nil {
-			return fmt.Errorf("roundtrip error: %w", err)
-		}
-		ev["error"] = m
+		ev["error"] = e.Error
 	}
 	return p.stream.Consume(ctx, ev)
 }

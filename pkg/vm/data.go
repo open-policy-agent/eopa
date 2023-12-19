@@ -6,6 +6,7 @@ import (
 	gojson "encoding/json"
 	"errors"
 	"strconv"
+	"time"
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 
@@ -331,8 +332,6 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (fjso
 			return nil, err
 		}
 		return obj, nil
-	case ast.Ref:
-		notImplemented()
 	case ast.Set:
 		set := fjson.NewSet(x.Len())
 		err := x.Iter(func(v *ast.Term) error {
@@ -351,6 +350,12 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (fjso
 		return o.FromInterface(ctx, x.Value)
 	case []byte:
 		return fjson.NewString(base64.StdEncoding.EncodeToString(x)), nil
+	case time.Time:
+		bs, err := x.MarshalText()
+		if err != nil {
+			return nil, err
+		}
+		return fjson.NewString(string(bs)), nil
 	default:
 		y, err := toNative(x)
 		if err != nil {
@@ -358,8 +363,6 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (fjso
 		}
 		return o.FromInterface(ctx, y)
 	}
-
-	return nil, nil
 }
 
 func (o *DataOperations) Iter(ctx context.Context, v interface{}, f func(key, value interface{}) (bool, error)) error {

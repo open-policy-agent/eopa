@@ -64,7 +64,6 @@ func readCases(t testing.TB) ([]cases.TestCase, map[string]string) {
 }
 
 func TestRegoE2E(t *testing.T) {
-	SetDefault(true)
 	cases, exceptions := readCases(t)
 	ctx := context.Background()
 	cases = append(cases, readEOPACases(t)...)
@@ -85,6 +84,7 @@ func TestRegoE2E(t *testing.T) {
 			}
 
 			opts := []func(*rego.Rego){
+				rego.Target(Target),
 				rego.Query(tc.Query),
 				rego.StrictBuiltinErrors(tc.StrictError),
 				rego.Store(store),
@@ -151,6 +151,7 @@ func BenchmarkRegoE2E(b *testing.B) {
 			}
 
 			opts := []func(*rego.Rego){
+				rego.Target(Target),
 				rego.Query(tc.Query),
 				rego.StrictBuiltinErrors(tc.StrictError),
 				rego.Store(store),
