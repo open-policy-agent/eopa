@@ -26,6 +26,11 @@ cmp stdout exp/key-conflict/stdout
 cmp stderr exp/unsafe/stderr
 cmp stdout exp/unsafe/stdout
 
+# var as rule name
+! exec eopa eval --format pretty --data var-as-rule.rego data.p
+cmp stderr exp/var-as-rule/stderr
+cmp stdout exp/var-as-rule/stdout
+
 -- conflict.rego --
 package p
 x := 1
@@ -67,3 +72,12 @@ allow { foo }
 1 error occurred: unsafe.rego:2: rego_unsafe_var_error: var foo is unsafe
 -- exp/unsafe/stderr --
 For more information, see: https://docs.styra.com/opa/errors/rego-unsafe-var-error/var-name-is-unsafe
+-- var-as-rule.rego --
+package p
+allow if {
+	true
+}
+-- exp/var-as-rule/stdout --
+1 error occurred: var-as-rule.rego:2: rego_parse_error: var cannot be used for rule name
+-- exp/var-as-rule/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/var-cannot-be-used-for-rule-name

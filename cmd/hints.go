@@ -20,6 +20,7 @@ var hints = map[string]*regexp.Regexp{
 	styra + `rego-unsafe-var-error/var-name-is-unsafe`:                             regexp.MustCompile(`^rego_unsafe_var_error: var .* is unsafe$`),
 	styra + `eval-conflict-error/object-keys-must-be-unique`:                       regexp.MustCompile(`^object insert conflict$|^eval_conflict_error: object keys must be unique$`),
 	styra + `rego-recursion-error/rule-name-is-recursive`:                          regexp.MustCompile(`^rego_recursion_error: rule .* is recursive:`),
+	styra + `rego-parse-error/var-cannot-be-used-for-rule-name`:                    regexp.MustCompile(`^rego_parse_error: var cannot be used for rule name$`),
 }
 
 func extraHints(c *cobra.Command, e error) error {
