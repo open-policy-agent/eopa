@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	_ "github.com/benthosdev/benthos/v4/public/components/aws" // aws_s3
 	_ "github.com/benthosdev/benthos/v4/public/components/io"  // file/stdout cache/output
@@ -19,7 +20,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/plugins"
 )
 
 type Stream interface {
@@ -44,8 +44,8 @@ const mask = "dl_mask"
 // the plugins.Manager, and have the Logger plugin take care of calling all the
 // callbacks.
 var (
-	reg registerer
-	pm  *plugins.Manager
+	reg    *registerer
+	regMtx sync.Mutex
 )
 
 func init() {
@@ -53,16 +53,16 @@ func init() {
 		return otel.GetTracerProvider(), nil
 	})
 
-	decisionConfig := service.NewConfigSpec().Field(
-		service.NewStringField("decision"),
-	)
+	decisionConfig := service.NewConfigSpec().
+		Field(service.NewStringField("decision"))
+
 	if err := service.RegisterProcessor(drop, decisionConfig, func(pc *service.ParsedConfig, _ *service.Resources) (service.Processor, error) {
-		return NewDrop(pc, pm, reg)
+		return NewDrop(pc, reg)
 	}); err != nil {
 		panic(err)
 	}
 	if err := service.RegisterProcessor(mask, decisionConfig, func(pc *service.ParsedConfig, _ *service.Resources) (service.Processor, error) {
-		return NewMask(pc, pm, reg)
+		return NewMask(pc, reg)
 	}); err != nil {
 		panic(err)
 	}
@@ -79,9 +79,14 @@ func (s *stream) Consume(ctx context.Context, msg map[string]any) error {
 	return s.prod(ctx, m.WithContext(ctx))
 }
 
-func newStream(_ context.Context, buf fmt.Stringer, out output, p *plugins.Manager, r0 registerer, logger logging.Logger) (*stream, error) {
+func newStream(_ context.Context, buf fmt.Stringer, out output, r0 *registerer, logger logging.Logger) (*stream, error) {
+	// NOTE(sr): This should ensure that when NewDrop/NewMask are called, they
+	// pick up the registerer we've set here. No two stream builders should be
+	// able to mess up each other's registerer. Note that in ordinary operations,
+	// outside of tests, there should only ever be ONE instance of this at a time.
+	regMtx.Lock()
 	reg = r0
-	pm = p
+	defer regMtx.Unlock()
 	st := &stream{}
 	builder := service.NewStreamBuilder()
 	builder.SetPrintLogger(&wrap{logger})

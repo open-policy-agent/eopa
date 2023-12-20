@@ -17,8 +17,8 @@ type DropProcessor struct {
 	decision ast.Ref
 }
 
-func NewDrop(pc *service.ParsedConfig, mgr *plugins.Manager, r registerer) (*DropProcessor, error) {
-	d := &DropProcessor{mgr: mgr}
+func NewDrop(pc *service.ParsedConfig, r *registerer) (*DropProcessor, error) {
+	d := &DropProcessor{mgr: r.mgr}
 	decision, _ := pc.FieldString("decision")
 	ref, err := parseDataPath(decision)
 	if err != nil {
@@ -26,7 +26,7 @@ func NewDrop(pc *service.ParsedConfig, mgr *plugins.Manager, r registerer) (*Dro
 	}
 	d.decision = ref
 
-	r(d.update)
+	r.register(d.update)
 	return d, nil
 }
 

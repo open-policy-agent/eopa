@@ -25,7 +25,11 @@ type Logger struct {
 var _ logs.Logger = (*Logger)(nil)
 
 type trigger func(storage.Transaction) error
-type registerer func(trigger)
+
+type registerer struct {
+	mgr      *plugins.Manager
+	register func(trigger)
+}
 
 func (p *Logger) Start(ctx context.Context) error {
 	if logs.Lookup(p.manager) == nil {
@@ -43,16 +47,18 @@ func (p *Logger) Start(ctx context.Context) error {
 
 	// clear out callbacks
 	p.callbacks = nil
-	reg := func(t trigger) {
-		if err := storage.Txn(ctx, p.manager.Store, storage.TransactionParams{}, func(txn storage.Transaction) error {
-			return t(txn)
-		}); err != nil {
-			p.manager.Logger().Error("compiler trigger: %v", err)
-		}
-		p.callbacks = append(p.callbacks, t)
+	reg := registerer{
+		mgr: p.manager,
+		register: func(t trigger) {
+			if err := storage.Txn(ctx, p.manager.Store, storage.TransactionParams{}, func(txn storage.Transaction) error {
+				return t(txn)
+			}); err != nil {
+				p.manager.Logger().Error("compiler trigger: %v", err)
+			}
+			p.callbacks = append(p.callbacks, t)
+		},
 	}
-
-	p.stream, err = newStream(ctx, buffer, p.config.outputs, p.manager, reg, p.manager.Logger())
+	p.stream, err = newStream(ctx, buffer, p.config.outputs, &reg, p.manager.Logger())
 	if err != nil {
 		return err
 	}

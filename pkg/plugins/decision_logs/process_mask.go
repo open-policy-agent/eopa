@@ -17,8 +17,8 @@ type MaskProcessor struct {
 	decision ast.Ref
 }
 
-func NewMask(pc *service.ParsedConfig, mgr *plugins.Manager, r registerer) (*MaskProcessor, error) {
-	m := &MaskProcessor{mgr: mgr}
+func NewMask(pc *service.ParsedConfig, r *registerer) (*MaskProcessor, error) {
+	m := &MaskProcessor{mgr: r.mgr}
 	decision, _ := pc.FieldString("decision")
 	ref, err := parseDataPath(decision)
 	if err != nil {
@@ -26,7 +26,7 @@ func NewMask(pc *service.ParsedConfig, mgr *plugins.Manager, r registerer) (*Mas
 	}
 	m.decision = ref
 
-	r(m.update)
+	r.register(m.update)
 	return m, nil
 }
 
