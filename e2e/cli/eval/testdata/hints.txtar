@@ -1,0 +1,69 @@
+# complete rule conflict: one hint, pretty output
+! exec eopa eval --format pretty --data conflict.rego data.p.x
+cmp stderr exp/conflict/stderr
+cmp stdout exp/conflict/stdout
+
+# default output (no hints)
+! exec eopa eval --data conflict.rego data.p.x
+cmp stdout exp/conflict/json/stdout
+! stderr .
+
+# resursive rule: two errors, one hint
+! exec eopa eval --format pretty --data recursive.rego data.p
+# NOTE(sr): unstable output ordering, can't use file
+stdout '2 errors occurred:'
+stdout 'recursive\.rego:2: rego_recursion_error: rule data\.p\.a is recursive: data\.p\.a -> data\.p\.b -> data\.p\.a'
+stdout 'recursive\.rego:3: rego_recursion_error: rule data\.p\.b is recursive: data\.p\.b -> data\.p\.a -> data\.p\.b'
+cmp stderr exp/resursive/pretty/stderr
+
+# object keys conflict
+! exec eopa eval --format pretty --data key-conflict.rego data.p
+cmp stderr exp/key-conflict/stderr
+cmp stdout exp/key-conflict/stdout
+
+# unsafe var
+! exec eopa eval --format pretty --data unsafe.rego data.p
+cmp stderr exp/unsafe/stderr
+cmp stdout exp/unsafe/stdout
+
+-- conflict.rego --
+package p
+x := 1
+x := 2
+-- exp/conflict/stdout --
+1 error occurred: eval_conflict_error: complete rules must not produce multiple outputs
+-- exp/conflict/stderr --
+For more information, see: https://docs.styra.com/opa/errors/eval-conflict-error/complete-rules-must-not-produce-multiple-outputs
+-- exp/conflict/json/stdout --
+{
+  "errors": [
+    {
+      "message": "complete rules must not produce multiple outputs",
+      "code": "eval_conflict_error"
+    }
+  ]
+}
+-- recursive.rego --
+package p
+a := b
+b := a
+-- exp/resursive/pretty/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-recursion-error/rule-name-is-recursive
+-- key-conflict.rego --
+package p
+import rego.v1
+obj := {k: v |
+	k := "foo"
+	some v in [1, 2]
+}
+-- exp/key-conflict/stdout --
+1 error occurred: object insert conflict
+-- exp/key-conflict/stderr --
+For more information, see: https://docs.styra.com/opa/errors/eval-conflict-error/object-keys-must-be-unique
+-- unsafe.rego --
+package p
+allow { foo }
+-- exp/unsafe/stdout --
+1 error occurred: unsafe.rego:2: rego_unsafe_var_error: var foo is unsafe
+-- exp/unsafe/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-unsafe-var-error/var-name-is-unsafe

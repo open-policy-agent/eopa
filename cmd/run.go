@@ -18,7 +18,6 @@ import (
 	bundleApi "github.com/open-policy-agent/opa/bundle"
 	"github.com/open-policy-agent/opa/hooks"
 	"github.com/open-policy-agent/opa/keys"
-	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/plugins/discovery"
 	"github.com/open-policy-agent/opa/runtime"
@@ -27,8 +26,6 @@ import (
 	opa_envoy "github.com/open-policy-agent/opa-envoy-plugin/plugin"
 
 	"github.com/styrainc/enterprise-opa-private/internal/license"
-	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
-	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
 	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
@@ -46,7 +43,7 @@ import (
 const defaultBindAddress = "localhost:8181"
 
 // Run provides the CLI entrypoint for the `run` subcommand
-func initRun(opa *cobra.Command, brand string, license license.Checker, lparams *keygen.LicenseParams) *cobra.Command {
+func initRun(opa *cobra.Command, brand string, license license.Checker, lparams *license.LicenseParams) *cobra.Command {
 	fallback := opa.RunE
 	// Only override Run, so we keep the args and usage texts
 	opa.RunE = func(c *cobra.Command, args []string) error {
@@ -259,7 +256,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 }
 
 // initRuntime is taken from OPA's cmd/run.go
-func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic license.Checker, lparams *keygen.LicenseParams) (*runtime.Runtime, error) {
+func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic license.Checker, lparams *license.LicenseParams) (*runtime.Runtime, error) {
 	authenticationSchemes := map[string]server.AuthenticationScheme{
 		"token": server.AuthenticationToken,
 		"tls":   server.AuthenticationTLS,
@@ -445,16 +442,4 @@ func buildVerificationConfig(pubKey, pubKeyID, alg, scope string, excludeFiles [
 	}
 	bs, err := bundleApi.NewVerificationConfig(map[string]*keys.Config{pubKeyID: keyConfig}, pubKeyID, scope, excludeFiles), nil
 	return bs, err
-}
-
-func getLogger(logLevel string, format, timestampFormat string) (logging.Logger, error) {
-	logger := logging.New()
-	level, err := internal_logging.GetLevel(logLevel)
-	if err != nil {
-		return nil, err
-	}
-	logger.SetLevel(logging.Level(level))
-	logger.SetFormatter(internal_logging.GetFormatter(format, timestampFormat))
-
-	return logger, nil
 }

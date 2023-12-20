@@ -379,4 +379,4 @@ replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.59.1-0.20231204144503-17044f2de2ec
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.59.1-0.20231220130444-90a86c1164ad

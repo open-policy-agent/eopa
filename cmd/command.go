@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/open-policy-agent/opa/cmd"
+	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/util"
 
 	"github.com/styrainc/enterprise-opa-private/internal/license"
@@ -343,7 +344,7 @@ func setDefaults(c *cobra.Command) *cobra.Command {
 		prev := c.RunE
 		c.RunE = func(c *cobra.Command, args []string) error {
 			init()
-			return prev(c, args)
+			return extraHints(c, prev(c, args))
 		}
 	case c.Run != nil:
 		prev := c.Run
@@ -375,4 +376,16 @@ func traverseUp(c string) string {
 		return ""
 	}
 	return traverseUp(ndir)
+}
+
+func getLogger(logLevel string, format, timestampFormat string) (logging.Logger, error) {
+	logger := logging.New()
+	level, err := internal_logging.GetLevel(logLevel)
+	if err != nil {
+		return nil, err
+	}
+	logger.SetLevel(logging.Level(level))
+	logger.SetFormatter(internal_logging.GetFormatter(format, timestampFormat))
+
+	return logger, nil
 }
