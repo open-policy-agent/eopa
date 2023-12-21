@@ -11,6 +11,84 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.15.0
+
+[![OPA v0.60.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.60.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.60.0)
+
+This release updates the OPA version used in Enterprise OPA to [v0.60.0](https://github.com/open-policy-agent/opa/releases/tag/v0.60.0),
+and includes improvements for Decision Logging, `sql.send`, and the `eopa eval`
+experience.
+
+### Contextual information on errors in `eopa eval`
+
+When you evaluate a policy, `eopa eval --format=pretty` will include extra links to
+docs pages explaining the errors, and how to overcome them.
+
+For example, with a policy like
+```rego
+# policy.rego
+package policy
+
+allow := data[input.org].allow
+```
+
+```interactive
+$ eopa eval -fpretty -d policy.rego data.policy.allow
+1 error occurred: policy.rego:3: rego_recursion_error: rule data.policy.allow is recursive: data.policy.allow -> data.policy.allow
+For more information, see: https://docs.styra.com/opa/errors/rego-recursion-error/rule-name-is-recursive
+```
+
+Note that the output only appears on standard error, and only for output format
+"pretty", so it should not interfere with any scripted usage of `eopa eval` you
+may have.
+
+### Decision Logs: per-output mask and drop decisions
+
+Enterprise OPA lets you configure multiple sinks for your decision logs.
+With this release, you can also specific per-output `mask_decision` and `drop_decision`
+settings, to accomodate different privacy and data restrictions.
+
+For example, this configuration would apply a mask decision (`data.system.s3_mask`)
+only for the S3 sink, and a drop decision (`data.system.console_drop`) for the console
+output.
+
+```yaml
+decision_logs:
+  plugin: eopa_dl
+plugins:
+  eopa_dl:
+    buffer:
+      type: memory
+    output:
+    - type: console
+      drop_decision: system/console_drop
+    - type: s3
+      mask_decision: system/s3_mask
+      # more config
+```
+
+Also see
+- [Decision Logs Configuration](https://docs.styra.com/enterprise-opa/reference/configuration/decision-logs)
+- [Tutorial: Logging decisions to AWS S3](https://docs.styra.com/enterprise-opa/tutorials/decision-log-s3)
+- [Masking and dropping decision logs](https://www.openpolicyagent.org/docs/latest/management-decision-logs/) from the OPA docs.
+
+### `sql.send` supports MS SQL Server
+
+`sql.send` now supports Microsoft SQL Server! To connect to it, use a `data_source_name` of
+
+    sqlserver://USER:PASSWORD@HOST:PORT?database=DATABASE_NAME
+
+For complete description of `data_source_name` options available, see: https://github.com/microsoft/go-mssqldb#connection-parameters-and-dsn
+
+It also comes with the usual Vault helpers, under `system.eopa.utils.sqlserver.v1.vault`.
+
+See [the `sql.send` documentation](https://docs.styra.com/enterprise-opa/reference/built-in-functions/sql)
+for all details.
+
+### Telemetry
+
+Telemetry data sent to Styra's telemetry system now includes the License ID.
+You can use `eopa run --server --disable-telemetry` to **opt-out**.
 
 ## v1.14.0
 

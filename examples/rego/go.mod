@@ -2,7 +2,7 @@ module github.com/styrainc/eopa-examples-rego
 
 go 1.20
 
-require github.com/open-policy-agent/opa v0.59.0
+require github.com/open-policy-agent/opa v0.60.0
 
 require github.com/styrainc/enterprise-opa-private v1.5.0
 
@@ -21,6 +21,7 @@ require (
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

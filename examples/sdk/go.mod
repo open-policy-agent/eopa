@@ -4,7 +4,7 @@ go 1.21
 
 toolchain go1.21.3
 
-require github.com/open-policy-agent/opa v0.59.0
+require github.com/open-policy-agent/opa v0.60.0
 
 require (
 	github.com/hashicorp/vault/api v1.9.2
@@ -222,7 +222,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sbabiv/xml2map v1.2.1 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
-	github.com/sergi/go-diff v1.1.0 // indirect
+	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shirou/gopsutil/v3 v3.23.9 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af // indirect

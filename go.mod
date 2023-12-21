@@ -43,7 +43,7 @@ require (
 	github.com/neo4j/neo4j-go-driver/v5 v5.15.0
 	github.com/oapi-codegen/runtime v1.1.0
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
-	github.com/open-policy-agent/opa v0.59.0
+	github.com/open-policy-agent/opa v0.60.0
 	github.com/open-policy-agent/opa-envoy-plugin v0.59.0-envoy
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/prometheus/client_golang v1.17.0
@@ -298,7 +298,7 @@ require (
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
-	github.com/sergi/go-diff v1.1.0 // indirect
+	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shirou/gopsutil/v3 v3.23.9 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/skeema/knownhosts v1.2.1 // indirect
@@ -379,4 +379,4 @@ replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.59.1-0.20231220130444-90a86c1164ad
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.59.1-0.20231221095249-ea5691d351f2

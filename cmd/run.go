@@ -349,8 +349,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 	lic.SetLogger(logger)
 	ekmHook.SetLogger(logger)
 
-	runtime.RegisterGatherers(map[string]func() (any, error){
-		"license": func() (any, error) {
+	runtime.RegisterGatherers(map[string]func(context.Context) (any, error){
+		"license": func(context.Context) (any, error) {
 			return lic.ID(), nil
 		},
 	})
