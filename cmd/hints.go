@@ -17,10 +17,12 @@ const styra = `https://docs.styra.com/opa/errors/`
 
 var hints = map[string]*regexp.Regexp{
 	styra + `eval-conflict-error/complete-rules-must-not-produce-multiple-outputs`: regexp.MustCompile(`^eval_conflict_error: complete rules must not produce multiple outputs$`),
-	styra + `rego-unsafe-var-error/var-name-is-unsafe`:                             regexp.MustCompile(`^rego_unsafe_var_error: var .* is unsafe$`),
 	styra + `eval-conflict-error/object-keys-must-be-unique`:                       regexp.MustCompile(`^object insert conflict$|^eval_conflict_error: object keys must be unique$`),
+	styra + `rego-unsafe-var-error/var-name-is-unsafe`:                             regexp.MustCompile(`^rego_unsafe_var_error: var .* is unsafe$`),
 	styra + `rego-recursion-error/rule-name-is-recursive`:                          regexp.MustCompile(`^rego_recursion_error: rule .* is recursive:`),
 	styra + `rego-parse-error/var-cannot-be-used-for-rule-name`:                    regexp.MustCompile(`^rego_parse_error: var cannot be used for rule name$`),
+	styra + `rego-type-error/conflicting-rules-name-found`:                         regexp.MustCompile(`^rego_type_error: conflicting rules .* found$`),
+	styra + `rego-type-error/match-error`:                                          regexp.MustCompile(`^rego_type_error: match error`),
 }
 
 func extraHints(c *cobra.Command, e error) error {

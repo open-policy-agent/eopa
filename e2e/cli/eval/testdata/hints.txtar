@@ -31,6 +31,16 @@ cmp stdout exp/unsafe/stdout
 cmp stderr exp/var-as-rule/stderr
 cmp stdout exp/var-as-rule/stdout
 
+# conflicting rules
+! exec eopa eval --format pretty --data conflicting-rules.rego data.p
+cmp stderr exp/conflicting-rules/stderr
+cmp stdout exp/conflicting-rules/stdout
+
+# match error
+! exec eopa eval --format pretty --data match.rego data.p
+cmp stderr exp/match/stderr
+cmp stdout exp/match/stdout
+
 -- conflict.rego --
 package p
 x := 1
@@ -81,3 +91,22 @@ allow if {
 1 error occurred: var-as-rule.rego:2: rego_parse_error: var cannot be used for rule name
 -- exp/var-as-rule/stderr --
 For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/var-cannot-be-used-for-rule-name
+-- conflicting-rules.rego --
+package p
+import future.keywords
+deny contains "reason"
+deny := "reason"
+-- exp/conflicting-rules/stdout --
+1 error occurred: conflicting-rules.rego:3: rego_type_error: conflicting rules data.p.deny found
+-- exp/conflicting-rules/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-type-error/conflicting-rules-name-found
+-- match.rego --
+package p
+import future.keywords
+same if 1 == "1"
+-- exp/match/stdout --
+1 error occurred: match.rego:3: rego_type_error: match error
+	left  : number
+	right : string
+-- exp/match/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-type-error/match-error
