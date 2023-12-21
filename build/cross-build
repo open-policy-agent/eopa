@@ -4,9 +4,8 @@
             [babashka.process :refer [shell]]
             [clojure.string :refer [replace-first]]))
 
-(def testdir        (System/getenv "TESTDIR"))
-(def reldir         (System/getenv "RELDIR"))
-(def build-release? (not (nil? reldir)))
+(def outputdir      (System/getenv "OUTPUTDIR"))
+(def build-release? (not (nil? (System/getenv "RELEASE"))))
 
 (def windows? (= "windows" (System/getenv "GOOS")))
 (def name     (if windows? "eopa.exe" "eopa"))
@@ -15,18 +14,17 @@
     (fs/glob "e2e/cli" "*/testdata")))
 
 (defn build-test [t]
-  (shell {:dir "e2e"} "go" "test" "-c" "-tags" "e2e" "-o" (fs/path ".." testdir) t))
+  (shell {:dir "e2e"} "go" "test" "-c" "-tags" "e2e" "-o" (fs/path ".." outputdir) t))
 (defn build-mock [mock]
-  (shell "go" "build" "-o" testdir (fs/path "./extras/cmd/" mock)))
+  (shell "go" "build" "-o" outputdir (fs/path "./extras/cmd/" mock)))
 (defn build-bin []
   (shell "make" "eopa")
-  (fs/copy "bin/eopa" (fs/path reldir name)))
+  (fs/copy "bin/eopa" (fs/path outputdir name)))
 
 (defn -main [& args]
-  (fs/create-dirs testdir)
-  (if build-release? (fs/create-dirs reldir))
+  (fs/create-dirs outputdir)
   (run! build-test testpkgs)
-  (fs/copy "build/cross-run" testdir)
+  (fs/copy "build/cross-run" outputdir)
   (build-mock "syncmock")
   (build-mock "loginmock")
   (if build-release? (build-bin)))

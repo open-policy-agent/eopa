@@ -40,7 +40,7 @@ jobs:
         run: make build
         working-directory: enterprise-opa
       - name: Upload image tarball
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: image
           path: enterprise-opa/local.tar
@@ -144,7 +144,7 @@ jobs:
           HOSTNAME: github.actions.local
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: binaries
           path: |
@@ -189,14 +189,14 @@ jobs:
           babashka-version: ${{ env.BB_VERSION }}
       - run: bb build/cross-build
         env:
-          TESTDIR: test/${{ matrix.GOOS }}_${{ matrix.GOARCH }}
+          OUTPUTDIR: bins
           GOOS: ${{ matrix.GOOS }}
           GOARCH: ${{ matrix.GOARCH }}
       - name: Upload test binaries
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: test-binaries
-          path: test
+          name: cross-binaries-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
+          path: bins
 
   cross-test-releases:
     name: Cross Test Releases
@@ -210,41 +210,39 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            reldir: dist/linux-windows-build_linux_amd64_v1
-            testdir: test/linux_amd64
+            GOOS: linux
+            GOARCH: amd64
           - os: ubuntu-22.04
-            reldir: dist/linux-windows-build_linux_arm64
-            testdir: test/linux_arm64
-            arch: arm64
+            GOOS: linux
+            GOARCH: arm64
           - os: macos-latest
-            reldir: dist/darwin-build_darwin_amd64_v1
-            testdir: test/darwin_amd64
+            GOOS: darwin
+            GOARCH: amd64
           - os: windows-latest
-            reldir: dist/linux-windows-build_windows_amd64_v1
-            testdir: test/windows_amd64
+            GOOS: windows
+            GOARCH: amd64
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
           platforms: arm64
-        if: matrix.arch == 'arm64'
+        if: matrix.GOARCH == 'arm64'
       - name: Download release binaries
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: binaries
           path: dist
       - name: Download test binaries
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: test-binaries
-          path: test
+          name: cross-binaries-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
+          path: bins
       - uses: turtlequeue/setup-babashka@v1.5.2
         with:
           babashka-version: ${{ env.BB_VERSION }}
-      - run: bb ${{ matrix.testdir }}/cross-run
+      - run: cp dist/*${{ matrix.GOOS }}_${{ matrix.GOARCH }}*/* bins
+      - run: bb bins/cross-run
         env:
-          TESTDIR: ${{ matrix.testdir }}
-          RELDIR: ${{ matrix.reldir }}
           EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
 
   regal:
@@ -282,7 +280,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Download image tarball
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: image
       - name: Enterprise OPA image
