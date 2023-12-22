@@ -84,7 +84,10 @@ import future.keywords
 # always succeeds, but adds nd_builtin_cache entry
 coin if rand.intn("coin", 2)
 
-drop if input.input.drop
+drop if {
+	print(input)
+	input.input.drop
+}
 
 mask contains {"op": "upsert", "path": "/input/replace", "value": "XXX"} if input.input.replace
 mask contains {"op": "remove", "path": "/input/remove"} if input.input.remove
