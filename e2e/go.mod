@@ -19,7 +19,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.26.0
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.26.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.26.0
-	github.com/twmb/franz-go v1.15.3
+	github.com/twmb/franz-go v1.15.4
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 )
@@ -151,7 +151,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
 	github.com/opencontainers/runc v1.1.7 // indirect
-	github.com/pierrec/lz4/v4 v4.1.18 // indirect
+	github.com/pierrec/lz4/v4 v4.1.19 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
