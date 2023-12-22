@@ -251,6 +251,19 @@ type OutputProcessors struct {
 	Drop string `json:"drop_decision,omitempty"`
 }
 
+func (s *OutputProcessors) NumOutputProcessors() (count int) {
+	if s == nil {
+		return
+	}
+	if s.Mask != "" {
+		count++
+	}
+	if s.Drop != "" {
+		count++
+	}
+	return
+}
+
 func (s *OutputProcessors) Extra() []map[string]any {
 	if s == nil {
 		return nil

@@ -29,6 +29,7 @@ type trigger func(storage.Transaction) error
 type registerer struct {
 	mgr      *plugins.Manager
 	register func(trigger)
+	wg       sync.WaitGroup
 }
 
 func (p *Logger) Start(ctx context.Context) error {
@@ -58,13 +59,22 @@ func (p *Logger) Start(ctx context.Context) error {
 			p.callbacks = append(p.callbacks, t)
 		},
 	}
+
+	// NOTE(sr): We count the number of to-be-instantiated Mask and Drop processors.
+	// That way, we can block in newStream until they have all been instantiated, to
+	// avoid a data race.
+	for _, out := range p.config.outputs {
+		if out, ok := out.(interface{ NumOutputProcessors() int }); ok {
+			reg.wg.Add(out.NumOutputProcessors())
+		}
+	}
+
+	p.manager.RegisterCompilerTrigger(p.compilerTrigger)
+
 	p.stream, err = newStream(ctx, buffer, p.config.outputs, &reg, p.manager.Logger())
 	if err != nil {
 		return err
 	}
-
-	p.manager.RegisterCompilerTrigger(p.compilerTrigger)
-	go p.stream.Run(ctx)
 
 	p.manager.UpdatePluginStatus(DLPluginName, &plugins.Status{State: plugins.StateOK})
 	return nil

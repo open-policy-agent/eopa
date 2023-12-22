@@ -35,17 +35,10 @@ const mask = "dl_mask"
 // NOTE(sr): These regretably have to be a global. It's OK since we only ever
 // instantiate one stream. Also, we're limiting the usage to this specific point:
 // NewStream will set them, the registered constructors for `dl_drop` and `dl_mask`
-// will read them (from init()).
-//
-// NOTE(sr): `registerer` needs to be a separate thing because the plugins.Manager
-// won't let us _unregister_ a callback. So if a config changes and we no longer
-// have that specific drop/mask processor, we wouldn't be able to unregister the
-// previous instances' callbacks. Instead, we only register the Logger plugin with
-// the plugins.Manager, and have the Logger plugin take care of calling all the
-// callbacks.
+// will read them (defined in init(), invoked from (stream).Run).
 var (
-	reg    *registerer
-	regMtx sync.Mutex
+	reg       *registerer
+	streamMtx sync.Mutex
 )
 
 func init() {
@@ -57,11 +50,13 @@ func init() {
 		Field(service.NewStringField("decision"))
 
 	if err := service.RegisterProcessor(drop, decisionConfig, func(pc *service.ParsedConfig, _ *service.Resources) (service.Processor, error) {
+		defer reg.wg.Done()
 		return NewDrop(pc, reg)
 	}); err != nil {
 		panic(err)
 	}
 	if err := service.RegisterProcessor(mask, decisionConfig, func(pc *service.ParsedConfig, _ *service.Resources) (service.Processor, error) {
+		defer reg.wg.Done()
 		return NewMask(pc, reg)
 	}); err != nil {
 		panic(err)
@@ -79,14 +74,11 @@ func (s *stream) Consume(ctx context.Context, msg map[string]any) error {
 	return s.prod(ctx, m.WithContext(ctx))
 }
 
-func newStream(_ context.Context, buf fmt.Stringer, out output, r0 *registerer, logger logging.Logger) (*stream, error) {
-	// NOTE(sr): This should ensure that when NewDrop/NewMask are called, they
-	// pick up the registerer we've set here. No two stream builders should be
-	// able to mess up each other's registerer. Note that in ordinary operations,
-	// outside of tests, there should only ever be ONE instance of this at a time.
-	regMtx.Lock()
+func newStream(ctx context.Context, buf fmt.Stringer, out output, r0 *registerer, logger logging.Logger) (*stream, error) {
+	streamMtx.Lock()
+	defer streamMtx.Unlock()
 	reg = r0
-	defer regMtx.Unlock()
+
 	st := &stream{}
 	builder := service.NewStreamBuilder()
 	builder.SetPrintLogger(&wrap{logger})
@@ -144,6 +136,14 @@ func newStream(_ context.Context, buf fmt.Stringer, out output, r0 *registerer, 
 	if err != nil {
 		return nil, err
 	}
+
+	go func() {
+		if err := st.Run(ctx); err != nil {
+			logger.Error("instantiate stream: %s", err.Error())
+		}
+	}()
+
+	r0.wg.Wait() // wait for all drop/mask processors to be instantiated
 
 	return st, nil
 }
