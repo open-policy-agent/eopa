@@ -11,6 +11,20 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+
+## v1.15.1
+
+[![OPA v0.60.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.60.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.60.0)
+
+This is a bug fix release for an exception that occurred when using a
+per-output mask or drop decision that included a print() statement.
+
+It's only relevant to you if 
+- you are using the `eopa_dl` decision logs plugin,
+- with a per-output mask_decision or drop_decision,
+- and that decision includes a `print()` call.
+
+
 ## v1.15.0
 
 [![OPA v0.60.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.60.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.60.0)
