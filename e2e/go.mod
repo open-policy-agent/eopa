@@ -15,10 +15,10 @@ require (
 	github.com/rogpeppe/go-internal v1.12.0
 	github.com/rs/zerolog v1.31.0
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
-	github.com/testcontainers/testcontainers-go v0.26.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.26.0
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.26.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.26.0
+	github.com/testcontainers/testcontainers-go v0.27.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.27.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.27.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.27.0
 	github.com/twmb/franz-go v1.15.4
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
@@ -166,7 +166,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sbabiv/xml2map v1.2.1 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
-	github.com/shirou/gopsutil/v3 v3.23.9 // indirect
+	github.com/shirou/gopsutil/v3 v3.23.11 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af // indirect
 	github.com/skeema/knownhosts v1.2.1 // indirect
