@@ -8,7 +8,8 @@ import (
 	"sync"
 
 	_ "github.com/benthosdev/benthos/v4/public/components/aws" // aws_s3
-	_ "github.com/benthosdev/benthos/v4/public/components/io"  // file/stdout cache/output
+	_ "github.com/benthosdev/benthos/v4/public/components/elasticsearch"
+	_ "github.com/benthosdev/benthos/v4/public/components/io" // file/stdout cache/output
 	_ "github.com/benthosdev/benthos/v4/public/components/kafka"
 	_ "github.com/benthosdev/benthos/v4/public/components/otlp"
 	_ "github.com/benthosdev/benthos/v4/public/components/pure"     // basics
