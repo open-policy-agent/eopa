@@ -26,6 +26,7 @@ KO_BUILD_DEPLOY := $(KO_BUILD) --bare --platform=linux/amd64,linux/arm64
 BUILD_DIR := $(shell echo `pwd`)
 FUZZ_TIME ?= 30m
 RELEASE_NOTES ?= "release-notes.md"
+EXAMPLES := $(wildcard examples/*)
 
 # EOPA_VERSION: strip 'v' from tag
 export EOPA_VERSION := $(shell git describe --abbrev=0 --tags | sed s/^v//)
@@ -130,6 +131,14 @@ fuzz:
 update:
 	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.60.0
 	go mod tidy
+
+update-e2e:
+	cd e2e \
+		&& go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.60.0 \
+		&& go mod tidy
+
+update-examples:
+	$(foreach example, $(EXAMPLES), (cd $(example) && go mod tidy);)
 
 .PHONY: ci-smoke-test
 ci-smoke-test:
