@@ -160,8 +160,8 @@ jobs:
           mkdir -p _public/capabilities
           cp capabilities/*.json _public/capabilities/
           # Update OPA badge version to match our currently-supported version.
-          sed -i "s|https://openpolicyagent.org/badge-endpoint/v[0-9.]\+|https://openpolicyagent.org/badge-endpoint/${{ steps.supported-opa-version.outputs.opa_version }}|g"
-          sed -i "s|\[OPA v[0-9.]\+\]|\[OPA ${{ steps.supported-opa-version.outputs.opa_version }}\]|g"
+          sed -i "s|https://openpolicyagent.org/badge-endpoint/v[0-9.]\+|https://openpolicyagent.org/badge-endpoint/${{ steps.supported-opa-version.outputs.opa_version }}|g" _public/README.md
+          sed -i "s|\[OPA v[0-9.]\+\]|\[OPA ${{ steps.supported-opa-version.outputs.opa_version }}\]|g" _public/README.md
           # Ensure the changes are picked up, especially if we added new files/folders.
           cd _public
           git config user.name "GitHub Actions"
