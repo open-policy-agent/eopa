@@ -141,6 +141,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: open-policy-agent/setup-opa@v2
       - name: pick up opa version
         id: supported-opa-version
         run: echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
