@@ -11,6 +11,9 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.15.2
+
+This release is a release engineering improvement for our automated publishing of artifacts, such as capabilities JSON files, gRPC protobuf definitions, and more.
 
 ## v1.15.1
 
