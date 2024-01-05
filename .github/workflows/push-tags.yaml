@@ -170,7 +170,7 @@ jobs:
           git add .
           # Ensure branch exists on remote for the 'gh pr create' command later.
           git checkout -b artifacts-${{ github.ref_name }} origin/main
-          git commit -am "Update proto defs and capabilities JSON files for ${{ github.ref_name }} release"
+          git commit -am "Update public artifacts for ${{ github.ref_name }} release"
           git push -u origin artifacts-${{ github.ref_name }}
       # Do a pre-flight check to ensure we don't make a needless PR.
       - name: Check for relevant file changes in git diffs for public repo
