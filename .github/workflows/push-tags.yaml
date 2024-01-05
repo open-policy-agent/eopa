@@ -14,7 +14,7 @@ jobs:
     name: GoReleaser
     runs-on: ubuntu-22.04
     needs:
-    - kopush
+      - kopush
     environment: ci
     env:
       QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }} # base64 encoded contents
@@ -120,8 +120,7 @@ jobs:
       # always creates docs under the Git commit SHA, and we'd like to have nice semver-style
       # tag names for releases.
       - name: Manually publish to BSR
-        run:
-          buf push proto --tag ${{ github.ref_name }}
+        run: buf push proto --tag ${{ github.ref_name }}
 
   pr-artifacts:
     name: Publish proto defs and capabilities.json using a PR
@@ -142,6 +141,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: pick up opa version
+        id: supported-opa-version
+        run: echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
       - name: Check out code for the public repo
         uses: actions/checkout@v4
         with:
@@ -157,6 +159,9 @@ jobs:
           # Copy capabilities.json files over.
           mkdir -p _public/capabilities
           cp capabilities/*.json _public/capabilities/
+          # Update OPA badge version to match our currently-supported version.
+          sed -i "s|https://openpolicyagent.org/badge-endpoint/v[0-9.]\+|https://openpolicyagent.org/badge-endpoint/${{ steps.supported-opa-version.outputs.opa_version }}|g"
+          sed -i "s|\[OPA v[0-9.]\+\]|\[OPA ${{ steps.supported-opa-version.outputs.opa_version }}\]|g"
           # Ensure the changes are picked up, especially if we added new files/folders.
           cd _public
           git config user.name "GitHub Actions"
@@ -167,7 +172,7 @@ jobs:
           git commit -am "Update proto defs and capabilities JSON files for ${{ github.ref_name }} release"
           git push -u origin artifacts-${{ github.ref_name }}
       # Do a pre-flight check to ensure we don't make a needless PR.
-      - name: Check for proto/ file changes in git diffs for public repo
+      - name: Check for relevant file changes in git diffs for public repo
         id: changes
         run: |
           cd _public;
@@ -179,10 +184,26 @@ jobs:
           then
             echo "capabilities=true" >> $GITHUB_OUTPUT
           fi
+          if git diff --name-only main artifacts-${{ github.ref_name }} | grep -q 'README.md';
+          then
+            echo "badges=true" >> $GITHUB_OUTPUT
+          fi
       - name: Create PR if changes detected
-        if: steps.changes.outputs.proto == 'true' || steps.changes.outputs.capabilities == 'true'
+        if: steps.changes.outputs.proto == 'true' || steps.changes.outputs.capabilities == 'true' || steps.changes.outputs.badges == 'true'
         run: |
           cd _public
-          gh pr create -B main --head artifacts-${{ github.ref_name }} --title 'Update proto defs and capabilities JSON files for ${{ github.ref_name }} release' --body 'Created by Github action'
+          message="Update "
+          if [[ "${{ steps.changes.outputs.badges }}" == "true" ]]; then
+            message+="README, "
+          fi
+          if [[ "${{ steps.changes.outputs.proto }}" == "true" ]]; then
+            message+="proto defs, "
+          fi
+          if [[ "${{ steps.changes.outputs.capabilities }}" == "true" ]]; then
+            message+="capabilities JSON files, "
+          fi
+          # Remove trailing comma and space
+          message="${message%, }"
+          gh pr create -B main --head artifacts-${{ github.ref_name }} --title "$message for ${{ github.ref_name }} release" --body 'Created by Github action'
         env:
           GITHUB_TOKEN: ${{steps.generate_token.outputs.token }}
