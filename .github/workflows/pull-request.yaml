@@ -201,6 +201,14 @@ jobs:
           GIT_GITHUB_TOKEN: ${{ secrets.E2E_GIT_GITHUB_TOKEN }}
           GIT_AZURE_TOKEN: ${{ secrets.E2E_GIT_AZURE_TOKEN }}
           GIT_GITLAB_TOKEN: ${{ secrets.E2E_GIT_GITLAB_TOKEN }}
+      - name: display go.sum diff
+        run: |
+         git diff --exit-code go.sum && exit 0
+         echo "# go.sum diff" >> $GITHUB_STEP_SUMMARY
+         echo '```diff' >> $GITHUB_STEP_SUMMARY
+         git diff go.sum >> $GITHUB_STEP_SUMMARY
+         echo '```' >> $GITHUB_STEP_SUMMARY
+        working-directory: e2e
 
   proto-docs-push:
     name: Push Protobuf docs to BSR

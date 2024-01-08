@@ -114,7 +114,9 @@ test-race:
 	go test $(BUILD_ARGS) ./... -race
 
 e2e:
-	cd e2e && go test -p 1 $(BUILD_ARGS) -tags e2e ./... -v -count=1
+	cd e2e && \
+	  go mod tidy && \
+	  go test -p 1 $(BUILD_ARGS) -tags e2e ./... -v -count=1
 
 benchmark:
 	go test $(BUILD_ARGS) -run=- -bench=. -benchmem ./...
