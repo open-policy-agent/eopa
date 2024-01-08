@@ -1,3 +1,5 @@
+//go:build use_opa_fork
+
 package storage
 
 import (
