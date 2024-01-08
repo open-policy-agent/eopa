@@ -11,7 +11,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/charmbracelet/bubbles v0.17.1
 	github.com/charmbracelet/bubbletea v0.25.0
-	github.com/docker/go-connections v0.4.0
+	github.com/docker/go-connections v0.5.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-chi/chi/v5 v5.0.11
 	github.com/go-git/go-billy/v5 v5.5.0
