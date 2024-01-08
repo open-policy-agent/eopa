@@ -5,7 +5,7 @@ go 1.21
 replace github.com/styrainc/enterprise-opa-private => ../
 
 require (
-	github.com/docker/go-connections v0.4.0
+	github.com/docker/go-connections v0.5.0
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/vault/api v1.10.0
