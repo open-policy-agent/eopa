@@ -41,6 +41,50 @@ cmp stdout exp/conflicting-rules/stdout
 cmp stderr exp/match/stderr
 cmp stdout exp/match/stdout
 
+# arity mismatch
+! exec eopa eval --format pretty --data arity-mismatch.rego data.p
+cmp stdout exp/arity-mismatch/stdout
+cmp stderr exp/arity-mismatch/stderr
+
+# user-defined function arity mismatch
+! exec eopa eval --format pretty --data func-mismatch.rego data.p
+cmp stdout exp/func-mismatch/stdout
+cmp stderr exp/func-mismatch/stderr
+
+# unused var (strict mode)
+! exec eopa eval --format pretty --data unused-var.rego --strict data.p
+cmp stdout exp/unused-var/stdout
+cmp stderr exp/unused-var/stderr
+
+# not too interesting parser errors below
+! exec eopa eval --format pretty --data parse-assign.rego data.p
+cmp stdout exp/parse-assign/stdout
+cmp stderr exp/parse-assign/stderr
+
+! exec eopa eval --format pretty --data parse-identifier.rego data.p
+cmp stdout exp/parse-identifier/stdout
+cmp stderr exp/parse-identifier/stderr
+
+! exec eopa eval --format pretty --data parse-left-curly.rego data.p
+cmp stdout exp/parse-left-curly/stdout
+cmp stderr exp/parse-left-curly/stderr
+
+! exec eopa eval --format pretty --data parse-right-curly.rego data.p
+cmp stdout exp/parse-right-curly/stdout
+cmp stderr exp/parse-right-curly/stderr
+
+! exec eopa eval --format pretty --data parse-kw.rego data.p
+cmp stdout exp/parse-kw/stdout
+cmp stderr exp/parse-kw/stderr
+
+! exec eopa eval --format pretty --data parse-string.rego data.p
+cmp stdout exp/parse-string/stdout
+cmp stderr exp/parse-string/stderr
+
+! exec eopa eval --format pretty --data parse-multi-default.rego data.p
+cmp stdout exp/parse-multi-default/stdout
+cmp stderr exp/parse-multi-default/stderr
+
 -- conflict.rego --
 package p
 x := 1
@@ -110,3 +154,109 @@ same if 1 == "1"
 	right : string
 -- exp/match/stderr --
 For more information, see: https://docs.styra.com/opa/errors/rego-type-error/match-error
+-- arity-mismatch.rego --
+package p
+import future.keywords
+q if "admin" in split("admin,member")
+-- exp/arity-mismatch/stdout --
+1 error occurred: arity-mismatch.rego:3: rego_type_error: split: arity mismatch
+	have: (string, ???)
+	want: (x: string, delimiter: string)
+-- exp/arity-mismatch/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-type-error/arity-mismatch
+-- func-mismatch.rego --
+package p
+import future.keywords
+default f(_, _) := false
+q := f(input)
+-- exp/func-mismatch/stdout --
+1 error occurred: func-mismatch.rego:4: rego_type_error: function data.p.f has arity 2, got 1 argument
+-- exp/func-mismatch/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-type-error/function-has-arity-got-argument
+-- unused-var.rego --
+package p
+import future.keywords
+q if {
+    user := input.user
+}
+-- exp/unused-var/stdout --
+1 error occurred: unused-var.rego:4: rego_compile_error: assigned var user unused
+-- exp/unused-var/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-compile-error/assigned-var-name-unused
+-- parse-assign.rego --
+package p
+q := "
+-- exp/parse-assign/stdout --
+1 error occurred: parse-assign.rego:2: rego_parse_error: unexpected assign token: expected rule value term (e.g., q := <VALUE> { ... })
+	q := "
+	  ^
+-- exp/parse-assign/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-assign-token
+-- parse-identifier.rego --
+package p
+import rego.v1
+allow if {
+	"admin" in input roles
+}
+-- exp/parse-identifier/stdout --
+1 error occurred: parse-identifier.rego:4: rego_parse_error: unexpected identifier token: expected \n or ; or }
+	"admin" in input roles
+	                 ^
+-- exp/parse-identifier/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-identifier-token
+-- parse-left-curly.rego --
+package p
+import future.keywords
+allow if {
+    input.roles == {}{
+}
+-- exp/parse-left-curly/stdout --
+1 error occurred: parse-left-curly.rego:4: rego_parse_error: unexpected { token: expected \n or ; or }
+	    input.roles == {}{
+	                     ^
+-- exp/parse-left-curly/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-left-curly-token
+-- parse-right-curly.rego --
+package p
+import future.keywords
+allow if {
+    input.roles == {}}
+}
+-- exp/parse-right-curly/stdout --
+1 error occurred: parse-right-curly.rego:5: rego_parse_error: unexpected } token
+	}
+	^
+-- exp/parse-right-curly/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-right-curly-token
+-- parse-kw.rego --
+package p
+import future.keywords
+allow if {
+	input.admin true
+}
+-- exp/parse-kw/stdout --
+1 error occurred: parse-kw.rego:4: rego_parse_error: unexpected true keyword: expected \n or ; or }
+	input.admin true
+	            ^
+-- exp/parse-kw/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-name-keyword
+-- parse-string.rego --
+package p
+import future.keywords
+allow if {
+	input.role "admin"
+}
+-- exp/parse-string/stdout --
+1 error occurred: parse-string.rego:4: rego_parse_error: unexpected string token: expected \n or ; or }
+	input.role "admin"
+	           ^
+-- exp/parse-string/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-string-token
+-- parse-multi-default.rego --
+package p
+default q := true
+default q := true
+-- exp/parse-multi-default/stdout --
+1 error occurred: parse-multi-default.rego:2: rego_type_error: multiple default rules data.p.q found
+-- exp/parse-multi-default/stderr --
+For more information, see: https://docs.styra.com/opa/errors/rego-type-error/multiple-default-rules-name-found
