@@ -1,7 +1,6 @@
 package pull
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -24,6 +23,10 @@ import (
 const cookieName = "gosessid"
 const dirPermission = 0o700
 const filePermission = 0o600
+
+// This limit is used with the /v1/data endpoint to retrieve datsource
+// contents. This value is the same as the DAS UI uses.
+const dataSizeLimit = "1048576"
 
 const warningStaleFiles = "Found these files that don't currently exist in the remote location: %s."
 const warningStaleFilesExtra = "If you were not expecting this message, please delete those files or run `eopa pull --force`"
@@ -106,11 +109,11 @@ func Start(ctx context.Context, opt ...Opt) error {
 	}
 	hc.cl = cl
 
-	resp, err := cl.LibrariesList(ctx)
+	libsResp, err := cl.LibrariesList(ctx)
 	if err != nil {
 		return fmt.Errorf("list libraries: %w", err)
 	}
-	libs, err := dasapi.ParseLibrariesListResponse(resp)
+	libs, err := dasapi.ParseLibrariesListResponse(libsResp)
 	if err != nil {
 		return fmt.Errorf("list libraries response: %w", err)
 	}
@@ -267,7 +270,7 @@ func (c *cl) getPolicy(ctx context.Context, id string) error {
 }
 
 func (c *cl) getData(ctx context.Context, id string) error {
-	lim := "1048576" // same as UI uses
+	lim := dataSizeLimit
 	resp, err := c.cl.GetData(ctx, id, &dasapi.GetDataParams{Limit: &lim})
 	if err != nil {
 		return err
@@ -280,21 +283,32 @@ func (c *cl) getData(ctx context.Context, id string) error {
 		return err
 	}
 
-	blob, ok := dat.JSON200.Result.(map[string]any)
-	if !ok {
-		return fmt.Errorf("unexpected result (%T)", dat.JSON200.Result)
+	blob, err := json.Marshal(dat.JSON200.Result)
+	if err != nil {
+		return fmt.Errorf("could not marshal datasource contents: %w", err)
 	}
 
+	// NOTE: in order for EOPA to be able to load the datasource locally,
+	// its parent directory should be the final path element in the
+	// `data.` path, and the data itself should live in a `data.json` file
+	// inside of that folder. This is similar but different from the
+	// policy files, where we want the output of c.path() to directly
+	// determine the full path to place the file at.
+	//
+	// -- CAD 2024-01-10
+
 	if len(blob) > 0 {
-		if err := c.fs.MkdirAll(c.path(filepath.Dir(id)), dirPermission); err != nil {
+		if err := c.fs.MkdirAll(c.path(id), dirPermission); err != nil {
 			return err
 		}
 	}
-	data := bytes.Buffer{}
-	if err := json.NewEncoder(&data).Encode(blob); err != nil {
-		return fmt.Errorf("encode data: %w", err)
+
+	// Make sure there is always a trailing newline.
+	if blob[len(blob)-1] != '\n' {
+		blob = append(blob, '\n')
 	}
-	if err := c.fs.WriteFile(c.path(id), data.Bytes(), filePermission); err != nil {
+
+	if err := c.fs.WriteFile(filepath.Join(c.path(id), "data.json"), blob, filePermission); err != nil {
 		return fmt.Errorf("create file: %w", err)
 	}
 	return nil
@@ -367,7 +381,17 @@ func (c *cl) writeToFS() error {
 }
 
 func (c *cl) path(policyID string, extra ...string) string {
-	policyID = policyID[len("libraries/"):]
+	// NOTE: we expect policyID to include the `libraries/` prefix. It is
+	// important that we keep this not only to match with DAS conventions,
+	// but also because while OPA uses `package` statements to place Rego
+	// policies into the `data.` hierarchy, it uses paths on disk to place
+	// data.json files. It is thus important for both datasources, and for
+	// JSON files included in repositories to include the `libraries`
+	// prefix so the data will be loaded into the right place. Note that at
+	// present, the latter situation is only applicable when the DATA_FILES
+	// feature flag is enabled for DAS.
+	//
+	// -- CAD 2024-01-10
 	return filepath.Join(append([]string{c.target, policyID}, extra...)...)
 }
 

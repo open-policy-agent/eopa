@@ -15,8 +15,8 @@ cp exp/libraries/lib02/stale act/libraries/lib02/envoy/policy.rego
 
 exec eopa pull
 stderr '\[INFO\] Retrieving 2 libraries: lib01, lib02'
-[!windows] stderr '\[WARNING\] Found these files that don''t currently exist in the remote location: lib00, lib02/stale.'
-[windows]  stderr '\[WARNING\] Found these files that don''t currently exist in the remote location: lib00, lib02\\stale.'
+[!windows] stderr '\[WARNING\] Found these files that don''t currently exist in the remote location: libraries/lib00, libraries/lib02/stale.'
+[windows]  stderr '\[WARNING\] Found these files that don''t currently exist in the remote location: libraries\\lib00, libraries\\lib02\\stale.'
 stderr '\[WARNING\] If you were not expecting this message, please delete those files or run `eopa pull --force`'
 ! stdout .
 exec diff -r exp act
@@ -24,6 +24,7 @@ exec diff -r exp act
 exec eopa pull --force --log-level warn
 ! stderr .
 ! stdout .
+
 exec diff -r exp-clean act
 
 -- .styra-session --
@@ -31,9 +32,9 @@ opensesame
 
 -- .styra.yaml --
 url: http://127.0.0.1:9991
-libraries: act/libraries
+libraries: act
 
--- exp/libraries/.gitignore --
+-- exp/.gitignore --
 *
 -- exp/libraries/lib00/old --
 -- exp/libraries/lib02/envoy/policy.rego --
@@ -42,17 +43,17 @@ import future.keywords
 allow if true
 -- exp/libraries/lib02/stale --
 not in mock response
--- exp/libraries/lib02/token --
+-- exp/libraries/lib02/token/data.json --
 {"bearer_token":"testtoken"}
--- exp/libraries/lib02/thing --
+-- exp/libraries/lib02/thing/data.json --
 {"data":{"one":{"foo":1},"two":{"foo":2}}}
--- exp-clean/libraries/.gitignore --
+-- exp-clean/.gitignore --
 *
 -- exp-clean/libraries/lib02/envoy/policy.rego --
 package libraries.lib02.envoy
 import future.keywords
 allow if true
--- exp-clean/libraries/lib02/token --
+-- exp-clean/libraries/lib02/token/data.json --
 {"bearer_token":"testtoken"}
--- exp-clean/libraries/lib02/thing --
+-- exp-clean/libraries/lib02/thing/data.json --
 {"data":{"one":{"foo":1},"two":{"foo":2}}}

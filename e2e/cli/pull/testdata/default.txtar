@@ -17,11 +17,11 @@ url: http://127.0.0.1:9992
 
 -- exp/.gitignore --
 *
--- exp/lib02/envoy/policy.rego --
+-- exp/libraries/lib02/envoy/policy.rego --
 package libraries.lib02.envoy
 import future.keywords
 allow if true
--- exp/lib02/token --
+-- exp/libraries/lib02/token/data.json --
 {"bearer_token":"testtoken"}
--- exp/lib02/thing --
+-- exp/libraries/lib02/thing/data.json --
 {"data":{"one":{"foo":1},"two":{"foo":2}}}
