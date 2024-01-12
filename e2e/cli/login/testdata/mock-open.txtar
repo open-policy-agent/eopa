@@ -4,12 +4,13 @@ env PATH=$WORK:$PATH
 env HOME=$WORK
 chmod 755 $WORK/open
 chmod 755 $WORK/xdg-open
-exec eopa login --url https://my.styra.com --timeout 1s --log-level debug
+exec eopa login --url https://my.styra.com/ --timeout 1s --log-level debug
 ! stdout .
 stderr '\[DEBUG\] Using session file'
 [!windows] stderr $WORK/\.styra-session
 stderr '\[INFO\] Successfully logged in'
 ! stderr '\[INFO\] POST'
+stderr '\[INFO\] Opening https://my.styra.com/cli-sign-in\?callback=[0-9]+$'
 stderr '\[DEBUG\] Wrote config to .styra.yaml'
 
 # comparing against a file yields a diff because of a trailing newline
