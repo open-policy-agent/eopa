@@ -42,7 +42,7 @@ Write all libraries to to libs/, with debug logging enabled:
 
     eopa pull --libraries libs --log-level debug
 
-Ignore existing target directory:
+Remove files that aren't expected in the target directory:
 
     eopa pull --force
 `,

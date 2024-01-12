@@ -60,7 +60,33 @@ func loginCmd(config *viper.Viper, paths []string) *cobra.Command {
 	var err error
 
 	cmd := &cobra.Command{
-		Use:    "login",
+		Use: "login",
+		Example: `
+Create a new browser session that is shared with EOPA.
+			
+Using settings from .styra.yaml:
+
+    eopa login
+
+Note: 'eopa login' will look for .styra.yaml in the current directory,
+the repository root, and your home directory. To use a different config
+file location, pass --styra-config:
+
+    eopa login --styra-config ~/.strya-primary.yaml
+
+You can also provide your DAS endpoint via a flag:
+
+    eopa login --url https://my-tenant.styra.com
+
+On successful login, a .styra.yaml file will be generated in your current
+working directory.
+
+If the automatic token transfer fails, the browser tab will show you the
+token to use. Paste the token into the following command to have it stored
+manually:
+
+	eopa login --read-token
+`,
 		Hidden: os.Getenv("EOPA_LOGIN") == "",
 		Short:  "Sign-in to DAS instance",
 		PreRunE: func(c *cobra.Command, _ []string) error {
