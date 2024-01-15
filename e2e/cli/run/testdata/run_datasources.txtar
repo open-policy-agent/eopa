@@ -1,0 +1,59 @@
+# This test ensures that data downloaded from a datasource with eopa pull can
+# be correctly accessed using eopa run. Because the point of truth for how the
+# downloaded data is structured is the implementation of `eopa pull`, this test
+# uses syncmock to simulate the DAS API, downloads it, and then launches the
+# EOPA server.
+#
+# NOTE: ports 33249 (syncmock) and 41072 (eopa) were chosen at random, so that
+# if we run in parallel with other tests, we won't fail to bind to the
+# interface.
+
+! exec syncmock 33249 .styra-session &
+[darwin] exec sleep 1
+
+exec eopa pull --log-level warn
+! stdout .
+! stderr .
+
+# we expect a nonzero exit code on windows
+[windows] ! exec eopa run --log-level error --addr :41072 --server &eopa&
+[!windows]  exec eopa run --log-level error --addr :41072 --server &eopa&
+! stdout .
+! stderr .
+
+# block until the server reports health OK
+httpwait 'http://localhost:41072/health' '{}'
+
+# policy access test
+exec curl -Ss --request GET --url http://localhost:41072/v1/data/libraries/lib02/envoy
+cmp stdout exp/stdout_policy_allow
+! stderr .
+
+# token access test (datsource)
+exec curl -Ss --request GET --url http://localhost:41072/v1/data/libraries/lib02/token
+cmp stdout exp/stdout_token
+! stderr .
+
+# thing access test (datsource)
+exec curl -Ss --request GET --url http://localhost:41072/v1/data/libraries/lib02/thing
+cmp stdout exp/stdout_thing
+! stderr .
+
+stop eopa
+! stdout .
+! stderr .
+
+-- .styra-session --
+opensesame
+
+-- .styra.yaml --
+url: http://127.0.0.1:33249
+data:
+  - .styra/include
+
+-- exp/stdout_policy_allow --
+{"result":{"allow":true}}
+-- exp/stdout_token --
+{"result":{"bearer_token":"testtoken"}}
+-- exp/stdout_thing --
+{"result":{"data":{"one":{"foo":1},"two":{"foo":2}}}}
