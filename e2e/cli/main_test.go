@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
@@ -72,7 +73,7 @@ p { data.xs[_] }`
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
-		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+		resp, err := utils.StdlibHTTPClient.Do(req.WithContext(ctx))
 		if err != nil {
 			t.Fatal(err)
 		}

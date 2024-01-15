@@ -265,7 +265,11 @@ func loadEnterpriseOPA(t *testing.T, config, image string, httpPort int) *docker
 func checkEnterpriseOPA(t *testing.T, host string, exp any) {
 	if err := util.WaitFunc(func() bool {
 		// check store response (TODO: check metrics/status when we have them)
-		resp, err := http.Get("http://" + host + "/v1/data/git/e2e")
+		req, err := http.NewRequest("GET", "http://"+host+"/v1/data/git/e2e", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err := utils.StdlibHTTPClient.Do(req)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -153,7 +153,7 @@ rego_modules:
 		t.Fatalf("http request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/yaml")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := utils.StdlibHTTPClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
