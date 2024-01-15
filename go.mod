@@ -28,7 +28,7 @@ require (
 	github.com/hashicorp/vault/api v1.9.2
 	github.com/hashicorp/vault/api/auth/approle v0.4.0
 	github.com/hashicorp/vault/api/auth/kubernetes v0.4.0
-	github.com/jackc/pgx/v5 v5.5.1
+	github.com/jackc/pgx/v5 v5.5.2
 	github.com/jarcoal/httpmock v1.2.0
 	github.com/json-iterator/go v1.1.12
 	github.com/keygen-sh/keygen-go/v2 v2.7.0
