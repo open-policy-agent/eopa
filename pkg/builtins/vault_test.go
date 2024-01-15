@@ -198,7 +198,7 @@ func startVaultMulti(t *testing.T, mount string, data map[string]map[string]stri
 	token := "root-token"
 	opts := []testcontainers.ContainerCustomizer{
 		testLogger(t),
-		testcontainers.WithImage("hashicorp/vault:1.13.3"),
+		testcontainers.WithImage("hashicorp/vault:1.15.4"),
 		testcontainersvault.WithToken(token),
 	}
 

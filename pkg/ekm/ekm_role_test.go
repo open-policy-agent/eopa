@@ -18,7 +18,7 @@ func createVaultTestRoleCluster(t *testing.T) (*testcontainervault.VaultContaine
 	t.Helper()
 
 	opts := []testcontainers.ContainerCustomizer{
-		testcontainers.WithImage("hashicorp/vault:1.13.0"),
+		testcontainers.WithImage("hashicorp/vault:1.15.4"),
 		testcontainervault.WithToken(token),
 		testcontainervault.WithInitCommand("secrets enable -version=2 -path=kv kv"),
 	}
