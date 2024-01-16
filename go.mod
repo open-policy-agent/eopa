@@ -61,6 +61,7 @@ require (
 	github.com/styrainc/regal v0.15.0
 	github.com/testcontainers/testcontainers-go v0.27.1-0.20240112110335-2309c4ecaf2f
 	github.com/testcontainers/testcontainers-go/modules/localstack v0.27.1-0.20240112110335-2309c4ecaf2f
+	github.com/testcontainers/testcontainers-go/modules/mssql v0.27.0
 	github.com/testcontainers/testcontainers-go/modules/mysql v0.27.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.27.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.27.0
