@@ -3,7 +3,7 @@ package utils
 import (
 	"embed"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -155,14 +155,14 @@ func TestscriptExtraFunctions() map[string]func(*testscript.TestScript, bool, []
 					continue
 				}
 
-				res, err := http.DefaultClient.Do(req)
+				res, err := StdlibHTTPClient.Do(req)
 				if err != nil {
 					ts.Logf("httpwait: failed to execute http request: %s", err.Error())
 					continue
 				}
 
 				defer res.Body.Close()
-				body, err := ioutil.ReadAll(res.Body)
+				body, err := io.ReadAll(res.Body)
 				if err != nil {
 					ts.Logf("httpwait: failed to read http response body: %s", err.Error())
 					continue
