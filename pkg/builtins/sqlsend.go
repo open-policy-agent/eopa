@@ -528,4 +528,11 @@ func validateDriver(d string) (string, error) {
 
 func init() {
 	RegisterBuiltinFunc(sqlSendName, builtinSQLSend)
+
+	mysql.SetLogger(null{})
 }
+
+// Suppress error messages from Go MySQL driver like "[mysql] 2023/07/27 15:59:30 packets.go:37: unexpected EOF"
+type null struct{}
+
+func (null) Print(...any) {}
