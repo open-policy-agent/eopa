@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	rhttp "github.com/hashicorp/go-retryablehttp"
+
 	"github.com/open-policy-agent/opa/logging"
 	logging_test "github.com/open-policy-agent/opa/logging/test"
 	"github.com/styrainc/enterprise-opa-private/pkg/login"
@@ -67,7 +69,7 @@ func TestLoginFlowSuccess(t *testing.T) {
 		if err != nil {
 			t.Fatalf("callback request: %v", err)
 		}
-		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+		resp, err := rhttp.NewClient().StandardClient().Do(req.WithContext(ctx))
 		if err != nil {
 			t.Fatalf("send callback: %v", err)
 		}
@@ -143,7 +145,7 @@ func TestLoginFlowNoBrowserSuccess(t *testing.T) {
 		if err != nil {
 			t.Fatalf("callback request: %v", err)
 		}
-		resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+		resp, err := rhttp.NewClient().StandardClient().Do(req.WithContext(ctx))
 		if err != nil {
 			t.Fatalf("send callback: %v", err)
 		}
