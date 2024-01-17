@@ -7,12 +7,19 @@
 exec eopa eval -f pretty '[data.foo.bar, data.coolstuff.foobar]'
 ! stderr .
 cmp stdout exp/stdout
+
+exec eopa eval -f pretty data
+! stderr .
+cmp stdout exp-data/stdout
+
 -- dummy1.rego --
 package foo
 bar := "abc"
 -- cooldir/dummy2.rego --
 package coolstuff
 foobar := "quux"
+-- cooldir/dummy2.json --
+{"foo2":"bear"}
 -- .styra.yaml --
 data:
   ./dummy1.rego
@@ -22,3 +29,13 @@ data:
   "abc",
   "quux"
 ]
+-- exp-data/stdout --
+{
+  "coolstuff": {
+    "foobar": "quux"
+  },
+  "foo": {
+    "bar": "abc"
+  },
+  "foo2": "bear"
+}

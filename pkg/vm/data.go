@@ -642,7 +642,7 @@ func objectIterate(ctx context.Context, obj interface{}, f func(key, value fjson
 	}
 
 	return obj.(IterableObject).Iter(ctx, func(key, value interface{}) (bool, error) {
-		jkey, err := castJSON(ctx, value)
+		jkey, err := castJSON(ctx, key)
 		if err != nil {
 			return false, err
 		}
