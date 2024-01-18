@@ -36,6 +36,7 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/preview"
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage"
+	"github.com/styrainc/enterprise-opa-private/pkg/telemetry"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
@@ -349,11 +350,14 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 	lic.SetLogger(logger)
 	ekmHook.SetLogger(logger)
 
-	runtime.RegisterGatherers(map[string]func(context.Context) (any, error){
+	params.rt.TelemetryGatherers = map[string]func(context.Context) (any, error){
 		"license": func(context.Context) (any, error) {
 			return lic.ID(), nil
 		},
-	})
+		"bundle_sizes": telemetry.GatherBundleSizes,
+	}
+	runtime.RegisterGatherers(params.rt.TelemetryGatherers)
+
 	rt, err := runtime.NewRuntime(ctx, params.rt)
 	if err != nil {
 		return nil, err
@@ -388,6 +392,9 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 	}
 
 	rt.Manager.Register(discovery.Name, disco)
+	telemetry.Setup(rt.Manager, disco)
+
+	signalTelemetry(rt.Manager)
 
 	return rt, nil
 }
