@@ -38,17 +38,23 @@ func hashImpl(value interface{}, hasher *xxhash.Digest) {
 		}
 
 	case Float:
-		f, err := value.Value().Float64()
-		if err != nil {
-			panic("invalid float")
+		if f, err := value.Value().Float64(); err == nil {
+			// NOTE(sr): Picked BigEndian here because we've done it below. It shouldn't matter
+			// for the hashing here.
+			b := make([]byte, 9)
+			b[0] = typeHashFloat
+			binary.BigEndian.PutUint64(b[1:], math.Float64bits(f))
+			hasher.Write(b)
+		} else {
+			// For numbers that don't convert straightaway via
+			// (Number).Float64, OSS OPA simply puts the raw text into the
+			// hasher, and hashes that. We mimic that approach here.
+			v := value.Value()
+			b := make([]byte, 0, len(v)+1)
+			b = append(b, typeHashFloat)
+			b = append(b, []byte(v)...)
+			hasher.Write(b)
 		}
-		// NOTE(sr): Picked BigEndian here because we've done it below. It shouldn't matter
-		// for the hashing here.
-		b := make([]byte, 9)
-		b[0] = typeHashFloat
-		binary.BigEndian.PutUint64(b[1:], math.Float64bits(f))
-		hasher.Write(b)
-
 	case *String:
 		hasher.Write([]byte{typeHashString})
 
