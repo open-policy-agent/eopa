@@ -23,11 +23,12 @@ import (
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/rs/zerolog"
-	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/plugin/kzerolog"
 
 	"github.com/open-policy-agent/opa/util"
+
+	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 )
 
 const defaultImage = "ko.local/enterprise-opa-private:edge" // built via `make build-local`
@@ -155,7 +156,7 @@ transform[key] := val if {
 
 			if err := util.WaitFunc(func() bool {
 				// check store response (TODO: check metrics/status when we have them)
-				resp, err := http.Get("http://localhost:" + eopa.GetPort(fmt.Sprintf("%d/tcp", eopaHTTPPort)) + "/v1/data/messages")
+				resp, err := utils.StdlibHTTPClient.Get("http://localhost:" + eopa.GetPort(fmt.Sprintf("%d/tcp", eopaHTTPPort)) + "/v1/data/messages")
 				if err != nil {
 					t.Fatal(err)
 				}
