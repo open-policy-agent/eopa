@@ -85,6 +85,8 @@ func TestTelemetry(t *testing.T) {
 					m["latest_version"] == "dummy"
 			}, 5*time.Second)
 
+			wait.ForLog(t, eopaErr, func(s string) bool { return s == "Bundle loaded and activated successfully." }, 5*time.Second)
+
 			if err := eopa.Process.Signal(syscall.SIGUSR1); err != nil {
 				t.Fatal(err)
 			}
