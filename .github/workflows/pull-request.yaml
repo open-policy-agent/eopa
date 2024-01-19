@@ -469,6 +469,10 @@ jobs:
             GOOS: windows
             GOARCH: amd64
     steps:
+      - run: |
+          netsh int ipv4 show dynamicport tcp
+          netsh int ipv4 show excludedportrange protocol=tcp
+        if: matrix.os == 'windows-latest'
       - name: Download cross-build binaries
         uses: actions/download-artifact@v4
         with:
