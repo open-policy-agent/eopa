@@ -4,7 +4,7 @@ cd new
 # syncmock is used by all commands in this file
 # it has to expect failure (the "!") because it's
 # killed at the end of the process
-! exec syncmock 9993 .styra-session &
+! exec syncmock --port 9993 --cookie-file .styra-session &
 [darwin] exec sleep 1
 
 exec git init .

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,25 +14,42 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/dasapi"
 )
 
+var cookieFile = flag.String("cookie-file", "", "file containing the cookie secret")
+var tokenFile = flag.String("token-file", "", "file containing the token secret")
+var port = flag.Int("port", 0, "port to listen to")
+
 func main() {
-	if len(os.Args) != 3 {
-		log.Fatalf("usage: %s <port> <cookie-file>", os.Args[0])
+	flag.Parse()
+	if *port == 0 || (*cookieFile == "" && *tokenFile == "") {
+		log.Fatalf("usage: %s --port <port> [--cookie-file <cookie-file>|--token-file <token-file>]", os.Args[0])
 	}
-	secret := strings.TrimSpace(string(must(os.ReadFile(os.Args[2]))))
+
+	var cookie, token string
+	if *cookieFile != "" {
+		cookie = strings.TrimSpace(string(must(os.ReadFile(*cookieFile))))
+	} else if *tokenFile != "" {
+		token = strings.TrimSpace(string(must(os.ReadFile(*tokenFile))))
+	}
 
 	s := &srv{}
 	mw := []dasapi.StrictMiddlewareFunc{
 		//nolint:staticcheck // We need to pass those types
-		func(f strictnethttp.StrictHttpHandlerFunc, operationID string) strictnethttp.StrictHttpHandlerFunc {
+		func(f strictnethttp.StrictHttpHandlerFunc, _ string) strictnethttp.StrictHttpHandlerFunc {
 			return func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
 				// NOTE(sr): it would be more realistic to return some HTTP status code here,
 				// with the errors, we just get a 500. But for testing, it's good enough.
-				c, err := r.Cookie("gosessid")
-				if err != nil {
-					return nil, fmt.Errorf("missing cookie")
-				}
-				if c.Value != string(secret) {
-					return nil, fmt.Errorf("wrong cookie")
+				if cookie != "" {
+					c, err := r.Cookie("gosessid")
+					if err != nil {
+						return nil, fmt.Errorf("missing cookie")
+					}
+					if c.Value != string(cookie) {
+						return nil, fmt.Errorf("wrong cookie")
+					}
+				} else if token != "" {
+					if act := r.Header.Get("Authorization"); act[len("bearer "):] != token {
+						return nil, fmt.Errorf("wrong token")
+					}
 				}
 				return f(ctx, w, r, request)
 			}
@@ -39,7 +57,7 @@ func main() {
 	}
 	http.Handle("/", dasapi.Handler(dasapi.NewStrictHandler(s, mw)))
 
-	log.Fatal(http.ListenAndServe("127.0.0.1:"+os.Args[1], nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", *port), nil))
 }
 
 type srv struct{}

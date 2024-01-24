@@ -5,7 +5,7 @@
 # NOTE: port 52463 was chosen at random, so that if we run in parallel with
 # other tests, we won't fail to bind to the interface.
 
-! exec eopa run --log-level error --addr :52463 --server --bundle
+! exec eopa run --log-level error --addr 127.0.0.1:52463 --server --bundle
 cmp stdout exp/stdout
 stderr '.*warning.*'
 stderr '.*additional data paths picked up from config file, this is likely to cause an overlapping roots error.*'

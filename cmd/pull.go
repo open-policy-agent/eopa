@@ -17,6 +17,7 @@ import (
 // targetDir says where to pull libraries to
 const targetDir = "libraries"             // that's the flag, --libraries, and the config key
 const targetDirDefault = ".styra/include" // that's the folder, libraries/
+const apiTokenEnvVar = "EOPA_STYRA_DAS_TOKEN"
 
 // force makes the pull command write to libraries even when it exists
 const force = "force"
@@ -37,6 +38,10 @@ the repository root, and your home directory. To use a different config
 file location, pass --styra-config:
 
     eopa pull --styra-config ~/.styra-primary.yaml
+
+
+If the environment varable EOPA_STYRA_DAS_TOKEN is set, 'eopa pull'
+will use it as an API token to talk to the configured DAS instance.
 
 Write all libraries to to libs/, with debug logging enabled:
 
@@ -84,13 +89,16 @@ Remove files that aren't expected in the target directory:
 			t, _ := c.Flags().GetString(targetDir)
 			st := toAbs(t != "", config, targetDir, targetDirDefault)
 
-			return pull.Start(ctx,
+			opts := []pull.Opt{
+				pull.APIToken(os.Getenv(apiTokenEnvVar)),
 				pull.SessionFile(sf),
 				pull.URL(u),
 				pull.Logger(logger),
 				pull.TargetDir(st),
 				pull.Force(config.GetBool(force)),
-			)
+			}
+
+			return pull.Start(ctx, opts...)
 		},
 	}
 

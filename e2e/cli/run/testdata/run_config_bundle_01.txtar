@@ -5,7 +5,7 @@
 # NOTE: port 41413 was chosen at random, so that if we run in parallel with
 # other tests, we won't fail to bind to the interface.
 
-! exec eopa run --log-level error --addr :41413 --server --bundle
+! exec eopa run --log-level error --addr 127.0.0.1:41413 --server --bundle
 stdout '^run error: initialization error: detected overlapping roots'
 stderr '.*warning.*'
 stderr '.*additional data paths picked up from config file, this is likely to cause an overlapping roots error.*'

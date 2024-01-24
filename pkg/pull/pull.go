@@ -35,6 +35,7 @@ type opts struct {
 	url         *url.URL
 	logger      logging.Logger
 	sessionFile string
+	token       string
 	target      string
 	force       bool
 }
@@ -65,6 +66,12 @@ func SessionFile(s string) Opt {
 	}
 }
 
+func APIToken(t string) Opt {
+	return func(o *opts) {
+		o.token = t
+	}
+}
+
 func TargetDir(s string) Opt {
 	return func(o *opts) {
 		o.target = s
@@ -72,7 +79,12 @@ func TargetDir(s string) Opt {
 }
 
 type cl struct {
+	// cookie and token are two potential authentication methods.
+	// We'll read sessionFile and populate either of the two fields
+	// accordingly.
 	cookie *http.Cookie
+	token  string
+
 	client *http.Client
 	logger logging.Logger
 	cl     *dasapi.Client
@@ -157,25 +169,37 @@ func (o *opts) preflight() error {
 }
 
 func (o *opts) newClient() (*cl, error) {
-	secret, err := os.ReadFile(o.sessionFile)
-	if err != nil {
-		return nil, fmt.Errorf("read secret %s: %w", o.sessionFile, err)
-	}
-
-	o.logger.Debug("read secret from %s", o.sessionFile)
-	return &cl{
-		cookie: &http.Cookie{
-			Name:     cookieName,
-			Value:    strings.TrimSpace(string(secret)),
-			HttpOnly: true,
-			Secure:   true,
-		},
+	c := cl{
 		client: http.DefaultClient,
 		logger: o.logger,
 		target: o.target,
 		force:  o.force,
+		token:  o.token,
 		fs:     newMemFS(o.target),
-	}, nil
+	}
+
+	if o.token != "" {
+		return &c, nil
+	}
+
+	// no token provided, read session file
+	secret, err := os.ReadFile(o.sessionFile)
+	if err != nil {
+		return nil, fmt.Errorf("read secret %s: %w", o.sessionFile, err)
+	}
+	if len(secret) == 0 {
+		return nil, fmt.Errorf("read secret %s: empty file", o.sessionFile)
+	}
+
+	c.cookie = &http.Cookie{
+		Name:     cookieName,
+		Value:    strings.TrimSpace(string(secret)),
+		HttpOnly: true,
+		Secure:   true,
+	}
+	o.logger.Debug("read session secret from %s", o.sessionFile)
+
+	return &c, nil
 }
 
 func newMemFS(tgt string) *memoryfs.FS {
@@ -192,7 +216,11 @@ func newMemFS(tgt string) *memoryfs.FS {
 }
 
 func (c *cl) Do(req *http.Request) (*http.Response, error) {
-	req.AddCookie(c.cookie)
+	if c.cookie != nil {
+		req.AddCookie(c.cookie)
+	} else if c.token != "" {
+		req.Header.Set("Authorization", "bearer "+c.token)
+	}
 	ds, _ := httputil.DumpRequestOut(req, true)
 	c.logger.Debug(string(ds))
 

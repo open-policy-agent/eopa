@@ -8,7 +8,7 @@
 # if we run in parallel with other tests, we won't fail to bind to the
 # interface.
 
-! exec syncmock 33249 .styra-session &
+! exec syncmock --port 33249 --cookie-file .styra-session &
 [darwin] exec sleep 1
 
 exec eopa pull --log-level warn
@@ -16,8 +16,8 @@ exec eopa pull --log-level warn
 ! stderr .
 
 # we expect a nonzero exit code on windows
-[windows] ! exec eopa run --log-level error --addr :41072 --server &eopa&
-[!windows]  exec eopa run --log-level error --addr :41072 --server &eopa&
+[windows] ! exec eopa run --log-level error --addr 127.0.0.1:41072 --server &eopa&
+[!windows]  exec eopa run --log-level error --addr 127.0.0.1:41072 --server &eopa&
 ! stdout .
 ! stderr .
 
