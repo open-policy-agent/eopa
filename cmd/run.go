@@ -336,8 +336,10 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 
 	ekmHook := ekm.NewEKM(lic, lparams)
 	previewHook := preview.NewHook()
+	datasourceTelemetryHook := telemetry.NewDatasourceTelemetryHook()
 	evalCacheHook := vm.NewCacheHook()
-	hs := hooks.New(ekmHook, previewHook, evalCacheHook)
+	hs := hooks.New(ekmHook, previewHook, evalCacheHook, datasourceTelemetryHook)
+
 	params.rt.Hooks = hs
 
 	params.rt.Router = loadRouter()
@@ -355,9 +357,9 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 			return lic.ID(), nil
 		},
 		"bundle_sizes": telemetry.GatherBundleSizes,
+		"datasources":  telemetry.GatherDatasources,
 	}
 	runtime.RegisterGatherers(params.rt.TelemetryGatherers)
-
 	rt, err := runtime.NewRuntime(ctx, params.rt)
 	if err != nil {
 		return nil, err

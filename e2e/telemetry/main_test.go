@@ -32,13 +32,21 @@ var testserver = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
 
 func TestTelemetry(t *testing.T) {
 	tests := []struct {
-		config string
+		config         string
+		datasourcesExp map[string]int
 	}{
 		{
 			config: "testdata/bundle.yml",
 		},
 		{
 			config: "testdata/disco.yml",
+		},
+		{
+			config: "testdata/datasources.yml",
+			datasourcesExp: map[string]int{
+				"http": 3,
+				"git":  1,
+			},
 		},
 	}
 
@@ -98,6 +106,7 @@ func TestTelemetry(t *testing.T) {
 
 			exp := []string{
 				"bundle_sizes",
+				"datasources",
 				"heap_usage_bytes",
 				"id",
 				"license",
@@ -121,6 +130,33 @@ func TestTelemetry(t *testing.T) {
 			}
 			if exp, act := float64(113), sizes[0]; exp != act {
 				t.Errorf("bundle_sizes, expected %v (%[1]T), got %v (%[2]T)", exp, act)
+			}
+
+			datasourcesAct := recv[1]["datasources"].(map[string]any)
+			if tc.datasourcesExp == nil {
+				if len(datasourcesAct) > 0 {
+					t.Errorf("datasourcesExp omitted from test case, but actual datasources was not empty")
+				}
+			} else {
+				// if this gets refactored at some point,
+				// suggest switching to go-cmp
+				if len(tc.datasourcesExp) != len(datasourcesAct) {
+					t.Errorf("actual an expected datasources had different lengths (%d =/= %d)", len(datasourcesAct), len(tc.datasourcesExp))
+				}
+
+				for k, vExp := range tc.datasourcesExp {
+					vAct, ok := datasourcesAct[k]
+					if !ok {
+						t.Errorf("actual datasources missing expected key '%s'", k)
+						continue
+					}
+
+					vActN := int(vAct.(float64))
+
+					if vExp != vActN {
+						t.Errorf("actual and expected datasources have different counts for key '%s' (%d =/= %d)", k, vActN, vExp)
+					}
+				}
 			}
 		})
 	}

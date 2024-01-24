@@ -21,12 +21,14 @@ func Factory() plugins.Factory {
 
 func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 	c := config.(Config)
-	return &Data{
+	p := &Data{
 		Config:  c,
 		log:     m.Logger(),
 		exit:    make(chan struct{}),
 		manager: m,
-		Rego:    transform.New(m, c.Path, Name, c.RegoTransformRule)}
+		Rego:    transform.New(m, c.Path, Name, c.RegoTransformRule),
+	}
+	return p
 }
 
 func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) {
