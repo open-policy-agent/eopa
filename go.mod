@@ -46,7 +46,6 @@ require (
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/open-policy-agent/opa v0.60.0
 	github.com/open-policy-agent/opa-envoy-plugin v0.60.0-envoy
-	github.com/ory/dockertest/v3 v3.10.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/rs/zerolog v1.31.0
 	github.com/sbabiv/xml2map v1.2.1
@@ -60,10 +59,12 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/styrainc/regal v0.15.0
 	github.com/testcontainers/testcontainers-go v0.27.1-0.20240112110335-2309c4ecaf2f
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.27.0
 	github.com/testcontainers/testcontainers-go/modules/localstack v0.27.1-0.20240112110335-2309c4ecaf2f
 	github.com/testcontainers/testcontainers-go/modules/mssql v0.27.0
 	github.com/testcontainers/testcontainers-go/modules/mysql v0.27.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.27.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.27.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.27.0
 	github.com/twmb/franz-go v1.16.0
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
@@ -98,7 +99,6 @@ require (
 	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Microsoft/hcsshim v0.11.4 // indirect
-	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/apache/arrow/go/v14 v14.0.2 // indirect
@@ -132,7 +132,6 @@ require (
 	github.com/cockroachdb/apd/v3 v3.2.0 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/containerd/containerd v1.7.11 // indirect
-	github.com/containerd/continuity v0.4.2 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/cpuguy83/dockercfg v0.3.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
@@ -142,7 +141,6 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.5 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/distribution/reference v0.5.0 // indirect
-	github.com/docker/cli v23.0.3+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker v24.0.7+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -182,7 +180,6 @@ require (
 	github.com/google/flatbuffers v23.5.26+incompatible // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/pprof v0.0.0-20231212022811-ec68065c825e // indirect
-	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect

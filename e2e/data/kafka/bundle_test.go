@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/ory/dockertest/v3/docker"
 	"github.com/twmb/franz-go/pkg/kgo"
 
 	"github.com/open-policy-agent/opa/util"
@@ -30,9 +29,11 @@ import (
 // `make transform` in testdata/bundles.
 func TestTransformFromBundle(t *testing.T) {
 	ctx := context.Background()
-	cleanupPrevious(t)
-	_ = testKafka(t, network(t))
-	cl, err := kafkaClient()
+
+	broker, tx := testKafka(t, ctx)
+	t.Cleanup(func() { tx.Terminate(ctx) })
+
+	cl, err := kafkaClient(broker)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +46,7 @@ func TestTransformFromBundle(t *testing.T) {
 		t.Fatalf("produce msg: %v", err)
 	}
 
-	eopa, eopaOut := eopaRun(t, config("transform", testserver.URL), eopaHTTPPort)
+	eopa, eopaOut := eopaRun(t, config("transform", testserver.URL, broker), "", eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +107,7 @@ func TestTransformFromBundle(t *testing.T) {
 
 // The bundle used in this test declares no roots, so it owns all of 'data'.
 func TestOverlapBundleWithoutRoots(t *testing.T) {
-	eopa, eopaOut := eopaRun(t, config("no-roots", testserver.URL), eopaHTTPPort)
+	eopa, eopaOut := eopaRun(t, config("no-roots", testserver.URL, "127.0.0.1:9191"), "", eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +126,7 @@ func TestOverlapBundleWithoutRoots(t *testing.T) {
 
 // The bundle used here declares the root "data.kafka.messages"
 func TestOverlapBundleOverlappingRoots(t *testing.T) {
-	eopa, eopaOut := eopaRun(t, config("overlap", testserver.URL), eopaHTTPPort)
+	eopa, eopaOut := eopaRun(t, config("overlap", testserver.URL, "127.0.0.1:9191"), "", eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -143,8 +144,8 @@ func TestOverlapBundleOverlappingRoots(t *testing.T) {
 
 // The bundle used here declares the root "data.kafka", a prefix of "data.kafka.messages"
 func TestOverlapBundlePrefixRoot(t *testing.T) {
-	config := fmt.Sprintf(config("prefix", testserver.URL))
-	eopa, eopaOut := eopaRun(t, config, eopaHTTPPort)
+	config := fmt.Sprintf(config("prefix", testserver.URL, "127.0.0.1:9191"))
+	eopa, eopaOut := eopaRun(t, config, "", eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +169,7 @@ var testserver = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
 	http.FileServer(http.Dir("testdata")).ServeHTTP(w, r)
 }))
 
-func config(bndl, service string) string {
+func config(bndl, service, broker string) string {
 	return fmt.Sprintf(`
 services:
 - name: testserver
@@ -182,9 +183,9 @@ plugins:
   data:
     kafka.messages:
       type: kafka
-      urls: [localhost:9092]
+      urls: [%[3]s]
       topics: [foo]
-      rego_transform: "data.transform.transform"`, bndl, service)
+      rego_transform: "data.transform.transform"`, bndl, service, broker)
 }
 
 func assertStatus(t *testing.T, exp map[string]any) {
@@ -207,20 +208,7 @@ func assertStatus(t *testing.T, exp map[string]any) {
 	}
 }
 
-func network(t *testing.T) *docker.Network {
-	network, err := dockerPool.Client.CreateNetwork(docker.CreateNetworkOptions{Name: "eopa_kafka_e2e"})
-	if err != nil {
-		t.Fatalf("network: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := dockerPool.Client.RemoveNetwork(network.ID); err != nil {
-			t.Fatal(err)
-		}
-	})
-	return network
-}
-
-func eopaRun(t *testing.T, config string, httpPort int, extra ...string) (*exec.Cmd, *bytes.Buffer) {
+func eopaRun(t *testing.T, config, policy string, httpPort int, extra ...string) (*exec.Cmd, *bytes.Buffer) {
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
 	args := []string{
@@ -236,6 +224,13 @@ func eopaRun(t *testing.T, config string, httpPort int, extra ...string) (*exec.
 			t.Fatalf("write config: %v", err)
 		}
 		args = append(args, "--config-file", configPath)
+	}
+	if policy != "" {
+		policyPath := filepath.Join(dir, "policy.rego")
+		if err := os.WriteFile(policyPath, []byte(policy), 0x777); err != nil {
+			t.Fatalf("write policy: %v", err)
+		}
+		args = append(args, policyPath)
 	}
 	if len(extra) > 0 {
 		args = append(args, extra...)

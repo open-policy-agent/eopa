@@ -1,20 +1,16 @@
 package kafka_test
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
+	"github.com/testcontainers/testcontainers-go/modules/redpanda"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/scram"
 
@@ -32,6 +28,8 @@ import (
 const caCertPath = "testdata/tls/ca.pem"
 const clientCertPath = "testdata/tls/client-cert.pem"
 const clientKeyPath = "testdata/tls/client-key.pem"
+const serverCertPath = "testdata/tls/server-cert.pem"
+const serverKeyPath = "testdata/tls/server-key.pem"
 
 const transform = `package e2e
 import future.keywords
@@ -49,21 +47,31 @@ transform[key] := val if {
 func TestTLS(t *testing.T) {
 	ctx := context.Background()
 	topic := "cipot"
-	config := fmt.Sprintf(`
+	config := `
 plugins:
   data:
     kafka.messages:
       type: kafka
-      urls: [127.0.0.1:19092]
+      urls: [%[2]s]
       topics: [%[1]s]
       rego_transform: "data.e2e.transform"
       tls_client_cert: testdata/tls/client-cert.pem
       tls_client_private_key: testdata/tls/client-key.pem
       tls_ca_cert: testdata/tls/ca.pem
-`, topic)
+`
 
-	store := storeWithPolicy(ctx, t, transform)
-	mgr := pluginMgr(ctx, t, store, config)
+	serverKeyPEMBlock, err := os.ReadFile(serverKeyPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	serverCertPEMBlock, err := os.ReadFile(serverCertPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	broker, tx := testRedPanda(t, ctx,
+		redpanda.WithTLS(serverCertPEMBlock, serverKeyPEMBlock),
+	)
+	t.Cleanup(func() { tx.Terminate(ctx) })
 
 	keyPEMBlock, err := os.ReadFile(clientKeyPath)
 	if err != nil {
@@ -88,14 +96,13 @@ plugins:
 		RootCAs:      caCertPool,
 	}
 
-	_ = testRedPanda(t, []string{
-		`--set`, `redpanda.kafka_api_tls={'name':'internal','enabled':true,'require_client_auth':true,'cert_file':'/w/tls/server-cert.pem','key_file':'/w/tls/server-key.pem','truststore_file':'/w/tls/ca.pem'}`,
-		`--set`, `redpanda.admin_api_tls={'name':'internal','enabled':true,'require_client_auth':true,'cert_file':'/w/tls/server-cert.pem','key_file':'/w/tls/server-key.pem','truststore_file':'/w/tls/ca.pem'}`},
-		kgo.DialTLSConfig(&tc))
-	cl, err := kafkaClient(kgo.DialTLSConfig(&tc))
+	cl, err := kafkaClient(broker, kgo.DialTLSConfig(&tc))
 	if err != nil {
 		t.Fatalf("kafka client: %v", err)
 	}
+
+	store := storeWithPolicy(ctx, t, transform)
+	mgr := pluginMgr(ctx, t, store, fmt.Sprintf(config, topic, broker))
 
 	// record written before we're consuming messages
 	record := &kgo.Record{Topic: topic, Key: []byte("one"), Value: []byte(`{"foo":"bar"}`)}
@@ -127,31 +134,36 @@ const user, pass = "admin", "wasspord"
 func TestSASL(t *testing.T) {
 	ctx := context.Background()
 	topic := "cipot"
-	config := fmt.Sprintf(`
+	config := `
 plugins:
   data:
     kafka.messages:
       type: kafka
-      urls: [127.0.0.1:19092]
+      urls: [%[2]s]
       topics: [%[1]s]
       rego_transform: "data.e2e.transform"
       sasl_mechanism: scram-sha-256
-      sasl_username: %[2]s
-      sasl_password: %[3]s
-`, topic, user, pass)
+      sasl_username: %[3]s
+      sasl_password: %[4]s
+`
+
+	broker, tx := testRedPanda(t, ctx,
+		redpanda.WithEnableSASL(),
+		redpanda.WithNewServiceAccount(user, pass),
+		redpanda.WithEnableKafkaAuthorization(),
+		redpanda.WithSuperusers(user),
+	)
+	t.Cleanup(func() { tx.Terminate(ctx) })
 
 	store := storeWithPolicy(ctx, t, transform)
-	mgr := pluginMgr(ctx, t, store, config)
+	mgr := pluginMgr(ctx, t, store, fmt.Sprintf(config, topic, broker, user, pass))
 
 	sasl := kgo.SASL(scram.Auth{
 		User: user,
 		Pass: pass,
 	}.AsSha256Mechanism())
-	_ = testRedPanda(t, []string{
-		`--set`, `redpanda.enable_sasl=true`,
-		`--set`, fmt.Sprintf(`redpanda.superusers=["%s"]`, user),
-	}, sasl)
-	cl, err := kafkaClient(sasl)
+
+	cl, err := kafkaClient(broker, sasl)
 	if err != nil {
 		t.Fatalf("kafka client: %v", err)
 	}
@@ -183,23 +195,23 @@ plugins:
 func TestPlainFrom(t *testing.T) {
 	ctx := context.Background()
 	topic := "cipot"
-	config := fmt.Sprintf(`
+	config := `
 plugins:
   data:
     kafka.messages:
       type: kafka
-      urls: [127.0.0.1:19092]
+      urls: [%[2]s]
       topics: [%[1]s]
       from: 100ms
       rego_transform: "data.e2e.transform"
-`, topic, "", "")
+`
 
 	store := storeWithPolicy(ctx, t, transform)
 
-	_ = testRedPanda(t, []string{
-		`--set`, fmt.Sprintf(`redpanda.superusers=["%s"]`, user),
-	})
-	cl, err := kafkaClient()
+	broker, tx := testRedPanda(t, ctx)
+	t.Cleanup(func() { tx.Terminate(ctx) })
+
+	cl, err := kafkaClient(broker)
 	if err != nil {
 		t.Fatalf("kafka client: %v", err)
 	}
@@ -217,7 +229,7 @@ plugins:
 	}
 	time.Sleep(50 * time.Millisecond)
 
-	mgr := pluginMgr(ctx, t, store, config)
+	mgr := pluginMgr(ctx, t, store, fmt.Sprintf(config, topic, broker))
 	if err := mgr.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -248,26 +260,39 @@ plugins:
 }
 
 func TestTLSAndSASL(t *testing.T) {
+	t.Skip("testcontainer module redpanda can't deal with sasl and tls at the same time")
 	ctx := context.Background()
 	topic := "cipot"
-	config := fmt.Sprintf(`
+	config := `
 plugins:
   data:
     kafka.messages:
       type: kafka
-      urls: [127.0.0.1:19092]
+      urls: [%[2]s]
       topics: [%[1]s]
       rego_transform: "data.e2e.transform"
       tls_client_cert: testdata/tls/client-cert.pem
       tls_client_private_key: testdata/tls/client-key.pem
       tls_ca_cert: testdata/tls/ca.pem
       sasl_mechanism: scram-sha-256
-      sasl_username: %[2]s
-      sasl_password: %[3]s
-`, topic, user, pass)
+      sasl_username: %[3]s
+      sasl_password: %[4]s
+`
 
-	store := storeWithPolicy(ctx, t, transform)
-	mgr := pluginMgr(ctx, t, store, config)
+	serverKeyPEMBlock, err := os.ReadFile(serverKeyPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	serverCertPEMBlock, err := os.ReadFile(serverCertPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	broker, tx := testRedPanda(t, ctx,
+		redpanda.WithEnableSASL(),
+		redpanda.WithNewServiceAccount(user, pass),
+		redpanda.WithTLS(serverCertPEMBlock, serverKeyPEMBlock),
+	)
+	t.Cleanup(func() { tx.Terminate(ctx) })
 
 	keyPEMBlock, err := os.ReadFile(clientKeyPath)
 	if err != nil {
@@ -296,16 +321,13 @@ plugins:
 		User: user,
 		Pass: pass,
 	}.AsSha256Mechanism())
-	_ = testRedPanda(t, []string{
-		`--set`, `redpanda.enable_sasl=true`,
-		`--set`, fmt.Sprintf(`redpanda.superusers=["%s"]`, user),
-		`--set`, `redpanda.kafka_api_tls={'name':'internal','enabled':true,'require_client_auth':true,'cert_file':'/w/tls/server-cert.pem','key_file':'/w/tls/server-key.pem','truststore_file':'/w/tls/ca.pem'}`,
-		`--set`, `redpanda.admin_api_tls={'name':'internal','enabled':true,'require_client_auth':true,'cert_file':'/w/tls/server-cert.pem','key_file':'/w/tls/server-key.pem','truststore_file':'/w/tls/ca.pem'}`},
-		kgo.DialTLSConfig(&tc), sasl)
-	cl, err := kafkaClient(kgo.DialTLSConfig(&tc), sasl)
+	cl, err := kafkaClient(broker, kgo.DialTLSConfig(&tc), sasl)
 	if err != nil {
 		t.Fatalf("kafka client: %v", err)
 	}
+
+	store := storeWithPolicy(ctx, t, transform)
+	mgr := pluginMgr(ctx, t, store, fmt.Sprintf(config, topic, broker, user, pass))
 
 	// record written before we're consuming messages
 	record := &kgo.Record{Topic: topic, Key: []byte("one"), Value: []byte(`{"foo":"bar"}`)}
@@ -366,92 +388,4 @@ func pluginMgr(_ context.Context, t *testing.T, store storage.Store, config stri
 	}
 	mgr.Register(discovery.Name, disco)
 	return mgr
-}
-
-// NOTE(sr): TLS setup is much simpler with RedPanda -- so we're using this to verify
-// the plugin's TLS/SASL functionality.
-// CAVEAT: RP only support SCRAM-SHA-256, no other variant (SCRAM-SHA-512, PLAIN).
-func testRedPanda(t *testing.T, flags []string, extra ...kgo.Opt) *dockertest.Resource {
-	pwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	// HACK(philip): These Kafka tests are expected to be run serially
-	// (thus the shared port number). Both CI and local runs can be
-	// disrupted by lingering Kafka containers from prior runs that
-	// terminated early with errors/timeouts/panics, which prevented the
-	// `t.Cleanup()` function from running normally. Therefore, we hackily
-	// look up the container and purge it *before* creating a new Kafka
-	// instance.
-	if res, found := dockerPool.ContainerByName("kafka"); found {
-		_ = dockerPool.Purge(res)
-	}
-	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
-		Name:       "kafka",
-		Repository: "redpandadata/redpanda",
-		Tag:        "latest",
-		Hostname:   "kafka",
-		Env:        []string{},
-		PortBindings: map[docker.Port][]docker.PortBinding{
-			"19092/tcp": {{HostIP: "localhost", HostPort: "19092/tcp"}}, // needed to have localhost:19092 work for kafkaClient
-		},
-		ExposedPorts: []string{"19092/tcp"},
-		Mounts: []string{
-			filepath.Join(pwd, "testdata/") + ":/w",
-		},
-		Cmd: append(strings.Split(`redpanda
-		start
-		--kafka-addr internal://0.0.0.0:19092
-		--advertise-kafka-addr internal://127.0.0.1:19092
-		--overprovisioned
-		--check=false
-		--set redpanda.auto_create_topics_enabled=true
-	`, " \n\t"), flags...),
-	}, func(config *docker.HostConfig) {
-		// set AutoRemove to true so that stopped container goes away by itself
-		config.AutoRemove = true
-		config.RestartPolicy = docker.RestartPolicy{
-			Name: "no",
-		}
-	})
-	if err != nil {
-		t.Fatalf("could not start kafka: %s", err)
-	}
-
-	if err := dockerPool.Retry(func() error {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		client, err := kafkaClient(extra...)
-		if err != nil {
-			t.Logf("kafkaClient: %v", err)
-			return err
-		}
-		buf := bytes.Buffer{}
-		out, err := kafkaResource.Exec(append(strings.Split("rpk acl user create admin -p", " "), pass), dockertest.ExecOptions{StdOut: &buf})
-		if err != nil {
-			t.Logf("docker exec: %v", err)
-			return err
-		}
-		t.Logf("docker exec exited %d: %s", out, buf.String())
-		if err := client.Ping(ctx); err != nil {
-			t.Logf("Ping: %v", err)
-			return err
-		}
-
-		record := &kgo.Record{Topic: "ping", Value: []byte(`true`)}
-		err = client.ProduceSync(ctx, record).FirstErr()
-		t.Logf("ProduceSync: %v", err)
-		return err
-	}); err != nil {
-		t.Fatalf("could not connect to kafka: %s", err)
-	}
-
-	t.Cleanup(func() {
-		if err := dockerPool.Purge(kafkaResource); err != nil {
-			t.Fatalf("could not purge kafkaResource: %s", err)
-		}
-	})
-
-	return kafkaResource
 }

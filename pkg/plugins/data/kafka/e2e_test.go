@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
 	"github.com/rs/zerolog"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/kafka"
+	"github.com/testcontainers/testcontainers-go/modules/redpanda"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/plugin/kzerolog"
 
@@ -21,31 +22,19 @@ import (
 	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm" // important! use VM for rego.Eval below
 )
 
-var dockerPool = func() *dockertest.Pool {
-	p, err := dockertest.NewPool("")
-	if err != nil {
-		panic(err)
-	}
-
-	if err = p.Client.Ping(); err != nil {
-		panic(err)
-	}
-	return p
-}()
-
 func TestKafkaData(t *testing.T) {
 	ctx := context.Background()
 	topic := "cipot"
 	topic2 := "btw"
-	config := fmt.Sprintf(`
+	config := `
 plugins:
   data:
     kafka.messages:
       type: kafka
-      urls: [localhost:19092]
+      urls: [%[3]s]
       topics: [%[1]s, %[2]s]
       rego_transform: "data.e2e.transform"
-`, topic, topic2)
+`
 
 	transform := `package e2e
 import future.keywords
@@ -60,11 +49,14 @@ transform[key] := val if {
 	}
 }
 `
-	store := storeWithPolicy(ctx, t, transform)
-	mgr := pluginMgr(ctx, t, store, config)
 
-	_ = testKafka(t)
-	cl, err := kafkaClient()
+	broker, tx := testKafka(t, ctx)
+	t.Cleanup(func() { tx.Terminate(ctx) })
+
+	store := storeWithPolicy(ctx, t, transform)
+	mgr := pluginMgr(ctx, t, store, fmt.Sprintf(config, topic, topic2, broker))
+
+	cl, err := kafkaClient(broker)
 	if err != nil {
 		t.Fatalf("kafka client: %v", err)
 	}
@@ -124,15 +116,15 @@ transform[key] := val if {
 func TestKafkaOwned(t *testing.T) {
 	ctx := context.Background()
 	topic := "cipot"
-	config := fmt.Sprintf(`
+	config := `
 plugins:
   data:
     kafka.messages:
       type: kafka
-      urls: [localhost:19092]
+      urls: [%[2]s]
       topics: [%[1]s]
       rego_transform: "data.e2e.transform"
-`, topic)
+`
 
 	transform := `package e2e
 import future.keywords
@@ -146,11 +138,11 @@ transform[key] := val if {
 	}
 }
 `
+	broker, tx := testKafka(t, ctx)
+	t.Cleanup(func() { tx.Terminate(ctx) })
+
 	store := storeWithPolicy(ctx, t, transform)
-	mgr := pluginMgr(ctx, t, store, config)
-
-	testKafka(t)
-
+	mgr := pluginMgr(ctx, t, store, fmt.Sprintf(config, topic, broker))
 	if err := mgr.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -176,15 +168,15 @@ transform[key] := val if {
 func TestKafkaPolicyUpdate(t *testing.T) {
 	ctx := context.Background()
 	topic := "cipot"
-	config := fmt.Sprintf(`
+	config := `
 plugins:
   data:
     kafka.messages:
       type: kafka
-      urls: [localhost:19092]
+      urls: [%[2]s]
       topics: [%[1]s]
       rego_transform: "data.e2e.transform"
-`, topic)
+`
 
 	transform := `package e2e
 import future.keywords
@@ -208,13 +200,14 @@ transform[key] := val if {
 	}
 }
 `
+	broker, tx := testKafka(t, ctx)
+	t.Cleanup(func() { tx.Terminate(ctx) })
 
 	noop := `package nothing`
 	store := storeWithPolicy(ctx, t, noop)
-	mgr := pluginMgr(ctx, t, store, config)
+	mgr := pluginMgr(ctx, t, store, fmt.Sprintf(config, topic, broker))
 
-	_ = testKafka(t)
-	cl, err := kafkaClient()
+	cl, err := kafkaClient(broker)
 	if err != nil {
 		t.Fatalf("kafka client: %v", err)
 	}
@@ -312,79 +305,7 @@ transform[key] := val if {
 	}
 }
 
-func testKafka(t *testing.T) *dockertest.Resource {
-	// HACK(philip): These Kafka tests are expected to be run serially
-	// (thus the shared port number). Both CI and local runs can be
-	// disrupted by lingering Kafka containers from prior runs that
-	// terminated early with errors/timeouts/panics, which prevented the
-	// `t.Cleanup()` function from running normally. Therefore, we hackily
-	// look up the container and purge it *before* creating a new Kafka
-	// instance.
-	if res, found := dockerPool.ContainerByName("kafka"); found {
-		_ = dockerPool.Purge(res)
-	}
-	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
-		Name:       "kafka",
-		Repository: "bitnami/kafka",
-		Tag:        "latest",
-		Hostname:   "kafka",
-		Env: []string{
-			"KAFKA_BROKER_ID=1",
-			"KAFKA_CFG_NODE_ID=1",
-			"KAFKA_ENABLE_KRAFT=yes",
-			"KAFKA_CFG_PROCESS_ROLES=broker,controller",
-			"KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER",
-			"KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true",
-			"KAFKA_CFG_LISTENERS=PLAINTEXT://:19092,CONTROLLER://:9093",
-			"KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT",
-			"KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://127.0.0.1:19092",
-			"KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@127.0.0.1:9093",
-			"ALLOW_PLAINTEXT_LISTENER=yes",
-		},
-		PortBindings: map[docker.Port][]docker.PortBinding{
-			"19092/tcp": {{HostIP: "localhost", HostPort: "19092/tcp"}},
-		},
-		ExposedPorts: []string{"19092/tcp"},
-	}, func(config *docker.HostConfig) {
-		// set AutoRemove to true so that stopped container goes away by itself
-		config.AutoRemove = true
-		config.RestartPolicy = docker.RestartPolicy{
-			Name: "no",
-		}
-	})
-	if err != nil {
-		t.Fatalf("could not start kafka: %s", err)
-	}
-	if err := dockerPool.Retry(kafkaPing); err != nil {
-		t.Fatalf("could not connect to kafka: %s", err)
-	}
-
-	t.Cleanup(func() {
-		if err := dockerPool.Purge(kafkaResource); err != nil {
-			t.Fatalf("could not purge kafkaResource: %s", err)
-		}
-	})
-
-	return kafkaResource
-}
-
-func kafkaPing() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	client, err := kafkaClient()
-	if err != nil {
-		return err
-	}
-	if err := client.Ping(ctx); err != nil {
-		return err
-	}
-
-	record := &kgo.Record{Topic: "ping", Value: []byte(`true`)}
-	return client.ProduceSync(ctx, record).FirstErr()
-}
-
-func kafkaClient(extra ...kgo.Opt) (*kgo.Client, error) {
+func kafkaClient(broker string, extra ...kgo.Opt) (*kgo.Client, error) {
 	var logger zerolog.Logger
 	if testing.Verbose() {
 		logger = zerolog.New(os.Stderr)
@@ -393,7 +314,7 @@ func kafkaClient(extra ...kgo.Opt) (*kgo.Client, error) {
 	}
 
 	opts := []kgo.Opt{
-		kgo.SeedBrokers("127.0.0.1:19092"),
+		kgo.SeedBrokers(broker),
 		kgo.WithLogger(kzerolog.New(&logger)),
 		kgo.AllowAutoTopicCreation(),
 	}
@@ -417,4 +338,34 @@ func waitForStorePath(ctx context.Context, t *testing.T, store storage.Store, pa
 	}, 200*time.Millisecond, 10*time.Second); err != nil {
 		t.Fatalf("wait for store path %v: %v", path, err)
 	}
+}
+
+func testKafka(t *testing.T, ctx context.Context, cs ...testcontainers.ContainerCustomizer) (string, testcontainers.Container) {
+	tc, err := kafka.RunContainer(ctx, cs...)
+	if err != nil {
+		t.Fatalf("could not start kafka: %s", err)
+	}
+	brokers, err := tc.Brokers(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return brokers[0], tc
+}
+
+// NOTE(sr): TLS setup is much simpler with RedPanda -- so we're using this to verify
+// the plugin's TLS/SASL functionality.
+// CAVEAT: RP only support SCRAM-SHA-256, no other variant (SCRAM-SHA-512, PLAIN).
+func testRedPanda(t *testing.T, ctx context.Context, cs ...testcontainers.ContainerCustomizer) (string, testcontainers.Container) {
+	opts := []testcontainers.ContainerCustomizer{
+		redpanda.WithAutoCreateTopics(),
+	}
+	tc, err := redpanda.RunContainer(ctx, append(opts, cs...)...)
+	if err != nil {
+		t.Fatalf("could not start kafka: %s", err)
+	}
+	brokers, err := tc.KafkaSeedBroker(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return brokers, tc
 }
