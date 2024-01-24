@@ -9,14 +9,19 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/open-policy-agent/opa/storage"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	rhttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/testcontainers/testcontainers-go"
 	tc_wait "github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/open-policy-agent/opa/storage"
+
+	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
 const rootUser = "uid=admin,ou=people,dc=example,dc=com"
 const rootPassword = "password"
+
+var retryClient = rhttp.NewClient().StandardClient()
 
 func TestDataLDAP(t *testing.T) {
 	ctx := context.Background()
@@ -145,7 +150,7 @@ func testServer(ctx context.Context, t *testing.T) (string, testcontainers.Conta
 
 func token(t *testing.T, api string) string {
 	payload := fmt.Sprintf(`{"username": "admin", "password": "%s"}`, rootPassword)
-	resp := must(http.Post(api+"/auth/simple/login", "application/json", strings.NewReader(payload)))(t)
+	resp := must(retryClient.Post(api+"/auth/simple/login", "application/json", strings.NewReader(payload)))(t)
 	defer resp.Body.Close()
 	var m struct {
 		Token string
@@ -181,7 +186,7 @@ func query(t *testing.T, api, token, query string) map[string]any {
 	req, _ := http.NewRequest("POST", api+"/api/graphql", strings.NewReader(query))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer "+token)
-	resp := must(http.DefaultClient.Do(req))(t)
+	resp := must(retryClient.Do(req))(t)
 	defer resp.Body.Close()
 	var data struct {
 		Data map[string]any
