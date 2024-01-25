@@ -146,7 +146,6 @@ jobs:
     name: Test E2E
     runs-on: ubuntu-22.04
     needs:
-    - build
     - goreleaser
     environment: ci
     steps:
@@ -170,10 +169,6 @@ jobs:
           check-latest: true
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      - name: Download image tarball
-        uses: actions/download-artifact@v4
-        with:
-          name: image
       - name: Download binary tarball
         uses: actions/download-artifact@v4
         with:
@@ -181,7 +176,6 @@ jobs:
       - name: Enterprise OPA image and binary, syncmock
         id: enterprise-opa
         run: |
-          echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
           go build -o syncmock ./extras/cmd/syncmock
           go build -o loginmock ./extras/cmd/loginmock
           echo "binary=$(pwd)/eopa" >> $GITHUB_OUTPUT
@@ -189,7 +183,6 @@ jobs:
           chmod +x eopa
       - run: make e2e
         env:
-          IMAGE: ${{ steps.enterprise-opa.outputs.image }}
           BINARY: ${{ steps.enterprise-opa.outputs.binary }}
           EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
           # credentials for data.git plugin

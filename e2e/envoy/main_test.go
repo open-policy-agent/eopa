@@ -5,22 +5,32 @@
 package envoy
 
 import (
+	"bytes"
+	"context"
+	_ "embed"
 	"fmt"
 	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
+	"github.com/docker/go-connections/nat"
+	"github.com/testcontainers/testcontainers-go"
+	tc_wait "github.com/testcontainers/testcontainers-go/wait"
+
 	"github.com/styrainc/enterprise-opa-private/e2e/utils"
+	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
-const defaultImage = "ko.local/enterprise-opa-private:edge" // built via `make build-local`
-
+//go:embed envoy.yaml
+var envoyConfigFmt []byte
 var eopaHTTPPort int
+
+var ci = os.Getenv("CI") != ""
 
 func TestMain(m *testing.M) {
 	r := rand.New(rand.NewSource(2908))
@@ -35,52 +45,64 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-var dockerPool = func() *dockertest.Pool {
-	p, err := dockertest.NewPool("")
-	if err != nil {
-		panic(err)
-	}
-
-	if err = p.Client.Ping(); err != nil {
-		panic(err)
-	}
-	return p
-}()
-
 func TestSimple(t *testing.T) {
-	cleanupPrevious(t)
-	image := os.Getenv("IMAGE")
-	if image == "" {
-		image = defaultImage
+	ctx := context.Background()
+	const config = `plugins:
+  envoy_ext_authz_grpc:
+    addr: "%[1]s:%[2]d"
+    path: envoy/authz/allow
+    dry-run: false
+    enable-reflection: true
+    proto-descriptor: yages.pb
+decision_logs:
+  console: true
+`
+	bind := "127.0.0.1"
+	if ci {
+		bind = "0.0.0.0"
 	}
 
-	network, err := dockerPool.Client.CreateNetwork(docker.CreateNetworkOptions{Name: "eopa_envoy_e2e"})
-	if err != nil {
-		t.Fatalf("network: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := dockerPool.Client.RemoveNetwork(network.ID); err != nil {
-			t.Fatal(err)
-		}
-	})
+	const policy = `package envoy.authz
+import future.keywords.if
 
+default allow := false
+
+allow if input.parsed_path = ["yages.Echo", "Ping"] # Ping is OK
+
+allow if {
+  input.parsed_path = ["yages.Echo", "Reverse"]
+  input.parsed_body = {
+    "text": "Maddaddam"
+  }
+} 
+`
 	// Start up containers.
-	_ = loadEnterpriseOPA(t, map[string]string{
-		"./yages.pb":    "/yages.pb",
-		"./policy.rego": "/policy.rego",
-		"./opa.yaml":    "/opa.yaml",
-	}, image, network)
-	_ = testEnvoy(t, network)
-	_ = testTestsrv(t, network)
+	eopa, _, eopaErr := loadEnterpriseOPA(t, "yages.pb", fmt.Sprintf(config, bind, eopaHTTPPort), policy, eopaHTTPPort)
+	if err := eopa.Start(); err != nil {
+		t.Fatal(err)
+	}
+	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+
+	ts, tsHost, tsPort := testTestsrv(t, ctx)
+	t.Cleanup(func() { ts.Terminate(ctx) })
+
+	eopaHost := "host.docker.internal"
+	if ci {
+		eopaHost = "172.17.0.1"
+	}
+	envoy, envoyEndpoint := testEnvoy(t, ctx, eopaHost, eopaHTTPPort, tsHost, tsPort)
+	t.Cleanup(func() { envoy.Terminate(ctx) })
 
 	// Try to get the simplest query to go through Envoy, authorized by the Envoy plugin (EOPA), and the
 	// "upstream" service, YAGES.
-	if err := grpcurl(t, "-protoset ./yages.pb -plaintext localhost:51051 yages.Echo.Ping"); err != nil {
+	if err := grpcurl(t,
+		fmt.Sprintf("-protoset ./yages.pb -plaintext %s yages.Echo.Ping", envoyEndpoint)); err != nil {
 		t.Fatalf("Ping stderr: %s", string(err.(*exec.ExitError).Stderr))
 	}
 
 	// Try a query that is only permitted if the request payload matches.
-	if err := grpcurl(t, `-protoset ./yages.pb -d {"text":"Maddaddam"} -plaintext localhost:51051 yages.Echo.Reverse`); err != nil {
+	if err := grpcurl(t,
+		fmt.Sprintf(`-protoset ./yages.pb -d {"text":"Maddaddam"} -plaintext %s yages.Echo.Reverse`, envoyEndpoint)); err != nil {
 		t.Fatalf("Reverse stderr: %s", string(err.(*exec.ExitError).Stderr))
 	}
 
@@ -89,148 +111,77 @@ func TestSimple(t *testing.T) {
 	// to deny requests on ext_authz failures, so this means we're OK!
 }
 
-func loadEnterpriseOPA(t *testing.T, tempfileMounts map[string]string, image string, network *docker.Network) *dockertest.Resource {
-	img := strings.Split(image, ":")
-
-	dir := t.TempDir()
-	mounts := make([]string, 0, len(tempfileMounts))
-	for k, v := range tempfileMounts {
-		tpath := filepath.Join(dir, v)
-		fdata, err := os.ReadFile(k)
-		if err != nil {
-			t.Fatalf("could not read file: %v", err)
-		}
-		if err := os.WriteFile(tpath, fdata, 0x777); err != nil {
-			t.Fatalf("write file: %v", err)
-		}
-		mounts = append(mounts, tpath+":"+v)
-	}
-
-	dockerHTTPPortBinding := fmt.Sprintf("%d/tcp", eopaHTTPPort)
-	opts := &dockertest.RunOptions{
-		Name:       "eopa-e2e",
-		Repository: img[0],
-		Tag:        img[1],
-		Hostname:   "eopa-e2e",
-		NetworkID:  network.ID,
-		Env: []string{
-			"EOPA_LICENSE_TOKEN=" + os.Getenv("EOPA_LICENSE_TOKEN"),
-			"EOPA_LICENSE_KEY=" + os.Getenv("EOPA_LICENSE_KEY"),
-		},
-		Mounts: mounts,
-		PortBindings: map[docker.Port][]docker.PortBinding{
-			"9191/tcp": {{HostIP: "localhost", HostPort: "9191/tcp"}}, // gRPC
-		},
-		ExposedPorts: []string{"9191/tcp", fmt.Sprintf("%d/tcp", eopaHTTPPort)},
-		Cmd:          strings.Split(fmt.Sprintf(`run --server --addr :%d --log-level debug --disable-telemetry --config-file=/opa.yaml /policy.rego`, eopaHTTPPort), " "),
-	}
-	// Late-bind the HTTP port to be the dynamically-selected one for the package.
-	opts.PortBindings[docker.Port(dockerHTTPPortBinding)] = []docker.PortBinding{{HostIP: "localhost", HostPort: fmt.Sprintf("%d/tcp", eopaHTTPPort)}} // HTTP
-	eopa, err := dockerPool.RunWithOptions(opts)
-	if err != nil {
-		t.Fatalf("could not start %s: %s", image, err)
-	}
-
-	t.Cleanup(func() {
-		if err := dockerPool.Purge(eopa); err != nil {
-			t.Fatalf("could not purge eopa: %s", err)
-		}
-	})
-
-	if err := dockerPool.Retry(func() error {
-		return grpcurl(t, "-plaintext localhost:9191 list") // reflection on the gRPC plugin API
-	}); err != nil {
-		t.Fatalf("could not connect to test srv: %v", err)
-	}
-
-	return eopa
-}
-
-func testEnvoy(t *testing.T, network *docker.Network) *dockertest.Resource {
+func testEnvoy(t *testing.T, ctx context.Context, eopaHost string, eopaPort int, tsHost string, tsPort int) (testcontainers.Container, string) {
 	dir := t.TempDir()
 	cfg := "./envoy.yaml"
 	tpath := filepath.Join(dir, cfg)
-	fdata, err := os.ReadFile(cfg)
-	if err != nil {
-		t.Fatalf("could not read file: %v", err)
-	}
-	if err := os.WriteFile(tpath, fdata, 0x777); err != nil {
+	config := fmt.Sprintf(string(envoyConfigFmt), tsHost, tsPort, eopaHost, eopaPort)
+	if err := os.WriteFile(tpath, []byte(config), 0x777); err != nil {
 		t.Fatalf("write file: %v", err)
 	}
 
-	envoyResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
-		Name:       "envoy-e2e",
-		Repository: "envoyproxy/envoy",
-		Tag:        "v1.26-latest",
-		NetworkID:  network.ID,
-		Hostname:   "envoy-e2e",
-		Env:        []string{},
-		Mounts: []string{
-			tpath + ":/etc/envoy/envoy.yaml",
-		},
-		PortBindings: map[docker.Port][]docker.PortBinding{
-			"9901/tcp":  {{HostIP: "localhost", HostPort: "9901/tcp"}},
-			"51051/tcp": {{HostIP: "localhost", HostPort: "51051/tcp"}},
-		},
-		ExposedPorts: []string{"9901/tcp", "51051/tcp"},
+	req := testcontainers.ContainerRequest{
+		Image:        "envoyproxy/envoy:v1.26-latest",
+		ExposedPorts: []string{"51051/tcp"},
 		Cmd:          []string{"envoy", "-c", "/etc/envoy/envoy.yaml", "--component-log-level", "ext_authz:trace"},
-	})
-	if err != nil {
-		t.Fatalf("could not start envoy: %s", err)
+		WaitingFor:   tc_wait.ForListeningPort(nat.Port("51051/tcp")),
+		Files: []testcontainers.ContainerFile{
+			{
+				HostFilePath:      tpath,
+				ContainerFilePath: "/etc/envoy/envoy.yaml",
+				FileMode:          700,
+			},
+		},
 	}
 
-	t.Cleanup(func() {
-		if err := dockerPool.Purge(envoyResource); err != nil {
-			t.Fatalf("could not purge envoyResource: %s", err)
-		}
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Logger:           testcontainers.TestLogger(t),
+		Started:          true,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	return envoyResource
+	port, err := c.MappedPort(ctx, "51051/tcp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c, fmt.Sprintf("127.0.0.1:%s", port.Port())
 }
 
 // Runs a simple echo service, see https://mhausenblas.info/yages/
 // Note(philip): This has nothing to do with our gRPC API, we're just using
 // Envoy's gRPC proxying capabilities for the demo.
-func testTestsrv(t *testing.T, network *docker.Network) *dockertest.Resource {
-	// Build and run the given Dockerfile.
-	resource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
-		Name:       "testsrv-e2e",
-		Hostname:   "testsrv-e2e",
-		NetworkID:  network.ID,
-		Repository: "golang",
-		Tag:        "latest",
-		Cmd:        []string{"go", "run", "github.com/mhausenblas/yages@latest"},
-		PortBindings: map[docker.Port][]docker.PortBinding{
-			"9000/tcp": {{HostIP: "localhost", HostPort: "9000/tcp"}},
-		},
+func testTestsrv(t *testing.T, ctx context.Context) (testcontainers.Container, string, int) {
+	req := testcontainers.ContainerRequest{
+		Image:        "quay.io/mhausenblas/yages:0.1.0",
 		ExposedPorts: []string{"9000/tcp"},
+		WaitingFor:   tc_wait.ForExposedPort(),
+	}
+
+	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Logger:           testcontainers.TestLogger(t),
+		Started:          true,
 	})
 	if err != nil {
-		t.Fatalf("Could not start resource: %v", err)
+		t.Fatal(err)
 	}
 
-	if err := dockerPool.Retry(func() error {
-		return grpcurl(t, "-plaintext localhost:9000 yages.Echo.Ping") // direct call to the service, not through envoy
-	}); err != nil {
-		t.Fatalf("could not connect to test srv: %v", err)
+	ip := "host.docker.internal"
+	if ci {
+		ip = "172.17.0.1"
 	}
-
-	t.Cleanup(func() {
-		if err = dockerPool.Purge(resource); err != nil {
-			t.Fatalf("Could not purge resource: %s", err)
-		}
-	})
-
-	return resource
-}
-
-func cleanupPrevious(t *testing.T) {
-	t.Helper()
-	for _, n := range []string{"eopa-e2e", "envoy-e2e", "testsrv-e2e"} {
-		if err := dockerPool.RemoveContainerByName(n); err != nil {
-			t.Fatalf("remove %s: %v", n, err)
-		}
+	port, err := c.MappedPort(ctx, "9000/tcp")
+	if err != nil {
+		t.Fatal(err)
 	}
+	iport, err := strconv.Atoi(port.Port())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c, ip, iport
 }
 
 func grpcurl(t *testing.T, args string) error {
@@ -238,4 +189,59 @@ func grpcurl(t *testing.T, args string) error {
 	stdout, err := exec.Command("grpcurl", strings.Split(args, " ")...).Output()
 	t.Logf("grpcurl %s: %s", args, string(stdout))
 	return err
+}
+
+func loadEnterpriseOPA(t *testing.T, protobuf, config, policy string, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
+	logLevel := "debug" // Needed for checking if server is ready
+
+	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}
+	dir := t.TempDir()
+	confPath := filepath.Join(dir, "config.yml")
+	if err := os.WriteFile(confPath, []byte(config), 0x777); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	policyPath := filepath.Join(dir, "eval.rego")
+	if err := os.WriteFile(policyPath, []byte(policy), 0x777); err != nil {
+		t.Fatalf("write policy: %v", err)
+	}
+
+	args := []string{
+		"run",
+		"--server",
+		"--addr", "localhost:0", // NOTE(sr): HTTP API isn't used for this test
+		"--config-file", confPath,
+		"--log-level", logLevel,
+		"--disable-telemetry",
+	}
+	eopa := exec.Command(binary(), append(args, policyPath)...)
+	eopa.Stderr = &stderr
+	eopa.Stdout = &stdout
+	eopa.Env = append(eopa.Environ(),
+		"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
+		"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
+	)
+
+	t.Cleanup(func() {
+		if eopa.Process == nil {
+			return
+		}
+		if err := eopa.Process.Signal(os.Interrupt); err != nil {
+			panic(err)
+		}
+		eopa.Wait()
+		if testing.Verbose() && t.Failed() {
+			t.Logf("eopa stdout:\n%s", stdout.String())
+			t.Logf("eopa stderr:\n%s", stderr.String())
+		}
+	})
+
+	return eopa, &stdout, &stderr
+}
+
+func binary() string {
+	bin := os.Getenv("BINARY")
+	if bin == "" {
+		return "eopa"
+	}
+	return bin
 }
