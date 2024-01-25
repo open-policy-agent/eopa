@@ -46,7 +46,7 @@ jobs:
       # Do a pre-flight check to ensure we don't bother with `buf` unless
       # we have protobuf changes present.
       - name: Check for proto/ file changes in git diffs.
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: |
@@ -218,7 +218,7 @@ jobs:
       # Do a pre-flight check to ensure we don't push up a BSR draft for
       # PRs that don't touch the protobuf files at all.
       - name: Check for proto/ file changes in git diffs.
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: |
