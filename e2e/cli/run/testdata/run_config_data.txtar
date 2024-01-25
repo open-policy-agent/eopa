@@ -1,23 +1,23 @@
 # This test ensures that the `eopa run` command correctly accepts extra data to
 # insert into the `data.` hierarchy from the `.styra.yaml` config file.
 #
-# NOTE: port 53181 was chosen at random, so that if we run in parallel with
+# NOTE: port 49153 was chosen at random, so that if we run in parallel with
 # other tests, we won't fail to bind to the interface.
 
 # we expect a nonzero exit code on windows
-[windows] ! exec eopa run --log-level error --addr 127.0.0.1:53181 --server &eopa&
-[!windows]  exec eopa run --log-level error --addr 127.0.0.1:53181 --server &eopa&
+[windows] ! exec eopa run --log-level error --addr 127.0.0.1:49153 --server &eopa&
+[!windows]  exec eopa run --log-level error --addr 127.0.0.1:49153 --server &eopa&
 ! stdout .
 ! stderr .
 
 # block until the server reports health OK
-httpwait 'http://localhost:53181/health' '{}'
+httpwait 'http://localhost:49153/health' '{}'
 
 # query out data we expect to be present
-exec curl -Ss --request GET --url http://localhost:53181/v1/data/foo/bar
+exec curl -Ss --request GET --url http://localhost:49153/v1/data/foo/bar
 cmp stdout exp/stdout_bar
 ! stderr .
-exec curl -Ss --request GET --url http://localhost:53181/v1/data/coolstuff/foobar
+exec curl -Ss --request GET --url http://localhost:49153/v1/data/coolstuff/foobar
 cmp stdout exp/stdout_foobar
 ! stderr .
 
