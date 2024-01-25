@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -31,21 +32,30 @@ var testserver = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
 }))
 
 func TestTelemetry(t *testing.T) {
+	t.Setenv("EOPA_BUNDLE_SERVER", testserver.URL)
+
 	tests := []struct {
 		config         string
-		datasourcesExp map[string]int
+		bundleSizesExp any
+		datasourcesExp any
 	}{
 		{
-			config: "testdata/bundle.yml",
+			config:         "testdata/bundle.yml",
+			bundleSizesExp: []any{float64(113)},
 		},
 		{
-			config: "testdata/disco.yml",
+			config: "testdata/nobundle.yml",
 		},
 		{
-			config: "testdata/datasources.yml",
-			datasourcesExp: map[string]int{
-				"http": 3,
-				"git":  1,
+			config:         "testdata/disco.yml",
+			bundleSizesExp: []any{float64(113)},
+		},
+		{
+			config:         "testdata/datasources.yml",
+			bundleSizesExp: []any{float64(113)},
+			datasourcesExp: map[string]any{
+				"http": float64(3),
+				"git":  float64(1),
 			},
 		},
 	}
@@ -80,7 +90,6 @@ func TestTelemetry(t *testing.T) {
 			}
 			go srv.ListenAndServe()
 			t.Cleanup(func() { srv.Shutdown(context.Background()) })
-			t.Setenv("EOPA_BUNDLE_SERVER", testserver.URL)
 
 			eopa, _, eopaErr := loadEnterpriseOPA(t, tc.config)
 			if err := eopa.Start(); err != nil {
@@ -91,9 +100,13 @@ func TestTelemetry(t *testing.T) {
 					m["release_notes"] == "Dummy Response" &&
 					m["download_opa"] == "dummy-url" &&
 					m["latest_version"] == "dummy"
-			}, 5*time.Second)
+			}, time.Second)
 
-			wait.ForLog(t, eopaErr, func(s string) bool { return s == "Bundle loaded and activated successfully." }, 5*time.Second)
+			if tc.bundleSizesExp != nil { // it's a test case with bundles
+				wait.ForLog(t, eopaErr, func(s string) bool { return s == "Bundle loaded and activated successfully." }, 5*time.Second)
+			} else {
+				wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+			}
 
 			if err := eopa.Process.Signal(syscall.SIGUSR1); err != nil {
 				t.Fatal(err)
@@ -105,14 +118,19 @@ func TestTelemetry(t *testing.T) {
 			}
 
 			exp := []string{
-				"bundle_sizes",
-				"datasources",
 				"heap_usage_bytes",
 				"id",
 				"license",
 				"min_compatible_version",
 				"version",
 			}
+			if tc.bundleSizesExp != nil {
+				exp = append(exp, "bundle_sizes")
+			}
+			if tc.datasourcesExp != nil {
+				exp = append(exp, "datasources")
+			}
+			sort.Strings(exp)
 			act := maps.Keys(recv[1])
 			sort.Strings(act)
 			if diff := cmp.Diff(exp, act); diff != "" {
@@ -124,46 +142,28 @@ func TestTelemetry(t *testing.T) {
 				}
 			}
 
-			sizes := recv[1]["bundle_sizes"].([]any)
-			if exp, act := 1, len(sizes); exp != act {
-				t.Errorf("bundle_sizes, expected %d entries, got %d", exp, act)
-			}
-			if exp, act := float64(113), sizes[0]; exp != act {
-				t.Errorf("bundle_sizes, expected %v (%[1]T), got %v (%[2]T)", exp, act)
-			}
-
-			datasourcesAct := recv[1]["datasources"].(map[string]any)
-			if tc.datasourcesExp == nil {
-				if len(datasourcesAct) > 0 {
-					t.Errorf("datasourcesExp omitted from test case, but actual datasources was not empty")
-				}
-			} else {
-				// if this gets refactored at some point,
-				// suggest switching to go-cmp
-				if len(tc.datasourcesExp) != len(datasourcesAct) {
-					t.Errorf("actual an expected datasources had different lengths (%d =/= %d)", len(datasourcesAct), len(tc.datasourcesExp))
-				}
-
-				for k, vExp := range tc.datasourcesExp {
-					vAct, ok := datasourcesAct[k]
-					if !ok {
-						t.Errorf("actual datasources missing expected key '%s'", k)
-						continue
-					}
-
-					vActN := int(vAct.(float64))
-
-					if vExp != vActN {
-						t.Errorf("actual and expected datasources have different counts for key '%s' (%d =/= %d)", k, vActN, vExp)
-					}
+			{
+				exp := tc.bundleSizesExp
+				act := recv[1]["bundle_sizes"]
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("bundle_sizes unexpected: (-want, +got):\n%s", diff)
 				}
 			}
+
+			{
+				exp := tc.datasourcesExp
+				act := recv[1]["datasources"]
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("datasources unexpected: (-want, +got):\n%s", diff)
+				}
+			}
+
 		})
 	}
 }
 
 func loadEnterpriseOPA(t *testing.T, config string) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
-	logLevel := "info" // log level of telemetry response
+	logLevel := "debug"
 
 	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}
 

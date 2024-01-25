@@ -45,7 +45,11 @@ func getSeenDatasources() map[string]int {
 // of datasource appeared in the most recent config. For the telemetry to be
 // reported, you should pass this function to runtime.RegisterGatherers().
 func GatherDatasources(_ context.Context) (any, error) {
-	return getSeenDatasources(), nil
+	ds := getSeenDatasources()
+	if len(ds) == 0 {
+		return nil, nil
+	}
+	return ds, nil
 }
 
 type DatasourceTelemetryHook struct {
