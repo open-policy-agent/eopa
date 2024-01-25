@@ -210,12 +210,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALU
 		},
 	}
 
-	var maxSize int64 = 1024 * 1024
-	interQueryCache := cache.NewInterQueryCache(&cache.Config{
-		InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-			MaxSizeBytes: &maxSize,
-		},
-	})
+	interQueryCache := newInterQueryCache()
 
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
@@ -231,11 +226,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALU
 				tc.time = now
 			}
 			if !tc.doNotResetCache {
-				interQueryCache = cache.NewInterQueryCache(&cache.Config{
-					InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-						MaxSizeBytes: &maxSize,
-					},
-				})
+				interQueryCache = newInterQueryCache()
 			}
 
 			execute(t, interQueryCache, "package t\n"+query, "t", tc.result, tc.error, tc.time, nil, tc.interQueryCacheHits, tc.preparedQueries)

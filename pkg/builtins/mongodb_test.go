@@ -164,21 +164,12 @@ func TestMongoDBFind(t *testing.T) {
 		},
 	}
 
-	var maxSize int64 = 1024 * 1024
-	interQueryCache := cache.NewInterQueryCache(&cache.Config{
-		InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-			MaxSizeBytes: &maxSize,
-		},
-	})
+	interQueryCache := newInterQueryCache()
 
 	for _, tc := range tests {
 		t.Run(tc.Note, func(t *testing.T) {
 			if !tc.DoNotResetCache {
-				interQueryCache = cache.NewInterQueryCache(&cache.Config{
-					InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-						MaxSizeBytes: &maxSize,
-					},
-				})
+				interQueryCache = newInterQueryCache()
 			}
 
 			executeMongoDB(t, interQueryCache, "package t\n"+tc.Source, "t", tc.Result, tc.Error, tc.Time, tc.InterQueryCacheHits)
@@ -325,21 +316,12 @@ func TestMongoDBFindOne(t *testing.T) {
 		},
 	}
 
-	var maxSize int64 = 1024 * 1024
-	interQueryCache := cache.NewInterQueryCache(&cache.Config{
-		InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-			MaxSizeBytes: &maxSize,
-		},
-	})
+	interQueryCache := newInterQueryCache()
 
 	for _, tc := range tests {
 		t.Run(tc.Note, func(t *testing.T) {
 			if !tc.DoNotResetCache {
-				interQueryCache = cache.NewInterQueryCache(&cache.Config{
-					InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-						MaxSizeBytes: &maxSize,
-					},
-				})
+				interQueryCache = newInterQueryCache()
 			}
 
 			executeMongoDB(t, interQueryCache, "package t\n"+tc.Source, "t", tc.Result, tc.Error, tc.Time, tc.InterQueryCacheHits)

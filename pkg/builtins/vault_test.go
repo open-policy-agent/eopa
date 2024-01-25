@@ -106,12 +106,7 @@ func TestVaultSend(t *testing.T) {
 		},
 	}
 
-	var maxSize int64 = 1024 * 1024
-	interQueryCache := cache.NewInterQueryCache(&cache.Config{
-		InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-			MaxSizeBytes: &maxSize,
-		},
-	})
+	interQueryCache := newInterQueryCache()
 
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
@@ -120,11 +115,7 @@ func TestVaultSend(t *testing.T) {
 				tc.time = now
 			}
 			if !tc.doNotResetCache {
-				interQueryCache = cache.NewInterQueryCache(&cache.Config{
-					InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-						MaxSizeBytes: &maxSize,
-					},
-				})
+				interQueryCache = newInterQueryCache()
 			}
 
 			executeVault(t, interQueryCache, "package t\n"+query, "t", tc.result, tc.error, tc.time, tc.interQueryCacheHits)

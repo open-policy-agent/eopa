@@ -52,9 +52,13 @@ func TestEvalCache(t *testing.T) {
 	now := time.Now()
 
 	var maxSize int64 = 1024 * 1024
+	var evictPct int64 = 100
+	var staleEvictSec int64 = 0
 	interQueryCache := cache.NewInterQueryCache(&cache.Config{
 		InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-			MaxSizeBytes: &maxSize,
+			MaxSizeBytes:                      &maxSize,
+			ForcedEvictionThresholdPercentage: &evictPct,
+			StaleEntryEvictionPeriodSeconds:   &staleEvictSec,
 		},
 	})
 

@@ -18,8 +18,6 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
 
-var maxSize int64 = 1024 * 1024 // IQBC
-
 func TestPostgresEnvSend(t *testing.T) {
 	be := startPostgreSQL(t)
 	t.Cleanup(be.cleanup)
@@ -691,22 +689,29 @@ func runRegoTests(exp func(*testing.T, rego.ResultSet), r ...func(*rego.Rego)) f
 	return func(t *testing.T) {
 		t.Helper()
 		ctx := context.Background()
-		c := cache.NewInterQueryCache(&cache.Config{
-			InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-				MaxSizeBytes: &maxSize,
-			},
-		})
 		opts := []func(*rego.Rego){
 			rego.Target(rego_vm.Target),
 			rego.StrictBuiltinErrors(true),
-			rego.InterQueryBuiltinCache(c),
+			rego.InterQueryBuiltinCache(newInterQueryCache()),
 		}
-		opts = append(opts, r...)
-		rs, err := rego.New(opts...).Eval(ctx)
+		rs, err := rego.New(append(opts, r...)...).Eval(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		exp(t, rs)
 	}
+}
+
+func newInterQueryCache() cache.InterQueryCache {
+	var maxSize int64 = 1024 * 1024
+	var evictPct int64 = 100
+	var staleEvictSec int64 = 0
+	return cache.NewInterQueryCache(&cache.Config{
+		InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
+			MaxSizeBytes:                      &maxSize,
+			ForcedEvictionThresholdPercentage: &evictPct,
+			StaleEntryEvictionPeriodSeconds:   &staleEvictSec,
+		},
+	})
 }

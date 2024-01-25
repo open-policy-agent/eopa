@@ -154,21 +154,12 @@ func TestDynamoDBGet(t *testing.T) {
 		},
 	}
 
-	var maxSize int64 = 1024 * 1024
-	interQueryCache := cache.NewInterQueryCache(&cache.Config{
-		InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-			MaxSizeBytes: &maxSize,
-		},
-	})
+	interQueryCache := newInterQueryCache()
 
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
 			if !tc.doNotResetCache {
-				interQueryCache = cache.NewInterQueryCache(&cache.Config{
-					InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-						MaxSizeBytes: &maxSize,
-					},
-				})
+				interQueryCache = newInterQueryCache()
 			}
 
 			executeDynamoDB(t, interQueryCache, "package t\n"+tc.source, "t", tc.result, tc.error, tc.time, dynamoDBGetInterQueryCacheHits, tc.interQueryCacheHits)
@@ -295,21 +286,12 @@ func TestDynamoDBQuery(t *testing.T) {
 		},
 	}
 
-	var maxSize int64 = 1024 * 1024
-	interQueryCache := cache.NewInterQueryCache(&cache.Config{
-		InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-			MaxSizeBytes: &maxSize,
-		},
-	})
+	interQueryCache := newInterQueryCache()
 
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
 			if !tc.doNotResetCache {
-				interQueryCache = cache.NewInterQueryCache(&cache.Config{
-					InterQueryBuiltinCache: cache.InterQueryBuiltinCacheConfig{
-						MaxSizeBytes: &maxSize,
-					},
-				})
+				interQueryCache = newInterQueryCache()
 			}
 
 			executeDynamoDB(t, interQueryCache, "package t\n"+tc.source, "t", tc.result, tc.error, tc.time, dynamoDBQueryInterQueryCacheHits, tc.interQueryCacheHits)

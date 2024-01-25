@@ -11,6 +11,23 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.16.0
+
+[![OPA v0.61.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.61.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.61.0)
+
+This release updates the OPA version used in Enterprise OPA to [v0.61.0](https://github.com/open-policy-agent/opa/releases/tag/v0.61.0),
+and includes telemetry enhancements, bug fixes, and various dependency updates.
+
+### Huge floats
+
+Gigantic floating point numbers (like `23456789012E667`) no longer cause a panic in the VM.
+
+### Telemetry
+
+Enterprise OPA now includes the latest retrieved bundle sizes, and the number of datasource plguins
+that are used, to help prioritizing future work.
+
+
 ## v1.15.5
 
 This release contains a bugfix for an issue where some Rego policies querying the entirety of the `data` namespace could see incorrect results.
