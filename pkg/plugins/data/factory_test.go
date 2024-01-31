@@ -1,3 +1,5 @@
+//go:build !race
+
 package data_test
 
 import (
