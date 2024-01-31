@@ -91,7 +91,7 @@ func TestTelemetry(t *testing.T) {
 			go srv.ListenAndServe()
 			t.Cleanup(func() { srv.Shutdown(context.Background()) })
 
-			eopa, _, eopaErr := loadEnterpriseOPA(t, tc.config)
+			eopa, _, eopaErr := loadEnterpriseOPA(t, tc.config, nil)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
@@ -162,7 +162,76 @@ func TestTelemetry(t *testing.T) {
 	}
 }
 
-func loadEnterpriseOPA(t *testing.T, config string) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
+// This tests the telemetry additions for "OPA fallback mode". The setup and assertions
+// are sufficiently different from the tests above to warrant its own test.
+func TestTelemetryFallback(t *testing.T) {
+
+	recv := make([]map[string]any, 0, 1)
+	m := http.NewServeMux()
+	m.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bs, _ := httputil.DumpRequest(r, true)
+		t.Log("received", string(bs))
+		json.NewEncoder(w).Encode(map[string]any{
+			"latest": map[string]any{
+				"release_notes":  "Dummy Response",
+				"latest_release": "vdummy",
+				"download":       "dummy-url",
+				"opa_up_to_date": false,
+			},
+		})
+		var req map[string]any
+		json.NewDecoder(r.Body).Decode(&req)
+		recv = append(recv, req)
+	}))
+	srv := &http.Server{
+		Addr:    "127.0.0.1:9191",
+		Handler: m,
+	}
+	go srv.ListenAndServe()
+	t.Cleanup(func() { srv.Shutdown(context.Background()) })
+
+	eopa, _, eopaErr := loadEnterpriseOPA(t, "testdata/nobundle.yml", filter)
+	if err := eopa.Start(); err != nil {
+		t.Fatal(err)
+	}
+	wait.ForLogFields(t, eopaErr, func(m map[string]any) bool {
+		return m["msg"] == "OPA is out of date." &&
+			m["release_notes"] == "Dummy Response" &&
+			m["download_opa"] == "dummy-url" &&
+			m["latest_version"] == "dummy"
+	}, time.Second)
+
+	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+
+	if exp, act := 1, len(recv); exp != act {
+		t.Fatalf("expected %d requests, got %d", exp, act)
+	}
+
+	{
+		exp := []string{
+			"heap_usage_bytes",
+			"id",
+			"version",
+			"opa_fallback",
+		}
+		sort.Strings(exp)
+		act := maps.Keys(recv[0])
+		sort.Strings(act)
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Errorf("unexpected keys (-want, +got):\n%s", diff)
+		}
+	}
+
+	{
+		exp, act := true, recv[0]["opa_fallback"]
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Errorf("unexpected opa_fallback value (-want, +got):\n%s", diff)
+
+		}
+	}
+}
+
+func loadEnterpriseOPA(t *testing.T, config string, filter func([]string) []string) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	logLevel := "debug"
 
 	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}
@@ -177,10 +246,15 @@ func loadEnterpriseOPA(t *testing.T, config string) (*exec.Cmd, *bytes.Buffer, *
 	eopa := exec.Command(binary(), args...)
 	eopa.Stderr = &stderr
 	eopa.Stdout = &stdout
-	eopa.Env = append(eopa.Environ(),
+	if filter == nil {
+		filter = func(x []string) []string {
+			return x
+		}
+	}
+	eopa.Env = filter(append(eopa.Environ(),
 		"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
 		"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
-	)
+	))
 
 	t.Cleanup(func() {
 		if eopa.Process == nil {
@@ -205,4 +279,14 @@ func binary() string {
 		return "eopa"
 	}
 	return bin
+}
+
+func filter(in []string) []string {
+	out := []string{}
+	for i := range in {
+		if !strings.HasPrefix(in[i], "EOPA") {
+			out = append(out, in[i])
+		}
+	}
+	return out
 }

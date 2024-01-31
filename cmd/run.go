@@ -70,6 +70,11 @@ func initRun(opa *cobra.Command, brand string, license license.Checker, lparams 
 				logger.Warn("Switching to OPA mode. Enterprise OPA functionality will be disabled.")
 
 				c.SilenceErrors = false
+				runtime.RegisterGatherers(map[string]func(context.Context) (any, error){
+					"opa_fallback": func(context.Context) (any, error) {
+						return true, nil
+					},
+				})
 				return fallback(c, args)
 			}
 		}
@@ -358,6 +363,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 		},
 		"bundle_sizes": telemetry.GatherBundleSizes,
 		"datasources":  telemetry.GatherDatasources,
+		// NOTE(sr): If we've reached this, we're not in fallback mode. So there's
+		//           no need to add the fallback telemetry gatherer here.
 	}
 	runtime.RegisterGatherers(params.rt.TelemetryGatherers)
 	rt, err := runtime.NewRuntime(ctx, params.rt)
