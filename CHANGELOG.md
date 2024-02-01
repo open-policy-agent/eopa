@@ -11,6 +11,73 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.17.0
+
+### Regal Linting Support
+
+Enterprise OPA now integrates the powerful [Regal](https://github.com/StyraInc/regal) linter for Rego policies!
+
+For example, if you had the example policy from the Regal docs:
+
+`policy/authz.rego`:
+```rego
+package authz
+
+import future.keywords
+
+default allow = false
+
+deny if {
+    "admin" != input.user.roles[_]
+}
+
+allow if not deny
+```
+
+You can lint the policy with `eopa lint` as follows:
+
+```bash
+$ eopa lint policy/
+Rule:         	not-equals-in-loop
+Description:  	Use of != in loop
+Category:     	bugs
+Location:     	policy/authz.rego:8:13
+Text:         	"admin" != input.user.roles[_
+Documentation:	https://docs.styra.com/regal/rules/bugs/not-equals-in-loop
+
+Rule:         	use-assignment-operator
+Description:  	Prefer := over = for assignment
+Category:     	style
+Location:     	policy/authz.rego:5:1
+Text:         	default allow = false
+Documentation:	https://docs.styra.com/regal/rules/style/use-assignment-operator
+
+Rule:         	prefer-some-in-iteration
+Description:  	Prefer `some .. in` for iteration
+Category:     	style
+Location:     	policy/authz.rego:8:16
+Text:         	"admin" != input.user.roles[_
+Documentation:	https://docs.styra.com/regal/rules/style/prefer-some-in-iteration
+
+1 file linted. 3 violations found.
+```
+
+### DAS Workflow Support
+
+You can now pull down policies and libraries from a [Styra DAS](https://docs.styra.com/das) instance, allowing easier local testing and development.
+
+To start the process, run `eopa login`, like in the example below.
+
+    eopa login --url https://example.styra.com
+
+This will bring up an OAuth login screen, which will allow connecting your local Enterprise OPA instance to your company's DAS instance.
+Once your Enterprise OPA instance is authenticated, you can then pull down the policies from your DAS Workspace using `eopa pull`.
+
+    eopa pull
+
+This will store the policies and library code from DAS under a folder named `.styra/include/libraries` by default.
+
+
 ## v1.16.0
 
 [![OPA v0.61.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.61.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.61.0)
