@@ -29,8 +29,10 @@ const dasURL = "url"
 // secretFile defines where to put the secret and where to read it from.
 // It'll be parsed relative to the config file it was used in; or relative
 // to the CWD if used via a parameter.
-const secretFile = "secret-file"
-const defaultSessionFile = ".styra-session"
+const (
+	secretFile         = "secret-file"
+	defaultSessionFile = ".styra-session"
+)
 
 // noOpen is the flag to inhibit attempts to open a browser tab. The command
 // will only show the URL instead.
@@ -88,8 +90,7 @@ manually:
 
 	eopa login --read-token
 `,
-		Hidden: os.Getenv("EOPA_LOGIN") == "",
-		Short:  "Sign-in to DAS instance",
+		Short: "Sign-in to DAS instance",
 		PreRunE: func(c *cobra.Command, _ []string) error {
 			bindDASFlags(config, c)
 			c.SilenceUsage = true
@@ -115,7 +116,6 @@ manually:
 				bs, err := io.ReadAll(os.Stdin)
 				if err != nil {
 					return err
-
 				}
 				if err := storeSecret(sf, string(bs)); err != nil {
 					return err

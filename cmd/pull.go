@@ -15,9 +15,11 @@ import (
 )
 
 // targetDir says where to pull libraries to
-const targetDir = "libraries"             // that's the flag, --libraries, and the config key
-const targetDirDefault = ".styra/include" // that's the folder, libraries/
-const apiTokenEnvVar = "EOPA_STYRA_DAS_TOKEN"
+const (
+	targetDir        = "libraries"      // that's the flag, --libraries, and the config key
+	targetDirDefault = ".styra/include" // that's the folder, libraries/
+	apiTokenEnvVar   = "EOPA_STYRA_DAS_TOKEN"
+)
 
 // force makes the pull command write to libraries even when it exists
 const force = "force"
@@ -51,8 +53,7 @@ Remove files that aren't expected in the target directory:
 
     eopa pull --force
 `,
-		Hidden: os.Getenv("EOPA_PULL") == "",
-		Short:  "Pull libraries from DAS instance",
+		Short: "Pull libraries from DAS instance",
 		PreRunE: func(c *cobra.Command, _ []string) error {
 			bindDASFlags(config, c)
 			c.SilenceUsage = true

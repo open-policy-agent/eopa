@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"errors"
-	"os"
 	"runtime/debug"
 	"strings"
 
@@ -16,7 +15,6 @@ func regal() *cobra.Command {
 	for _, rc := range regal_cmd.RootCommand.Commands() {
 		if rc.Name() == "lint" {
 			prev := rc.RunE
-			rc.Hidden = os.Getenv("STYRA_LINT") == ""
 			rc.RunE = func(c *cobra.Command, args []string) error {
 				if err := prev(c, args); err != nil {
 					code := 1
