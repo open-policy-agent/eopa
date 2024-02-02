@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go v1.50.7
 	github.com/benthosdev/benthos/v4 v4.24.0
 	github.com/cespare/xxhash/v2 v2.2.0
-	github.com/charmbracelet/bubbles v0.17.1
+	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/docker/go-connections v0.5.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
@@ -282,7 +282,7 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rickb777/date v1.20.5 // indirect
 	github.com/rickb777/plural v1.4.1 // indirect
-	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/rivo/uniseg v0.4.6 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rs/xid v1.5.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
