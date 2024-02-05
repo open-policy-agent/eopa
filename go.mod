@@ -47,7 +47,7 @@ require (
 	github.com/open-policy-agent/opa v0.61.0
 	github.com/open-policy-agent/opa-envoy-plugin v0.61.0-envoy
 	github.com/prometheus/client_golang v1.18.0
-	github.com/rs/zerolog v1.31.0
+	github.com/rs/zerolog v1.32.0
 	github.com/sbabiv/xml2map v1.2.1
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
