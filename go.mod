@@ -32,7 +32,7 @@ require (
 	github.com/jackc/pgx/v5 v5.5.2
 	github.com/jarcoal/httpmock v1.2.0
 	github.com/json-iterator/go v1.1.12
-	github.com/keygen-sh/keygen-go/v2 v2.7.0
+	github.com/keygen-sh/keygen-go/v2 v2.8.0
 	github.com/liamg/memoryfs v1.6.0
 	github.com/lib/pq v1.10.9
 	github.com/microsoft/go-mssqldb v1.6.0
@@ -216,7 +216,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/keygen-sh/go-update v1.0.0 // indirect
-	github.com/keygen-sh/jsonapi-go v1.2.0 // indirect
+	github.com/keygen-sh/jsonapi-go v1.2.1 // indirect
 	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
