@@ -13,7 +13,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.66
 	github.com/open-policy-agent/opa v0.61.0
 	github.com/rogpeppe/go-internal v1.12.0
-	github.com/rs/zerolog v1.31.0
+	github.com/rs/zerolog v1.32.0
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
 	github.com/testcontainers/testcontainers-go v0.27.1-0.20240112110335-2309c4ecaf2f
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.27.0
