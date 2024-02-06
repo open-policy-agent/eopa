@@ -1,0 +1,58 @@
+exec eopa eval -f pretty --bundle toplevel data
+! stderr .
+cmp stdout exp-toplevel/stdout
+
+exec eopa eval -f pretty --bundle nested data
+! stderr .
+cmp stdout exp-nested/stdout
+
+-- toplevel/data.yaml --
+/some-yaml:
+  goes:
+    here: NO
+-- nested/a/b/c/data.yaml --
+yes: no
+-- exp-toplevel/stdout --
+{
+  "/some-yaml": {
+    "goes": {
+      "here": false
+    }
+  },
+  "system": {
+    "bundles": {
+      "toplevel": {
+        "etag": "",
+        "manifest": {
+          "revision": "",
+          "roots": [
+            ""
+          ]
+        }
+      }
+    }
+  }
+}
+-- exp-nested/stdout --
+{
+  "a": {
+    "b": {
+      "c": {
+        "true": false
+      }
+    }
+  },
+  "system": {
+    "bundles": {
+      "nested": {
+        "etag": "",
+        "manifest": {
+          "revision": "",
+          "roots": [
+            ""
+          ]
+        }
+      }
+    }
+  }
+}

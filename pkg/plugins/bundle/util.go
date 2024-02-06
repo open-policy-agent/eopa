@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 
+	"sigs.k8s.io/yaml"
+
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
@@ -30,6 +32,14 @@ func BjsonFromBinary(bs []byte) (b bjson.Json, err error) {
 		return bjson.NewFromBinary(bs)
 	}
 
-	// JSON (ascii)
-	return bjson.NewDecoder(bytes.NewReader(bs)).Decode()
+	if bjson.IsJSON(bs) {
+		return bjson.NewDecoder(bytes.NewReader(bs)).Decode()
+	}
+
+	// lastly, try yaml
+	nbs, err := yaml.YAMLToJSON(bs)
+	if err != nil {
+		return nil, err
+	}
+	return bjson.NewDecoder(bytes.NewReader(nbs)).Decode()
 }

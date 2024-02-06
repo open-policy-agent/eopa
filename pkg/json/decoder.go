@@ -15,6 +15,10 @@ var config = jsoniter.Config{
 	UseNumber:              true,
 }.Froze()
 
+func IsJSON(bs []byte) bool {
+	return config.Valid(bs)
+}
+
 // Decoder mimics the golang JSON decoder: reading a JSON object out of a byte stream. For simplicity, the Decode() implementation returns the constructed object, instead of taking a pointer as a parameter as the
 // standard package.
 type Decoder struct {

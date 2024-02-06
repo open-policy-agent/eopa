@@ -18,8 +18,8 @@ func TestLoaderErrors(t *testing.T) {
 	}{
 		{"empty string", []byte(""), io.EOF, "expecting io.EOF"},
 		{"bad bjson", []byte{0x08, 0x09, 0x09, 0x09, 0x09, 0x09}, nil, "corrupted binary"},
-		{"bad json", []byte("{"), nil, "expect \" after {"},
-		{"bad number", []byte("{10}"), nil, "but found 1"},
+		{"bad json+yaml", []byte("{"), nil, "yaml: line 1: did not find expected node content"},
+		{"bad yaml", []byte("u: u: u:"), nil, "yaml: mapping values are not allowed in this context"},
 	}
 
 	for _, tc := range tests {
@@ -27,11 +27,11 @@ func TestLoaderErrors(t *testing.T) {
 			var x any
 			err := loadJSON(tc.input, &x)
 			if err == nil {
-				t.Fatalf("expected %v", tc.msg)
+				t.Fatalf("expected %q", tc.msg)
 			}
 			if tc.err == nil {
 				if !strings.Contains(err.Error(), tc.msg) {
-					t.Fatalf("expected %v, got %v", tc.msg, err)
+					t.Fatalf("expected %q, got %q", tc.msg, err)
 				}
 			} else {
 				if !errors.Is(err, tc.err) {
