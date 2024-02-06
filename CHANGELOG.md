@@ -11,6 +11,10 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.17.1
+
+This release addresses an issue where YAML files in a bundle could cause Enterprise OPA to return an error, particularly during `eopa eval`.
+
 ## v1.17.0
 
 ### Regal Linting Support
