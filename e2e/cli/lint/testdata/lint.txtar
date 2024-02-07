@@ -19,16 +19,18 @@ stdout '1 file linted\. 1 violation found\.'
 
 -- policies/test.rego --
 package policies.test
+import rego.v1
 allow := true
-
 -- policies_pass/p.rego --
 package policies.test
+
+import rego.v1
 
 allow := true
 -- policies_sql/p.rego --
 package policies.test
 
-import future.keywords.if
+import rego.v1
 
 allow if {
 	some res

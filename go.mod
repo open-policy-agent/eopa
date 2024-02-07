@@ -57,7 +57,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
-	github.com/styrainc/regal v0.15.0
+	github.com/styrainc/regal v0.16.0
 	github.com/testcontainers/testcontainers-go v0.27.1-0.20240112110335-2309c4ecaf2f
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.27.0
 	github.com/testcontainers/testcontainers-go/modules/localstack v0.27.1-0.20240112110335-2309c4ecaf2f
@@ -295,6 +295,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.23.12 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/skeema/knownhosts v1.2.1 // indirect
+	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
