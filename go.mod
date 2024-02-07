@@ -1,6 +1,6 @@
 module github.com/styrainc/enterprise-opa-private
 
-go 1.20
+go 1.21
 
 require (
 	git.sr.ht/~charles/graph v0.0.1
@@ -80,6 +80,7 @@ require (
 	google.golang.org/protobuf v1.32.0
 	gopkg.in/h2non/gock.v1 v1.1.2
 	modernc.org/sqlite v1.28.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -357,7 +358,6 @@ require (
 	modernc.org/strutil v1.1.3 // indirect
 	modernc.org/token v1.1.0 // indirect
 	oras.land/oras-go/v2 v2.3.1 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
 // glog's init function does a lookup of the current user, and that can be quite
