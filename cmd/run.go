@@ -79,6 +79,7 @@ func initRun(opa *cobra.Command, brand string, license license.Checker, lparams 
 			}
 		}
 		builtins.Init()
+		bundle.RegisterActivator()
 		rego_vm.SetDefault(true)
 		rt, err := initRuntime(ctx, params, args, license, lparams)
 		if err != nil {

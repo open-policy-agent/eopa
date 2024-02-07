@@ -6,6 +6,6 @@ import (
 	bundleApi "github.com/open-policy-agent/opa/bundle"
 )
 
-func init() {
+func RegisterActivator() {
 	bundleApi.RegisterBundleActivator(&CustomActivator{})
 }

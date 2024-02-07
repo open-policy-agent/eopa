@@ -1,3 +1,5 @@
+//go:build use_opa_fork
+
 package cmd
 
 import (
@@ -17,6 +19,7 @@ import (
 	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
 	"github.com/styrainc/enterprise-opa-private/pkg/iropt"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
 
@@ -337,6 +340,7 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 func setDefaults(c *cobra.Command) *cobra.Command {
 	init := func() {
 		rego_vm.SetDefault(true)
+		bundle.RegisterActivator()
 		builtins.Init()
 	}
 	switch {
