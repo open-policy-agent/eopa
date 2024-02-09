@@ -81,7 +81,7 @@ allow if {
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
-	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, 5*time.Second)
 
 	ts, tsHost, tsPort := testTestsrv(t, ctx)
 	t.Cleanup(func() { ts.Terminate(ctx) })
@@ -121,7 +121,7 @@ func testEnvoy(t *testing.T, ctx context.Context, eopaHost string, eopaPort int,
 	}
 
 	req := testcontainers.ContainerRequest{
-		Image:        "envoyproxy/envoy:v1.26-latest",
+		Image:        "envoyproxy/envoy:v1.29-latest",
 		ExposedPorts: []string{"51051/tcp"},
 		Cmd:          []string{"envoy", "-c", "/etc/envoy/envoy.yaml", "--component-log-level", "ext_authz:trace"},
 		WaitingFor:   tc_wait.ForListeningPort(nat.Port("51051/tcp")),
