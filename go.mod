@@ -66,7 +66,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.27.0
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.27.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.27.0
-	github.com/twmb/franz-go v1.16.0
+	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	go.mongodb.org/mongo-driver v1.13.1
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.47.0
