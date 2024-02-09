@@ -11,6 +11,14 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.17.2
+
+This release fixes an issue with using OPA fallback mode (when missing a license) together with bundles.
+
+### Regal v0.16.0
+
+The embedded Regal version (used with `eopa lint`) was updated to [v0.16.0]((https://github.com/StyraInc/regal/releases/tag/v0.16.0).
+
 ## v1.17.1
 
 This release addresses an issue where YAML files in a bundle could cause Enterprise OPA to return an error, particularly during `eopa eval`.
