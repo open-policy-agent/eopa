@@ -16,7 +16,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	sdk_test "github.com/open-policy-agent/opa/sdk/test"
-	"github.com/open-policy-agent/opa/version"
 
 	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
@@ -119,7 +118,7 @@ plugins:
   eopa_dl:
     output:
       type: console
-`, // no plugins
+`,
 		s.URL())
 
 	inputPath := tempFile(t, map[string]any{"foo": map[string]any{"bar": "quz"}})
@@ -161,7 +160,7 @@ plugins:
 			Input:   map[string]any{"foo": map[string]any{"bar": "quz"}},
 			Result:  true,
 			Path:    "/test/p",
-			Labels:  payloadLabels{Version: version.Version},
+			Labels:  payloadLabels{Version: os.Getenv("EOPA_VERSION")},
 		}
 		ignores := cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "DecisionID", "Labels.ID", "NDBC")
 		if diff := cmp.Diff(exp, act, ignores); diff != "" {

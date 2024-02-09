@@ -15,7 +15,7 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/util"
 
-	"github.com/styrainc/enterprise-opa-private/pkg"
+	"github.com/styrainc/enterprise-opa-private/internal/version"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
 )
@@ -136,7 +136,10 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 		}
 	}
 
-	c.config = append(c.config, okta.WithUserAgentExtra(pkg.GetUserAgent()), okta.WithCacheManager(okta.NewNoOpCache()))
+	c.config = append(c.config,
+		okta.WithUserAgentExtra(version.UserAgent()),
+		okta.WithCacheManager(okta.NewNoOpCache()),
+	)
 
 	return c, nil
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/util"
 
-	"github.com/styrainc/enterprise-opa-private/pkg"
+	"github.com/styrainc/enterprise-opa-private/internal/version"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/types"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
@@ -150,7 +150,7 @@ func (c *Data) poll(ctx context.Context, body io.ReadSeeker, eTag string, client
 	if req.Header.Get("Accept") == "" {
 		req.Header.Set("Accept", acceptedTypes)
 	}
-	req.Header.Set("User-Agent", fmt.Sprintf("%s (http plugin)", pkg.GetUserAgent()))
+	req.Header.Set("User-Agent", fmt.Sprintf("%s (http plugin)", version.UserAgent()))
 	if eTag != "" {
 		req.Header.Set("If-None-Match", eTag)
 	}

@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -26,8 +27,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"golang.org/x/exp/maps"
-
-	"github.com/open-policy-agent/opa/version"
 
 	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
@@ -54,7 +53,7 @@ type payloadLabels struct {
 
 var standardLabels = payloadLabels{
 	Type:    "enterprise-opa",
-	Version: version.Version,
+	Version: os.Getenv("EOPA_VERSION"),
 }
 
 var stdIgnores = cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "DecisionID", "Labels.ID", "NDBC")
@@ -513,6 +512,7 @@ plugins:
 				case r.Method != http.MethodPost:
 				case r.Header.Get("Authorization") != "Secret opensesame":
 				case r.Header.Get("Content-Type") != "application/json":
+				case !expectedUA(r.Header.Get("User-Agent")):
 				case tc.compressed && r.Header.Get("Content-Encoding") != "gzip":
 				default: // all matches
 					var src io.ReadCloser
@@ -559,6 +559,12 @@ plugins:
 			}
 		})
 	}
+}
+
+var ua = regexp.MustCompile(`^Enterprise OPA/([0-9]+\.[0-9]+\.[0-9]+) Open Policy Agent/[0-9.]+ \([a-z]+, [a-z0-9-_]+\)$`)
+
+func expectedUA(u string) bool {
+	return ua.MatchString(u)
 }
 
 func TestDecisionLogsHttpRetry(t *testing.T) {

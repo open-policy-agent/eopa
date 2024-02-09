@@ -34,16 +34,13 @@ VERSION := $(EOPA_VERSION)$(shell ./build/get-plugin-rev.sh)
 export OPA_VERSION := $(shell ./build/get-opa-version.sh)
 HOSTNAME ?= $(shell hostname -f)
 
-EOPA_LDFLAGS := "-X=github.com/open-policy-agent/opa/version.Program=Enterprise OPA"
-ALT_EOPA_LDFLAGS := "-X=github.com/open-policy-agent/opa/version.AltProgram=Open Policy Agent"
-VERSION_LDFLAGS := -X=github.com/open-policy-agent/opa/version.Version=$(EOPA_VERSION)
-ALT_VERSION_LDFLAGS := -X=github.com/open-policy-agent/opa/version.AltVersion=$(OPA_VERSION)
+VERSION_LDFLAGS := -X=github.com/styrainc/enterprise-opa-private/internal/version.Version=$(EOPA_VERSION)
 TELEMETRY_LDFLAGS := -X=github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=$(EOPA_TELEMETRY_URL)
-HOSTNAME_LDFLAGS := -X=github.com/open-policy-agent/opa/version.Hostname=$(HOSTNAME)
+HOSTNAME_LDFLAGS := -X=github.com/styrainc/enterprise-opa-private/internal/version.Hostname=$(HOSTNAME)
 # goreleaser reads this via .goreleaser.yaml
 export EOPA_TELEMETRY_URL ?= https://load-telemetry.corp.styra.com
 
-LDFLAGS := $(VERSION_LDFLAGS) $(EOPA_LDFLAGS) $(ALT_EOPA_LDFLAGS) $(ALT_VERSION_LDFLAGS) $(TELEMETRY_LDFLAGS) $(HOSTNAME_LDFLAGS)
+LDFLAGS := $(VERSION_LDFLAGS) $(TELEMETRY_LDFLAGS) $(HOSTNAME_LDFLAGS)
 
 .PHONY: eopa
 eopa:
@@ -131,12 +128,12 @@ fuzz:
 	go test $(BUILD_ARGS)  ./pkg/json -fuzz FuzzDecode -fuzztime ${FUZZ_TIME} -v -run '^$$'
 
 update:
-	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.61.0
+	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.61.0-1
 	go mod tidy
 
 update-e2e:
 	cd e2e \
-		&& go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.61.0 \
+		&& go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.61.0-1 \
 		&& go mod tidy
 
 update-examples:

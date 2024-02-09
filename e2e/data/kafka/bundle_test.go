@@ -19,8 +19,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/twmb/franz-go/pkg/kgo"
 
-	"github.com/open-policy-agent/opa/util"
-
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
 
@@ -84,7 +82,7 @@ func TestTransformFromBundle(t *testing.T) {
 		},
 	}
 
-	if err := util.WaitFunc(func() bool {
+	if err := wait.Func(func() bool {
 		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/v1/data/kafka/messages", eopaHTTPPort))
 		if err != nil {
 			t.Fatal(err)

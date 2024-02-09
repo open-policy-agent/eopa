@@ -11,6 +11,7 @@ import (
 	"net/http/httputil"
 	"os"
 	"os/exec"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -31,6 +32,15 @@ var testserver = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,
 	http.FileServer(http.Dir("testdata")).ServeHTTP(w, r)
 }))
 
+// NOTE! To run these services, you'll need to build eopa with
+//
+//	make EOPA_TELEMETRY_URL=http://127.0.0.1:9191 eopa
+//
+// as otherwise the signal handler will not be set up, and the
+// tests will fail to trigger a telemetry report. It looks like
+// the ordinary
+//
+//	timeout waiting for result: log not found
 func TestTelemetry(t *testing.T) {
 	t.Setenv("EOPA_BUNDLE_SERVER", testserver.URL)
 
@@ -67,6 +77,7 @@ func TestTelemetry(t *testing.T) {
 			reqs.Add(2)
 
 			recv := make([]map[string]any, 0, 2)
+			var lastUseragent string
 			m := http.NewServeMux()
 			m.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				bs, _ := httputil.DumpRequest(r, true)
@@ -82,6 +93,7 @@ func TestTelemetry(t *testing.T) {
 				var req map[string]any
 				json.NewDecoder(r.Body).Decode(&req)
 				recv = append(recv, req)
+				lastUseragent = r.Header.Get("user-agent")
 				reqs.Done()
 			}))
 			srv := &http.Server{
@@ -158,6 +170,18 @@ func TestTelemetry(t *testing.T) {
 				}
 			}
 
+			{
+				re := regexp.MustCompile(`^Enterprise OPA/([0-9]+\.[0-9]+\.[0-9]+) Open Policy Agent/[0-9.]+ \([a-z]+, [a-z0-9-_]+\)$`)
+				match := re.FindStringSubmatch(lastUseragent)
+				if len(match) != 2 {
+					t.Fatalf("user-agent unexpected: %s", lastUseragent)
+				}
+				exp := match[1]
+				act := recv[1]["version"]
+				if diff := cmp.Diff(exp, act); diff != "" {
+					t.Errorf("version unexpected: (-want, +got):\n%s", diff)
+				}
+			}
 		})
 	}
 }

@@ -19,7 +19,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.27.0
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.27.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.27.0
-	github.com/twmb/franz-go v1.16.0
+	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	golang.org/x/exp v0.0.0-20240110193028-0dcbfd608b1e
 )
@@ -39,7 +39,7 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/apache/arrow/go/v14 v14.0.2 // indirect
-	github.com/aws/aws-sdk-go v1.50.7 // indirect
+	github.com/aws/aws-sdk-go v1.50.12 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.24.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.5.4 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.16.14 // indirect
@@ -105,7 +105,7 @@ require (
 	github.com/hashicorp/vault/api/auth/approle v0.4.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
-	github.com/jackc/pgx/v5 v5.5.2 // indirect
+	github.com/jackc/pgx/v5 v5.5.3 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
@@ -202,4 +202,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.61.1-0.20240125131418-fee55b468562
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.61.1-0.20240209123608-3339e1263900

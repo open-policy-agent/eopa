@@ -26,7 +26,6 @@ import (
 	opa_envoy "github.com/open-policy-agent/opa-envoy-plugin/plugin"
 
 	"github.com/styrainc/enterprise-opa-private/internal/license"
-	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
 	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
@@ -34,7 +33,6 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
 	"github.com/styrainc/enterprise-opa-private/pkg/preview"
-	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage"
 	"github.com/styrainc/enterprise-opa-private/pkg/telemetry"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
@@ -78,9 +76,8 @@ func initRun(opa *cobra.Command, brand string, license license.Checker, lparams 
 				return fallback(c, args)
 			}
 		}
-		builtins.Init()
-		bundle.RegisterActivator()
-		rego_vm.SetDefault(true)
+
+		enableEOPAOnly()
 		rt, err := initRuntime(ctx, params, args, license, lparams)
 		if err != nil {
 			fmt.Println("run error:", err)

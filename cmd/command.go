@@ -11,12 +11,15 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/open-policy-agent/opa/cmd"
+	opa_cmd "github.com/open-policy-agent/opa/cmd"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/util"
+	opa_version "github.com/open-policy-agent/opa/version"
 
 	"github.com/styrainc/enterprise-opa-private/internal/license"
 	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
 	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
+	"github.com/styrainc/enterprise-opa-private/internal/version"
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
 	"github.com/styrainc/enterprise-opa-private/pkg/iropt"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
@@ -337,23 +340,26 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	return root
 }
 
+func enableEOPAOnly() {
+	rego_vm.SetDefault(true)
+	bundle.RegisterActivator()
+	builtins.Init()
+	opa_cmd.UserAgent(version.UserAgent())
+	opa_version.Version = version.Version
+}
+
 func setDefaults(c *cobra.Command) *cobra.Command {
-	init := func() {
-		rego_vm.SetDefault(true)
-		bundle.RegisterActivator()
-		builtins.Init()
-	}
 	switch {
 	case c.RunE != nil:
 		prev := c.RunE
 		c.RunE = func(c *cobra.Command, args []string) error {
-			init()
+			enableEOPAOnly()
 			return extraHints(c, prev(c, args))
 		}
 	case c.Run != nil:
 		prev := c.Run
 		c.Run = func(c *cobra.Command, args []string) {
-			init()
+			enableEOPAOnly()
 			prev(c, args)
 		}
 	}

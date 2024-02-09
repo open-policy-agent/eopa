@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/styrainc/enterprise-opa-private/internal/version"
 )
 
 type Config struct {
@@ -208,9 +210,12 @@ func (s *outputHTTPOpts) Benthos() map[string]any {
 	m := map[string]any{
 		"url": s.URL,
 	}
-	if len(s.Headers) > 0 {
-		m["headers"] = s.Headers
+	hdrs := make(map[string]any, len(s.Headers)+1)
+	hdrs["User-Agent"] = version.UserAgent()
+	for k, v := range s.Headers {
+		hdrs[k] = v
 	}
+	m["headers"] = hdrs
 	if s.Timeout != "" {
 		m["timeout"] = s.Timeout
 	}

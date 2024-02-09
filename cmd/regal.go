@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"errors"
-	"runtime/debug"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -29,18 +27,4 @@ func regal() *cobra.Command {
 		}
 	}
 	panic("unreachable")
-}
-
-// regalVersion is used for `eopa version`
-func regalVersion() string {
-	bi, ok := debug.ReadBuildInfo()
-	if !ok {
-		return ""
-	}
-	for _, x := range bi.Deps {
-		if x.Path == "github.com/styrainc/regal" {
-			return strings.TrimLeft(x.Version, "v")
-		}
-	}
-	return ""
 }

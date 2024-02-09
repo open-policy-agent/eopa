@@ -40,6 +40,7 @@ func initExec(opa *cobra.Command, license license.Checker, lparams *keygen.Licen
 		e := ekm.NewEKM(license, lparams)
 		e.SetLogger(logging.NewNoOpLogger())
 		sdk.DefaultOptions.Hooks = hooks.New(e)
+		enableEOPAOnly()
 		return fallback(c, args)
 	}
 	return opa

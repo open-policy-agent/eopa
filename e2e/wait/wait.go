@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"testing"
 	"time"
@@ -91,4 +92,31 @@ func retrieveField(t *testing.T, buf *bytes.Buffer, assert func(map[string]any) 
 		t.Fatalf("scanner: %v", err)
 	}
 	return errors.New("log not found")
+}
+
+// Func will call passed function at an interval and return nil
+// as soon this function returns true.
+// If timeout is reached before the passed in function returns true
+// an error is returned.
+//
+// Taken from github.com/open-policy-agent/opa/utils/wait.go
+// Copyright 2020 The OPA Authors.  All rights reserved.
+func Func(fun func() bool, interval, timeout time.Duration) error {
+	if fun() {
+		return nil
+	}
+	ticker := time.NewTicker(interval)
+	timer := time.NewTimer(timeout)
+	defer ticker.Stop()
+	defer timer.Stop()
+	for {
+		select {
+		case <-timer.C:
+			return fmt.Errorf("timeout")
+		case <-ticker.C:
+			if fun() {
+				return nil
+			}
+		}
+	}
 }

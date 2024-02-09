@@ -11,6 +11,8 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/plugins/logs"
 	"github.com/open-policy-agent/opa/storage/inmem"
+
+	"github.com/styrainc/enterprise-opa-private/internal/version"
 )
 
 func isConfig(exp Config) func(testing.TB, any, error) {
@@ -427,10 +429,11 @@ output:
 								},
 								"url":     "http://knownservice/prefix/decisionlogs",
 								"timeout": "10s",
-								"headers": map[string]string{
+								"headers": map[string]any{
 									"Content-Type":     "application/foobear",
 									"Content-Encoding": "gzip",
 									"X-Token":          "y",
+									"User-Agent":       version.UserAgent(),
 								},
 							},
 						},
@@ -586,8 +589,11 @@ output:
 						"error": true,
 						"output": map[string]any{
 							"http_client": map[string]any{
-								"url":     "https://logs.logs.logs:1234/post",
-								"headers": map[string]string{"foo": "bear"},
+								"url": "https://logs.logs.logs:1234/post",
+								"headers": map[string]any{
+									"User-Agent": version.UserAgent(),
+									"foo":        "bear",
+								},
 							},
 						},
 					},
@@ -641,6 +647,9 @@ output:
 								"backoff_on":        []int{400, 429},
 								"drop_on":           []int{300},
 								"successful_on":     []int{202},
+								"headers": map[string]any{
+									"User-Agent": version.UserAgent(),
+								},
 							},
 						},
 					},
@@ -679,6 +688,9 @@ output:
 							"http_client": map[string]any{
 								"url":        "https://logs.logs.logs:1234/post",
 								"rate_limit": ResourceKey("https://logs.logs.logs:1234/post"),
+								"headers": map[string]any{
+									"User-Agent": version.UserAgent(),
+								},
 							},
 						},
 					},

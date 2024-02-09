@@ -25,8 +25,6 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/plugin/kzerolog"
 
-	"github.com/open-policy-agent/opa/util"
-
 	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
@@ -130,7 +128,7 @@ transform[key] := val if {
 				}
 			}
 
-			if err := util.WaitFunc(func() bool {
+			if err := wait.Func(func() bool {
 				// check store response (TODO: check metrics/status when we have them)
 				resp, err := utils.StdlibHTTPClient.Get(fmt.Sprintf("http://localhost:%d/v1/data/messages", eopaHTTPPort))
 				if err != nil {
