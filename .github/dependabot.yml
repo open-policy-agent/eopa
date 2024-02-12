@@ -4,7 +4,7 @@ updates:
   directory: /
   schedule:
     interval: daily
-  groups: &go-groups
+  groups:
     go.opentelemetry.io:
       patterns:
       - "go.opentelemetry.io/*"
@@ -18,7 +18,16 @@ updates:
   directory: /e2e
   schedule:
     interval: daily
-  groups: *go-groups
+  groups:
+    go.opentelemetry.io:
+      patterns:
+      - "go.opentelemetry.io/*"
+    vault:
+      patterns:
+      - "github.com/hashicorp/vault/*"
+    testcontainers:
+      patterns:
+      - "github.com/testcontainers/*"
 - package-ecosystem: github-actions
   directory: /
   schedule:
