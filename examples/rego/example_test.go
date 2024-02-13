@@ -1,5 +1,5 @@
 // Package rego_test demonstrates the use of OPA's rego package,
-// github.com/open-policy-agent/opa/rego, with Load's VM code.
+// github.com/open-policy-agent/opa/rego, with EOPA's VM code.
 package rego_test
 
 import (
@@ -44,7 +44,7 @@ func ExampleRego_Eval_simple_default() { // Start with the default rego package
 	// bindings: map[x:1]
 }
 
-func ExampleRego_Eval_simple_load() { // Repeat the same with the Load VM instead:
+func ExampleRego_Eval_simple_load() { // Repeat the same with the EOPA VM instead:
 	ctx := context.Background()
 
 	r := rego.New(
@@ -118,7 +118,7 @@ func ExampleRego_Eval_storage_default() { // This is using OPA's inmem storage.
 	// value: [dogs clouds]
 }
 
-func ExampleRego_Eval_storage_bjson() { // This is using Load's optimized inmem storage.
+func ExampleRego_Eval_storage_bjson() { // This is using EOPA's optimized inmem storage.
 	ctx := context.Background()
 
 	json := util.MustUnmarshalJSON([]byte(data))

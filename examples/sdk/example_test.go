@@ -1,5 +1,5 @@
 // Package sdk_test demonstrates the use of OPA's sdk package,
-// github.com/open-policy-agent/opa/sdk, with Load's VM code,
+// github.com/open-policy-agent/opa/sdk, with EOPA's VM code,
 // storage, and all plugins.
 package sdk_test
 
