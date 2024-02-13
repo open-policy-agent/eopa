@@ -41,9 +41,10 @@ file location, pass --styra-config:
 
     eopa pull --styra-config ~/.styra-primary.yaml
 
-
 If the environment varable EOPA_STYRA_DAS_TOKEN is set, 'eopa pull'
-will use it as an API token to talk to the configured DAS instance.
+will use it as an API token to talk to the configured DAS instance:
+
+    EOPA_STYRA_DAS_TOKEN="..." eopa pull
 
 Write all libraries to to libs/, with debug logging enabled:
 
