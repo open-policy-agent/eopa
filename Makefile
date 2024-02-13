@@ -148,4 +148,4 @@ ci-smoke-test:
 generate-cli-docs:
 	rm -rf tmp-docs
 	mkdir tmp-docs
-	go run build/generate-cli-docs/generate.go tmp-docs
+	go run $(BUILD_ARGS) build/generate-cli-docs/generate.go tmp-docs

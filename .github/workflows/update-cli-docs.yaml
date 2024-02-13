@@ -1,0 +1,46 @@
+# this workflow is used to update the EOPA CLI docs content at
+# docs.styra.com when it changes in this repo on release.
+name: Update Docs
+
+on:
+  push:
+    tags:
+      - v[0-9].**
+  workflow_dispatch:
+
+env:
+  GOPRIVATE: github.com/StyraInc/opa
+  GO_VERSION: 1.22
+
+jobs:
+  update-docs:
+    name: Update Docs
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Setup github api token
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+
+      - name: Generate CLI Docs
+        run: |
+          make generate-cli-docs
+
+      - name: Update docs repo
+        uses: leigholiver/commit-with-deploy-key@9562ffd1c0965c6d4f264e2555a569bd33ac7d05
+        with:
+          source: tmp-docs
+          destination_folder: imported/artifacts/enterprise-opa-private
+          destination_repo: StyraInc/docs
+          deploy_key: ${{ secrets.STYRA_DOCS_DEPLOY_KEY }}
