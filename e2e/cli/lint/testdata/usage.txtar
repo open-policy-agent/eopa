@@ -2,13 +2,11 @@
 ! stdout .
 stderr 'Error: at least one file or directory must be provided for linting'
 stderr 'Usage:'
-[!windows] stderr 'eopa lint <path> \[path \[...\]\] \[flags\]'
-[windows]  stderr 'eopa.exe lint <path> \[path \[...\]\] \[flags\]'
+stderr 'eopa lint <path> \[path \[...\]\] \[flags\]'
 
 exec eopa lint --help
 ! stderr .
 stdout 'Lint Rego source files for linter rule violations.'
 stdout 'Usage:'
-[!windows] stdout 'eopa lint <path> \[path \[...\]\] \[flags\]'
-[windows]  stdout 'eopa.exe lint <path> \[path \[...\]\] \[flags\]'
+stdout 'eopa lint <path> \[path \[...\]\] \[flags\]'
 stdout 'Flags:'

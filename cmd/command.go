@@ -4,13 +4,11 @@ package cmd
 
 import (
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/open-policy-agent/opa/cmd"
 	opa_cmd "github.com/open-policy-agent/opa/cmd"
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/util"
@@ -122,7 +120,7 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	paths = append(paths, "$HOME")
 
 	root := &cobra.Command{
-		Use:   path.Base(os.Args[0]),
+		Use:   "eopa",
 		Short: "Enterprise OPA",
 
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -286,7 +284,9 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	root.AddCommand(liaCtl())
 
 	// add OPA commands to root
-	opa := cmd.Command(brand)
+	dummyRoot := &cobra.Command{Use: "eopa"}
+
+	opa := opa_cmd.Command(dummyRoot, brand)
 	for _, c := range opa.Commands() {
 		switch c.Name() {
 		case "run":

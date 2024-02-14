@@ -46,6 +46,7 @@ require (
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/open-policy-agent/opa v0.61.0
 	github.com/open-policy-agent/opa-envoy-plugin v0.61.0-envoy
+	github.com/pkg/profile v1.7.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/rs/zerolog v1.32.0
 	github.com/sbabiv/xml2map v1.2.1
@@ -271,7 +272,6 @@ require (
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pkg/profile v1.7.0 // indirect
 	github.com/pkg/sftp v1.13.6 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
@@ -372,4 +372,4 @@ replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.61.1-0.20240209123608-3339e1263900
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.61.1-0.20240214173630-c48bac07e09a

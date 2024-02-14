@@ -1,0 +1,6 @@
+# this tests is for spot-checking the presence of the wrong executable
+# name in our help texts
+exec eopa eval -h
+stdout 'eopa eval ''x := 1; y := 2; x < y'''
+! stdout 'enterprise opa eval'
+! stderr .
