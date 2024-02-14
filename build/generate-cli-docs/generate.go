@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-
 	"log"
 	"os"
 	"path/filepath"
@@ -11,16 +10,18 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra/doc"
+
 	eopaCmd "github.com/styrainc/enterprise-opa-private/cmd"
 	"github.com/styrainc/enterprise-opa-private/internal/license"
 )
 
 const fileHeader = `---
-title: CLI
-kind: documentation
-weight: 90
-restrictedtoc: true
+sidebar_position: 4
+sidebar_label: CLI Reference
+title: CLI Reference
 ---
+
+# Enterprise OPA CLI Reference
 
 The Enterprise OPA executable provides the following commands.
 
