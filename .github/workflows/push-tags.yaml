@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - kopush
-    environment: ci
     env:
       QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }} # base64 encoded contents
       QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }} # p12 password
@@ -64,7 +63,6 @@ jobs:
   kopush:
     name: Ko Push
     runs-on: ubuntu-22.04
-    environment: ci
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -94,7 +92,6 @@ jobs:
   proto-docs-push:
     name: Push Protobuf docs to BSR
     runs-on: ubuntu-22.04
-    environment: ci
     env:
       BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
     steps:
@@ -125,7 +122,6 @@ jobs:
   pr-artifacts:
     name: Publish proto defs and capabilities.json using a PR
     runs-on: ubuntu-22.04
-    environment: ci
     steps:
       - name: Generate GitHub App Token
         id: generate_token

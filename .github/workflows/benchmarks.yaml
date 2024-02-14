@@ -3,7 +3,7 @@ name: Benchmarks
 on:
   workflow_dispatch: {}
   push:
-    branches: [ main ]
+    branches: [main]
 
 env:
   GO_VERSION: 1.22
@@ -13,7 +13,6 @@ jobs:
     name: Benchmarks
     if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-22.04
-    environment: ci
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -22,8 +21,7 @@ jobs:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
       - name: Override GH Token Env Var
-        run:
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/StyraInc.insteadOf https://github.com/StyraInc
       - uses: open-policy-agent/setup-opa@v2

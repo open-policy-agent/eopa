@@ -3,7 +3,7 @@ name: Main
 on:
   workflow_dispatch: {}
   push:
-    branches: [ main ]
+    branches: [main]
 
 env:
   GOPRIVATE: github.com/StyraInc/opa
@@ -13,7 +13,6 @@ jobs:
   deploy:
     name: Push Latest Release
     runs-on: ubuntu-22.04
-    environment: ci
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -26,7 +25,6 @@ jobs:
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
           echo "GITHUB_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@v2
-
       - name: Check out code
         uses: actions/checkout@v4
         with:

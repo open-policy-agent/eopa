@@ -1,8 +1,8 @@
 name: Nightly
 on:
-  workflow_dispatch: {}   # Allow for manual triggers
+  workflow_dispatch: {} # Allow for manual triggers
   schedule:
-    - cron:  '0 8 * * 1-5'  # Mo-Fr, at 8:00 UTC
+    - cron: "0 8 * * 1-5" # Mo-Fr, at 8:00 UTC
 
 env:
   GO_VERSION: 1.22
@@ -12,7 +12,6 @@ jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-22.04
-    environment: ci
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -100,7 +99,6 @@ jobs:
   goreleaser:
     name: GoReleaser
     runs-on: ubuntu-22.04
-    environment: ci
     env:
       QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }} # base64 encoded contents
       QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }} # p12 password
@@ -151,7 +149,6 @@ jobs:
   cross-build:
     name: Cross Build
     runs-on: ubuntu-22.04
-    environment: ci
     strategy:
       fail-fast: true
       matrix:
@@ -199,9 +196,8 @@ jobs:
     name: Cross Test Releases
     runs-on: ${{ matrix.os }}
     needs:
-    - goreleaser
-    - cross-build
-    environment: ci
+      - goreleaser
+      - cross-build
     strategy:
       fail-fast: false
       matrix:
@@ -245,7 +241,6 @@ jobs:
   regal:
     name: Regal e2e
     runs-on: ubuntu-22.04
-    environment: ci
     steps:
       - uses: open-policy-agent/setup-opa@v2
       - name: checkout Enterprise OPA
@@ -290,7 +285,7 @@ jobs:
         with:
           image-ref: ${{ steps.enterprise-opa.outputs.image }}
           format: table
-          exit-code: '1'
+          exit-code: "1"
           ignore-unfixed: true
           vuln-type: os,library
           severity: CRITICAL,HIGH
@@ -309,7 +304,7 @@ jobs:
         with:
           scan-type: fs
           format: table
-          exit-code: '1'
+          exit-code: "1"
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
@@ -372,19 +367,19 @@ jobs:
       security-events: write
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    # Initializes the CodeQL tools for scanning.
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: go
+      # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: go
 
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:go"
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:go"

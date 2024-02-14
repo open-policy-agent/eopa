@@ -19,7 +19,6 @@ jobs:
   lint:
     name: Analysis & Linting
     runs-on: ubuntu-22.04
-    environment: ci
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -90,7 +89,6 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-22.04
-    environment: ci
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -146,8 +144,7 @@ jobs:
     name: Test E2E
     runs-on: ubuntu-22.04
     needs:
-    - goreleaser
-    environment: ci
+      - goreleaser
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -191,17 +188,16 @@ jobs:
           GIT_GITLAB_TOKEN: ${{ secrets.E2E_GIT_GITLAB_TOKEN }}
       - name: display go.sum diff
         run: |
-         git diff --exit-code go.sum && exit 0
-         echo "# go.sum diff" >> $GITHUB_STEP_SUMMARY
-         echo '```diff' >> $GITHUB_STEP_SUMMARY
-         git diff go.sum >> $GITHUB_STEP_SUMMARY
-         echo '```' >> $GITHUB_STEP_SUMMARY
+          git diff --exit-code go.sum && exit 0
+          echo "# go.sum diff" >> $GITHUB_STEP_SUMMARY
+          echo '```diff' >> $GITHUB_STEP_SUMMARY
+          git diff go.sum >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
         working-directory: e2e
 
   proto-docs-push:
     name: Push Protobuf docs to BSR
     runs-on: ubuntu-22.04
-    environment: ci
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -241,7 +237,6 @@ jobs:
   build:
     name: Ko Build
     runs-on: ubuntu-22.04
-    environment: ci
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -274,7 +269,6 @@ jobs:
   goreleaser:
     name: Goreleaser build
     runs-on: ubuntu-22.04
-    environment: ci
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -315,7 +309,6 @@ jobs:
     name: Smoke Test CLI
     runs-on: ubuntu-22.04
     needs: build
-    environment: ci
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -343,7 +336,6 @@ jobs:
   performance-related:
     name: Performance
     runs-on: ubuntu-22.04
-    environment: ci
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -399,16 +391,15 @@ jobs:
 
   cross-build:
     runs-on: ubuntu-22.04
-    environment: ci
     strategy:
       fail-fast: true
       matrix:
         GOOS:
-        - windows
-        - linux
-        - darwin
+          - windows
+          - linux
+          - darwin
         GOARCH:
-        - amd64
+          - amd64
     steps:
       - name: Generate GitHub App Token
         id: generate_token
@@ -446,8 +437,7 @@ jobs:
     name: Cross Test Releases
     runs-on: ${{ matrix.os }}
     needs:
-    - cross-build
-    environment: ci
+      - cross-build
     strategy:
       fail-fast: false
       matrix:
