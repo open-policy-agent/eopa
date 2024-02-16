@@ -18,19 +18,6 @@ yes: no
     "goes": {
       "here": false
     }
-  },
-  "system": {
-    "bundles": {
-      "toplevel": {
-        "etag": "",
-        "manifest": {
-          "revision": "",
-          "roots": [
-            ""
-          ]
-        }
-      }
-    }
   }
 }
 -- exp-nested/stdout --
@@ -39,19 +26,6 @@ yes: no
     "b": {
       "c": {
         "true": false
-      }
-    }
-  },
-  "system": {
-    "bundles": {
-      "nested": {
-        "etag": "",
-        "manifest": {
-          "revision": "",
-          "roots": [
-            ""
-          ]
-        }
       }
     }
   }

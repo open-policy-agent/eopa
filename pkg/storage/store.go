@@ -462,8 +462,16 @@ func (txn *transaction) read(ctx context.Context, store storage.Store, path stor
 	switch s := store.(type) {
 	case BJSONReader:
 		doc, err = s.ReadBJSON(ctx, t, path)
+		if len(path) == 0 { // reading all of "data"
+			if om, ok := doc.(bjson.Object); ok && om != nil { // haven't checked err, so be careful with doc+om
+				doc = om.Remove("system")
+			}
+		}
 	default:
 		doc, err = s.Read(ctx, t, path)
+		// NOTE(sr): We're most likely keeping "data.system" in here, but
+		// this code path should rarely be exercised: it's when using EOPA's
+		// VM without EOPA's store.
 	}
 
 	if storage.IsNotFound(err) {

@@ -1,0 +1,21 @@
+# we expect a nonzero exit code on windows
+[windows] ! exec eopa run --log-level error --addr 127.0.0.1:61597 --server --bundle bundledir &eopa&
+[!windows]  exec eopa run --log-level error --addr 127.0.0.1:61597 --server --bundle bundledir &eopa&
+! stdout .
+! stderr .
+
+# block until the server reports health OK
+httpwait 'http://localhost:61597/health' '{}'
+
+exec curl -Ss --request GET --url http://localhost:61597/v1/data
+! stderr .
+cmp stdout exp/stdout
+
+stop eopa
+! stdout .
+! stderr .
+
+-- bundledir/data.json --
+{"foo": "bear"}
+-- exp/stdout --
+{"result":{"foo":"bear"}}
