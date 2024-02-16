@@ -58,14 +58,14 @@ require (
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
 	github.com/styrainc/regal v0.16.0
-	github.com/testcontainers/testcontainers-go v0.27.1-0.20240112110335-2309c4ecaf2f
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.27.0
-	github.com/testcontainers/testcontainers-go/modules/localstack v0.27.1-0.20240112110335-2309c4ecaf2f
-	github.com/testcontainers/testcontainers-go/modules/mssql v0.27.0
-	github.com/testcontainers/testcontainers-go/modules/mysql v0.27.0
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.27.0
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.27.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.27.0
+	github.com/testcontainers/testcontainers-go v0.28.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.28.0
+	github.com/testcontainers/testcontainers-go/modules/localstack v0.28.0
+	github.com/testcontainers/testcontainers-go/modules/mssql v0.28.0
+	github.com/testcontainers/testcontainers-go/modules/mysql v0.28.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.28.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.28.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.28.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
 	go.mongodb.org/mongo-driver v1.14.0
@@ -142,8 +142,7 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.5 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/distribution/reference v0.5.0 // indirect
-	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker v24.0.7+incompatible // indirect
+	github.com/docker/docker v25.0.2+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
@@ -242,6 +241,7 @@ require (
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
+	github.com/moby/sys/user v0.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
