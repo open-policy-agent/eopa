@@ -1,0 +1,10 @@
+# This test ensures that `eopa test bootstrap` exits with an appropriate warning
+# if a folder named 'bootstrap' is present.This could happen when a developer
+# intends to run `eopa test`, and experiences a name collision with the
+# sub-command.
+! exec eopa test bootstrap
+! stdout .
+stderr '^Error: Name collision between ''eopa test'' and ''eopa test bootstrap'' commands detected. No tests will be run or generated.'
+cmp bootstrap exp/bootstrap
+-- bootstrap/ --
+-- exp/bootstrap/ --

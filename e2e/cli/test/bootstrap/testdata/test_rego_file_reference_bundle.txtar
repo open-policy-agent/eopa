@@ -1,0 +1,69 @@
+# This test ensures that `eopa test-bootstrap` works with a combination of Rego
+# files and unpacked, on-disk bundle sources. This allows us to potentially
+# integrate with more complex Rego frameworks, such as DAS entitlements bundles.
+exec eopa test bootstrap -d bundle/ -d main.rego main/allow
+! stdout .
+cmp stderr exp/stderr
+cmp main_test.rego exp/main_test.rego
+-- bundle/example.rego --
+package example
+
+import rego.v1
+
+default allow := false                              # unless otherwise defined, allow is false
+
+allow if {                                          # allow is true if...
+    count(violation) == 0                           # there are zero violations.
+}
+
+violation contains server.id if {                   # a server is in the violation set if...
+    some server
+    public_servers[server]                           # it exists in the 'public_servers' set and...
+    server.protocols[_] == "http"                   # it contains the insecure "http" protocol.
+}
+
+violation contains server.id if {                   # a server is in the violation set if...
+    server := input.servers[_]                      # it exists in the input.servers collection and...
+    server.protocols[_] == "telnet"                 # it contains the "telnet" protocol.
+}
+
+public_servers contains server if {                  # a server exists in the 'public_servers' set if...
+    some i, j
+    server := input.servers[_]                      # it exists in the input.servers collection and...
+    server.ports[_] == input.ports[i].id            # it references a port in the input.ports collection and...
+    input.ports[i].network == input.networks[j].id  # the port references a network in the input.networks collection and...
+    input.networks[j].public                        # the network is public.
+}
+-- main.rego --
+package main
+
+import rego.v1
+
+allow if {
+    count(data.example.violation) == 0
+}
+-- exp/main_test.rego --
+package main_test
+
+import rego.v1
+
+# Testcases generated from: main.rego:5
+# Success case: All inputs defined.
+test_success_main_allow_0 if {
+	test_input = {"input": {"networks": "EXAMPLE", "ports": "EXAMPLE", "servers": "EXAMPLE"}}
+	data.main.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_main_allow_0_no_input if {
+	test_input = {}
+	not data.main.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_main_allow_0_bad_input if {
+	test_input = {"input": {"networks": "EXAMPLE", "ports": "EXAMPLE", "servers": "EXAMPLE"}}
+	not data.main.allow with input as test_input
+}
+
+-- exp/stderr --
+[INFO] Generating testcases for rule 'data.main.allow'. File destination will be: main_test.rego
+

@@ -108,7 +108,7 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 	viper.SupportedExts = []string{"yaml"}
 
 	// NOTE(sr): for config file debugging, use this
-	//cfg := viper.NewWithOptions(viper.WithLogger(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))))
+	// cfg := viper.NewWithOptions(viper.WithLogger(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))))
 	cfg := viper.New()
 
 	cfg.SetConfigName(".styra")
@@ -310,6 +310,8 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 
 			c.Flags().VarP(logLevel, "log-level", "l", "set log level")
 			c.Flags().Var(logFormat, "log-format", "set log format") // NOTE(sr): we don't support "text" here
+
+			c.AddCommand(testBootstrapCmd(cfg, paths))
 
 			root.AddCommand(setDefaults(c))
 

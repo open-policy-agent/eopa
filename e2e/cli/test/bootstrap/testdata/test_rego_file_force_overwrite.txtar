@@ -1,0 +1,78 @@
+# This test ensures that `eopa test-bootstrap` can overwrite tests when forced
+# with the appropriate flag.
+cp step1/example.rego example.rego
+exec eopa test bootstrap -d example.rego example/allow
+! stdout .
+cmp stderr exp/step1/stderr
+cmp example_test.rego exp/step1/example_test.rego
+
+# Check to make sure we can overwrite existing tests when -f is on.
+cp step2/example.rego example.rego
+exec eopa test bootstrap -f -d example.rego example/allow
+! stdout .
+cmp stderr exp/step2/stderr
+cmp example_test.rego exp/step2/example_test.rego
+
+-- step1/example.rego --
+package example
+
+allow {
+	input.servers[_].names[_]
+	input.clients[_]
+}
+-- step2/example.rego --
+package example
+
+allow {
+	input.protocols[_]
+}
+-- exp/step1/example_test.rego --
+package example_test
+
+import rego.v1
+
+# Testcases generated from: example.rego:3
+# Success case: All inputs defined.
+test_success_example_allow_0 if {
+	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
+	data.example.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_example_allow_0_no_input if {
+	test_input = {}
+	not data.example.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_example_allow_0_bad_input if {
+	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
+	not data.example.allow with input as test_input
+}
+
+-- exp/step2/example_test.rego --
+package example_test
+
+import rego.v1
+
+# Testcases generated from: example.rego:3
+# Success case: All inputs defined.
+test_success_example_allow_0 if {
+	test_input = {"input": {"protocols": "EXAMPLE"}}
+	data.example.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_example_allow_0_no_input if {
+	test_input = {}
+	not data.example.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_example_allow_0_bad_input if {
+	test_input = {"input": {"protocols": "EXAMPLE"}}
+	not data.example.allow with input as test_input
+}
+
+-- exp/step1/stderr --
+[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: example_test.rego
+
+-- exp/step2/stderr --
+[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: example_test.rego
+

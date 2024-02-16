@@ -31,7 +31,7 @@ func pullCmd(config *viper.Viper, paths []string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "pull",
 		Example: `
-Download all DAS libraries  using settings from .styra.yaml:
+Download all DAS libraries using settings from .styra.yaml:
 
     eopa pull
 
