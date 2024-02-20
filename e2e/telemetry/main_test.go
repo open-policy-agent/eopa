@@ -46,23 +46,27 @@ func TestTelemetry(t *testing.T) {
 
 	tests := []struct {
 		config         string
-		bundleSizesExp any
+		bundlesExp     any
 		datasourcesExp any
 	}{
 		{
-			config:         "testdata/bundle.yml",
-			bundleSizesExp: []any{float64(113)},
+			config:     "testdata/bundle.yml",
+			bundlesExp: []any{map[string]any{"size": float64(113), "type": "snapshot", "format": "json"}},
+		},
+		{
+			config:     "testdata/bjson-bundle.yml",
+			bundlesExp: []any{map[string]any{"size": float64(118), "type": "snapshot", "format": "bjson"}},
 		},
 		{
 			config: "testdata/nobundle.yml",
 		},
 		{
-			config:         "testdata/disco.yml",
-			bundleSizesExp: []any{float64(113)},
+			config:     "testdata/disco.yml",
+			bundlesExp: []any{map[string]any{"size": float64(113), "type": "snapshot", "format": "json"}},
 		},
 		{
-			config:         "testdata/datasources.yml",
-			bundleSizesExp: []any{float64(113)},
+			config:     "testdata/datasources.yml",
+			bundlesExp: []any{map[string]any{"size": float64(113), "type": "snapshot", "format": "json"}},
 			datasourcesExp: map[string]any{
 				"http": float64(3),
 				"git":  float64(1),
@@ -114,7 +118,7 @@ func TestTelemetry(t *testing.T) {
 					m["latest_version"] == "dummy"
 			}, time.Second)
 
-			if tc.bundleSizesExp != nil { // it's a test case with bundles
+			if tc.bundlesExp != nil { // it's a test case with bundles
 				wait.ForLog(t, eopaErr, func(s string) bool { return s == "Bundle loaded and activated successfully." }, 5*time.Second)
 			} else {
 				wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
@@ -136,8 +140,8 @@ func TestTelemetry(t *testing.T) {
 				"min_compatible_version",
 				"version",
 			}
-			if tc.bundleSizesExp != nil {
-				exp = append(exp, "bundle_sizes")
+			if tc.bundlesExp != nil {
+				exp = append(exp, "bundles")
 			}
 			if tc.datasourcesExp != nil {
 				exp = append(exp, "datasources")
@@ -155,10 +159,10 @@ func TestTelemetry(t *testing.T) {
 			}
 
 			{
-				exp := tc.bundleSizesExp
-				act := recv[1]["bundle_sizes"]
+				exp := tc.bundlesExp
+				act := recv[1]["bundles"]
 				if diff := cmp.Diff(exp, act); diff != "" {
-					t.Errorf("bundle_sizes unexpected: (-want, +got):\n%s", diff)
+					t.Errorf("bundles unexpected: (-want, +got):\n%s", diff)
 				}
 			}
 

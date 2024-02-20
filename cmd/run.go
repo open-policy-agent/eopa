@@ -359,8 +359,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 		"license": func(context.Context) (any, error) {
 			return lic.ID(), nil
 		},
-		"bundle_sizes": telemetry.GatherBundleSizes,
-		"datasources":  telemetry.GatherDatasources,
+		"bundles":     telemetry.GatherBundleData,
+		"datasources": telemetry.GatherDatasources,
 		// NOTE(sr): If we've reached this, we're not in fallback mode. So there's
 		//           no need to add the fallback telemetry gatherer here.
 	}

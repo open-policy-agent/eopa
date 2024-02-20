@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	"github.com/styrainc/enterprise-opa-private/pkg/telemetry"
 
 	"github.com/open-policy-agent/opa/ast"
 	bundleApi "github.com/open-policy-agent/opa/bundle"
@@ -362,15 +363,18 @@ func activateBundles(opts *bundleApi.ActivateOpts) error {
 	}
 
 	// Validate data in bundle does not contain paths outside the bundle's roots.
-	for _, b := range snapshotBundles {
+	for name, b := range snapshotBundles {
 
 		for _, item := range b.Raw {
 			path := filepath.ToSlash(item.Path)
 
 			if filepath.Base(path) == "data.json" {
-				val, err := BjsonFromBinary(item.Value)
+				val, isBJSON, err := MaybeBjsonFromBinary(item.Value)
 				if err != nil {
 					return err
+				}
+				if isBJSON {
+					telemetry.SetBJSON(name)
 				}
 
 				valObj, ok := val.(bjson.Object)
