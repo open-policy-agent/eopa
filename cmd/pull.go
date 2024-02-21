@@ -17,7 +17,7 @@ import (
 // targetDir says where to pull libraries to
 const (
 	targetDir        = "libraries"      // that's the flag, --libraries, and the config key
-	targetDirDefault = ".styra/include" // that's the folder, libraries/
+	targetDirDefault = ".styra/include" // that's the folder
 	apiTokenEnvVar   = "EOPA_STYRA_DAS_TOKEN"
 )
 
@@ -102,13 +102,18 @@ Remove files that aren't expected in the target directory:
 
 			return pull.Start(ctx, opts...)
 		},
+		PostRunE: func(*cobra.Command, []string) error {
+			// NOTE(sr): if the config file location was passed via
+			// --styra-config, then it has to exist -- that's checked
+			// before. Hence it cannot be generated, either.
+			if config.ConfigFileUsed() != "" { // config exists, don't do anything
+				return nil
+			}
+			return writeConfig(config, logger)
+		},
 	}
 
 	addDASFlags(cmd)
-
-	cmd.Flags().String(targetDir, targetDirDefault, "where to copy libraries to")
-	config.BindPFlag(targetDir, cmd.Flags().Lookup(targetDir))
 	cmd.Flags().BoolP(force, "f", false, "ignore if libraries folder exists, overwrite existing content on conflict")
-	config.BindPFlag(force, cmd.Flags().Lookup(force))
 	return cmd
 }

@@ -18,7 +18,6 @@ import (
 // Sub-command for automated test stub/mock generation.
 func testBootstrapCmd(config *viper.Viper, paths []string) *cobra.Command {
 	var dataPaths, ignoreNames []string
-	var forceOverwrite bool
 	var logger logging.Logger
 	var err error
 
@@ -85,6 +84,7 @@ and test cases may be required!
 			// TODO(philip): Add DAS/Styra config auto-detection or includes here.
 
 			entrypoints := args
+			forceOverwrite, _ := c.Flags().GetBool(force)
 
 			return test_bootstrap.Start(ctx,
 				test_bootstrap.Entrypoints(entrypoints),
@@ -99,6 +99,6 @@ and test cases may be required!
 	addDASFlags(cmd) // TODO(philip): Do we want "bindDASFlags" here?
 	cmd.Flags().StringSliceVarP(&ignoreNames, "ignore", "", []string{}, "set file and directory names to ignore during loading (e.g., '.*' excludes hidden files)")
 	cmd.Flags().StringSliceVarP(&dataPaths, "data", "d", []string{}, "set policy or data file(s). Recursively traverses bundle folders. This flag can be repeated.")
-	cmd.Flags().BoolVarP(&forceOverwrite, "force", "f", false, "ignore if test files already exist, overwrite existing content on conflict")
+	cmd.Flags().BoolP("force", "f", false, "ignore if test files already exist, overwrite existing content on conflict")
 	return cmd
 }
