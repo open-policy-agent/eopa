@@ -92,14 +92,29 @@ func VivifyTree(tree *edittree.EditTree, ref ast.Ref) {
 		if tree.Exists(ref[:i+1]) {
 			continue
 		}
-		// Correct the case where we actually want an array.
-		if ast.TypeName(ref[i].Value) == "number" {
-			tree.DeleteAtPath(ref[:i])
-			tree.InsertAtPath(ref[:i], ast.ArrayTerm())
-		}
+		// Note(philip): Ideally, if the only keys at a given level are all
+		// integer values, we *might* sometimes be able to infer that an array
+		// is intended at that level. However, it's not a guarantee, and we have
+		// to deal with folks providing whacky numerical values, like `3.145`.
+		// For now, we're using Objects for everything, and we can be smarter
+		// later if there's demand for it.
 		tree.InsertAtPath(ref[:i+1], ast.ObjectTerm())
 	}
 }
+
+// Note(philip): We want longest refs first, so that the auto-vivification of
+// long tree branches will ensure we get correct structure, even if there's a
+// mix of long and short refs along the same path.
+type refSlice []ast.Ref
+
+func (s refSlice) Less(i, j int) bool {
+	if len(s[i]) == len(s[j]) {
+		return s[i].Compare(s[j]) < 0
+	}
+	return len(s[i]) > len(s[j])
+}
+func (s refSlice) Swap(i, j int) { x := s[i]; s[i] = s[j]; s[j] = x }
+func (s refSlice) Len() int      { return len(s) }
 
 // Builds Rego AST objects, based on the refs provided to it.
 // Note(philip): I wanted to do this without needing the EditTree structure from
@@ -110,24 +125,27 @@ func ASTObjectsFromRefs(refs []ast.Ref, defaultLeafValue *ast.Term) (*ast.Term, 
 		[2]*ast.Term{ast.VarTerm("input"), ast.ObjectTerm()},
 		[2]*ast.Term{ast.VarTerm("data"), ast.ObjectTerm()},
 	))
+	sort.Sort(refSlice(refs))
 	for _, ref := range refs {
 		if tree.Exists(ref) {
 			continue
 		}
 		VivifyTree(tree, ref)
-		if _, err := tree.InsertAtPath(ref, defaultLeafValue); err != nil {
-			return nil, nil, err
+		if len(ref) > 1 {
+			if _, err := tree.InsertAtPath(ref, defaultLeafValue); err != nil {
+				return nil, nil, fmt.Errorf("tree construction failed: %w", err)
+			}
 		}
 	}
 
 	inputItems, err := tree.RenderAtPath(ast.Ref{ast.VarTerm("input")})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("input object construction failed: %w", err)
 	}
 
 	dataItems, err := tree.RenderAtPath(ast.Ref{ast.VarTerm("data")})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("data object construction failed: %w", err)
 	}
 
 	input := ast.ObjectTerm([2]*ast.Term{ast.StringTerm("input"), inputItems})

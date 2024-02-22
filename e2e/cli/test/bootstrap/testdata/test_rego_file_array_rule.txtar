@@ -1,14 +1,17 @@
-# This test ensures that `eopa test bootstrap` works with a single Rego file,
-# with a single rule. This is our most basic unit test variety.
+# This test ensures that `eopa test bootstrap` works with numerical indices.
+
 exec eopa test bootstrap -d example.rego example/allow
 ! stdout .
 cmp stderr exp/stderr
 cmp example_test.rego exp/example_test.rego
+
 -- example.rego --
 package example
 
-allow {
-	input.servers[_].names[_]
+allow[0] {
+	input.servers[0].names[_]
+	input.servers[3].zones
+	input.servers[2.45].x
 	input.clients[_]
 }
 -- exp/example_test.rego --
@@ -19,7 +22,7 @@ import rego.v1
 # Testcases generated from: example.rego:3
 # Success case: All inputs defined.
 test_success_example_allow_0 if {
-	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
+	test_input = {"input": {"clients": "EXAMPLE", "servers": {0: {"names": "EXAMPLE"}, 2.45: {"x": "EXAMPLE"}, 3: {"zones": "EXAMPLE"}}}}
 	data.example.allow with input as test_input
 }
 # Failure case: No inputs defined.
@@ -29,7 +32,7 @@ test_fail_example_allow_0_no_input if {
 }
 # Failure case: Inputs defined, but wrong values.
 test_fail_example_allow_0_bad_input if {
-	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
+	test_input = {"input": {"clients": "EXAMPLE", "servers": {0: {"names": "EXAMPLE"}, 2.45: {"x": "EXAMPLE"}, 3: {"zones": "EXAMPLE"}}}}
 	not data.example.allow with input as test_input
 }
 

@@ -1,4 +1,4 @@
-# This test ensures that `eopa test-bootstrap` works with a single Rego file,
+# This test ensures that `eopa test bootstrap` works with a single Rego file,
 # with a single rule. This is our most basic unit test variety.
 exec eopa test bootstrap -d example.rego example/allow
 ! stdout .

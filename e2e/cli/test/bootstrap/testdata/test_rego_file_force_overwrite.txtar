@@ -1,4 +1,4 @@
-# This test ensures that `eopa test-bootstrap` can overwrite tests when forced
+# This test ensures that `eopa test bootstrap` can overwrite tests when forced
 # with the appropriate flag.
 cp step1/example.rego example.rego
 exec eopa test bootstrap -d example.rego example/allow

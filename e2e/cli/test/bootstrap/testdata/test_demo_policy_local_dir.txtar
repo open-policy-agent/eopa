@@ -1,0 +1,173 @@
+# This test ensures that `eopa test bootstrap` works with the StyraInc/demo
+# policy, and can handle the `.` dir.
+
+exec eopa test bootstrap -d main.rego main/main/allow
+! stdout .
+cmp stderr exp/stderr
+cmp main_test.rego exp/main_test.rego
+
+-- main.rego --
+package main.main
+import future.keywords
+import data.libraries.banking_lib
+
+# pull in Rego extended policies for APIs (enforced by APIs but not GUI)
+# extension can override the allowed openapi policies and it can add additional allows
+#    (allow overrides deny in the extension)
+
+default allow := false
+
+# METADATA
+# entry: true
+# test-bootstrap-name: allow
+allow {
+    allow_openapi
+    not data.extended.deny
+}
+allow {
+    allow_openapi
+    data.extended.deny
+    data.extended.allow
+}
+
+# look up this api entry; should be partially evaluated to make it O(1)
+apientry = entry {
+    some openapiPath, openapiMethod
+    entry := data.openapi[openapiPath][openapiMethod]
+    lower(input.method) == lower(openapiMethod)
+    url_match(input.path, openapiPath)
+}
+
+# granted to everyone (needs to be really fast)
+# test-bootstrap-name: allow_open_with_all_roles
+allow_openapi {
+    apientry.userFeatures[_] in data.libraries.banking_lib.roles["all"]
+
+}
+
+# granted because of role
+# test-bootstrap-name: allow_open_with_role
+allow_openapi {
+    feature := apientry.userFeatures[_]  # usually just the one
+    some possible_role in feature_roles[feature]
+    possible_role in data.user.roles[input.username]
+}
+
+# Just the inversion of the roles to features map
+# Is this leveraging the optimization correctly?
+feature_roles[feature] = roles {
+    feature :=  data.libraries.banking_lib.roles[_][_]
+    roles := {r | some r;  data.libraries.banking_lib.roles[r][_] == feature}
+}
+
+# METADATA
+# entry: true
+user_features_object.features = user_features | { x | some x in  data.libraries.banking_lib.roles["all"] }
+
+# METADATA
+# entry: true
+user_features[feature] {
+    some role in data.user.roles[input.username]
+    some feature in  data.libraries.banking_lib.roles[role]
+}
+
+###########################################
+# URL matching and extraction
+#   An abomination; need a builtin for this
+###########################################
+
+url_match(concrete, abstract) = bindinglist {
+    concrete2 := trim(concrete, "/")
+    abstract2 := trim(abstract, "/")
+    concretearr := split(concrete2, "/")
+    abstractarr := split(abstract2, "/")
+    arr_match(concretearr, abstractarr)
+    bindinglist := bind(concretearr, abstractarr)
+    # glob.match(abstract2, ["/"], concrete2)
+}
+
+arr_match(concrete, abstract) {
+    count(concrete) == count(abstract)
+    every i, entry in concrete {
+        entry_match(entry, abstract[i])
+    }
+}
+
+entry_match(concrete, abstract) {
+    startswith(abstract, "{")
+    endswith(abstract, "}")
+}
+entry_match(concrete, abstract) {
+    concrete == abstract
+}
+bind(concrete, abstract) = bl {
+    bl := [concrete[i] | some i, entry in abstract
+                  startswith(entry, "{")
+                  endswith(entry, "}")]
+}
+
+# ideally this would output into the decision log somehow as well
+explain(role) {
+    print(role)
+}
+-- exp/stderr --
+[INFO] Generating testcases for rule 'data.main.main.allow'. File destination will be: main_test.rego
+
+-- exp/main_test.rego --
+package main.main_test
+
+import rego.v1
+
+# Testcases generated from: main.rego:9
+# Success case: All inputs defined.
+test_success_main_main_allow_0 if {
+	test_input = {"input": {}}
+	data.main.main.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_main_main_allow_0_no_input if {
+	test_input = {}
+	not data.main.main.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_main_main_allow_0_bad_input if {
+	test_input = {"input": {}}
+	not data.main.main.allow with input as test_input
+}
+
+
+# Testcases generated from: main.rego:14
+# Success case: All inputs defined.
+test_success_main_main_allow_1 if {
+	test_input = {"input": {"method": "EXAMPLE", "path": "EXAMPLE", "username": "EXAMPLE"}}
+	data.main.main.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_main_main_allow_1_no_input if {
+	test_input = {}
+	not data.main.main.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_main_main_allow_1_bad_input if {
+	test_input = {"input": {"method": "EXAMPLE", "path": "EXAMPLE", "username": "EXAMPLE"}}
+	not data.main.main.allow with input as test_input
+}
+
+
+# Testcases generated from: main.rego:18
+# Success case: All inputs defined.
+test_success_main_main_allow_2 if {
+	test_input = {"input": {"method": "EXAMPLE", "path": "EXAMPLE", "username": "EXAMPLE"}}
+	data.main.main.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_main_main_allow_2_no_input if {
+	test_input = {}
+	not data.main.main.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_main_main_allow_2_bad_input if {
+	test_input = {"input": {"method": "EXAMPLE", "path": "EXAMPLE", "username": "EXAMPLE"}}
+	not data.main.main.allow with input as test_input
+}
+

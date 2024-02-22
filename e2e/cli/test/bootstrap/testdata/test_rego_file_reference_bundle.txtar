@@ -1,4 +1,4 @@
-# This test ensures that `eopa test-bootstrap` works with a combination of Rego
+# This test ensures that `eopa test bootstrap` works with a combination of Rego
 # files and unpacked, on-disk bundle sources. This allows us to potentially
 # integrate with more complex Rego frameworks, such as DAS entitlements bundles.
 exec eopa test bootstrap -d bundle/ -d main.rego main/allow

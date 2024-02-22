@@ -1,4 +1,4 @@
-# This test ensures that `eopa test-bootstrap` works with on-disk, unpacked Rego
+# This test ensures that `eopa test bootstrap` works with on-disk, unpacked Rego
 # bundles.
 exec eopa test bootstrap -d bundle/ example/allow
 ! stdout .
