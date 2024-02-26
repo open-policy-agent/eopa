@@ -81,6 +81,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestGitPlugin(t *testing.T) {
+	t.Skip("Need to create new keys and tokens")
 	for _, tt := range []struct {
 		name     string
 		url      string
