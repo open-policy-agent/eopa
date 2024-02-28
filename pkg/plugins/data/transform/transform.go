@@ -136,6 +136,7 @@ func (s *Rego) Ingest(ctx context.Context, path storage.Path, incoming any) erro
 		}
 	}
 	if err := inmem.WriteUncheckedTxn(ctx, s.manager.Store, txn, storage.ReplaceOp, path, transformed); err != nil {
+		s.manager.Store.Abort(ctx, txn)
 		return fmt.Errorf("writing data to %+v failed: %v", path, err)
 	}
 	return s.manager.Store.Commit(ctx, txn)

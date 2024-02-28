@@ -5,10 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -411,19 +409,6 @@ func (l *checker) validate(params *LicenseParams) error {
 	}
 
 	if lerr == keygen.ErrLicenseNotActivated {
-		go func() {
-			// Handle SIGINT and gracefully deactivate the machine
-			sigs := make(chan os.Signal, 1)
-			signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGSEGV) // disable default os.Interrupt handler
-
-			for s := range sigs {
-				l.ReleaseLicense()
-				time.Sleep(100 * time.Millisecond) // give eopa server sometime to finish // TODO(sr): this isn't how we should do this
-				fmt.Fprintf(os.Stderr, "caught signal '%v', exiting", s)
-				os.Exit(1) // exit now (default behavior)!
-			}
-		}()
-
 		// Activate the current fingerprint
 		if license.Expiry == nil {
 			return fmt.Errorf("license activation failed: missing expiry")

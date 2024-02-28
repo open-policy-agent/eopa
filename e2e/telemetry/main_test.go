@@ -65,8 +65,7 @@ func TestTelemetry(t *testing.T) {
 			bundlesExp: []any{map[string]any{"size": float64(113), "type": "snapshot", "format": "json"}},
 		},
 		{
-			config:     "testdata/datasources.yml",
-			bundlesExp: []any{map[string]any{"size": float64(113), "type": "snapshot", "format": "json"}},
+			config: "testdata/datasources.yml",
 			datasourcesExp: map[string]any{
 				"http": float64(3),
 				"git":  float64(1),

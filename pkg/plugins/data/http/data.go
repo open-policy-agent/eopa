@@ -192,7 +192,7 @@ func (c *Data) poll(ctx context.Context, body io.ReadSeeker, eTag string, client
 
 	}
 	if err := c.Rego.Ingest(ctx, c.Path(), data); err != nil {
-		return "", fmt.Errorf("writing data to %+v failed: %w", c.Config.path, err)
+		return "", fmt.Errorf("plugin %s at %s: %w", c.Name(), c.Config.path, err)
 	}
 
 	// override eTag only if everything ok with the current response
