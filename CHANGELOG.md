@@ -11,13 +11,51 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.18.0
+
+[![OPA v0.62.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.62.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.62.0)
+[![Regal v0.17.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.17.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.17.0)
+
+This release includes updates to embedded OPA and Regal versions, and various
+bug fixes and dependency bumps. It also include some telemetry enhancements.
+
+### OPA v0.62.0 and Regal v0.17.0
+
+This release updates the OPA version used in Enterprise OPA to [v0.62.0](https://github.com/open-policy-agent/opa/releases/tag/v0.62.0),
+and the embedded Regal version (used with `eopa lint`) to [v0.17.0](https://github.com/StyraInc/regal/releases/tag/v0.17.0).
+
+### `eopa login` and `eopa pull` prepare .styra.yaml for `eopa run`
+
+Previously, an extra step was necessary to have `eopa run` pick up DAS
+libraries pulled in via `eopa pull`. Now, the generated configuration already
+includes all the necessary settings for a seamless workflow of:
+
+- `eopa login --url https://my-tenant.styra.com`
+- `eopa pull`
+- `eopa run --server`
+
+See [_How to develop and test policies locally using Styra DAS libraries_](https://docs.styra.com/enterprise-opa/how-to/develop-and-test-applications-using-libraries)
+for details.
+
+### OPA compatibility when querying `data`
+
+Previously, Enterprise OPA would include the `data.system` tree in queries for
+`data` -- either via the CLI, `eopa eval data` or via the HTTP API,
+`GET /v1/data`. That isn't harmful, but it differs from what OPA does.
+Now, Enterprise OPA will give the same results -- omitting `data.system`.
+
+### Telemetry
+
+Enterprise OPA now reports on the type of bundles used: delta/snapshot and JSON
+or BJSON, to help prioritizing future work.
+
 ## v1.17.2
 
 This release fixes an issue with using OPA fallback mode (when missing a license) together with bundles.
 
 ### Regal v0.16.0
 
-The embedded Regal version (used with `eopa lint`) was updated to [v0.16.0]((https://github.com/StyraInc/regal/releases/tag/v0.16.0).
+The embedded Regal version (used with `eopa lint`) was updated to [v0.16.0](https://github.com/StyraInc/regal/releases/tag/v0.16.0).
 
 ## v1.17.1
 
