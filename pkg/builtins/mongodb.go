@@ -184,6 +184,7 @@ func builtinMongoDBFind(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 	}
 
 	bctx.Metrics.Timer(mongoDBFindLatencyMetricKey).Start()
+	defer bctx.Metrics.Timer(mongoDBFindLatencyMetricKey).Stop()
 
 	if responseObj, ok, err := checkCaches(bctx, cacheKey, interQueryCacheEnabled, mongoDBFindBuiltinCacheKey, mongoDBFindInterQueryCacheHits); ok {
 		if err != nil {
@@ -300,8 +301,6 @@ func builtinMongoDBFind(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 	if err := insertCaches(bctx, cacheKey, responseObj.(ast.Object), queryErr, interQueryCacheEnabled, ttl, mongoDBFindBuiltinCacheKey); err != nil {
 		return err
 	}
-
-	bctx.Metrics.Timer(mongoDBFindLatencyMetricKey).Stop()
 
 	return iter(ast.NewTerm(responseObj))
 }

@@ -45,8 +45,9 @@ require (
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/open-policy-agent/opa v0.62.0
-	github.com/open-policy-agent/opa-envoy-plugin v0.62.0-envoy
+	github.com/open-policy-agent/opa-envoy-plugin v0.46.1
 	github.com/prometheus/client_golang v1.19.0
+	github.com/redis/go-redis/v9 v9.5.1
 	github.com/rs/zerolog v1.32.0
 	github.com/sbabiv/xml2map v1.2.1
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
@@ -158,6 +159,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgraph-io/badger/v3 v3.2103.5 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/docker v25.0.2+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -337,7 +339,6 @@ require (
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.47.0 // indirect
-	go.opentelemetry.io/contrib/propagators/b3 v1.21.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.23.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.23.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.23.1 // indirect

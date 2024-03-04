@@ -1,0 +1,491 @@
+package builtins
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/bundle"
+	"github.com/open-policy-agent/opa/compile"
+	"github.com/open-policy-agent/opa/ir"
+	"github.com/open-policy-agent/opa/metrics"
+	"github.com/open-policy-agent/opa/topdown/builtins"
+	"github.com/open-policy-agent/opa/topdown/cache"
+	"github.com/styrainc/enterprise-opa-private/pkg/vm"
+
+	"github.com/styrainc/enterprise-opa-private/pkg/library"
+
+	"github.com/redis/go-redis/v9"
+
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
+)
+
+func TestRedisQuery(t *testing.T) {
+
+	// force the library methods to load so we can access the vault helpers
+	err := library.Init()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	password := "letmein!"
+	redisContainer, addr := startRedis(t, password)
+	defer redisContainer.Terminate(context.Background())
+
+	vaultData := map[string]map[string]string{
+		"redis": {
+			"addr":     addr,
+			"password": password,
+		},
+	}
+	vaultContainer, vaultURI, vaultToken := startVaultMulti(t, "secret", vaultData)
+	defer vaultContainer.Terminate(context.Background())
+
+	auth := fmt.Sprintf(`{"addr": "%s", "password": "%s"}`, addr, password)
+	now := time.Now()
+
+	tests := []struct {
+		Note                string
+		Source              string
+		Result              string
+		Error               string
+		DoNotResetCache     bool
+		Time                time.Time
+		InterQueryCacheHits int
+	}{
+
+		// NOTE: HKEYS is not tested because the key ordering is not
+		// constant each time. SRANDMEMBER and HRANDFIELD are not
+		// tested because they, by design, return a random element.
+
+		{
+			Note:                "hello world",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "GET", "args": ["foo"]})`, auth),
+			Result:              `{{"result": {"p": {"results": "Hello, World!"}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "atomic get",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "MGET", "args": ["foo", "bar", "baz"]})`, auth),
+			Result:              `{{"result": {"p": {"results": ["Hello, World!", "abcd", "efgh"]}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "get range (substring)",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "GETRANGE", "args": ["foo", 1, 3]})`, auth),
+			Result:              `{{"result": {"p": {"results": "ell"}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "get string length",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "STRLEN", "args": ["foo"]})`, auth),
+			Result:              `{{"result": {"p": {"results": 13}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "access entire list",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "LRANGE", "args": ["mylist", 0, -1]})`, auth),
+			Result:              `{{"result": {"p": {"results": ["lamb", "ham", "spam"]}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "access part of a list",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "LRANGE", "args": ["mylist", 1, 1]})`, auth),
+			Result:              `{{"result": {"p": {"results": ["ham"]}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "locate item in list",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "LPOS", "args": ["mylist", "spam"]})`, auth),
+			Result:              `{{"result": {"p": {"results": 2}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "access index of a list",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "LINDEX", "args": ["mylist", 1]})`, auth),
+			Result:              `{{"result": {"p": {"results": "ham"}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "get length of list",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "LLEN", "args": ["mylist"]})`, auth),
+			Result:              `{{"result": {"p": {"results": 3}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "access hash table key",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "HGET", "args": ["myhash", "abc"]})`, auth),
+			Result:              `{{"result": {"p": {"results": "123"}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "access entire hash table",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "HGETALL", "args": ["myhash"]})`, auth),
+			Result:              `{{"result": {"p": {"results": {"abc": "123", "def": "789", "xyz": "456"}}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "check if item in hash table (positive)",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "HEXISTS", "args": ["myhash", "abc"]})`, auth),
+			Result:              `{{"result": {"p": {"results": true}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "check if item in hash table (negative)",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "HEXISTS", "args": ["myhash", "nonexistant"]})`, auth),
+			Result:              `{{"result": {"p": {"results": false}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "get hashtable size",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "HLEN", "args": ["myhash"]})`, auth),
+			Result:              `{{"result": {"p": {"results": 3}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "get multiple hashtable elements",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "HMGET", "args": ["myhash", "xyz", "def"]})`, auth),
+			Result:              `{{"result": {"p": {"results": ["456", "789"]}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "set cardinality",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SCARD", "args": ["set1"]})`, auth),
+			Result:              `{{"result": {"p": {"results": 3}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "set difference 01",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SDIFF", "args": ["set1", "set2"]})`, auth),
+			Result:              `{{"result": {"p": {"results": ["aaa", "bbb"]}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "set difference 02",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SDIFF", "args": ["set2", "set1"]})`, auth),
+			Result:              `{{"result": {"p": {"results": ["ddd", "eee"]}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "set intersect",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SINTER", "args": ["set1", "set2"]})`, auth),
+			Result:              `{{"result": {"p": {"results": ["ccc"]}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "set intersect cardinality",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SINTERCARD", "args": [2, "set1", "set2"]})`, auth),
+			Result:              `{{"result": {"p": {"results": 1}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "set membership (positive)",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SISMEMBER", "args": ["set1", "aaa"]})`, auth),
+			Result:              `{{"result": {"p": {"results": true}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "set membership (negative)",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SISMEMBER", "args": ["set1", "xxx"]})`, auth),
+			Result:              `{{"result": {"p": {"results": false}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "set membership (multi)",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SMISMEMBER", "args": ["set1", "aaa", "xxx", "bbb"]})`, auth),
+			Result:              `{{"result": {"p": {"results": [true, false, true]}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "access all set members",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SMEMBERS", "args": ["set1"]})`, auth),
+			Result:              `{{"result": {"p": {"results": ["aaa", "bbb", "ccc"]}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "set union",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SUNION", "args": ["set1", "set2"]})`, auth),
+			Result:              `{{"result": {"p": {"results": ["aaa", "bbb", "ccc", "ddd", "eee"]}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note:                "test cache (warm)",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "GET", "args": ["foo"], "cache": true})`, auth),
+			Result:              `{{"result": {"p": {"results": "Hello, World!"}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "test cache (hit)",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "GET", "args": ["foo"], "cache": true})`, auth),
+			Result:              `{{"result": {"p": {"results": "Hello, World!"}}}}`,
+			DoNotResetCache:     true,
+			Time:                now,
+			InterQueryCacheHits: 1,
+		},
+		{
+			Note:                "test cache (non-cached data)",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "GET", "args": ["bar"], "cache": true})`, auth),
+			Result:              `{{"result": {"p": {"results": "abcd"}}}}`,
+			DoNotResetCache:     true,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "test cache (expired)",
+			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "GET", "args": ["foo"], "cache": true})`, auth),
+			Result:              `{{"result": {"p": {"results": "Hello, World!"}}}}`,
+			DoNotResetCache:     true,
+			Time:                now.Add(time.Hour * 10000),
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note: "test vault helper auth()",
+			Source: fmt.Sprintf(`import data.system.eopa.utils.redis.v1.vault as redisvault
+import data.system.eopa.utils.vault.v1.env as vault
+out = y {
+	y := redisvault.auth(vault.secret("secret/redis")) with vault.override.address as "%s" with vault.override.token as "%s"
+}
+`, vaultURI, vaultToken),
+			Result:              fmt.Sprintf(`{{"result": {"out": {"addr": "%s", "password": "%s"}}}}`, addr, password),
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+
+		{
+			Note: "test vault helper query()",
+			Source: fmt.Sprintf(`import data.system.eopa.utils.redis.v1.vault as redisvault
+import data.system.eopa.utils.vault.v1.env as vault
+out = y {
+	y := redisvault.query({"command": "GET", "args": ["baz"]}) with vault.override.address as "%s" with vault.override.token as "%s"
+}
+`, vaultURI, vaultToken),
+			Result: `{{"result": {"out": {"results": "efgh"}}}}`,
+		},
+	}
+
+	interQueryCache := newInterQueryCache()
+
+	for _, tc := range tests {
+		t.Run(tc.Note, func(t *testing.T) {
+			if !tc.DoNotResetCache {
+				interQueryCache = newInterQueryCache()
+			}
+
+			executeRedis(t, interQueryCache, "package t\n"+tc.Source, "t", tc.Result, tc.Error, tc.Time, tc.InterQueryCacheHits)
+		})
+	}
+}
+
+func executeRedis(tb testing.TB, interQueryCache cache.InterQueryCache, module string, query string, expectedResult string, expectedError string, time time.Time, expectedInterQueryCacheHits int) {
+	b := &bundle.Bundle{
+		Modules: []bundle.ModuleFile{
+			{
+				URL:    "/url",
+				Path:   "/foo.rego",
+				Raw:    []byte(module),
+				Parsed: ast.MustParseModule(module),
+			},
+		},
+	}
+
+	compiler := compile.New().WithTarget(compile.TargetPlan).WithBundle(b).WithEntrypoints(query)
+	if err := compiler.Build(context.Background()); err != nil {
+		tb.Fatal(err)
+	}
+
+	var policy ir.Policy
+	if err := json.Unmarshal(compiler.Bundle().PlanModules[0].Raw, &policy); err != nil {
+		tb.Fatal(err)
+	}
+
+	executable, err := vm.NewCompiler().WithPolicy(&policy).Compile()
+	if err != nil {
+		tb.Fatal(err)
+	}
+
+	_, ctx := vm.WithStatistics(context.Background())
+	metrics := metrics.New()
+	v, err := vm.NewVM().WithExecutable(executable).Eval(ctx, query, vm.EvalOpts{
+		Metrics:                metrics,
+		Time:                   time,
+		Cache:                  builtins.Cache{},
+		InterQueryBuiltinCache: interQueryCache,
+		StrictBuiltinErrors:    true,
+	})
+	if expectedError != "" {
+		if !strings.HasPrefix(err.Error(), expectedError) {
+			tb.Fatalf("unexpected error: %v", err)
+		}
+
+		return
+	}
+	if err != nil {
+		tb.Fatal(err)
+	}
+
+	if t := ast.MustParseTerm(expectedResult); v.Compare(t.Value) != 0 {
+		tb.Fatalf("got %v wanted %v\n", v, expectedResult)
+	}
+
+	hits := metrics.Counter(redisQueryInterQueryCacheHitsKey).Value().(uint64)
+	if hits != uint64(expectedInterQueryCacheHits) {
+		tb.Fatalf("got %v hits, wanted %v\n", hits, expectedInterQueryCacheHits)
+	}
+}
+
+func startRedis(t *testing.T, password string) (testcontainers.Container, string) {
+	t.Helper()
+
+	ctx := context.Background()
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "redis:alpine",
+			ExposedPorts: []string{"6379/tcp"},
+
+			WaitingFor: wait.ForAll(
+				wait.ForLog("Ready to accept connections tcp"),
+				wait.ForListeningPort("6379/tcp"),
+			),
+		},
+		Logger:  testcontainers.TestLogger(t),
+		Started: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	endpoint, err := container.PortEndpoint(ctx, "6379/tcp", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr: endpoint,
+	})
+
+	cmd := redis.NewStringCmd(ctx, "config", "set", "requirepass", password)
+	err = rdb.Process(ctx, cmd)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rdb = redis.NewClient(&redis.Options{
+		Addr:     endpoint,
+		Password: password,
+	})
+
+	err = rdb.Set(ctx, "foo", "Hello, World!", 0).Err()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = rdb.Set(ctx, "bar", "abcd", 0).Err()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = rdb.Set(ctx, "baz", "efgh", 0).Err()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = rdb.LPush(ctx, "mylist", "spam", "ham", "lamb").Err()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = rdb.HSet(ctx, "myhash", map[string]any{"abc": "123", "xyz": "456", "def": "789"}).Err()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = rdb.SAdd(ctx, "set1", []string{"aaa", "bbb", "ccc"}).Err()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = rdb.SAdd(ctx, "set2", []string{"ccc", "ddd", "eee"}).Err()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = rdb.SAdd(ctx, "json1", "$", `{"a": "1", "b": 2, "c": {"d": 3, "e": [4,5,6]}}`).Err()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return container, endpoint
+}

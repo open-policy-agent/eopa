@@ -215,6 +215,7 @@ func builtinNeo4jQuery(bctx topdown.BuiltinContext, operands []*ast.Term, iter f
 	}
 
 	bctx.Metrics.Timer(neo4jQueryLatencyMetricKey).Start()
+	defer bctx.Metrics.Timer(neo4jQueryLatencyMetricKey).Stop()
 
 	if responseObj, ok, err := checkCaches(bctx, cacheKey, interQueryCacheEnabled, neo4jQueryBuiltinCacheKey, neo4jQueryInterQueryCacheHitsKey); ok {
 		if err != nil {
@@ -287,8 +288,6 @@ func builtinNeo4jQuery(bctx topdown.BuiltinContext, operands []*ast.Term, iter f
 	if err := insertCaches(bctx, cacheKey, responseObj.(ast.Object), queryErr, interQueryCacheEnabled, ttl, neo4jQueryInterQueryCacheHitsKey); err != nil {
 		return err
 	}
-
-	bctx.Metrics.Timer(neo4jQueryLatencyMetricKey).Stop()
 
 	return iter(ast.NewTerm(responseObj))
 
