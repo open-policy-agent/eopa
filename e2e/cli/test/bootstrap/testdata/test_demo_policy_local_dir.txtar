@@ -19,7 +19,8 @@ default allow := false
 
 # METADATA
 # entry: true
-# test-bootstrap-name: allow
+# custom:
+#   test-bootstrap-name: allow
 allow {
     allow_openapi
     not data.extended.deny
@@ -136,25 +137,25 @@ test_fail_main_main_allow_0_bad_input if {
 }
 
 
-# Testcases generated from: main.rego:14
+# Testcases generated from: main.rego:15
 # Success case: All inputs defined.
-test_success_main_main_allow_1 if {
+test_success_allow if {
 	test_input = {"input": {"method": "EXAMPLE", "path": "EXAMPLE", "username": "EXAMPLE"}}
 	data.main.main.allow with input as test_input
 }
 # Failure case: No inputs defined.
-test_fail_main_main_allow_1_no_input if {
+test_fail_allow_no_input if {
 	test_input = {}
 	not data.main.main.allow with input as test_input
 }
 # Failure case: Inputs defined, but wrong values.
-test_fail_main_main_allow_1_bad_input if {
+test_fail_allow_bad_input if {
 	test_input = {"input": {"method": "EXAMPLE", "path": "EXAMPLE", "username": "EXAMPLE"}}
 	not data.main.main.allow with input as test_input
 }
 
 
-# Testcases generated from: main.rego:18
+# Testcases generated from: main.rego:19
 # Success case: All inputs defined.
 test_success_main_main_allow_2 if {
 	test_input = {"input": {"method": "EXAMPLE", "path": "EXAMPLE", "username": "EXAMPLE"}}

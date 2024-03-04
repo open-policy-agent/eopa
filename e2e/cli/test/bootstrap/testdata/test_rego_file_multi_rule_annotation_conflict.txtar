@@ -1,0 +1,66 @@
+# This test ensures that `eopa test bootstrap` correctly errors
+# when a conflict of generated rule names might occur.
+# This can happen in two ways:
+# - Same name annotation for two rules.
+# - Name annotation mimicking a rule.
+
+# Same annotation for two rules.
+! exec eopa test bootstrap -d example1.rego example/allow
+! stdout .
+cmp stderr exp1/stderr
+
+# Name annotation mimicking generated rule name.
+! exec eopa test bootstrap -d example2.rego example/allow example/evil
+! stdout .
+cmp stderr exp2/stderr
+
+-- example1.rego --
+package example
+
+default allow := false
+
+# METADATA
+# custom:
+#   test-bootstrap-name: allow
+allow {
+	input.servers[_].names[_]
+	input.clients[_]
+}
+
+# METADATA
+# custom:
+#   test-bootstrap-name: allow
+allow {
+	input.servers[_].name == "admin"
+}
+-- example2.rego --
+package example
+
+default allow := false
+
+allow {
+	input.servers[_].names[_]
+	input.clients[_]
+}
+
+allow {
+	input.servers[_].name == "admin"
+}
+
+# METADATA
+# custom:
+#   test-bootstrap-name: example_allow_0
+evil {
+	input.servers[_]
+}
+
+-- exp1/stderr --
+[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: example1_test.rego
+
+Error: testcase name collision between rules: example1.rego:8, example1.rego:16
+-- exp2/stderr --
+[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: example2_test.rego
+
+[INFO] Generating testcases for rule 'data.example.evil'. File destination will be: example2_test.rego
+
+Error: testcase name collision between rules: example2.rego:3, example2.rego:17

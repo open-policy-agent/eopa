@@ -159,7 +159,7 @@ func ASTObjectsFromRefs(refs []ast.Ref, defaultLeafValue *ast.Term) (*ast.Term, 
 // rules that apply to it. Each rule is then individually analyzed, and a
 // testcase is generated for it using the testcase templates. The collected set
 // of testcases is then returned as a string.
-func TestcasesFromRef(ruleRef ast.Ref, compiler *ast.Compiler) (string, error) {
+func TestcasesFromRef(ruleRef ast.Ref, generatedNames map[string]string, compiler *ast.Compiler) (string, error) {
 	// Create a new template and parse the main template.
 	tmpl := template.Must(template.New("testcases").Parse(testTemplate))
 	tmpl = template.Must(tmpl.New("test").Parse(testRuleTemplate))
@@ -167,6 +167,10 @@ func TestcasesFromRef(ruleRef ast.Ref, compiler *ast.Compiler) (string, error) {
 	tests := strings.Builder{}
 
 	rules := compiler.GetRules(ruleRef)
+	annotationsRefs, err := GetCustomAnnotationsForRefs(compiler)
+	if err != nil {
+		return "", err
+	}
 
 	// Note(philip): Sort the rules according to file and line number. This
 	// helps devs map test cases to rule bodies in the original policy.
@@ -175,6 +179,18 @@ func TestcasesFromRef(ruleRef ast.Ref, compiler *ast.Compiler) (string, error) {
 	// We generate one set of testcases per rule encountered.
 	for i, rule := range rules {
 		tp := templateParams{}
+
+		// Check to see if there's a relevant annotation for this rule.
+		// Filter by file and line number.
+		var relevantAnnotation *ast.AnnotationsRef
+		if v, ok := annotationsRefs[rule.Ref().String()]; ok {
+			for _, a := range v {
+				if a.Location.File == rule.Location.File &&
+					a.Location.Row == rule.Location.Row {
+					relevantAnnotation = a
+				}
+			}
+		}
 
 		testName := ""
 		for _, p := range ruleRef {
@@ -188,7 +204,30 @@ func TestcasesFromRef(ruleRef ast.Ref, compiler *ast.Compiler) (string, error) {
 			testName += "_" + strings.ReplaceAll(p.String(), ".", "_")
 		}
 
-		testName = strings.TrimPrefix(testName, "_data")
+		testName = strings.TrimPrefix(testName, "_data_")
+
+		// If an annotation was provided, use that for the rule name suffix.
+		// Otherwise, use the index of the rule body.
+		if relevantAnnotation != nil {
+			if nameForTest, ok := relevantAnnotation.Annotations.Custom["test-bootstrap-name"]; ok {
+				if name, ok := nameForTest.(string); ok {
+					testName = name
+				} else {
+					return "", fmt.Errorf("custom metadata key 'test-bootstrap-name' must have a string value")
+				}
+			} else {
+				return "", fmt.Errorf("missing expected custom metadata key: 'test-bootstrap-name'")
+			}
+		} else {
+			testName += "_" + strconv.FormatInt(int64(i), 10)
+		}
+
+		// Add the generated name to the set of seen rule names.
+		// If the generated name matches an already generated rule name in this file, we error.
+		if firstLoc, ok := generatedNames[testName]; ok {
+			return "", fmt.Errorf("testcase name collision between rules: %s, %s", firstLoc, rule.Location.String())
+		}
+		generatedNames[testName] = rule.Location.String()
 
 		input, err := GetInputFromRuleDeps(rule, compiler)
 		if err != nil {
@@ -198,19 +237,19 @@ func TestcasesFromRef(ruleRef ast.Ref, compiler *ast.Compiler) (string, error) {
 		tp.SourceLocation = rule.Location.String()
 		tp.Success = &testRuleParams{
 			Negated:  false,
-			TestName: "test_success" + testName + "_" + strconv.FormatInt(int64(i), 10),
+			TestName: "test_success_" + testName,
 			RuleName: ruleRef.String(),
 			Inputs:   input.String(),
 		}
 		tp.FailureNoInput = &testRuleParams{
 			Negated:  true,
-			TestName: "test_fail" + testName + "_" + strconv.FormatInt(int64(i), 10) + "_no_input",
+			TestName: "test_fail_" + testName + "_no_input",
 			RuleName: ruleRef.String(),
 			Inputs:   ast.ObjectTerm().String(),
 		}
 		tp.FailureBadInput = &testRuleParams{
 			Negated:  true,
-			TestName: "test_fail" + testName + "_" + strconv.FormatInt(int64(i), 10) + "_bad_input",
+			TestName: "test_fail_" + testName + "_bad_input",
 			RuleName: ruleRef.String(),
 			Inputs:   input.String(),
 		}

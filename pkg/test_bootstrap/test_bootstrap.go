@@ -76,6 +76,7 @@ func Start(ctx context.Context, opt ...Opt) error {
 	// - Determine where the tests will land.
 	// - Generate the testcases, based on the deps.
 	out := make(map[string][]string, len(o.entrypoints))
+	generatedNames := make(map[string]map[string]string, len(o.entrypoints))
 	packages := make(map[string]string, len(o.entrypoints))
 	for _, e := range o.entrypoints {
 		rref, err := ast.ParseRef(RefPtrToQuery(e))
@@ -88,14 +89,20 @@ func Start(ctx context.Context, opt ...Opt) error {
 		testBaseName := path.Base(parentFilename)
 		testBareFilename := strings.TrimSuffix(testBaseName, path.Ext(testBaseName))
 		testFilename := path.Join(testPath, testBareFilename+"_test.rego")
+		// Initialize name collision map if it doesn't already exist.
+		gn := make(map[string]string)
+		if value, ok := generatedNames[testFilename]; ok {
+			gn = value
+		}
 		o.logger.Info("Generating testcases for rule '%v'. File destination will be: %v", rref, testFilename)
 
 		// Iterates over all rules matching the ref and generates appropriate testcases for each.
-		testcasesRaw, err := TestcasesFromRef(rref, compiler)
+		testcasesRaw, err := TestcasesFromRef(rref, gn, compiler)
 		if err != nil {
 			return err
 		}
 		out[testFilename] = append(out[testFilename], testcasesRaw)
+		generatedNames[testFilename] = gn
 
 		// We use lists of strings, in case multiple testcase batches need to go
 		// to the same destination.
@@ -161,6 +168,7 @@ func LoadPolicies(dataPaths []string, ignores []string) (*ast.Compiler, error) {
 		}
 
 		result, err := loader.NewFileLoader().
+			WithProcessAnnotation(true).
 			Filtered(dataPaths, f.Apply)
 		if err != nil {
 			return nil, err
@@ -187,4 +195,31 @@ func RefPtrToQuery(rp string) string {
 		parts = append(parts, "data")
 	}
 	return strings.Join(append(parts, strings.Split(rp, "/")...), ".")
+}
+
+// Returns a map of targeted rule paths and their accompanying annotations refs.
+func GetCustomAnnotationsForRefs(compiler *ast.Compiler) (map[string][]*ast.AnnotationsRef, error) {
+	modules := compiler.Modules
+	modulesList := make([]*ast.Module, 0, len(modules))
+	for _, v := range modules {
+		modulesList = append(modulesList, v)
+	}
+	as, errs := ast.BuildAnnotationSet(modulesList)
+	if len(errs) > 0 {
+		return nil, errs
+	}
+	flattened := as.Flatten()
+
+	out := map[string][]*ast.AnnotationsRef{}
+	for _, ref := range flattened {
+		a := ref.Annotations
+		// Filter annotations down to only rule-scoped, custom annotations that contain the key `test-bootstrap-name`.
+		if a != nil && a.Scope == "rule" && len(a.Custom) > 0 {
+			if _, ok := a.Custom["test-bootstrap-name"]; ok {
+				targetPath := ref.Annotations.GetTargetPath().String()
+				out[targetPath] = append(out[targetPath], ref)
+			}
+		}
+	}
+	return out, nil
 }
