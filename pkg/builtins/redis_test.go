@@ -34,19 +34,20 @@ func TestRedisQuery(t *testing.T) {
 	}
 
 	password := "letmein!"
-	redisContainer, addr := startRedis(t, password)
+	username := "redis"
+	redisContainer, addr := startRedis(t, username, password)
 	defer redisContainer.Terminate(context.Background())
 
 	vaultData := map[string]map[string]string{
 		"redis": {
-			"addr":     addr,
 			"password": password,
+			"username": username,
 		},
 	}
 	vaultContainer, vaultURI, vaultToken := startVaultMulti(t, "secret", vaultData)
 	defer vaultContainer.Terminate(context.Background())
 
-	auth := fmt.Sprintf(`{"addr": "%s", "password": "%s"}`, addr, password)
+	auth := fmt.Sprintf(`{"username": "%s", "password": "%s"}`, username, password)
 	now := time.Now()
 
 	tests := []struct {
@@ -65,7 +66,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "hello world",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "GET", "args": ["foo"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "GET", "args": ["foo"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": "Hello, World!"}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -74,7 +75,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "atomic get",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "MGET", "args": ["foo", "bar", "baz"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "MGET", "args": ["foo", "bar", "baz"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": ["Hello, World!", "abcd", "efgh"]}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -83,7 +84,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "get range (substring)",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "GETRANGE", "args": ["foo", 1, 3]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "GETRANGE", "args": ["foo", 1, 3]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": "ell"}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -92,7 +93,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "get string length",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "STRLEN", "args": ["foo"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "STRLEN", "args": ["foo"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": 13}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -101,7 +102,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "access entire list",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "LRANGE", "args": ["mylist", 0, -1]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "LRANGE", "args": ["mylist", 0, -1]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": ["lamb", "ham", "spam"]}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -109,7 +110,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "access part of a list",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "LRANGE", "args": ["mylist", 1, 1]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "LRANGE", "args": ["mylist", 1, 1]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": ["ham"]}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -117,7 +118,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "locate item in list",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "LPOS", "args": ["mylist", "spam"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "LPOS", "args": ["mylist", "spam"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": 2}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -125,7 +126,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "access index of a list",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "LINDEX", "args": ["mylist", 1]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "LINDEX", "args": ["mylist", 1]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": "ham"}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -133,7 +134,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "get length of list",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "LLEN", "args": ["mylist"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "LLEN", "args": ["mylist"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": 3}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -142,7 +143,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "access hash table key",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "HGET", "args": ["myhash", "abc"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "HGET", "args": ["myhash", "abc"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": "123"}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -150,7 +151,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "access entire hash table",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "HGETALL", "args": ["myhash"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "HGETALL", "args": ["myhash"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": {"abc": "123", "def": "789", "xyz": "456"}}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -158,7 +159,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "check if item in hash table (positive)",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "HEXISTS", "args": ["myhash", "abc"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "HEXISTS", "args": ["myhash", "abc"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": true}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -166,7 +167,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "check if item in hash table (negative)",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "HEXISTS", "args": ["myhash", "nonexistant"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "HEXISTS", "args": ["myhash", "nonexistant"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": false}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -175,7 +176,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "get hashtable size",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "HLEN", "args": ["myhash"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "HLEN", "args": ["myhash"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": 3}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -183,7 +184,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "get multiple hashtable elements",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "HMGET", "args": ["myhash", "xyz", "def"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "HMGET", "args": ["myhash", "xyz", "def"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": ["456", "789"]}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -192,7 +193,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "set cardinality",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SCARD", "args": ["set1"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "SCARD", "args": ["set1"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": 3}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -201,7 +202,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "set difference 01",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SDIFF", "args": ["set1", "set2"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "SDIFF", "args": ["set1", "set2"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": ["aaa", "bbb"]}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -209,7 +210,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "set difference 02",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SDIFF", "args": ["set2", "set1"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "SDIFF", "args": ["set2", "set1"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": ["ddd", "eee"]}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -218,7 +219,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "set intersect",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SINTER", "args": ["set1", "set2"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "SINTER", "args": ["set1", "set2"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": ["ccc"]}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -227,7 +228,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "set intersect cardinality",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SINTERCARD", "args": [2, "set1", "set2"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "SINTERCARD", "args": [2, "set1", "set2"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": 1}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -236,7 +237,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "set membership (positive)",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SISMEMBER", "args": ["set1", "aaa"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "SISMEMBER", "args": ["set1", "aaa"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": true}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -244,7 +245,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "set membership (negative)",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SISMEMBER", "args": ["set1", "xxx"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "SISMEMBER", "args": ["set1", "xxx"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": false}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -252,7 +253,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "set membership (multi)",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SMISMEMBER", "args": ["set1", "aaa", "xxx", "bbb"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "SMISMEMBER", "args": ["set1", "aaa", "xxx", "bbb"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": [true, false, true]}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -261,7 +262,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "access all set members",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SMEMBERS", "args": ["set1"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "SMEMBERS", "args": ["set1"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": ["aaa", "bbb", "ccc"]}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -270,7 +271,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "set union",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "SUNION", "args": ["set1", "set2"]})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "SUNION", "args": ["set1", "set2"]})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": ["aaa", "bbb", "ccc", "ddd", "eee"]}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -279,7 +280,7 @@ func TestRedisQuery(t *testing.T) {
 
 		{
 			Note:                "test cache (warm)",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "GET", "args": ["foo"], "cache": true})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "GET", "args": ["foo"], "cache": true})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": "Hello, World!"}}}}`,
 			DoNotResetCache:     false,
 			Time:                now,
@@ -287,7 +288,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "test cache (hit)",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "GET", "args": ["foo"], "cache": true})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "GET", "args": ["foo"], "cache": true})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": "Hello, World!"}}}}`,
 			DoNotResetCache:     true,
 			Time:                now,
@@ -295,7 +296,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "test cache (non-cached data)",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "GET", "args": ["bar"], "cache": true})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "GET", "args": ["bar"], "cache": true})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": "abcd"}}}}`,
 			DoNotResetCache:     true,
 			Time:                now,
@@ -303,7 +304,7 @@ func TestRedisQuery(t *testing.T) {
 		},
 		{
 			Note:                "test cache (expired)",
-			Source:              fmt.Sprintf(`p := redis.query({"auth": %s, "command": "GET", "args": ["foo"], "cache": true})`, auth),
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "GET", "args": ["foo"], "cache": true})`, addr, auth),
 			Result:              `{{"result": {"p": {"results": "Hello, World!"}}}}`,
 			DoNotResetCache:     true,
 			Time:                now.Add(time.Hour * 10000),
@@ -318,7 +319,7 @@ out = y {
 	y := redisvault.auth(vault.secret("secret/redis")) with vault.override.address as "%s" with vault.override.token as "%s"
 }
 `, vaultURI, vaultToken),
-			Result:              fmt.Sprintf(`{{"result": {"out": {"addr": "%s", "password": "%s"}}}}`, addr, password),
+			Result:              fmt.Sprintf(`{{"result": {"out": {"password": "%s", "username": "redis"}}}}`, password),
 			DoNotResetCache:     false,
 			Time:                now,
 			InterQueryCacheHits: 0,
@@ -329,9 +330,9 @@ out = y {
 			Source: fmt.Sprintf(`import data.system.eopa.utils.redis.v1.vault as redisvault
 import data.system.eopa.utils.vault.v1.env as vault
 out = y {
-	y := redisvault.query({"command": "GET", "args": ["baz"]}) with vault.override.address as "%s" with vault.override.token as "%s"
+	y := redisvault.query({"addr": "%s", "command": "GET", "args": ["baz"]}) with vault.override.address as "%s" with vault.override.token as "%s"
 }
-`, vaultURI, vaultToken),
+`, addr, vaultURI, vaultToken),
 			Result: `{{"result": {"out": {"results": "efgh"}}}}`,
 		},
 	}
@@ -406,7 +407,7 @@ func executeRedis(tb testing.TB, interQueryCache cache.InterQueryCache, module s
 	}
 }
 
-func startRedis(t *testing.T, password string) (testcontainers.Container, string) {
+func startRedis(t *testing.T, username, password string) (testcontainers.Container, string) {
 	t.Helper()
 
 	ctx := context.Background()
@@ -436,7 +437,19 @@ func startRedis(t *testing.T, password string) (testcontainers.Container, string
 		Addr: endpoint,
 	})
 
-	cmd := redis.NewStringCmd(ctx, "config", "set", "requirepass", password)
+	// NOTE: the password for the default user is set so that if the
+	// username isn't being passed through right, the connection wont
+	// authenticate. None of the tests should be using this.
+	cmd := redis.NewStringCmd(ctx, "config", "set", "requirepass", "123456")
+	err = rdb.Process(ctx, cmd)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// https://stackoverflow.com/a/66727309
+	//
+	// https://redis.io/commands/acl-setuser/
+	cmd = redis.NewStringCmd(ctx, "acl", "setuser", username, "allcommands", "allkeys", "on", ">"+password)
 	err = rdb.Process(ctx, cmd)
 	if err != nil {
 		t.Fatal(err)
@@ -445,6 +458,7 @@ func startRedis(t *testing.T, password string) (testcontainers.Container, string
 	rdb = redis.NewClient(&redis.Options{
 		Addr:     endpoint,
 		Password: password,
+		Username: username,
 	})
 
 	err = rdb.Set(ctx, "foo", "Hello, World!", 0).Err()

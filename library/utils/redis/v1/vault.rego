@@ -14,10 +14,10 @@ import data.system.eopa.utils.vault.v1.env as vault
 query(req) := redis.query(object.union({"auth": auth(vault.secret(secret_path(true)))}, req))
 
 auth(vault_data) := {
-	"addr": addr,
+	"username": username,
 	"password": password,
 } if {
-	addr := object.get(vault_data, "addr", "localhost:6379")
+	username := object.get(vault_data, "username", "")
 	password := object.get(vault_data, "password", "")
 }
 

@@ -106,6 +106,8 @@ var (
 
 	redisQueryAllowedKeys = ast.NewSet(
 		ast.StringTerm("auth"),
+		ast.StringTerm("addr"),
+		ast.StringTerm("db"),
 		ast.StringTerm("command"),
 		ast.StringTerm("args"),
 		ast.StringTerm("cache"),
@@ -114,13 +116,13 @@ var (
 	)
 
 	redisAuthAllowedKeys = ast.NewSet(
-		ast.StringTerm("addr"),
+		ast.StringTerm("username"),
 		ast.StringTerm("password"),
-		ast.StringTerm("db"),
 		ast.StringTerm("protocol"),
 	)
 
 	redisQueryRequiredKeys = ast.NewSet(
+		ast.StringTerm("addr"),
 		ast.StringTerm("auth"),
 		ast.StringTerm("command"),
 		ast.StringTerm("args"),
@@ -231,16 +233,20 @@ func builtinredisQuery(bctx topdown.BuiltinContext, operands []*ast.Term, iter f
 	if err != nil {
 		return err
 	}
+	addr, err := getRequestStringWithDefault(obj, "addr", "")
+	if err != nil {
+		return err
+	}
+	db, err := getRequestIntWithDefault(obj, "db", 0)
+	if err != nil {
+		return err
+	}
 
-	addr, err := getRequestStringWithDefault(auth, "addr", "")
+	username, err := getRequestStringWithDefault(auth, "username", "")
 	if err != nil {
 		return err
 	}
 	password, err := getRequestStringWithDefault(auth, "password", "")
-	if err != nil {
-		return err
-	}
-	db, err := getRequestIntWithDefault(auth, "db", 0)
 	if err != nil {
 		return err
 	}
@@ -256,6 +262,7 @@ func builtinredisQuery(bctx topdown.BuiltinContext, operands []*ast.Term, iter f
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: password,
+		Username: username,
 		DB:       int(db),
 		Protocol: int(protocol),
 	})
