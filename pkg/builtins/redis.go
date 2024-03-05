@@ -123,7 +123,6 @@ var (
 
 	redisQueryRequiredKeys = ast.NewSet(
 		ast.StringTerm("addr"),
-		ast.StringTerm("auth"),
 		ast.StringTerm("command"),
 		ast.StringTerm("args"),
 	)
@@ -163,7 +162,7 @@ func builtinredisQuery(bctx topdown.BuiltinContext, operands []*ast.Term, iter f
 	}
 
 	cacheKey := obj
-	auth, err := getRequestObjectWithDefault(obj, "auth", nil)
+	auth, err := getRequestObjectWithDefault(obj, "auth", ast.NewObject())
 	if err != nil {
 		return err
 	} else if auth != nil {
