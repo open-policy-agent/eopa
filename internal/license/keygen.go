@@ -1,6 +1,7 @@
 package license
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	rhttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/keygen-sh/keygen-go/v2"
 	"github.com/sirupsen/logrus"
 
@@ -18,7 +20,7 @@ import (
 
 const eopaLicenseToken = "EOPA_LICENSE_TOKEN"
 const eopaLicenseKey = "EOPA_LICENSE_KEY"
-const licenseErrorExitCode = 3
+const ErrorExitCode = 3
 
 var licenseRetries = 6   // up to 30 seconds total
 var defaultRateSleep = 5 // seconds
@@ -43,7 +45,7 @@ const (
 )
 
 type (
-	checker struct {
+	Checker struct {
 		mutex       sync.Mutex
 		license     *keygen.License
 		logger      logging.Logger
@@ -51,21 +53,13 @@ type (
 		released    bool
 		shutdown    chan struct{}
 		finished    chan struct{}
-		started     bool
-		mustStartBy *time.Timer
 		fingerprint string
-		exit        func(exitcode int, err error)
-		strict      bool
 	}
 
 	LicenseParams struct {
 		Source Source // EKM override or command line
 		Key    string
 		Token  string
-	}
-
-	keygenLogger struct {
-		logger logging.Logger
 	}
 
 	// offline license embedded-data: https://keygen.sh/docs/api/cryptography/#cryptographic-keys-template-vars
@@ -97,34 +91,12 @@ type (
 	}
 )
 
-type Checker interface {
-	ValidateLicense(*LicenseParams) error
-	ValidateLicenseOrDie(*LicenseParams)
-	SetLicense(*keygen.License) bool
-	IsOnline() bool
-	Expiry() time.Time
-	Policy() (*KeygenLicense, error)
-	SetStrict(bool)
-	Strict() bool
-	ID() string
-
-	ReleaseLicense()
-	Wait(time.Duration) bool
-
-	SetLogger(logger logging.Logger)
-	SetFormatter(logrus.Formatter)
-	SetLevel(logging.Level)
-}
-
-func NewChecker() Checker {
+func NewChecker() *Checker {
 	keygen.Account = "dd0105d1-9564-4f58-ae1c-9defdd0bfea7" // account=styra-com
 	keygen.Product = "f7da4ae5-7bf5-46f6-9634-026bec5e8599" // product=enterprise-opa
 	keygen.PublicKey = "8b8ff31c1d3031add9b1b734e09e81c794731718c2cac2e601b8dfbc95daa4fc"
-	//keygen.APIURL = "https://2.2.2.99" // simulate offline network (timeout)
-	//keygen.APIURL = "https://api.keygenx.sh" // simulate offline network (DNS not found)
-
-	logger := logging.New()
-	keygen.Logger = &keygenLogger{logger}
+	// keygen.APIURL = "https://2.2.2.99" // simulate offline network (timeout)
+	// keygen.APIURL = "https://api.keygenx.sh" // simulate offline network (DNS not found)
 
 	// validate licensekey or licensetoken
 	keygen.LicenseKey = os.Getenv(eopaLicenseKey)
@@ -136,16 +108,16 @@ func NewChecker() Checker {
 	os.Unsetenv(eopaLicenseKey)
 	os.Unsetenv(eopaLicenseToken)
 
-	l := &checker{
-		logger:   logger,
+	l := &Checker{
+		logger:   logging.New(),
 		shutdown: make(chan struct{}, 1),
 		finished: make(chan struct{}, 1),
-		exit: func(code int, err error) {
-			fmt.Fprintf(os.Stderr, "invalid license: %v\n", err)
-			os.Exit(code)
-		},
 	}
-	l.mustStartBy = time.AfterFunc(10*time.Minute, l.timerCallback) // 10 minutes to start license check limit
+
+	keygen.Logger = l
+	retryClient := rhttp.NewClient()
+	retryClient.Logger = l
+	keygen.HTTPClient = retryClient.StandardClient()
 	return l
 }
 
@@ -156,71 +128,91 @@ func NewLicenseParams() *LicenseParams {
 	return lp
 }
 
+// Debug, Info, Warn and Error are for rhttp. They're set up as methods
+// on *Checker so they react to someone updating the Checker's logger via
+// SetLogger().
+func (l *Checker) Debug(f string, fs ...any) {
+	l.logger.WithFields(fields(fs)).Debug(f)
+}
+
+func (l *Checker) Info(f string, fs ...any) {
+	l.logger.WithFields(fields(fs)).Info(f)
+}
+
+func (l *Checker) Warn(f string, fs ...any) {
+	l.logger.WithFields(fields(fs)).Warn(f)
+}
+
+func (l *Checker) Error(f string, fs ...any) {
+	l.logger.WithFields(fields(fs)).Error(f)
+}
+
+func fields(fs []any) map[string]any {
+	x := make(map[string]any, len(fs)/2)
+	for i := 0; i < len(fs)/2; i++ {
+		v := fs[2*i+1]
+		if w, ok := v.(fmt.Stringer); ok {
+			v = w.String()
+		}
+		x[fs[2*i].(string)] = v
+	}
+	return x
+}
+
+// Debugf, Infof, Warnf and Errorf for keygen's logging. They're set up as methods
+// on *Checker so they react to someone updating the Checker's logger via SetLogger().
 // NOTE(sr): We're mapping ALL keygen errors to "debug" level. We don't want to show
 // them under ordinary conditions, but if we're debugging license trouble, they need
 // to be surfaced.
-func (l *keygenLogger) Errorf(format string, v ...interface{}) {
+func (l *Checker) Errorf(format string, v ...interface{}) {
 	l.logger.Debug(format, v...)
 }
 
-func (l *keygenLogger) Warnf(format string, v ...interface{}) {
+func (l *Checker) Warnf(format string, v ...interface{}) {
 	l.logger.Debug(format, v...)
 }
 
-func (l *keygenLogger) Infof(format string, v ...interface{}) {
+func (l *Checker) Infof(format string, v ...interface{}) {
 	l.logger.Debug(format, v...)
 }
 
-func (l *keygenLogger) Debugf(string, ...interface{}) {
+func (l *Checker) Debugf(string, ...interface{}) {
 	// l.logger.Debug(format, v...) // very noisy
 }
 
-func (l *checker) SetStrict(x bool) {
-	l.strict = x
-}
-
-func (l *checker) Strict() bool {
-	return l.strict
-}
-
-func (l *checker) ID() string {
+func (l *Checker) ID() string {
 	if l.license != nil {
 		return l.license.ID
 	}
 	return ""
 }
 
-func (l *checker) IsOnline() bool {
+func (l *Checker) IsOnline() bool {
 	return l.license != nil
 }
 
-func (l *checker) Expiry() time.Time {
+func (l *Checker) Expiry() time.Time {
 	return l.expiry
 }
 
-func (l *checker) Logger() logging.Logger {
+func (l *Checker) Logger() logging.Logger {
 	return l.logger
 }
 
-func (l *checker) SetLogger(logger logging.Logger) {
+func (l *Checker) SetLogger(logger logging.Logger) {
 	l.logger = logger
 }
 
-func (l *checker) SetLevel(level logging.Level) {
+func (l *Checker) SetLevel(level logging.Level) {
 	if std, ok := l.logger.(*logging.StandardLogger); ok {
 		std.SetLevel(level)
 	}
 }
 
-func (l *checker) SetFormatter(formatter logrus.Formatter) {
+func (l *Checker) SetFormatter(formatter logrus.Formatter) {
 	if std, ok := l.logger.(*logging.StandardLogger); ok {
 		std.SetFormatter(formatter)
 	}
-}
-
-func (l *checker) timerCallback() {
-	l.logger.Error("licensing error: timeout")
-	os.Exit(licenseErrorExitCode)
 }
 
 func readLicense(file string) (string, error) {
@@ -235,25 +227,23 @@ func readLicense(file string) (string, error) {
 	return s, nil
 }
 
-func (l *checker) showExpiry(expiry time.Time, prefix string) {
-	l.expiry = expiry
-
-	d := time.Until(expiry).Truncate(time.Second)
+func (l *Checker) showExpiry(prefix string) {
+	d := time.Until(l.expiry).Truncate(time.Second)
 	if d > 3*24*time.Hour { // > 3 days
 		l.logger.Debug("%s: expires in %.2fd", prefix, float64(d)/float64(24*time.Hour))
 	} else {
-		l.logger.Debug("%s: expires in %v", prefix, d)
+		l.logger.Warn("%s: expires in %v", prefix, d)
 	}
 }
 
 func stringToTime(data string, param string) (time.Time, error) {
 	if data == "" {
-		return time.Time{}, fmt.Errorf("off-line license verification failed: missing %s time", param)
+		return time.Time{}, fmt.Errorf("off-line license verification: missing %s time", param)
 	}
 
-	t, lerr := time.Parse("2006-01-02T15:04:05.000Z", data)
-	if lerr != nil {
-		return time.Time{}, fmt.Errorf("off-line license verification failed: %w", lerr)
+	t, err := time.Parse("2006-01-02T15:04:05.000Z", data)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("off-line license verification: %w", err)
 	}
 	return t, nil
 }
@@ -274,186 +264,136 @@ func rateLimitRetrySeconds(lerr error) time.Duration {
 	return 0
 }
 
-func (l *checker) validateOffline() error {
+func (l *Checker) validateOffline() error {
 	// Verify the license key's signature and decode embedded dataset
 	license := &keygen.License{Scheme: keygen.SchemeCodeEd25519, Key: keygen.LicenseKey}
-	dataset, lerr := license.Verify()
-	if lerr != nil {
-		return fmt.Errorf("off-line license verification failed: %w", lerr)
+	dataset, err := license.Verify()
+	if err != nil {
+		return fmt.Errorf("off-line license verification: %w", err)
 	}
 
 	var data keygenDataset
-	if lerr := json.Unmarshal(dataset, &data); lerr != nil {
-		return fmt.Errorf("off-line license verification failed: %w", lerr)
+	if err := json.Unmarshal(dataset, &data); err != nil {
+		return fmt.Errorf("off-line license verification: %w", err)
 	}
 
 	if data.Product.ID != keygen.Product {
-		return fmt.Errorf("off-line license verification failed: invalid product")
+		return fmt.Errorf("off-line license verification: invalid product")
 	}
 
-	created, lerr := stringToTime(data.License.Created, "created")
-	if lerr != nil {
-		return lerr
+	created, err := stringToTime(data.License.Created, "created")
+	if err != nil {
+		return err
 	}
 
 	now := time.Now().UTC()
 	if created.After(now.Add(time.Hour)) {
-		return fmt.Errorf("off-line license verification failed: invalid created %s", created.String())
+		return fmt.Errorf("off-line license verification: invalid created %s", created.String())
 	}
 
-	expiry, lerr := stringToTime(data.License.Expiry, "expiry")
-	if lerr != nil {
-		return lerr
+	expiry, err := stringToTime(data.License.Expiry, "expiry")
+	if err != nil {
+		return err
 	}
 
 	if expiry.Before(now) {
-		return fmt.Errorf("off-line license verification failed: license expired %s", expiry.String())
+		return fmt.Errorf("off-line license verification: license expired %s", expiry.String())
 	}
-
-	l.showExpiry(expiry, "Licensing offline verification")
+	l.expiry = expiry
+	l.showExpiry("Offline license:")
 	return nil
 }
 
 // ValidateLicense validate and activate the keygen license
-//  1. keygen.Validate
-//     a. on Timeout and NetworkErrors
-//     - i. if offline key; perform offline validation
-//     b. on LicenseNotActivated Errors
-//     - i. keygen.Activate
-//     - ii. setup signal handler SIGINT, SIGTERM
-//     - iii. start keygen machine monitor
-func (l *checker) ValidateLicense(params *LicenseParams) error {
-	return l.validate(params)
+// This is the up-front license check: we won't retry! If it fails,
+// the startup goes into OPA-fallback mode.
+func (l *Checker) ValidateLicense(ctx context.Context, params *LicenseParams) error {
+	return l.oneOffLicenseCheck(ctx, params)
 }
 
-func (l *checker) ValidateLicenseOrDie(params *LicenseParams) {
-	if err := l.validate(params); err != nil {
-		l.exit(licenseErrorExitCode, err)
-	}
+// ValidateLicenseOrDie can only be started once in the lifetime of an EOPA process:
+// it'll either end in success and disappear; or it'll end in failure, and stop the
+// entire process (harshly).
+func (l *Checker) ValidateLicenseWithRetry(ctx context.Context, params *LicenseParams) error {
+	return l.Retrier(ctx, params)
 }
 
-func (l *checker) validate(params *LicenseParams) error {
-	// stop background timer
-	l.mustStartBy.Stop()
-
-	l.mutex.Lock()
-	if l.started { // only run once
-		l.mutex.Unlock()
-		return nil
-	}
-	l.started = true
-	l.mutex.Unlock()
-
-	if l.logger == nil {
-		l.logger = logging.Get()
+// This function is run through Retrier, and
+// - is only run by that once at a time
+// - is retried on any errors
+// However, we still check the Retry-After rate limit header -- since this method
+// is also called for the synchronous license verification, it's better to deal with
+// the rate limit properly.
+func (l *Checker) validateForRetry(params *LicenseParams) error {
+	// update keygen.Token and keygen.Key from passed-in-parameters (EKM)
+	if err := params.UpdateGlobals(); err != nil {
+		return err
 	}
 
-	// validate licensekey or licensetoken
-	if keygen.LicenseKey == "" && keygen.Token == "" {
-		var dat string
-		if params.Key != "" {
-			if params.Source == SourceOverride {
-				dat = params.Key
-			} else {
-				var err error
-				dat, err = readLicense(params.Key)
-				if err != nil {
-					return err
-				}
-			}
-			keygen.LicenseKey = dat
-		} else if params.Token != "" {
-			if params.Source == SourceOverride {
-				dat = params.Token
-			} else {
-				var err error
-				dat, err = readLicense(params.Token)
-				if err != nil {
-					return err
-				}
-			}
-			keygen.Token = dat
-		} else {
-			return ErrMissingLicense
-		}
-	}
-
-	if l.stopped() { // if ReleaseLicense was called, exit now
-		return nil
-	}
-
-	// try offline license
 	if isOfflineKey(keygen.LicenseKey) {
 		return l.validateOffline()
 	}
-
 	// use random fingerprint: floating concurrent license
 	l.fingerprint = uuid.New().String()
 
-	var lerr error
-	var license *keygen.License
-	for i := 0; i < licenseRetries; i++ {
-		// Validate the license for the current fingerprint
-		license, lerr = keygen.Validate(l.fingerprint)
-		if lerr == nil {
-			return fmt.Errorf("invalid license: expected LicenseNotActivated")
-		}
-		if r := rateLimitRetrySeconds(lerr); r != 0 {
-			l.logger.Info("ValidateLicense rate limit error: Retry-After=%v", r)
-			if !l.sleep(r) {
-				return nil
+	// Validate the license for the current fingerprint
+	license, err := keygen.Validate(l.fingerprint)
+	if err != nil {
+		// if the err is "not activated", we're OK: proceed to activate it
+		if err != keygen.ErrLicenseNotActivated {
+			if isTimeout(err) { // fix output message
+				return fmt.Errorf("invalid license: timed out")
 			}
-			continue
+			return err
 		}
-		break
-	}
-
-	if lerr == keygen.ErrLicenseNotActivated {
-		// Activate the current fingerprint
+		// NOTE(sr): It's odd, but license really is part of the return
+		// values from keygen.Validate, even if err != nil
 		if license.Expiry == nil {
-			return fmt.Errorf("license activation failed: missing expiry")
+			return fmt.Errorf("license activation: missing expiry")
 		}
-
-		l.showExpiry(*license.Expiry, "Licensing activation")
-
-		if l.SetLicense(license) { // if ReleaseLicense was called, exit now
-			return nil
-		}
-
-		var machine *keygen.Machine
-		var err error
-		for i := 0; i < licenseRetries; i++ {
-			machine, err = license.Activate(l.fingerprint)
-			if err != nil {
-				if r := rateLimitRetrySeconds(lerr); r != 0 {
-					l.logger.Info("ActivateLicense rate limit error: Retry-After=%v", r)
-					if !l.sleep(r) {
-						return nil
-					}
-					continue
-				}
-			}
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("license activation failed: %w", lerr)
-		}
-
-		if l.stopped() { // if ReleaseLicense was called, exit now
-			return nil
-		}
-
-		// Start heartbeat monitor for machine (also set policy "Heartbeat Basis": FROM_CREATION)
-		go l.monitor(machine)
-		return nil
 	}
+	l.expiry = *license.Expiry
+	l.showExpiry("License")
+	l.SetLicense(license)
 
-	if isTimeout(lerr) { // fix output message
-		return fmt.Errorf("invalid license: timed out")
+	machine, err := license.Activate(l.fingerprint)
+	if err != nil {
+		return fmt.Errorf("license activation: %w", err)
 	}
+	// NOTE(sr): we're almost done, and there's no way this could go wrong
+	// now -- so we'll spawn off the heartbeat goroutine. The `return nil`
+	// below will stop the retrier loop.
+	//
+	// old comment: also set policy "Heartbeat Basis": FROM_CREATION
+	go l.monitor(machine)
+	return nil
+}
 
-	// something's wrong
-	return fmt.Errorf("invalid license: %w", lerr)
+func (l *Checker) UpdateLicenseParams(lp *LicenseParams) {
+	retryParams.Store(lp)
+}
+
+func (params *LicenseParams) UpdateGlobals() error {
+	var err error
+	if keygen.LicenseKey == "" && keygen.Token == "" {
+		switch {
+		case params.Key != "":
+			keygen.LicenseKey, err = readSource(params.Key, params.Source)
+		case params.Token != "":
+			keygen.Token, err = readSource(params.Token, params.Source)
+		default:
+			err = ErrMissingLicense
+		}
+	}
+	return err
+}
+
+func readSource(fileOrContent string, s Source) (string, error) {
+	switch s {
+	case SourceOverride:
+		return fileOrContent, nil
+	}
+	return readLicense(fileOrContent)
 }
 
 func isTimeout(netError error) bool {
@@ -467,7 +407,7 @@ func isTimeout(netError error) bool {
 	return false
 }
 
-func (l *checker) SetLicense(license *keygen.License) bool {
+func (l *Checker) SetLicense(license *keygen.License) bool {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
@@ -479,7 +419,7 @@ func (l *checker) SetLicense(license *keygen.License) bool {
 }
 
 // stopped: see if ReleaseLicense was called
-func (l *checker) stopped() bool {
+func (l *Checker) stopped() bool {
 	select {
 	case <-l.shutdown:
 		return true
@@ -489,7 +429,7 @@ func (l *checker) stopped() bool {
 }
 
 // wait: wait for monitor to stop
-func (l *checker) Wait(dur time.Duration) bool {
+func (l *Checker) Wait(dur time.Duration) bool {
 	delay := time.NewTimer(dur)
 	select {
 	case <-l.finished:
@@ -502,7 +442,7 @@ func (l *checker) Wait(dur time.Duration) bool {
 	}
 }
 
-func (l *checker) sleep(dur time.Duration) bool {
+func (l *Checker) sleep(dur time.Duration) bool {
 	delay := time.NewTimer(dur)
 	select {
 	case <-l.shutdown:
@@ -515,7 +455,7 @@ func (l *checker) sleep(dur time.Duration) bool {
 	}
 }
 
-func (l *checker) ReleaseLicense() {
+func (l *Checker) ReleaseLicense() {
 	if l == nil {
 		return
 	}
@@ -548,7 +488,7 @@ func (l *checker) ReleaseLicense() {
 }
 
 // monitorRetry: try connecting to keygen SaaS for upto 16 minutes
-func (l *checker) monitorRetry(m *keygen.Machine) error {
+func (l *Checker) monitorRetry(m *keygen.Machine) error {
 	t := 30 * time.Second
 	c := 32
 
@@ -565,7 +505,7 @@ func (l *checker) monitorRetry(m *keygen.Machine) error {
 }
 
 // monitor: send keygen SaaS heartbeat
-func (l *checker) monitor(m *keygen.Machine) {
+func (l *Checker) monitor(m *keygen.Machine) {
 	defer close(l.finished) // signal monitor has completed
 
 	if l.stopped() {
@@ -591,7 +531,7 @@ func (l *checker) monitor(m *keygen.Machine) {
 	}
 }
 
-func (l *checker) heartbeat(m *keygen.Machine) error {
+func (l *Checker) heartbeat(m *keygen.Machine) error {
 	var err error
 	for i := 0; i < licenseRetries; i++ {
 		client := keygen.NewClient()
@@ -611,12 +551,12 @@ func (l *checker) heartbeat(m *keygen.Machine) error {
 	return fmt.Errorf("heartbeat failure: %w", err)
 }
 
-func (l *checker) Machines() (int, error) {
+func (l *Checker) Machines() (int, error) {
 	m, err := l.license.Machines()
 	return len(m), err
 }
 
-func (l *checker) Policy() (*KeygenLicense, error) {
+func (l *Checker) Policy() (*KeygenLicense, error) {
 	var license *keygen.Response
 	var err error
 	for i := 0; i < licenseRetries; i++ {

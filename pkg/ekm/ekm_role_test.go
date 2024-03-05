@@ -143,7 +143,7 @@ func TestRoleEKM(t *testing.T) {
 			Keys:     []byte(`{"jwt_signing": {"key": "test"} }`),
 		}
 
-		e := NewEKM(nil, nil)
+		e := NewEKM(nil)
 		e.SetLogger(logging.New())
 		cnf, err := e.OnConfig(context.Background(), &conf)
 		if err != nil {

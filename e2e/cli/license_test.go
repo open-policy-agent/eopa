@@ -44,7 +44,7 @@ func TestNoLicenseForLongEval(t *testing.T) {
 		}
 	}
 	if ee, ok := err.(*exec.ExitError); ok {
-		exp := "invalid license: invalid license: license key is invalid\n"
+		exp := "invalid license: license key is invalid\n"
 		if act := string(ee.Stderr); exp != act {
 			t.Errorf("expected output %s, got %s", exp, act)
 		}

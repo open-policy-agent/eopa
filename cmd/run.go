@@ -42,14 +42,14 @@ import (
 const defaultBindAddress = "localhost:8181"
 
 // Run provides the CLI entrypoint for the `run` subcommand
-func initRun(opa *cobra.Command, brand string, license license.Checker, lparams *license.LicenseParams) *cobra.Command {
+func initRun(opa *cobra.Command, brand string, lic *license.Checker, lparams *license.LicenseParams) *cobra.Command {
 	fallback := opa.RunE
 	// Only override Run, so we keep the args and usage texts
 	opa.RunE = func(c *cobra.Command, args []string) error {
 		c.SilenceErrors = true
 		c.SilenceUsage = true
 
-		ctx := context.Background()
+		ctx := c.Context()
 		params, err := newRunParams(c)
 		if err != nil {
 			panic(err)
@@ -61,9 +61,8 @@ func initRun(opa *cobra.Command, brand string, license license.Checker, lparams 
 		}
 
 		strict, _ := c.Flags().GetBool("no-license-fallback")
-		license.SetStrict(strict)
 		if !strict { // validate license synchronously
-			if err := license.ValidateLicense(lparams); err != nil { // TODO(sr): context? timeout?
+			if err := lic.ValidateLicense(ctx, lparams); err != nil {
 				logger.Warn(err.Error())
 				logger.Warn("Switching to OPA mode. Enterprise OPA functionality will be disabled.")
 
@@ -75,10 +74,15 @@ func initRun(opa *cobra.Command, brand string, license license.Checker, lparams 
 				})
 				return fallback(c, args)
 			}
+		} else { // do the license validate and activate asynchronously
+			if err := lic.ValidateLicenseWithRetry(c.Context(), lparams); err != nil {
+				fmt.Fprintln(os.Stderr, err.Error())
+				os.Exit(license.ErrorExitCode)
+			}
 		}
 
 		enableEOPAOnly()
-		rt, err := initRuntime(ctx, params, args, license, lparams)
+		rt, err := initRuntime(ctx, params, args, lic)
 		if err != nil {
 			fmt.Println("run error:", err)
 			return err
@@ -260,7 +264,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 }
 
 // initRuntime is taken from OPA's cmd/run.go
-func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic license.Checker, lparams *license.LicenseParams) (*runtime.Runtime, error) {
+func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *license.Checker) (*runtime.Runtime, error) {
 	authenticationSchemes := map[string]server.AuthenticationScheme{
 		"token": server.AuthenticationToken,
 		"tls":   server.AuthenticationTLS,
@@ -337,7 +341,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic l
 	bundleApi.RegisterActivator("_enterprise_opa", a)
 	params.rt.BundleActivatorPlugin = "_enterprise_opa"
 
-	ekmHook := ekm.NewEKM(lic, lparams)
+	ekmHook := ekm.NewEKM(lic)
 	previewHook := preview.NewHook()
 	datasourceTelemetryHook := telemetry.NewDatasourceTelemetryHook()
 	evalCacheHook := vm.NewCacheHook()

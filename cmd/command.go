@@ -3,6 +3,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -88,7 +89,7 @@ The following flags control specific optimizations:
 `
 }
 
-func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
+func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 	var instructionLimit int64
 	var optLevel int64
 	var enableOptPassFlags, disableOptPassFlags iropt.OptimizationPassFlags
@@ -185,7 +186,12 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 				}
 
 				// do the license validate and activate asynchronously; so user doesn't have to wait
-				go lic.ValidateLicenseOrDie(lparams) // calls os.Exit if license isn't valid
+				go func() {
+					if err := lic.ValidateLicense(cmd.Context(), lparams); err != nil {
+						fmt.Fprintf(os.Stderr, "invalid license: %v\n", err)
+						os.Exit(3)
+					}
+				}()
 
 			case "test":
 				lvl, _ := internal_logging.GetLevel(logLevel.String())
@@ -273,7 +279,6 @@ func EnterpriseOPACommand(lic license.Checker) *cobra.Command {
 				cmd.RunE = func(cmd *cobra.Command, args []string) error {
 					return oldRunE(cmd, append(args, extraDataArgs...))
 				}
-
 			}
 			return nil
 		},

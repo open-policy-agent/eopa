@@ -53,14 +53,13 @@ type (
 	}
 
 	EKM struct {
-		checker license.Checker
-		lparams *license.LicenseParams
+		checker *license.Checker
 		logger  logging.Logger
 	}
 )
 
-func NewEKM(c license.Checker, lparams *license.LicenseParams) *EKM {
-	return &EKM{checker: c, lparams: lparams}
+func NewEKM(c *license.Checker) *EKM {
+	return &EKM{checker: c}
 }
 
 func (e *EKM) SetLogger(l logging.Logger) {
@@ -68,37 +67,35 @@ func (e *EKM) SetLogger(l logging.Logger) {
 }
 
 func (e *EKM) OnConfigDiscovery(ctx context.Context, conf *config.Config) (*config.Config, error) {
-	return e.onConfig(ctx, conf, true)
+	return e.OnConfig(ctx, conf)
 }
 
 func (e *EKM) OnConfig(ctx context.Context, conf *config.Config) (*config.Config, error) {
-	return e.onConfig(ctx, conf, conf.Discovery == nil)
+	c, lparams, err := e.onConfig(ctx, conf)
+	if err != nil {
+		return nil, err
+	}
+	if e.checker != nil && lparams != nil {
+		e.checker.UpdateLicenseParams(lparams)
+	}
+	return c, nil
 }
 
-func (e *EKM) onConfig(ctx context.Context, conf *config.Config, validateLicense bool) (*config.Config, error) {
-	if validateLicense {
-		defer func() {
-			// TODO(sr): e2e test EKM license interactions
-			if e.checker != nil && e.checker.Strict() {
-				e.checker.ValidateLicenseOrDie(e.lparams) // calls os.Exit if invalid
-			}
-		}()
-	}
-
+func (e *EKM) onConfig(ctx context.Context, conf *config.Config) (*config.Config, *license.LicenseParams, error) {
 	e.logger.Debug("Process EKM")
 
 	if conf.Extra["ekm"] == nil {
-		return conf, nil
+		return conf, nil, nil
 	}
 
 	var vc Config
 	err := unmarshalAndValidate(conf.Extra["ekm"], &vc)
 	if err != nil {
-		return conf, err
+		return nil, nil, err
 	}
 
 	if vc.Vault == nil {
-		return conf, nil
+		return conf, nil, nil
 	}
 
 	vaultCfg := vault.DefaultConfig()
@@ -106,7 +103,7 @@ func (e *EKM) onConfig(ctx context.Context, conf *config.Config, validateLicense
 
 	parsedURL, err := url.Parse(vc.Vault.URL)
 	if err != nil {
-		return conf, fmt.Errorf("invalid URL %v, %w", vc.Vault.URL, err)
+		return nil, nil, fmt.Errorf("invalid URL %v, %w", vc.Vault.URL, err)
 	}
 
 	if parsedURL.Scheme == "https" {
@@ -123,16 +120,14 @@ func (e *EKM) onConfig(ctx context.Context, conf *config.Config, validateLicense
 
 	vaultClient, err := vault.NewClient(vaultCfg)
 	if err != nil {
-		err := fmt.Errorf("ProcessEKM vault failure: %w", err)
-		e.logger.Error("%v", err)
-		return nil, err
+		return nil, nil, fmt.Errorf("EKM vault failure: %w", err)
 	}
 
 	// use kubernetes
 	switch vc.Vault.AccessType {
 	case "kubernetes":
 		if vc.Vault.K8sService == nil {
-			return nil, fmt.Errorf("unable to initialize kubernetes auth method")
+			return nil, nil, fmt.Errorf("kubernetes auth method")
 		}
 
 		k8sAuth, err := kubernetes.NewKubernetesAuth(
@@ -140,20 +135,20 @@ func (e *EKM) onConfig(ctx context.Context, conf *config.Config, validateLicense
 			kubernetes.WithServiceAccountTokenPath(vc.Vault.K8sService.ServiceToken),
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable to initialize Kubernetes auth method: %w", err)
+			return nil, nil, fmt.Errorf("Kubernetes auth method: %w", err)
 		}
 
 		authInfo, err := vaultClient.Auth().Login(ctx, k8sAuth)
 		if err != nil {
-			return nil, fmt.Errorf("unable to log in with Kubernetes auth: %w", err)
+			return nil, nil, fmt.Errorf("unable to log in with Kubernetes auth: %w", err)
 		}
 		if authInfo == nil {
-			return nil, fmt.Errorf("no auth info was returned after login")
+			return nil, nil, fmt.Errorf("no auth info was returned after login")
 		}
 
 	case "approle":
 		if vc.Vault.AppRole == nil {
-			return nil, fmt.Errorf("unable to initialize AppRole auth method")
+			return nil, nil, fmt.Errorf("AppRole auth method not configured")
 		}
 
 		s := &approle.SecretID{FromString: vc.Vault.AppRole.SecretID}
@@ -170,15 +165,15 @@ func (e *EKM) onConfig(ctx context.Context, conf *config.Config, validateLicense
 			opts...,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable to initialize AppRole auth method: %w", err)
+			return nil, nil, fmt.Errorf("AppRole auth method: %w", err)
 		}
 
 		authInfo, err := vaultClient.Auth().Login(ctx, appRoleAuth)
 		if err != nil {
-			return nil, fmt.Errorf("unable to login to AppRole auth method: %w", err)
+			return nil, nil, fmt.Errorf("AppRole auth method, login: %w", err)
 		}
 		if authInfo == nil {
-			return nil, fmt.Errorf("no auth info was returned after login")
+			return nil, nil, fmt.Errorf("AppRole auth method, login: no auth info returned")
 		}
 
 	case "token":
@@ -188,28 +183,30 @@ func (e *EKM) onConfig(ctx context.Context, conf *config.Config, validateLicense
 		} else if vc.Vault.TokenFile != "" {
 			ltoken, err := readFile(vc.Vault.TokenFile)
 			if err != nil {
-				return nil, fmt.Errorf("invalid token file: %w", err)
+				return nil, nil, fmt.Errorf("token file: %w", err)
 			}
 			vaultClient.SetToken(ltoken)
 		} else {
 			if os.Getenv("VAULT_TOKEN") == "" {
-				return nil, fmt.Errorf("no token specified")
+				return nil, nil, fmt.Errorf("no token specified")
 			}
 		}
 
 	default:
-		return nil, fmt.Errorf("invalid accesstype: %s", vc.Vault.AccessType)
+		return nil, nil, fmt.Errorf(`invalid accesstype: %s (must be one of "kubernetes", "approle", "token")`, vc.Vault.AccessType)
 	}
 
 	vlogical := vaultClient.Logical()
 
-	if e.checker != nil && e.lparams != nil && vc.Vault.License != nil {
+	var lparams *license.LicenseParams
+	if vc.Vault.License != nil { // attempt to take license params from vault
 		if tokenKey, ok := vc.Vault.License["token"]; ok {
 			value, err := lookupKey(vlogical, tokenKey)
 			if err == nil {
-				e.lparams.Source = license.SourceOverride
-				e.lparams.Token = value // override token
-				e.lparams.Key = ""
+				lparams = &license.LicenseParams{
+					Source: license.SourceOverride,
+					Token:  value, // override token
+				}
 			} else {
 				e.logger.Debug("lookupKey failure %v", err)
 			}
@@ -217,9 +214,10 @@ func (e *EKM) onConfig(ctx context.Context, conf *config.Config, validateLicense
 			if keyKey, ok := vc.Vault.License["key"]; ok {
 				value, err := lookupKey(vlogical, keyKey)
 				if err == nil {
-					e.lparams.Source = license.SourceOverride
-					e.lparams.Key = value // override key
-					e.lparams.Token = ""
+					lparams = &license.LicenseParams{
+						Source: license.SourceOverride,
+						Key:    value, // override key
+					}
 				} else {
 					e.logger.Debug("lookupKey failure %v", err)
 				}
@@ -230,14 +228,14 @@ func (e *EKM) onConfig(ctx context.Context, conf *config.Config, validateLicense
 	if len(vc.Vault.Services) > 0 {
 		conf.Services, err = e.filter(vlogical, conf.Services, &vc.Vault.Services)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	if len(vc.Vault.Keys) > 0 {
 		conf.Keys, err = e.filter(vlogical, conf.Keys, &vc.Vault.Keys)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 	if len(vc.Vault.HTTPSend) > 0 {
@@ -261,7 +259,7 @@ func (e *EKM) onConfig(ctx context.Context, conf *config.Config, validateLicense
 	} else {
 		resetHTTPSend()
 	}
-	return conf, nil
+	return conf, lparams, nil
 }
 
 func readFile(file string) (string, error) {

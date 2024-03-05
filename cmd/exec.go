@@ -17,7 +17,7 @@ import (
 )
 
 // Run provides the CLI entrypoint for the `exec` subcommand
-func initExec(opa *cobra.Command, license license.Checker, lparams *keygen.LicenseParams) *cobra.Command {
+func initExec(opa *cobra.Command, lic *license.Checker, lparams *keygen.LicenseParams) *cobra.Command {
 	fallback := opa.RunE
 	// Only override Run, so we keep the args and usage texts
 	opa.RunE = func(c *cobra.Command, args []string) error {
@@ -25,19 +25,25 @@ func initExec(opa *cobra.Command, license license.Checker, lparams *keygen.Licen
 		c.SilenceUsage = true
 
 		strict, _ := c.Flags().GetBool("no-license-fallback")
-		license.SetStrict(strict)
 		if !strict { // validate license synchronously
-			if err := license.ValidateLicense(lparams); err != nil { // TODO(sr): context? timeout?
+			if err := lic.ValidateLicense(c.Context(), lparams); err != nil {
 				fmt.Fprintln(os.Stderr, err.Error())
 				fmt.Fprintln(os.Stderr, "Switching to OPA mode")
 
 				c.SilenceErrors = false
 				return fallback(c, args)
 			}
+		} else { // do the license validate and activate asynchronously
+			go func() {
+				if err := lic.ValidateLicense(c.Context(), lparams); err != nil {
+					fmt.Fprintln(os.Stderr, err.Error())
+					os.Exit(license.ErrorExitCode)
+				}
+			}()
 		}
+
 		sdk.DefaultOptions = eopa_sdk.DefaultOptions()
-		// Update EKM so it'll deal with the license checking asynchronously
-		e := ekm.NewEKM(license, lparams)
+		e := ekm.NewEKM(lic)
 		e.SetLogger(logging.NewNoOpLogger())
 		sdk.DefaultOptions.Hooks = hooks.New(e)
 		enableEOPAOnly()

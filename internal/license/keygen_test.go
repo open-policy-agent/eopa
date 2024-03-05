@@ -1,8 +1,8 @@
 package license
 
 import (
+	"context"
 	"testing"
-	"time"
 
 	"github.com/keygen-sh/keygen-go/v2"
 	"gopkg.in/h2non/gock.v1"
@@ -59,195 +59,119 @@ func setupKeygen(expiry string, code string) {
 }
 
 func TestKeygen(t *testing.T) {
-	t.Setenv("EOPA_LICENSE_KEY", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewChecker()
+	// NOTE(sr): Be warned! The NewChecker() call resets the keygen package
+	// globals like APIURL and PublicKey!
 
-	keygen.PublicKey = "" // don't validate the signature
-
-	defer gock.Off()
-	defer gock.RestoreClient(keygen.HTTPClient)
-
-	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"NO_MACHINE\"")
-
-	var result int
-	license.(*checker).exit = func(code int, _ error) { result = code }
-	license.ValidateLicenseOrDie(NewLicenseParams())
-	if exp, act := 0, result; exp != act {
-		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
+	// NOTE(sr): We don't release any licenses in these tests, or stop heartbeat monitors.
+	// It's all talking to gock mocked endpoints, so the worst thing to happen is a logged
+	// warning during tests.
+	tests := []struct {
+		note                     string
+		licenseKey, licenseToken string
+		unsetPublicKey           bool
+		expiry, code             string
+		errMsg                   string
+		apiURL                   string
+	}{
+		{
+			note:           "success",
+			licenseKey:     "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3",
+			expiry:         "\"3023-09-14T21:18:08.990Z\"",
+			code:           "\"NO_MACHINE\"",
+			unsetPublicKey: true,
+		},
+		{
+			note:           "missing expiry",
+			licenseKey:     "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3",
+			expiry:         "null",
+			code:           "\"NO_MACHINE\"",
+			errMsg:         "license activation: missing expiry",
+			unsetPublicKey: true,
+		},
+		{
+			note:           "license expired",
+			licenseKey:     "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3",
+			expiry:         "\"3023-09-14T21:18:08.990Z\"",
+			code:           "\"EXPIRED\"",
+			errMsg:         "license is expired",
+			unsetPublicKey: true,
+		},
+		{
+			note:           "license token not found",
+			licenseToken:   "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3",
+			expiry:         "\"3023-09-14T21:18:08.990Z\"",
+			code:           "\"NOT_FOUND\"",
+			errMsg:         "license is invalid",
+			unsetPublicKey: true,
+		},
+		{ // This is the API response signature; not related to some signature of a license
+			note:         "signature invalid",
+			licenseToken: "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3",
+			expiry:       "\"3023-09-14T21:18:08.990Z\"",
+			code:         "\"NOT_FOUND\"",
+			errMsg:       "response signature is invalid",
+		},
+		{ // NOTE(sr): This test was called "TestKeygenValid", but asserted exitcode=3; no idea why.
+			note:           "valid token",
+			licenseToken:   "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3",
+			expiry:         "\"3023-09-14T21:18:08.990Z\"",
+			code:           "\"VALID\"",
+			unsetPublicKey: true,
+		},
+		{
+			note:       "offline verification",
+			licenseKey: "key/7F08EC970E9D.B0214E4CF0C7354C97",
+			expiry:     "\"3023-09-14T21:18:08.990Z\"",
+			code:       "\"VALID\"",
+			apiURL:     "https://api.keygenx.sh", // ANY API call would fail, so this ensures there aren't any.'
+			errMsg:     "off-line license verification: license key is not genuine",
+		},
+		{
+			note:       "offline expired",
+			licenseKey: "key/eyJhY2NvdW50Ijp7ImlkIjoiZGQwMTA1ZDEtOTU2NC00ZjU4LWFlMWMtOWRlZmRkMGJmZWE3In0sInByb2R1Y3QiOnsiaWQiOiJmN2RhNGFlNS03YmY1LTQ2ZjYtOTYzNC0wMjZiZWM1ZTg1OTkifSwicG9saWN5Ijp7ImlkIjoiZTVjYjZmMTgtZTVjOS00OTJjLTgyMmYtMDFiYzUxNjYxNmI2IiwiZHVyYXRpb24iOjI1OTIwMDB9LCJ1c2VyIjpudWxsLCJsaWNlbnNlIjp7ImlkIjoiYWJmNWMxYWItODYwYy00NzUxLTlhODItNTc5Mjk0OWIxNjFlIiwiY3JlYXRlZCI6IjIwMjMtMDItMTJUMTc6MzM6MjIuNzcxWiIsImV4cGlyeSI6IjIwMjMtMDItMDFUMDA6MDA6MDAuMDAwWiJ9fQ==.2NLHJjiAiXkO7HsBoQFrmXG32gC0ZH9SDxUEcacqqHPgvZq0RcczFV603XuJ7mzAtN5OEPa6XoETksjsBteqCQ==",
+			expiry:     "\"3023-09-14T21:18:08.990Z\"",
+			code:       "\"VALID\"",
+			errMsg:     "off-line license verification: license expired 2023-02-01 00:00:00 +0000 UTC",
+		},
+		{
+			note:       "rate-limit exceeded",
+			licenseKey: "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3",
+			apiURL:     "https://api.keygenx.sh", // simulate RateLimitExceeded
+			errMsg:     "rate limit has been exceeded",
+		},
 	}
-	time.Sleep(100 * time.Millisecond) // let monitor start
-	license.ReleaseLicense()
-	res := license.Wait(5 * time.Second) // wait upto 5s for monitor to end
-	if res {
-		t.Fatal("license monitor did not shutdown correctly")
-	}
-}
+	for _, tc := range tests {
+		t.Run(tc.note, func(t *testing.T) {
+			ctx := context.Background()
+			t.Setenv("EOPA_LICENSE_KEY", tc.licenseKey)
+			t.Setenv("EOPA_LICENSE_TOKEN", tc.licenseToken)
+			license := NewChecker()
 
-func TestKeygenExpiry(t *testing.T) {
-	t.Setenv("EOPA_LICENSE_KEY", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewChecker()
+			if tc.unsetPublicKey {
+				keygen.PublicKey = ""
+			}
+			if tc.apiURL != "" {
+				keygen.APIURL = tc.apiURL
+			}
+			t.Cleanup(gock.Off)
+			t.Cleanup(func() {
+				gock.RestoreClient(keygen.HTTPClient)
+			})
 
-	keygen.PublicKey = "" // don't validate the signature
+			setupKeygen(tc.expiry, tc.code)
+			err := license.oneOffLicenseCheck(ctx, NewLicenseParams())
 
-	defer gock.Off()
-	defer gock.RestoreClient(keygen.HTTPClient)
-
-	setupKeygen("null", "\"NO_MACHINE\"")
-
-	var result int
-	license.(*checker).exit = func(code int, _ error) { result = code }
-	license.ValidateLicenseOrDie(NewLicenseParams())
-	if exp, act := 3, result; exp != act {
-		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
-	}
-}
-
-func TestKeygenExpired(t *testing.T) {
-	t.Setenv("EOPA_LICENSE_KEY", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewChecker()
-
-	keygen.PublicKey = "" // don't validate the signature
-
-	defer gock.Off()
-	defer gock.RestoreClient(keygen.HTTPClient)
-
-	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"EXPIRED\"")
-
-	var result int
-	license.(*checker).exit = func(code int, _ error) { result = code }
-	license.ValidateLicenseOrDie(NewLicenseParams())
-	if exp, act := 3, result; exp != act {
-		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
-	}
-}
-
-func TestKeygenToken(t *testing.T) {
-	t.Setenv("EOPA_LICENSE_KEY", "")
-	t.Setenv("EOPA_LICENSE_TOKEN", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewChecker()
-
-	keygen.PublicKey = "" // don't validate the signature
-
-	defer gock.Off()
-	defer gock.RestoreClient(keygen.HTTPClient)
-
-	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"NOT_FOUND\"")
-
-	var result int
-	license.(*checker).exit = func(code int, _ error) { result = code }
-	license.ValidateLicenseOrDie(NewLicenseParams())
-	if exp, act := 3, result; exp != act {
-		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
-	}
-}
-
-func TestKeygenSignature(t *testing.T) {
-	t.Setenv("EOPA_LICENSE_KEY", "")
-	t.Setenv("EOPA_LICENSE_TOKEN", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewChecker()
-
-	defer gock.Off()
-	defer gock.RestoreClient(keygen.HTTPClient)
-
-	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"NOT_FOUND\"")
-
-	var result int
-	license.(*checker).exit = func(code int, _ error) { result = code }
-	license.ValidateLicenseOrDie(NewLicenseParams())
-	if exp, act := 3, result; exp != act {
-		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
-	}
-}
-
-func TestKeygenValid(t *testing.T) {
-	t.Setenv("EOPA_LICENSE_KEY", "")
-	t.Setenv("EOPA_LICENSE_TOKEN", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewChecker()
-
-	keygen.PublicKey = "" // don't validate the signature
-
-	defer gock.Off()
-	defer gock.RestoreClient(keygen.HTTPClient)
-
-	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"VALID\"")
-
-	var result int
-	license.(*checker).exit = func(code int, _ error) { result = code }
-	license.ValidateLicenseOrDie(NewLicenseParams())
-	if exp, act := 3, result; exp != act {
-		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
-	}
-}
-
-func TestKeygenRateLimit(t *testing.T) {
-	t.Setenv("EOPA_LICENSE_KEY", "7F08EC-970E9D-B0214E-4CF0C7-354C97-V3")
-	license := NewChecker()
-
-	keygen.APIURL = "https://api.keygenx.sh" // simulate RateLimitExceeded
-
-	defer gock.Off()
-	defer gock.RestoreClient(keygen.HTTPClient)
-
-	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"VALID\"")
-
-	var result int
-	var err error
-	license.(*checker).exit = func(code int, err0 error) { result = code; err = err0 }
-	license.ValidateLicenseOrDie(NewLicenseParams())
-	if exp, act := 3, result; exp != act {
-		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
-	}
-
-	expected := "invalid license: rate limit has been exceeded"
-	if err.Error() != expected {
-		t.Fatalf("expected: %v, got %v", expected, err.Error())
-	}
-}
-
-func TestKeygenOffline(t *testing.T) {
-	t.Setenv("EOPA_LICENSE_KEY", "key/7F08EC970E9D.B0214E4CF0C7354C97")
-	license := NewChecker()
-
-	keygen.APIURL = "https://api.keygenx.sh" // simulate RateLimitExceeded
-
-	defer gock.Off()
-	defer gock.RestoreClient(keygen.HTTPClient)
-
-	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"VALID\"")
-
-	var result int
-	var err error
-	expected := "off-line license verification failed: license key is not genuine"
-	license.(*checker).exit = func(code int, err0 error) { result = code; err = err0 }
-	license.ValidateLicenseOrDie(NewLicenseParams())
-	if exp, act := 3, result; exp != act {
-		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
-	}
-	if err.Error() != expected {
-		t.Fatalf("expected: %v, got %v", expected, err.Error())
-	}
-}
-
-func TestKeygenOfflineExpired(t *testing.T) {
-	t.Setenv("EOPA_LICENSE_KEY", "key/eyJhY2NvdW50Ijp7ImlkIjoiZGQwMTA1ZDEtOTU2NC00ZjU4LWFlMWMtOWRlZmRkMGJmZWE3In0sInByb2R1Y3QiOnsiaWQiOiJmN2RhNGFlNS03YmY1LTQ2ZjYtOTYzNC0wMjZiZWM1ZTg1OTkifSwicG9saWN5Ijp7ImlkIjoiZTVjYjZmMTgtZTVjOS00OTJjLTgyMmYtMDFiYzUxNjYxNmI2IiwiZHVyYXRpb24iOjI1OTIwMDB9LCJ1c2VyIjpudWxsLCJsaWNlbnNlIjp7ImlkIjoiYWJmNWMxYWItODYwYy00NzUxLTlhODItNTc5Mjk0OWIxNjFlIiwiY3JlYXRlZCI6IjIwMjMtMDItMTJUMTc6MzM6MjIuNzcxWiIsImV4cGlyeSI6IjIwMjMtMDItMDFUMDA6MDA6MDAuMDAwWiJ9fQ==.2NLHJjiAiXkO7HsBoQFrmXG32gC0ZH9SDxUEcacqqHPgvZq0RcczFV603XuJ7mzAtN5OEPa6XoETksjsBteqCQ==")
-	license := NewChecker()
-
-	keygen.APIURL = "https://api.keygenx.sh" // simulate RateLimitExceeded
-
-	defer gock.Off()
-	defer gock.RestoreClient(keygen.HTTPClient)
-
-	setupKeygen("\"3023-09-14T21:18:08.990Z\"", "\"VALID\"")
-
-	var result int
-	var err error
-	expected := "off-line license verification failed: license expired 2023-02-01 00:00:00 +0000 UTC"
-	license.(*checker).exit = func(code int, err0 error) { result = code; err = err0 }
-	license.ValidateLicenseOrDie(NewLicenseParams())
-	if exp, act := 3, result; exp != act {
-		t.Fatalf("Invalid result, want=%d, got=%d", exp, act)
-	}
-	if err.Error() != expected {
-		t.Fatalf("expected: %v, got %v", expected, err.Error())
+			if tc.errMsg != "" {
+				if err == nil {
+					t.Error("expected err, got nil")
+				} else if exp, act := tc.errMsg, err.Error(); exp != act {
+					t.Errorf("expected error %q, got %q", exp, act)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v %[1]T", err)
+				}
+			}
+		})
 	}
 }

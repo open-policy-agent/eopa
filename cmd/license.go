@@ -31,7 +31,7 @@ func showExp(online bool, expiry time.Time) {
 	}
 }
 
-func LicenseCmd(lic license.Checker, lparams *keygen.LicenseParams) *cobra.Command {
+func LicenseCmd(lic *license.Checker, lparams *keygen.LicenseParams) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "license",
 		Short: "License status",
@@ -43,7 +43,7 @@ func LicenseCmd(lic license.Checker, lparams *keygen.LicenseParams) *cobra.Comma
 			lic.SetFormatter(internal_logging.GetFormatter("json", ""))
 			lic.SetLevel(lvl)
 
-			if err := lic.ValidateLicense(lparams); err != nil {
+			if err := lic.ValidateLicense(c.Context(), lparams); err != nil {
 				fmt.Fprintf(os.Stderr, "Validation error: %v\n", err)
 				return err
 			}
