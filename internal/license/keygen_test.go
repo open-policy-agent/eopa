@@ -146,6 +146,7 @@ func TestKeygen(t *testing.T) {
 			t.Setenv("EOPA_LICENSE_KEY", tc.licenseKey)
 			t.Setenv("EOPA_LICENSE_TOKEN", tc.licenseToken)
 			license := NewChecker()
+			t.Cleanup(license.ReleaseLicense)
 
 			if tc.unsetPublicKey {
 				keygen.PublicKey = ""
