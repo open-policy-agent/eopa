@@ -278,7 +278,7 @@ func builtinredisQuery(bctx topdown.BuiltinContext, operands []*ast.Term, iter f
 	m := map[string]any{}
 
 	if queryErr != nil {
-		if !raiseError {
+		if raiseError {
 			m["error"] = queryErr.Error()
 			queryErr = nil
 		} else {
@@ -287,9 +287,21 @@ func builtinredisQuery(bctx topdown.BuiltinContext, operands []*ast.Term, iter f
 	} else {
 		m["results"], err = getRedisResult(cmd)
 		if err != nil {
-			// TODO - can this even happen? should this be treated
-			// like queryErr?
-			panic(err)
+
+			// NOTE: It's not clear to me that this case can
+			// actually occur in practice. I'm not sure what it
+			// would mean semantically for executing a command to
+			// return a nil error, but retrieving its result to be
+			// non-nil. Nevertheless, we should report it if that
+			// happens.
+			//
+			// -- CAD 2024-03-05
+
+			if raiseError {
+				m["error"] = queryErr.Error()
+			} else {
+				return err
+			}
 		}
 
 	}
