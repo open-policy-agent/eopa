@@ -19,6 +19,8 @@ import (
 )
 
 func TestRegoEval(t *testing.T) {
+	t.Parallel()
+
 	now := time.Now()
 
 	tests := []struct {

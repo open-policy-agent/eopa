@@ -19,6 +19,8 @@ import (
 )
 
 func TestPostgresEnvSend(t *testing.T) {
+	t.Parallel()
+
 	be := startPostgreSQL(t)
 	t.Cleanup(be.cleanup)
 
@@ -91,6 +93,8 @@ import data.system.eopa.utils.postgres.v1.env as postgres
 }
 
 func TestPostgresVaultSend(t *testing.T) {
+	t.Parallel()
+
 	be := startPostgreSQL(t)
 	t.Cleanup(be.cleanup)
 
@@ -198,6 +202,8 @@ import data.system.eopa.utils.postgres.v1.vault as postgres
 }
 
 func TestMysqlVaultSend(t *testing.T) {
+	t.Parallel()
+
 	be := startMySQL(t)
 	t.Cleanup(be.cleanup)
 
@@ -305,6 +311,8 @@ import data.system.eopa.utils.mysql.v1.vault as mysql
 }
 
 func TestVaultSecret(t *testing.T) {
+	t.Parallel()
+
 	if err := library.Init(); err != nil {
 		t.Fatal(err)
 	}
@@ -386,6 +394,8 @@ import data.system.eopa.utils.vault.v1.env as vault
 }
 
 func TestMongoDBFindVault(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	username, password := "alice", "wasspord"
@@ -566,6 +576,8 @@ import data.system.eopa.utils.mongodb.v1.vault as mongodb
 }
 
 func TestDynamoDBGetVault(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	tc, endpoint := startDynamoDB(t)

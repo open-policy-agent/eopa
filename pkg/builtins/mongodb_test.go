@@ -26,6 +26,8 @@ import (
 )
 
 func TestMongoDBFind(t *testing.T) {
+	t.Parallel()
+
 	username, password := "root", "password"
 	mongodb, uri := startMongoDB(t, username, password)
 	defer mongodb.Terminate(context.Background())
@@ -178,6 +180,8 @@ func TestMongoDBFind(t *testing.T) {
 }
 
 func TestMongoDBFindOne(t *testing.T) {
+	t.Parallel()
+
 	username, password := "root", "password"
 	mongodb, uri := startMongoDB(t, username, password)
 	defer mongodb.Terminate(context.Background())

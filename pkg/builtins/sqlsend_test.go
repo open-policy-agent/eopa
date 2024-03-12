@@ -32,6 +32,8 @@ type backend struct {
 }
 
 func TestSQLSend(t *testing.T) {
+	t.Parallel()
+
 	type typ int
 	const (
 		sqlite typ = iota
@@ -236,6 +238,8 @@ sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALU
 
 // TestRegoZanzibar implements the example (slightly improved) described in: https://storage.googleapis.com/pub-tools-public-publication-data/pdf/10683a8987dbf0c6d4edcafb9b4f05cc9de5974a.pdf
 func TestRegoZanzibar(t *testing.T) {
+	t.Parallel()
+
 	// Test data:
 	//
 	// doc:readme#owner@10
@@ -245,7 +249,7 @@ func TestRegoZanzibar(t *testing.T) {
 	// folder:A#parent@folder:X#...
 	// doc:readme#parent@folder:A#...
 
-	var initSQL = `
+	initSQL := `
         CREATE TABLE OWNER (OBJECT TEXT, USER TEXT, USERSET_OBJECT TEXT, USERSET_RELATION TEXT);
         CREATE TABLE EDITOR (OBJECT TEXT, USER TEXT, USERSET_OBJECT TEXT, USERSET_RELATION TEXT);
         CREATE TABLE MEMBER (OBJECT TEXT, USER TEXT, USERSET_OBJECT TEXT, USERSET_RELATION TEXT);

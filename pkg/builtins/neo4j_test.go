@@ -26,6 +26,7 @@ import (
 )
 
 func TestNeo4jQuery(t *testing.T) {
+	t.Parallel()
 
 	// force the library methods to load so we can access the vault helpers
 	err := library.Init()
@@ -61,7 +62,6 @@ func TestNeo4jQuery(t *testing.T) {
 		Time                time.Time
 		InterQueryCacheHits int
 	}{
-
 		{
 			Note:                "hello world",
 			Source:              fmt.Sprintf(`p := neo4j.query({"auth": %s, "uri": "%s", "query": "MATCH (n:Pet) WHERE n.id = \"dog456\" RETURN n.name"})`, auth, uri),

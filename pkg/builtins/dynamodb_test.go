@@ -27,6 +27,8 @@ import (
 )
 
 func TestDynamoDBGet(t *testing.T) {
+	t.Parallel()
+
 	ddb, endpoint := startDynamoDB(t)
 	defer ddb.Terminate(context.Background())
 
@@ -168,6 +170,8 @@ func TestDynamoDBGet(t *testing.T) {
 }
 
 func TestDynamoDBQuery(t *testing.T) {
+	t.Parallel()
+
 	ddb, endpoint := startDynamoDB(t)
 	defer ddb.Terminate(context.Background())
 

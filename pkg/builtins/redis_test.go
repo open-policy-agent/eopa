@@ -26,6 +26,7 @@ import (
 )
 
 func TestRedisQuery(t *testing.T) {
+	t.Parallel()
 
 	// force the library methods to load so we can access the vault helpers
 	err := library.Init()
@@ -59,7 +60,6 @@ func TestRedisQuery(t *testing.T) {
 		Time                time.Time
 		InterQueryCacheHits int
 	}{
-
 		// NOTE: HKEYS is not tested because the key ordering is not
 		// constant each time. SRANDMEMBER and HRANDFIELD are not
 		// tested because they, by design, return a random element.
