@@ -1,0 +1,70 @@
+# This test is for `eopa test new`, and has the following concerns:
+# - Conflict detection works between rule bodies with the same annotation.
+# - Conflict detection works between different rules with the same annotation.
+# - Context: single Rego file.
+
+# Same annotation for two rule bodies, same rule.
+# Entrypoint required, else we will get the generic error message
+# for 2+ rules in conflict.
+! exec eopa test new -d example1.rego -e example/allow A
+! stdout .
+cmp stderr exp1/stderr
+
+# Same annotation for two different rules.
+! exec eopa test new -d example2.rego A
+! stdout .
+cmp stderr exp2/stderr
+
+-- example1.rego --
+package example
+
+default allow := false
+
+# METADATA
+# custom:
+#   test-bootstrap-name: A
+allow {
+	input.servers[_].names[_]
+	input.clients[_]
+}
+
+# METADATA
+# custom:
+#   test-bootstrap-name: A
+allow {
+	input.servers[_].name == "admin"
+}
+-- example2.rego --
+package example
+
+default allow := false
+
+allow {
+	input.servers[_].names[_]
+	input.clients[_]
+}
+
+# METADATA
+# custom:
+#   test-bootstrap-name: A
+allow {
+	input.servers[_].name == "admin"
+}
+
+# METADATA
+# custom:
+#   test-bootstrap-name: A
+evil {
+	input.servers[_]
+}
+
+# METADATA
+# custom:
+#   test-bootstrap-name: B
+evil {
+	input.clients[_]
+}
+-- exp1/stderr --
+Error: custom annotation, test-bootstrap-name: 'A' is present for 2+ rule bodies for the same rule: ['allow' at example1.rego:8, 'allow' at example1.rego:16]. Annotated names must be unique for each annotated rule body
+-- exp2/stderr --
+Error: custom annotation, test-bootstrap-name: 'A' is present for 2+ rules: ['allow' at example2.rego:13, 'evil' at example2.rego:20]. An entrypoint is needed to disambiguate which rule to use for generating testcases

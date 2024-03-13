@@ -1,5 +1,6 @@
 # This test ensures that `eopa test bootstrap` works with a single Rego file,
 # with a single rule. This is our most basic unit test variety.
+
 exec eopa test bootstrap -d example.rego example/allow
 ! stdout .
 cmp stderr exp/stderr
@@ -10,6 +11,7 @@ exec eopa test bootstrap -d example.rego example/allow
 ! stdout .
 cmp stderr exp/stderr-no-overwrite
 cmp example_test.rego exp/example_test.rego
+
 -- example.rego --
 package example
 
@@ -40,10 +42,10 @@ test_fail_example_allow_0_bad_input if {
 }
 
 -- exp/stderr --
-[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: example_test.rego
+[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: 'example_test.rego'
 
 -- exp/stderr-no-overwrite --
-[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: example_test.rego
+[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: 'example_test.rego'
 
 [WARNING] File 'example_test.rego' already exists. Skipping to avoid overwriting.
 

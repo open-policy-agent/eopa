@@ -1,10 +1,12 @@
 # This test ensures that `eopa test bootstrap` works with a combination of Rego
 # files and unpacked, on-disk bundle sources. This allows us to potentially
 # integrate with more complex Rego frameworks, such as DAS entitlements bundles.
+
 exec eopa test bootstrap -d bundle/ -d main.rego main/allow
 ! stdout .
 cmp stderr exp/stderr
 cmp main_test.rego exp/main_test.rego
+
 -- bundle/example.rego --
 package example
 
@@ -65,5 +67,5 @@ test_fail_main_allow_0_bad_input if {
 }
 
 -- exp/stderr --
-[INFO] Generating testcases for rule 'data.main.allow'. File destination will be: main_test.rego
+[INFO] Generating testcases for rule 'data.main.allow'. File destination will be: 'main_test.rego'
 

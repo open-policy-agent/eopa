@@ -4,6 +4,7 @@ package test_bootstrap
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -17,7 +18,9 @@ import (
 
 type opts struct {
 	logger         logging.Logger
+	entrypoint     string
 	entrypoints    []string
+	annotation     string
 	dataPaths      []string
 	ignores        []string
 	forceOverwrite bool
@@ -28,6 +31,12 @@ type Opt func(*opts)
 func Logger(l logging.Logger) Opt {
 	return func(o *opts) {
 		o.logger = l
+	}
+}
+
+func Entrypoint(e string) Opt {
+	return func(o *opts) {
+		o.entrypoint = e
 	}
 }
 
@@ -55,10 +64,13 @@ func Force(f bool) Opt {
 	}
 }
 
-func Start(ctx context.Context, opt ...Opt) error {
-	_, cancel := context.WithCancel(ctx)
-	defer cancel()
+func Annotation(a string) Opt {
+	return func(o *opts) {
+		o.annotation = a
+	}
+}
 
+func StartBootstrap(_ context.Context, opt ...Opt) error {
 	o := &opts{
 		logger: logging.NewNoOpLogger(),
 	}
@@ -94,7 +106,7 @@ func Start(ctx context.Context, opt ...Opt) error {
 		if value, ok := generatedNames[testFilename]; ok {
 			gn = value
 		}
-		o.logger.Info("Generating testcases for rule '%v'. File destination will be: %v", rref, testFilename)
+		o.logger.Info("Generating testcases for rule '%v'. File destination will be: '%s'", rref, testFilename)
 
 		// Iterates over all rules matching the ref and generates appropriate testcases for each.
 		testcasesRaw, err := TestcasesFromRef(rref, gn, compiler)
@@ -135,6 +147,104 @@ func Start(ctx context.Context, opt ...Opt) error {
 				return err
 			}
 		}
+	}
+
+	return nil
+}
+
+func StartNew(_ context.Context, opt ...Opt) error {
+	var entrypointRef ast.Ref
+
+	o := &opts{
+		logger: logging.NewNoOpLogger(),
+	}
+	for _, opt := range opt {
+		opt(o)
+	}
+
+	// Get the compiler instance with all our policies loaded up.
+	compiler, err := LoadPolicies(o.dataPaths, o.ignores)
+	if err != nil {
+		return err
+	}
+
+	if o.entrypoint != "" {
+		var err error
+		entrypointRef, err = ast.ParseRef(RefPtrToQuery(o.entrypoint))
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check to see if the annotation exists, and grab the rule for it.
+	relevantAnnotation, err := GetRuleCustomAnnotationWithKey(o.annotation, entrypointRef, compiler)
+	if err != nil {
+		return err
+	}
+	rule := relevantAnnotation.GetRule()
+	testPackage := GetPackageForRuleRef(rule.Ref(), compiler)
+
+	// Check to see if the test file already exists, and if so, is there a conflict.
+	parentFilename := GetFileLocationForRuleRef(rule.Ref(), compiler)
+	testPath := path.Dir(parentFilename)
+	testBaseName := path.Base(parentFilename)
+	testBareFilename := strings.TrimSuffix(testBaseName, path.Ext(testBaseName))
+	testFilename := path.Join(testPath, testBareFilename+"_test.rego")
+	fileExists := false
+	if _, err := os.Stat(testFilename); err == nil {
+		fileExists = true
+	}
+	o.logger.Info("Generating testcases for annotation '%s'. File destination will be: '%s'", o.annotation, testFilename)
+
+	// Compare the generated testcase names to the neighboring rules in the destination package.
+	testcaseNames := []string{
+		"test_success_" + o.annotation,
+		"test_failure_" + o.annotation + "_no_input",
+		"test_failure" + o.annotation + "_bad_input",
+	}
+	if fileExists {
+		bs, err := os.ReadFile(testFilename)
+		if err != nil {
+			return err
+		}
+
+		m, err := ast.ParseModule(testFilename, string(bs))
+		if err != nil {
+			return err
+		}
+
+		for _, r := range m.Rules {
+			for _, tc := range testcaseNames {
+				if string(r.Head.Name) == tc {
+					return fmt.Errorf("rule conflict for file '%s', rule '%s' already exists", testFilename, tc)
+				}
+			}
+		}
+	}
+
+	// Actually generate the testcases, now that we *should* be in the clear.
+	testcases, err := TestcasesForRule(o.annotation, rule, compiler)
+	if err != nil {
+		return err
+	}
+
+	// Create the new file.
+	file, err := os.OpenFile(testFilename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Write package header + imports if this is the first testcase to be added to the file.
+	if !fileExists {
+		if _, err := file.WriteString(testPackage + "_test" + "\n\nimport rego.v1\n"); err != nil {
+			return err
+		}
+	}
+
+	// Write testcase chunks.
+	if _, err = file.WriteString(testcases); err != nil {
+		return err
 	}
 
 	return nil
@@ -218,6 +328,37 @@ func GetCustomAnnotationsForRefs(compiler *ast.Compiler) (map[string][]*ast.Anno
 			if _, ok := a.Custom["test-bootstrap-name"]; ok {
 				targetPath := ref.Annotations.GetTargetPath().String()
 				out[targetPath] = append(out[targetPath], ref)
+			}
+		}
+	}
+	return out, nil
+}
+
+// Returns a map of targeted rule paths corresponding to the `test-bootstrap-name` custom annotation.
+func GetTestNamesToCustomAnnotations(compiler *ast.Compiler) (map[string][]*ast.AnnotationsRef, error) {
+	modules := compiler.Modules
+	modulesList := make([]*ast.Module, 0, len(modules))
+	for _, v := range modules {
+		modulesList = append(modulesList, v)
+	}
+	as, errs := ast.BuildAnnotationSet(modulesList)
+	if len(errs) > 0 {
+		return nil, errs
+	}
+	flattened := as.Flatten()
+
+	out := map[string][]*ast.AnnotationsRef{}
+	for _, ref := range flattened {
+		a := ref.Annotations
+		// Filter annotations down to only rule-scoped, custom annotations that contain the key `test-bootstrap-name`.
+		if a != nil && a.Scope == "rule" && len(a.Custom) > 0 {
+			if value, ok := a.Custom["test-bootstrap-name"]; ok {
+				// Only store annotations that are valid.
+				if name, ok := value.(string); ok {
+					out[name] = append(out[name], ref)
+				} else {
+					return nil, fmt.Errorf("custom metadata key 'test-bootstrap-name' for rule at '%v' must have a string value", ref.Annotations.Location)
+				}
 			}
 		}
 	}

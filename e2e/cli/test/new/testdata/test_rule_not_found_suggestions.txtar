@@ -1,0 +1,40 @@
+# This test is for `eopa test new`, and has the following concerns:
+# - When annotation not found, suggest closest names.
+# - Context: single Rego file.
+
+! exec eopa test new -d example.rego 'allow_X'
+! stdout .
+cmp stderr exp/stderr
+
+-- example.rego --
+package example
+
+# METADATA
+# custom:
+#   test-bootstrap-name: allow_x
+allow {
+	input.x
+}
+
+# METADATA
+# custom:
+#   test-bootstrap-name: allow_y
+allow {
+	input.x
+}
+
+# METADATA
+# custom:
+#   test-bootstrap-name: b
+allow {
+	input.x
+}
+
+# METADATA
+# custom:
+#   test-bootstrap-name: all
+allow {
+	input.x
+}
+-- exp/stderr --
+Error: custom annotation, test-bootstrap-name: 'allow_X' not found in policies. Closest matching annotation(s) are: [allow_x allow_y]

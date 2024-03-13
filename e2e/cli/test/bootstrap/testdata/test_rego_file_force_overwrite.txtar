@@ -1,5 +1,6 @@
 # This test ensures that `eopa test bootstrap` can overwrite tests when forced
 # with the appropriate flag.
+
 cp step1/example.rego example.rego
 exec eopa test bootstrap -d example.rego example/allow
 ! stdout .
@@ -71,8 +72,8 @@ test_fail_example_allow_0_bad_input if {
 }
 
 -- exp/step1/stderr --
-[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: example_test.rego
+[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: 'example_test.rego'
 
 -- exp/step2/stderr --
-[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: example_test.rego
+[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: 'example_test.rego'
 

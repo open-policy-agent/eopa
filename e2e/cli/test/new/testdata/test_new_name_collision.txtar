@@ -1,0 +1,10 @@
+# This test is for `eopa test new`, and has the following concerns:
+# - `opa test` name collision correctly detected.
+# - Context: None
+
+! exec eopa test new
+! stdout .
+stderr '^Error: Name collision between ''eopa test'' and ''eopa test new'' commands detected. No tests will be run or generated.'
+cmp new exp/new
+-- new/ --
+-- exp/new/ --

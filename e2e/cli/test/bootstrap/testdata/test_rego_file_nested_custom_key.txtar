@@ -1,7 +1,9 @@
 # This test ensures that `eopa test bootstrap` rejects malformed annotations.
+
 ! exec eopa test bootstrap -d example.rego example/allow
 ! stdout .
 cmp stderr exp/stderr
+
 -- example.rego --
 package example
 
@@ -14,6 +16,6 @@ allow {
 	input.clients[_]
 }
 -- exp/stderr --
-[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: example_test.rego
+[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: 'example_test.rego'
 
-Error: custom metadata key 'test-bootstrap-name' must have a string value
+Error: custom metadata key 'test-bootstrap-name' for rule at 'example.rego:7' must have a string value

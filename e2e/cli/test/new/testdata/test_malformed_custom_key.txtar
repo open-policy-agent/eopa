@@ -1,0 +1,21 @@
+# This test is for `eopa test new`, and has the following concerns:
+# - Malformed annotations are rejected.
+# - Context: single Rego file.
+
+! exec eopa test new -d example.rego '"{key: value}"'
+! stdout .
+cmp stderr exp/stderr
+
+-- example.rego --
+package example
+
+# METADATA
+# custom:
+#   test-bootstrap-name:
+#     key: value
+allow {
+	input.servers[_].names[_]
+	input.clients[_]
+}
+-- exp/stderr --
+Error: custom metadata key 'test-bootstrap-name' for rule at 'example.rego:3' must have a string value

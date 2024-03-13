@@ -1,7 +1,9 @@
-# This test ensures that `eopa test bootstrap` works with the StyraInc/demo
-# policy, and can handle the `.` dir.
+# This test is for `eopa test new`, and has the following concerns:
+# - StyraInc/demo policy handled correctly.
+# - The `.` dir is handled correctly.
+# - Context: single Rego file.
 
-exec eopa test bootstrap -d main.rego main/main/allow
+exec eopa test new -d main.rego allow
 ! stdout .
 cmp stderr exp/stderr
 cmp main_test.rego exp/main_test.rego
@@ -116,24 +118,6 @@ package main.main_test
 
 import rego.v1
 
-# Testcases generated from: main.rego:9
-# Success case: All inputs defined.
-test_success_main_main_allow_0 if {
-	test_input = {"input": {}}
-	data.main.main.allow with input as test_input
-}
-# Failure case: No inputs defined.
-test_fail_main_main_allow_0_no_input if {
-	test_input = {}
-	not data.main.main.allow with input as test_input
-}
-# Failure case: Inputs defined, but wrong values.
-test_fail_main_main_allow_0_bad_input if {
-	test_input = {"input": {}}
-	not data.main.main.allow with input as test_input
-}
-
-
 # Testcases generated from: main.rego:15
 # Success case: All inputs defined.
 test_success_allow if {
@@ -151,24 +135,6 @@ test_fail_allow_bad_input if {
 	not data.main.main.allow with input as test_input
 }
 
-
-# Testcases generated from: main.rego:19
-# Success case: All inputs defined.
-test_success_main_main_allow_2 if {
-	test_input = {"input": {"method": "EXAMPLE", "path": "EXAMPLE", "username": "EXAMPLE"}}
-	data.main.main.allow with input as test_input
-}
-# Failure case: No inputs defined.
-test_fail_main_main_allow_2_no_input if {
-	test_input = {}
-	not data.main.main.allow with input as test_input
-}
-# Failure case: Inputs defined, but wrong values.
-test_fail_main_main_allow_2_bad_input if {
-	test_input = {"input": {"method": "EXAMPLE", "path": "EXAMPLE", "username": "EXAMPLE"}}
-	not data.main.main.allow with input as test_input
-}
-
 -- exp/stderr --
-[INFO] Generating testcases for rule 'data.main.main.allow'. File destination will be: 'main_test.rego'
+[INFO] Generating testcases for annotation 'allow'. File destination will be: 'main_test.rego'
 

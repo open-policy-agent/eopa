@@ -316,7 +316,9 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 			c.Flags().VarP(logLevel, "log-level", "l", "set log level")
 			c.Flags().Var(logFormat, "log-format", "set log format") // NOTE(sr): we don't support "text" here
 
+			// Sub-commands:
 			c.AddCommand(testBootstrapCmd(cfg, paths))
+			c.AddCommand(testNewCmd(cfg, paths))
 
 			root.AddCommand(setDefaults(c))
 

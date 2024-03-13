@@ -6,6 +6,7 @@ require (
 	git.sr.ht/~charles/graph v0.0.1
 	github.com/Jeffail/gabs/v2 v2.7.0
 	github.com/OneOfOne/xxhash v1.2.8
+	github.com/agnivade/levenshtein v1.1.1
 	github.com/aws/aws-sdk-go v1.50.31
 	github.com/benthosdev/benthos/v4 v4.25.1
 	github.com/cenkalti/backoff/v4 v4.2.1
@@ -104,7 +105,6 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Microsoft/hcsshim v0.12.0 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371 // indirect
-	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/apache/arrow/go/v14 v14.0.2 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect

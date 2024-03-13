@@ -1,0 +1,55 @@
+# This test is for `eopa test new`, and has the following concerns:
+# - Conflict detection works when a rule has the same name in the test file
+#   as our generated result would.
+# - Context: single Rego file.
+
+exec eopa test new -d example.rego allow
+! stdout .
+cmp stderr exp/stderr
+cmp example_test.rego exp/example_test.rego
+
+# Check to make sure we don't have a rule collision.
+! exec eopa test new -d example.rego allow
+! stdout .
+cmp stderr exp/stderr-collision
+cmp example_test.rego exp/example_test.rego
+
+-- example.rego --
+package example
+
+# METADATA
+# custom:
+#   test-bootstrap-name: allow
+allow {
+	input.servers[_].names[_]
+	input.clients[_]
+}
+-- exp/example_test.rego --
+package example_test
+
+import rego.v1
+
+# Testcases generated from: example.rego:6
+# Success case: All inputs defined.
+test_success_allow if {
+	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
+	data.example.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_allow_no_input if {
+	test_input = {}
+	not data.example.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_allow_bad_input if {
+	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
+	not data.example.allow with input as test_input
+}
+
+-- exp/stderr --
+[INFO] Generating testcases for annotation 'allow'. File destination will be: 'example_test.rego'
+
+-- exp/stderr-collision --
+[INFO] Generating testcases for annotation 'allow'. File destination will be: 'example_test.rego'
+
+Error: rule conflict for file 'example_test.rego', rule 'test_success_allow' already exists

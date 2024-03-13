@@ -1,0 +1,101 @@
+# This test is for `eopa test new`, and has the following concerns:
+# - Can add a new test to a blank test file.
+# - Preamble is generated correctly for a blank test file.
+# - The command can add different annotated rules to the same file.
+# - Context: single Rego file.
+
+exec eopa test new -d example.rego A
+! stdout .
+cmp stderr exp/stderr-A
+cmp example_test.rego exp/example_test-A.rego
+
+exec eopa test new -d example.rego B
+! stdout .
+cmp stderr exp/stderr-B
+cmp example_test.rego exp/example_test-B.rego
+
+-- example.rego --
+package example
+
+# METADATA
+# custom:
+#   test-bootstrap-name: A
+allow {
+	input.servers[_].names[_]
+	input.clients[_]
+}
+
+# METADATA
+# custom:
+#   test-bootstrap-name: B
+allow {
+	input.servers[_].name == "admin"
+}
+-- exp/example_test-A.rego --
+package example_test
+
+import rego.v1
+
+# Testcases generated from: example.rego:6
+# Success case: All inputs defined.
+test_success_A if {
+	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
+	data.example.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_A_no_input if {
+	test_input = {}
+	not data.example.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_A_bad_input if {
+	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
+	not data.example.allow with input as test_input
+}
+
+-- exp/example_test-B.rego --
+package example_test
+
+import rego.v1
+
+# Testcases generated from: example.rego:6
+# Success case: All inputs defined.
+test_success_A if {
+	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
+	data.example.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_A_no_input if {
+	test_input = {}
+	not data.example.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_A_bad_input if {
+	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
+	not data.example.allow with input as test_input
+}
+
+
+# Testcases generated from: example.rego:14
+# Success case: All inputs defined.
+test_success_B if {
+	test_input = {"input": {"servers": "EXAMPLE"}}
+	data.example.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_B_no_input if {
+	test_input = {}
+	not data.example.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_B_bad_input if {
+	test_input = {"input": {"servers": "EXAMPLE"}}
+	not data.example.allow with input as test_input
+}
+
+-- exp/stderr-A --
+[INFO] Generating testcases for annotation 'A'. File destination will be: 'example_test.rego'
+
+-- exp/stderr-B --
+[INFO] Generating testcases for annotation 'B'. File destination will be: 'example_test.rego'
+

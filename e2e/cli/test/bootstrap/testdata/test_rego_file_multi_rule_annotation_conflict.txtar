@@ -55,12 +55,12 @@ evil {
 }
 
 -- exp1/stderr --
-[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: example1_test.rego
+[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: 'example1_test.rego'
 
 Error: testcase name collision between rules: example1.rego:8, example1.rego:16
 -- exp2/stderr --
-[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: example2_test.rego
+[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: 'example2_test.rego'
 
-[INFO] Generating testcases for rule 'data.example.evil'. File destination will be: example2_test.rego
+[INFO] Generating testcases for rule 'data.example.evil'. File destination will be: 'example2_test.rego'
 
 Error: testcase name collision between rules: example2.rego:3, example2.rego:17

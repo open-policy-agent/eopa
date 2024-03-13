@@ -1,6 +1,8 @@
-# This test ensures that `eopa test bootstrap` works with numerical indices.
+# This test is for `eopa test new`, and has the following concerns:
+# - Rules involving numerical indices work fine.
+# - Context: single Rego file.
 
-exec eopa test bootstrap -d example.rego example/allow
+exec eopa test new -d example.rego allow_idx
 ! stdout .
 cmp stderr exp/stderr
 cmp example_test.rego exp/example_test.rego
@@ -8,6 +10,9 @@ cmp example_test.rego exp/example_test.rego
 -- example.rego --
 package example
 
+# METADATA
+# custom:
+#   test-bootstrap-name: allow_idx
 allow[0] {
 	input.servers[0].names[_]
 	input.servers[3].zones
@@ -19,23 +24,23 @@ package example_test
 
 import rego.v1
 
-# Testcases generated from: example.rego:3
+# Testcases generated from: example.rego:6
 # Success case: All inputs defined.
-test_success_example_allow_0 if {
+test_success_allow_idx if {
 	test_input = {"input": {"clients": "EXAMPLE", "servers": {0: {"names": "EXAMPLE"}, 2.45: {"x": "EXAMPLE"}, 3: {"zones": "EXAMPLE"}}}}
 	data.example.allow with input as test_input
 }
 # Failure case: No inputs defined.
-test_fail_example_allow_0_no_input if {
+test_fail_allow_idx_no_input if {
 	test_input = {}
 	not data.example.allow with input as test_input
 }
 # Failure case: Inputs defined, but wrong values.
-test_fail_example_allow_0_bad_input if {
+test_fail_allow_idx_bad_input if {
 	test_input = {"input": {"clients": "EXAMPLE", "servers": {0: {"names": "EXAMPLE"}, 2.45: {"x": "EXAMPLE"}, 3: {"zones": "EXAMPLE"}}}}
 	not data.example.allow with input as test_input
 }
 
 -- exp/stderr --
-[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: 'example_test.rego'
+[INFO] Generating testcases for annotation 'allow_idx'. File destination will be: 'example_test.rego'
 

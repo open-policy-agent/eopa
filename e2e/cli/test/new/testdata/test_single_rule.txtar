@@ -1,8 +1,8 @@
-# This test ensures that `eopa test bootstrap` correctly generates
-# test names when the custom metadata annotation 'test-bootstrap-name'
-# is used in a multi-rule-body scenario.
+# This test is for `eopa test new`, and has the following concerns:
+# - Can add a new test to an existing test file.
+# - Context: single Rego file.
 
-exec eopa test bootstrap -d example.rego example/allow
+exec eopa test new -d example.rego 'allow_x'
 ! stdout .
 cmp stderr exp/stderr
 cmp example_test.rego exp/example_test.rego
@@ -10,20 +10,18 @@ cmp example_test.rego exp/example_test.rego
 -- example.rego --
 package example
 
-default allow := false
-
-# METADATA
-# custom:
-#   test-bootstrap-name: allow
 allow {
 	input.servers[_].names[_]
 	input.clients[_]
 }
 
+# METADATA
+# custom:
+#   test-bootstrap-name: allow_x
 allow {
-	input.servers[_].name == "admin"
+	input.x
 }
--- exp/example_test.rego --
+-- example_test.rego --
 package example_test
 
 import rego.v1
@@ -31,7 +29,7 @@ import rego.v1
 # Testcases generated from: example.rego:3
 # Success case: All inputs defined.
 test_success_example_allow_0 if {
-	test_input = {"input": {}}
+	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
 	data.example.allow with input as test_input
 }
 # Failure case: No inputs defined.
@@ -41,46 +39,50 @@ test_fail_example_allow_0_no_input if {
 }
 # Failure case: Inputs defined, but wrong values.
 test_fail_example_allow_0_bad_input if {
-	test_input = {"input": {}}
-	not data.example.allow with input as test_input
-}
-
-
-# Testcases generated from: example.rego:8
-# Success case: All inputs defined.
-test_success_allow if {
-	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
-	data.example.allow with input as test_input
-}
-# Failure case: No inputs defined.
-test_fail_allow_no_input if {
-	test_input = {}
-	not data.example.allow with input as test_input
-}
-# Failure case: Inputs defined, but wrong values.
-test_fail_allow_bad_input if {
 	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
 	not data.example.allow with input as test_input
 }
 
+-- exp/example_test.rego --
+package example_test
 
-# Testcases generated from: example.rego:13
+import rego.v1
+
+# Testcases generated from: example.rego:3
 # Success case: All inputs defined.
-test_success_example_allow_2 if {
-	test_input = {"input": {"servers": "EXAMPLE"}}
+test_success_example_allow_0 if {
+	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
 	data.example.allow with input as test_input
 }
 # Failure case: No inputs defined.
-test_fail_example_allow_2_no_input if {
+test_fail_example_allow_0_no_input if {
 	test_input = {}
 	not data.example.allow with input as test_input
 }
 # Failure case: Inputs defined, but wrong values.
-test_fail_example_allow_2_bad_input if {
-	test_input = {"input": {"servers": "EXAMPLE"}}
+test_fail_example_allow_0_bad_input if {
+	test_input = {"input": {"clients": "EXAMPLE", "servers": "EXAMPLE"}}
+	not data.example.allow with input as test_input
+}
+
+
+# Testcases generated from: example.rego:11
+# Success case: All inputs defined.
+test_success_allow_x if {
+	test_input = {"input": {"x": "EXAMPLE"}}
+	data.example.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_allow_x_no_input if {
+	test_input = {}
+	not data.example.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_allow_x_bad_input if {
+	test_input = {"input": {"x": "EXAMPLE"}}
 	not data.example.allow with input as test_input
 }
 
 -- exp/stderr --
-[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: 'example_test.rego'
+[INFO] Generating testcases for annotation 'allow_x'. File destination will be: 'example_test.rego'
 

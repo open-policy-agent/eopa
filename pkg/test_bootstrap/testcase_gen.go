@@ -7,6 +7,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/agnivade/levenshtein"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/dependencies"
 	"github.com/styrainc/enterprise-opa-private/pkg/internal/edittree"
@@ -160,10 +161,6 @@ func ASTObjectsFromRefs(refs []ast.Ref, defaultLeafValue *ast.Term) (*ast.Term, 
 // testcase is generated for it using the testcase templates. The collected set
 // of testcases is then returned as a string.
 func TestcasesFromRef(ruleRef ast.Ref, generatedNames map[string]string, compiler *ast.Compiler) (string, error) {
-	// Create a new template and parse the main template.
-	tmpl := template.Must(template.New("testcases").Parse(testTemplate))
-	tmpl = template.Must(tmpl.New("test").Parse(testRuleTemplate))
-
 	tests := strings.Builder{}
 
 	rules := compiler.GetRules(ruleRef)
@@ -178,7 +175,6 @@ func TestcasesFromRef(ruleRef ast.Ref, generatedNames map[string]string, compile
 
 	// We generate one set of testcases per rule encountered.
 	for i, rule := range rules {
-		tp := templateParams{}
 
 		// Check to see if there's a relevant annotation for this rule.
 		// Filter by file and line number.
@@ -213,7 +209,7 @@ func TestcasesFromRef(ruleRef ast.Ref, generatedNames map[string]string, compile
 				if name, ok := nameForTest.(string); ok {
 					testName = name
 				} else {
-					return "", fmt.Errorf("custom metadata key 'test-bootstrap-name' must have a string value")
+					return "", fmt.Errorf("custom metadata key 'test-bootstrap-name' for rule at '%v' must have a string value", relevantAnnotation.Location)
 				}
 			} else {
 				return "", fmt.Errorf("missing expected custom metadata key: 'test-bootstrap-name'")
@@ -229,34 +225,146 @@ func TestcasesFromRef(ruleRef ast.Ref, generatedNames map[string]string, compile
 		}
 		generatedNames[testName] = rule.Location.String()
 
-		input, err := GetInputFromRuleDeps(rule, compiler)
+		testcases, err := TestcasesForRule(testName, rule, compiler)
 		if err != nil {
 			return "", err
 		}
 
-		tp.SourceLocation = rule.Location.String()
-		tp.Success = &testRuleParams{
-			Negated:  false,
-			TestName: "test_success_" + testName,
-			RuleName: ruleRef.String(),
-			Inputs:   input.String(),
-		}
-		tp.FailureNoInput = &testRuleParams{
-			Negated:  true,
-			TestName: "test_fail_" + testName + "_no_input",
-			RuleName: ruleRef.String(),
-			Inputs:   ast.ObjectTerm().String(),
-		}
-		tp.FailureBadInput = &testRuleParams{
-			Negated:  true,
-			TestName: "test_fail_" + testName + "_bad_input",
-			RuleName: ruleRef.String(),
-			Inputs:   input.String(),
-		}
-
-		tmpl.ExecuteTemplate(&tests, "testcases", tp)
-		tests.WriteRune('\n')
+		tests.WriteString(testcases)
 	}
 
 	return tests.String(), nil
+}
+
+func TestcasesForRule(testName string, rule *ast.Rule, compiler *ast.Compiler) (string, error) {
+	// Create a new template and parse the main template.
+	tmpl := template.Must(template.New("testcases").Parse(testTemplate))
+	tmpl = template.Must(tmpl.New("test").Parse(testRuleTemplate))
+	tests := strings.Builder{}
+
+	// Generate the new testcase!
+	tp := templateParams{}
+	ruleRef := rule.Ref()
+	// // Add the generated name to the set of seen rule names.
+	// // If the generated name matches an already generated rule name in this file, we error.
+	// if firstLoc, ok := generatedNames[testName]; ok {
+	// 	return "", fmt.Errorf("testcase name collision between rules: %s, %s", firstLoc, rule.Location.String())
+	// }
+	// generatedNames[testName] = rule.Location.String()
+
+	input, err := GetInputFromRuleDeps(rule, compiler)
+	if err != nil {
+		return "", err
+	}
+
+	tp.SourceLocation = rule.Location.String()
+	tp.Success = &testRuleParams{
+		Negated:  false,
+		TestName: "test_success_" + testName,
+		RuleName: ruleRef.String(),
+		Inputs:   input.String(),
+	}
+	tp.FailureNoInput = &testRuleParams{
+		Negated:  true,
+		TestName: "test_fail_" + testName + "_no_input",
+		RuleName: ruleRef.String(),
+		Inputs:   ast.ObjectTerm().String(),
+	}
+	tp.FailureBadInput = &testRuleParams{
+		Negated:  true,
+		TestName: "test_fail_" + testName + "_bad_input",
+		RuleName: ruleRef.String(),
+		Inputs:   input.String(),
+	}
+
+	tmpl.ExecuteTemplate(&tests, "testcases", tp)
+	tests.WriteRune('\n')
+
+	return tests.String(), nil
+}
+
+func GetRuleCustomAnnotationWithKey(key string, entrypoint ast.Ref, compiler *ast.Compiler) (*ast.AnnotationsRef, error) {
+	var relevantAnnotation *ast.AnnotationsRef
+
+	testNamesToAnnotations, err := GetTestNamesToCustomAnnotations(compiler)
+	if err != nil {
+		return nil, err
+	}
+
+	if annotations, ok := testNamesToAnnotations[key]; ok {
+		// NOTE(philip): We want *exactly one* rule for a given annotation. If
+		// more than one rule has the same annotation, we check the entrypoint
+		// to try to disambiguate which rule to use. If that doesn't get us down
+		// to one rule, then we have the same annotation for 2+ rule bodies on
+		// the same rule. If no entrypoint, or still 2+ rules after using the
+		// entrypoint for disambiguation, we can error out with a helpful error
+		// message, but the contents will be different depending on which case
+		// happens.
+
+		// Grab the first annotation from the list. If there's 2+ annotations in
+		// the list, we update which one to use in the block below.
+		relevantAnnotation = annotations[0]
+
+		if len(annotations) > 1 {
+			// Multiple matches, no disambiguating entrypoint available.
+			if entrypoint == nil {
+				badRulesList := getBadRulesListFromAnnotations(annotations)
+				return nil, fmt.Errorf("custom annotation, test-bootstrap-name: '%s' is present for 2+ rules: %s. An entrypoint is needed to disambiguate which rule to use for generating testcases", key, badRulesList)
+			}
+
+			// Try paring down the list using the entrypoint.
+			matches := []*ast.AnnotationsRef{}
+			for _, a := range annotations {
+				if a.Path.HasPrefix(entrypoint) {
+					matches = append(matches, a)
+				}
+			}
+			// Still too many matching refs? Then it's 2+ matches across
+			// different rule bodies for the same rule.
+			if len(matches) > 1 {
+				badRulesList := getBadRulesListFromAnnotations(matches)
+				return nil, fmt.Errorf("custom annotation, test-bootstrap-name: '%s' is present for 2+ rule bodies for the same rule: %v. Annotated names must be unique for each annotated rule body", key, badRulesList)
+			}
+
+			// Successfully disambiguated which annotation to use!
+			relevantAnnotation = matches[0]
+		}
+
+		return relevantAnnotation, nil
+	}
+
+	// Annotation not present? Suggest to the user the closest annotations that might be relevant.
+	smallestDistance := 65536 // Based on the largest string size supported by agnivade/levenshtein.
+	closestStrings := []string{}
+	for k := range testNamesToAnnotations {
+		levDist := levenshtein.ComputeDistance(key, k)
+		switch {
+		case levDist < smallestDistance:
+			closestStrings = []string{k}
+			smallestDistance = levDist
+		case levDist == smallestDistance:
+			closestStrings = append(closestStrings, k)
+			smallestDistance = levDist
+		default:
+			continue
+		}
+	}
+	return nil, fmt.Errorf("custom annotation, test-bootstrap-name: '%s' not found in policies. Closest matching annotation(s) are: %v", key, closestStrings)
+}
+
+// Utility function for more helpful annotation error messages.
+func getBadRulesListFromAnnotations(annotations []*ast.AnnotationsRef) string {
+	out := strings.Builder{}
+
+	// Generate the list of offending rules + locations.
+	out.WriteByte('[')
+	for i, a := range annotations {
+		out.WriteString(fmt.Sprintf("'%s' at %s", a.GetRule().Head.Name.String(), a.Location.String()))
+		if i < len(annotations)-1 {
+			out.WriteString(", ")
+		}
+	}
+	out.WriteByte(']')
+
+	return out.String()
 }

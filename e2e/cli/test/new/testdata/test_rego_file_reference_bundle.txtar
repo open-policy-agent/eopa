@@ -1,10 +1,11 @@
-# This test ensures that `eopa test bootstrap` works with on-disk, unpacked Rego
-# bundles.
+# This test is for `eopa test new`, and has the following concerns:
+# - Can add tests when using mixed bundles and Rego files.
+# - Context: Bundle + standalone Rego file.
 
-exec eopa test bootstrap -d bundle/ example/allow
+exec eopa test new -d bundle/ -d main.rego allow
 ! stdout .
 cmp stderr exp/stderr
-cmp bundle/example_test.rego exp/bundle/example_test.rego
+cmp main_test.rego exp/main_test.rego
 
 -- bundle/example.rego --
 package example
@@ -35,46 +36,39 @@ public_servers contains server if {                  # a server exists in the 'p
     input.ports[i].network == input.networks[j].id  # the port references a network in the input.networks collection and...
     input.networks[j].public                        # the network is public.
 }
--- exp/bundle/example_test.rego --
-package example_test
+-- main.rego --
+package main
 
 import rego.v1
 
-# Testcases generated from: bundle/example.rego:5
+# METADATA
+# custom:
+#   test-bootstrap-name: allow
+allow if {
+    count(data.example.violation) == 0
+}
+-- exp/main_test.rego --
+package main_test
+
+import rego.v1
+
+# Testcases generated from: main.rego:8
 # Success case: All inputs defined.
-test_success_example_allow_0 if {
-	test_input = {"input": {}}
-	data.example.allow with input as test_input
+test_success_allow if {
+	test_input = {"input": {"networks": "EXAMPLE", "ports": "EXAMPLE", "servers": "EXAMPLE"}}
+	data.main.allow with input as test_input
 }
 # Failure case: No inputs defined.
-test_fail_example_allow_0_no_input if {
+test_fail_allow_no_input if {
 	test_input = {}
-	not data.example.allow with input as test_input
+	not data.main.allow with input as test_input
 }
 # Failure case: Inputs defined, but wrong values.
-test_fail_example_allow_0_bad_input if {
-	test_input = {"input": {}}
-	not data.example.allow with input as test_input
-}
-
-
-# Testcases generated from: bundle/example.rego:7
-# Success case: All inputs defined.
-test_success_example_allow_1 if {
+test_fail_allow_bad_input if {
 	test_input = {"input": {"networks": "EXAMPLE", "ports": "EXAMPLE", "servers": "EXAMPLE"}}
-	data.example.allow with input as test_input
-}
-# Failure case: No inputs defined.
-test_fail_example_allow_1_no_input if {
-	test_input = {}
-	not data.example.allow with input as test_input
-}
-# Failure case: Inputs defined, but wrong values.
-test_fail_example_allow_1_bad_input if {
-	test_input = {"input": {"networks": "EXAMPLE", "ports": "EXAMPLE", "servers": "EXAMPLE"}}
-	not data.example.allow with input as test_input
+	not data.main.allow with input as test_input
 }
 
 -- exp/stderr --
-[INFO] Generating testcases for rule 'data.example.allow'. File destination will be: 'bundle/example_test.rego'
+[INFO] Generating testcases for annotation 'allow'. File destination will be: 'main_test.rego'
 
