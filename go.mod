@@ -81,7 +81,7 @@ require (
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/h2non/gock.v1 v1.1.2
-	modernc.org/sqlite v1.29.3
+	modernc.org/sqlite v1.29.5
 	sigs.k8s.io/yaml v1.4.0
 )
 
