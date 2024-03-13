@@ -335,6 +335,32 @@ out = y {
 `, addr, vaultURI, vaultToken),
 			Result: `{{"result": {"out": {"results": "efgh"}}}}`,
 		},
+
+		{
+			Note:                "error handling - default settings",
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "GET", "args": []})`, addr, auth),
+			Result:              `{{"result": {"p": {"error": "ERR wrong number of arguments for 'get' command"}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "error handling - raise_error=true",
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "GET", "args": [], "raise_error": true})`, addr, auth),
+			Result:              `{{"result": {"p": {"error": "ERR wrong number of arguments for 'get' command"}}}}`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
+		{
+			Note:                "error handling - raise_error=false",
+			Source:              fmt.Sprintf(`p := redis.query({"addr": "%s", "auth": %s, "command": "GET", "args": [], "raise_error": false})`, addr, auth),
+			Result:              ``,
+			Error:               `eval_builtin_error: redis.query: ERR wrong number of arguments for 'get' command`,
+			DoNotResetCache:     false,
+			Time:                now,
+			InterQueryCacheHits: 0,
+		},
 	}
 
 	interQueryCache := newInterQueryCache()

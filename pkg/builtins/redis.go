@@ -298,7 +298,7 @@ func builtinredisQuery(bctx topdown.BuiltinContext, operands []*ast.Term, iter f
 			// -- CAD 2024-03-05
 
 			if raiseError {
-				m["error"] = queryErr.Error()
+				m["error"] = err.Error()
 			} else {
 				return err
 			}
