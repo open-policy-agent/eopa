@@ -38,7 +38,7 @@ jobs:
           make generate-cli-docs
 
       - name: Update docs repo
-        uses: leigholiver/commit-with-deploy-key@9562ffd1c0965c6d4f264e2555a569bd33ac7d05
+        uses: leigholiver/commit-with-deploy-key@64d2c8705aa10aa475e971b877a7fe6ada69a1a2
         with:
           source: tmp-docs
           destination_folder: imported/artifacts/enterprise-opa-private
