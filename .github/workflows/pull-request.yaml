@@ -20,6 +20,8 @@ jobs:
     name: Analysis & Linting
     runs-on: ubuntu-22.04
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -90,6 +92,8 @@ jobs:
     name: Test
     runs-on: ubuntu-22.04
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -146,6 +150,8 @@ jobs:
     needs:
       - goreleaser
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -199,6 +205,8 @@ jobs:
     name: Push Protobuf docs to BSR
     runs-on: ubuntu-22.04
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -238,6 +246,8 @@ jobs:
     name: Ko Build
     runs-on: ubuntu-22.04
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -270,6 +280,8 @@ jobs:
     name: Goreleaser build
     runs-on: ubuntu-22.04
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -310,6 +322,8 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -337,6 +351,8 @@ jobs:
     name: Performance
     runs-on: ubuntu-22.04
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -401,6 +417,8 @@ jobs:
         GOARCH:
           - amd64
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -452,6 +470,8 @@ jobs:
             GOOS: windows
             GOARCH: amd64
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - run: |
           netsh int ipv4 show dynamicport tcp
           netsh int ipv4 show excludedportrange protocol=tcp

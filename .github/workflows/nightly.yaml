@@ -13,6 +13,8 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-22.04
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -106,6 +108,8 @@ jobs:
       QUILL_NOTARY_KEY_ID: ${{ secrets.QUILL_NOTARY_KEY_ID }}
       QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -162,6 +166,8 @@ jobs:
           - GOOS: windows
             GOARCH: amd64
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -215,6 +221,8 @@ jobs:
             GOOS: windows
             GOARCH: amd64
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -242,6 +250,8 @@ jobs:
     name: Regal e2e
     runs-on: ubuntu-22.04
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - uses: open-policy-agent/setup-opa@v2
       - name: checkout Enterprise OPA
         uses: actions/checkout@v4
@@ -267,6 +277,8 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Checkout code # needed for .trivyignore file
         uses: actions/checkout@v4
         with:
@@ -294,6 +306,9 @@ jobs:
     name: Trivy security scan repo
     runs-on: ubuntu-22.04
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -312,6 +327,8 @@ jobs:
     name: Go vulnerability check
     runs-on: ubuntu-22.04
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -334,6 +351,8 @@ jobs:
     name: Go Fuzzer
     runs-on: ubuntu-22.04
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -367,6 +386,9 @@ jobs:
       security-events: write
 
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
+
       - name: Checkout repository
         uses: actions/checkout@v4
 

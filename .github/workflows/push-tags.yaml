@@ -22,6 +22,8 @@ jobs:
       QUILL_NOTARY_KEY_ID: ${{ secrets.QUILL_NOTARY_KEY_ID }}
       QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -64,6 +66,8 @@ jobs:
     name: Ko Push
     runs-on: ubuntu-22.04
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -95,6 +99,8 @@ jobs:
     env:
       BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -123,6 +129,8 @@ jobs:
     name: Publish proto defs and capabilities.json using a PR
     runs-on: ubuntu-22.04
     steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
