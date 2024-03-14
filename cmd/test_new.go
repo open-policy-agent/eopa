@@ -30,7 +30,7 @@ selecting the new tests by their annotated name.
 
 For example, given the annotated rule:
 
-    # METADATA
+	# METADATA
 	# custom:
 	#   test-bootstrap-name: my-allow-rule
 	allow if { ... }

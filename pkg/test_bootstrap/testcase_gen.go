@@ -2,6 +2,7 @@ package test_bootstrap
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -349,22 +350,38 @@ func GetRuleCustomAnnotationWithKey(key string, entrypoint ast.Ref, compiler *as
 			continue
 		}
 	}
+	slices.Sort(closestStrings)
 	return nil, fmt.Errorf("custom annotation, test-bootstrap-name: '%s' not found in policies. Closest matching annotation(s) are: %v", key, closestStrings)
 }
 
 // Utility function for more helpful annotation error messages.
 func getBadRulesListFromAnnotations(annotations []*ast.AnnotationsRef) string {
-	out := strings.Builder{}
+	// Sort by location filename, then row.
+	slices.SortFunc(annotations, func(a *ast.AnnotationsRef, b *ast.AnnotationsRef) int {
+		headA := a.GetRule().Head.Name.String()
+		headB := b.GetRule().Head.Name.String()
+		if headA < headB {
+			return -1
+		} else if headA > headB {
+			return 1
+		}
+		locA := a.Location.Row
+		locB := b.Location.Row
+		switch {
+		case locA < locB:
+			return -1
+		case locA > locB:
+			return 1
+		default:
+			return 0
+		}
+	})
 
 	// Generate the list of offending rules + locations.
-	out.WriteByte('[')
-	for i, a := range annotations {
-		out.WriteString(fmt.Sprintf("'%s' at %s", a.GetRule().Head.Name.String(), a.Location.String()))
-		if i < len(annotations)-1 {
-			out.WriteString(", ")
-		}
+	locations := make([]string, 0, len(annotations))
+	for _, a := range annotations {
+		locations = append(locations, fmt.Sprintf("'%s' at %s", a.GetRule().Head.Name.String(), a.Location.String()))
 	}
-	out.WriteByte(']')
 
-	return out.String()
+	return "[" + strings.Join(locations, ", ") + "]"
 }
