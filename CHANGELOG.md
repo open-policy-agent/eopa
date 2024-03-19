@@ -11,6 +11,124 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.19.0
+
+[![OPA v0.62.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.62.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.62.0)
+[![Regal v0.19.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.19.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.19.0)
+
+This release includes a few new features around test generation, as well as a Regal version bump.
+
+### Test Stub Generation
+
+It is now possible to quickly spin up a test suite for a policy project with Enterprise OPA, using the new test generation commands: `test bootstrap` and `test new`.
+
+These commands will generate test stubs that are pre-populated with `input` objects, based off of what keys each rule body references from the input.
+While the stubs usually need some customization after generation in order to match the exact policy constraints, the generation commands remove much of the initial boilerplate work required for basic test coverage.
+
+#### Bootstrapping a starting set of test stubs (one test group per rule body)
+
+Given the file `example.rego`:
+```rego
+package example
+
+import rego.v1
+
+servers := ["dev", "canary", "prod"]
+
+default allow := false
+
+allow if {
+  input.servers.names[_] == data.servers[_]
+  input.action == "fetch"
+}
+```
+
+We can generate a set of basic tests for the `allow` rules using the command: `eopa test bootstrap -d example.rego example/allow`
+
+The generated tests will appear in a file called `example_test.rego`, and should look roughly like the following:
+```rego
+package example_test
+
+import rego.v1
+
+# Testcases generated from: example.rego:7
+# Success case: All inputs defined.
+test_success_example_allow_0 if {
+	test_input = {"input": {}}
+	data.example.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_example_allow_0_no_input if {
+	test_input = {}
+	not data.example.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_example_allow_0_bad_input if {
+	test_input = {"input": {}}
+	not data.example.allow with input as test_input
+}
+
+
+# Testcases generated from: example.rego:9
+# Success case: All inputs defined.
+test_success_example_allow_1 if {
+	test_input = {"input": {"action": "EXAMPLE", "servers": {"names": "EXAMPLE"}}}
+	data.example.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_example_allow_1_no_input if {
+	test_input = {}
+	not data.example.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_example_allow_1_bad_input if {
+	test_input = {"input": {"action": "EXAMPLE", "servers": {"names": "EXAMPLE"}}}
+	not data.example.allow with input as test_input
+}
+```
+
+#### Adding new named test stubs
+
+If we add a new rule to the policy with an [OPA metadata annotation](https://www.openpolicyagent.org/docs/latest/policy-language/#metadata) `test-bootstrap-name`:
+```rego
+# ...
+
+# METADATA
+# custom:
+#   test-bootstrap-name: allow_admin
+allow if {
+	"admin" in input.user.roles
+}
+```
+
+We can then add generated tests for this new rule to the test file with the command `eopa test new -d example.rego 'allow_admin'`
+The new test will be appended at the end of test file, and will look like:
+
+```rego
+# ...
+
+# Testcases generated from: example.rego:17
+# Success case: All inputs defined.
+test_success_allow_admin if {
+	test_input = {"input": {"user": {"roles": "EXAMPLE"}}}
+	data.example.allow with input as test_input
+}
+# Failure case: No inputs defined.
+test_fail_allow_admin_no_input if {
+	test_input = {}
+	not data.example.allow with input as test_input
+}
+# Failure case: Inputs defined, but wrong values.
+test_fail_allow_admin_bad_input if {
+	test_input = {"input": {"user": {"roles": "EXAMPLE"}}}
+	not data.example.allow with input as test_input
+}
+```
+
+The metadata annotation allows control over test naming with both the `bootstrap` and `new` commands.
+If two rules have the same metadata annotation, an error message will report the locations of the conflicts.
+
+
 ## v1.18.0
 
 [![OPA v0.62.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.62.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.62.0)
