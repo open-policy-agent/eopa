@@ -8,7 +8,7 @@ require (
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/agnivade/levenshtein v1.1.1
 	github.com/aws/aws-sdk-go v1.50.38
-	github.com/benthosdev/benthos/v4 v4.25.1
+	github.com/benthosdev/benthos/v4 v4.26.0
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/charmbracelet/bubbles v0.18.0
