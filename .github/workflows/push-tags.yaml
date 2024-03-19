@@ -146,9 +146,12 @@ jobs:
         with:
           fetch-depth: 0
       - uses: open-policy-agent/setup-opa@v2
-      - name: pick up opa version
+      - name: Pick up OPA version
         id: supported-opa-version
         run: echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
+      - name: Pick up Regal version
+        id: supported-regal-version
+        run: echo "regal_version=v$(build/get-regal-version.sh)" >> $GITHUB_OUTPUT
       - name: Check out code for the public repo
         uses: actions/checkout@v4
         with:
@@ -167,6 +170,9 @@ jobs:
           # Update OPA badge version to match our currently-supported version.
           sed -i "s|https://openpolicyagent.org/badge-endpoint/v[0-9.]\+|https://openpolicyagent.org/badge-endpoint/${{ steps.supported-opa-version.outputs.opa_version }}|g" _public/README.md
           sed -i "s|\[OPA v[0-9.]\+\]|\[OPA ${{ steps.supported-opa-version.outputs.opa_version }}\]|g" _public/README.md
+          # Update Regal badge version to match our currently-supported version.
+          sed -i "s|https://img.shields.io/github/v/release/styrainc/regal?filter=v[0-9.]\+|https://img.shields.io/github/v/release/styrainc/regal?filter=v${{ steps.supported-regal-version.outputs.regal_version }}|g" _public/README.md
+          sed -i "s|\[Regal v[0-9.]\+\]|\[Regal ${{ steps.supported-regal-version.outputs.regal_version }}\]|g" _public/README.md
           # Ensure the changes are picked up, especially if we added new files/folders.
           cd _public
           git config user.name "GitHub Actions"
