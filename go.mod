@@ -46,7 +46,7 @@ require (
 	github.com/neo4j/neo4j-go-driver/v5 v5.18.0
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
-	github.com/open-policy-agent/opa v0.62.0
+	github.com/open-policy-agent/opa v0.62.1
 	github.com/open-policy-agent/opa-envoy-plugin v0.46.1
 	github.com/prometheus/client_golang v1.19.0
 	github.com/redis/go-redis/v9 v9.5.1
@@ -60,7 +60,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.9.0
-	github.com/styrainc/regal v0.18.0
+	github.com/styrainc/regal v0.19.0
 	github.com/testcontainers/testcontainers-go v0.29.1
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.29.1
 	github.com/testcontainers/testcontainers-go/modules/localstack v0.29.1
