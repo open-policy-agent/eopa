@@ -14,7 +14,8 @@ type Config struct {
 	Topics []string `json:"topics"`
 	Path   string   `json:"path"`
 
-	From string `json:"from,omitempty" optional:"true" description:"Consume from topic offset: \"start\", \"end\" or since duration ago"`
+	From          string `json:"from,omitempty"`
+	ConsumerGroup bool   `json:"consumer_group"`
 
 	RegoTransformRule string `json:"rego_transform"`
 

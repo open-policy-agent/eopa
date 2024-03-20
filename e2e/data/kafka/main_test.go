@@ -1,6 +1,6 @@
 //go:build e2e
 
-// package kafka is for testing Enterprise OPA as container, running as server,
+// package kafka is for testing Enterprise OPA running as server,
 // interacting with kafka-compatible services.
 package kafka
 
@@ -22,6 +22,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/testcontainers/testcontainers-go/modules/redpanda"
+	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/plugin/kzerolog"
 
@@ -51,16 +52,27 @@ func TestSimple(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tc := range []struct {
-		note  string
-		kafka func(*testing.T, context.Context, ...testcontainers.ContainerCustomizer) (string, testcontainers.Container)
+		note          string
+		kafka         func(*testing.T, context.Context, ...testcontainers.ContainerCustomizer) (string, testcontainers.Container)
+		consumerGroup bool
 	}{
 		{
 			note:  "kafka",
 			kafka: testKafka,
 		},
 		{
+			note:          "kafka/consumer-group",
+			kafka:         testKafka,
+			consumerGroup: true,
+		},
+		{
 			note:  "redpanda",
 			kafka: testRedPanda,
+		},
+		{
+			note:          "redpanda/consumer-group",
+			kafka:         testRedPanda,
+			consumerGroup: true,
 		},
 	} {
 		t.Run(tc.note, func(t *testing.T) {
@@ -78,11 +90,12 @@ plugins:
     messages:
       type: kafka
       urls: [%[1]s]
+      consumer_group: %[2]v
       topics:
       - toothpaste
       - dinner
       rego_transform: "data.e2e.transform"
-`, broker)
+`, broker, tc.consumerGroup)
 			policy := `package e2e
 import future.keywords
 transform[key] := val if {
@@ -149,6 +162,32 @@ transform[key] := val if {
 			}
 
 			// if we reach this, the diff was "" => our expectation was met
+
+			// finally, check consumer group registration
+			admCl := kadm.NewClient(cl)
+			t.Cleanup(admCl.Close)
+
+			grps, err := admCl.ListGroups(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !tc.consumerGroup {
+				if exp, act := 0, len(grps); exp != act {
+					t.Errorf("expected %d consumer group, got %d", exp, act)
+				}
+				return
+			}
+			if exp, act := 1, len(grps); exp != act {
+				t.Errorf("expected %d consumer group, got %d", exp, act)
+			}
+			var first string
+			for k := range grps {
+				first = k
+			}
+			re := regexp.MustCompile(`^eopa_[-a-f0-9]+_messages$`)
+			if !re.MatchString(first) {
+				t.Errorf("unexpected group name: %s", first)
+			}
 		})
 	}
 }

@@ -1,0 +1,16 @@
+input:
+  generate:
+    count: 100000
+    interval: ""
+    mapping: |
+      meta = { "key": counter() }
+      root =  {
+        "type": if random_int() % 2 == 0 { "update" } else { "delete" },
+        "id": random_int() % 1000,
+        "name": fake("name"),
+      }
+output:
+  kafka_franz:
+    seed_brokers: ["${BENTHOS_BROKER}"]
+    topic: "msgs"
+    key: ${! meta("key") }

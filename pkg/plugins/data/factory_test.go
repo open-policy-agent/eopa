@@ -94,6 +94,7 @@ func TestValidate(t *testing.T) {
 			config: `
 updates:
   type: kafka
+  consumer_group: true
   urls:
   - 127.0.0.1:8083
   topics:
@@ -104,6 +105,7 @@ updates:
 				Topics:            []string{"updates"},
 				URLs:              []string{"127.0.0.1:8083"},
 				RegoTransformRule: "data.utils.transform_events",
+				ConsumerGroup:     true,
 			}),
 		},
 		{

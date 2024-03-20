@@ -62,6 +62,11 @@ func (c *Data) Start(ctx context.Context) error {
 		opts = append(opts, kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().Add(-duration).UnixMilli())))
 	}
 
+	if c.Config.ConsumerGroup {
+		group := fmt.Sprintf("eopa_%s_%s", c.manager.ID, c.Config.Path)
+		opts = append(opts, kgo.ConsumerGroup(group))
+	}
+
 	if c.Config.sasl != nil {
 		opts = append(opts, kgo.SASL(c.Config.sasl))
 	}
@@ -139,7 +144,9 @@ LOOP:
 			n := rs.NumRecords()
 			if n > 0 {
 				c.log.Debug("fetched %d records", n)
+				before := time.Now()
 				c.transformAndSave(ctx, n, rs.RecordIter())
+				c.log.Debug("transformed and saved %d records in %v", n, time.Since(before))
 			}
 		}
 	}
