@@ -1,4 +1,5 @@
 package disco
+import rego.v1
 
 config := {
  	"services": [
@@ -12,6 +13,4 @@ config := {
 			"service": "bndl"
 		}
 	}
-} {
-	data.test.foo
-}
+} if data.test.foo

@@ -1,5 +1,6 @@
 package transform
-import future.keywords
+import rego.v1
+
 transform[key] := val if {
 	some msg in input.incoming
 	payload := json.unmarshal(base64.decode(msg.value))

@@ -1,5 +1,5 @@
 package test
-import future.keywords.if
+import rego.v1
 
 # METADATA
 # entrypoint: true

@@ -1,5 +1,5 @@
 package test
-import future.keywords.if
+import rego.v1
 
 test_result if {
     result with input as {"yay":"bar"}

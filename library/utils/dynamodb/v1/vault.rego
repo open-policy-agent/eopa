@@ -7,7 +7,7 @@
 #  at the key "dynamodb" in mount_path "secret"
 package system.eopa.utils.dynamodb.v1.vault
 
-import future.keywords.if
+import rego.v1
 import data.system.eopa.utils.vault.v1.env as vault
 
 get(req) := dynamodb.get(object.union(auth(vault.secret(secret_path(true))), req))

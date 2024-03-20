@@ -8,7 +8,7 @@
 # - https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-HOST
 package system.eopa.utils.postgres.v1.env
 
-import future.keywords.if
+import rego.v1
 
 send(query, args) := send_opts(query, args, {})
 

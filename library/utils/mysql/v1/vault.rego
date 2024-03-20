@@ -7,7 +7,7 @@
 #  at the key "mysql" in mount_path "secret".
 package system.eopa.utils.mysql.v1.vault
 
-import future.keywords.if
+import rego.v1
 import data.system.eopa.utils.vault.v1.env as vault
 
 send(query, args) := send_opts(query, args, {})

@@ -8,7 +8,7 @@
 #  the Redis server is not configure to require a password.
 package system.eopa.utils.redis.v1.vault
 
-import future.keywords.if
+import rego.v1
 import data.system.eopa.utils.vault.v1.env as vault
 
 query(req) := redis.query(object.union({"auth": auth(vault.secret(secret_path(true)))}, req))
@@ -25,4 +25,3 @@ override.secret_path if false
 
 secret_path(_) := override.secret_path if true
 else := "secret/redis"
-

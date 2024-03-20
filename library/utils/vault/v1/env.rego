@@ -5,7 +5,7 @@
 #  env vars VAULT_ADDRESS and VAULT_TOKEN, respectively.
 package system.eopa.utils.vault.v1.env
 
-import future.keywords.if
+import rego.v1
 
 secret(path) := secret_opts(path, {})
 

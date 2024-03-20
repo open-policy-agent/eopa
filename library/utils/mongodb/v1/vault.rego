@@ -9,7 +9,7 @@
 # - https://www.mongodb.com/docs/manual/reference/connection-string/
 package system.eopa.utils.mongodb.v1.vault
 
-import future.keywords.if
+import rego.v1
 import data.system.eopa.utils.vault.v1.env as vault
 
 # TODO(sr): treat database like DBNAME in PG? I.e. take it from

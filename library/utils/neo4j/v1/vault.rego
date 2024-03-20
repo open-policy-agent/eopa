@@ -8,7 +8,7 @@
 #  credentials, realm are necessary depending on the scheme used.
 package system.eopa.utils.neo4j.v1.vault
 
-import future.keywords.if
+import rego.v1
 import data.system.eopa.utils.vault.v1.env as vault
 
 query(req) := neo4j.query(object.union(auth(vault.secret(secret_path(true))), req))

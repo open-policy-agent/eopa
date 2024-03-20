@@ -1,6 +1,5 @@
 package test
 
-import future.keywords.if
-import future.keywords.in
+import rego.v1
 
 allow if input.action in data.roles[data.users[input.user].role]

@@ -1,5 +1,6 @@
 package transform
-import future.keywords
+import rego.v1
+
 transform contains {"op": "add", "path": key, "value": val} if {
 	payload := json.unmarshal(base64.decode(input.value))
 	key := base64.decode(input.key)

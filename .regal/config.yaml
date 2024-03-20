@@ -5,7 +5,6 @@ rules:
       ignore:
         files:
           - library/utils/
-          - cmd/test.rego
           - e2e/cli/
   idiomatic:
     no-defined-entrypoint:
@@ -14,6 +13,11 @@ rules:
     implicit-future-keywords:
       level: ignore
   style:
+    rule-name-repeats-package:
+      ignore:
+        files:
+          - e2e/data/kafka/testdata/bundles/
+          - test/cli/smoke/
     opa-fmt:
       level: ignore
     todo-comment:
