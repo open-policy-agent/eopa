@@ -66,11 +66,13 @@ func (s *Rego) transformData(ctx context.Context, txn storage.Transaction, incom
 		rego.EvalTransaction(txn),
 		rego.EvalPrintHook(topdown.NewPrintHook(buf)),
 	)
-	if err != nil {
-		return nil, err
-	}
+	// NOTE(sr): It's possible that there's some print output that's helpful to show
+	// even if the overall eval failed -- e.g. with an "object insert conflict"
 	if buf.Len() > 0 {
 		s.manager.Logger().Debug("rego_transform<%s>: %s", s.rule, buf.String())
+	}
+	if err != nil {
+		return nil, err
 	}
 	if len(rs) == 0 || empty(rs[0].Bindings["new"]) {
 		s.manager.Logger().Debug("incoming data discarded by transform: %v", incoming) // TODO(sr): this could be very large
