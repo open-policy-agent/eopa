@@ -473,6 +473,7 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+        if: matrix.os != 'windows-latest'
       - run: |
           netsh int ipv4 show dynamicport tcp
           netsh int ipv4 show excludedportrange protocol=tcp

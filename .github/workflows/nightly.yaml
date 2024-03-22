@@ -223,6 +223,7 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+        if: matrix.os != 'windows-latest'
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
