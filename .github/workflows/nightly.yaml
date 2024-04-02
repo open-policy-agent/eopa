@@ -184,7 +184,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
-      - uses: turtlequeue/setup-babashka@v1.6.0
+      - uses: turtlequeue/setup-babashka@v1.7.0
         with:
           babashka-version: ${{ env.BB_VERSION }}
       - run: bb build/cross-build
@@ -239,7 +239,7 @@ jobs:
         with:
           name: cross-binaries-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
           path: bins
-      - uses: turtlequeue/setup-babashka@v1.6.0
+      - uses: turtlequeue/setup-babashka@v1.7.0
         with:
           babashka-version: ${{ env.BB_VERSION }}
       - run: cp dist/*${{ matrix.GOOS }}_${{ matrix.GOARCH }}*/* bins
