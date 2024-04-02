@@ -11,6 +11,29 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.20.0
+
+[![OPA v0.63.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.63.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.63.0)
+[![Regal v0.19.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.19.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.19.0)
+
+This release includes an enhancement to the Apache Kafka data source, updates the OPA version used in Enterprise OPA to [v0.63.0](https://github.com/open-policy-agent/opa/releases/tag/v0.63.0), and brings in various dependency bumps.
+
+### Kafka data source: consumer group support
+
+By providing `consumer_group: true` in the Kafka data source configuration, Enterprise OPA will register the data plugin instance as its own _consumer group_ with the Kafka Broker.
+This improves observability of the Kafka data plugin, since you can now use standard Kafka tooling to determine the status of your consuming Enterprise OPA instances, including the number of messages they lag behind.
+
+Due to the way consumer groups work, each data plugin instance will form its own _one-member_ consumer group.
+The group name includes the Enterprise OPA instance ID, which is reset on restarts.
+These two measures guarantee that the message consumption behaviour isn't changed: each (re)started instance of Enterprise OPA will read all the messages of the topic, unless configured otherwise.
+
+For details, see [the Kafka data source documentation](https://docs.styra.com/enterprise-opa/reference/configuration/data/kafka#consumer-group).
+
+### Kafka data source: show `print()` output on errors
+
+When a data source Rego transform _fails_, it can be difficult to debug, even more so when it depends on hard-to-reproduce message batches coming in from Apache Kafka.
+To help with this, any `print()` calls in Rego transforms are now emitted, even if the overall transformation failed, e.g. with an object insertion conflict.
+
 ## v1.19.0
 
 [![OPA v0.62.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.62.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.62.0)
