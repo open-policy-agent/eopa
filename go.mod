@@ -79,7 +79,7 @@ require (
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8
 	golang.org/x/sync v0.6.0
 	golang.org/x/term v0.18.0
-	google.golang.org/grpc v1.62.1
+	google.golang.org/grpc v1.63.0
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/h2non/gock.v1 v1.1.2
 	modernc.org/sqlite v1.29.5
