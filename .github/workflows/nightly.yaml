@@ -5,7 +5,6 @@ on:
     - cron: "0 8 * * 1-5" # Mo-Fr, at 8:00 UTC
 
 env:
-  GO_VERSION: 1.22
   BB_VERSION: 1.3.186
 
 jobs:
@@ -29,11 +28,14 @@ jobs:
         with:
           fetch-depth: 0
           path: enterprise-opa
+      - id: go_version
+        name: Read go version
+        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
+        working-directory: enterprise-opa
       - uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: ${{ steps.go_version.outputs.go_version }}
           cache-dependency-path: enterprise-opa/go.sum
-          check-latest: true
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/StyraInc.insteadOf https://github.com/StyraInc
       - uses: ko-build/setup-ko@v0.6
@@ -123,10 +125,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - id: go_version
+        name: Read go version
+        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
       - uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
-          check-latest: true
+          go-version: ${{ steps.go_version.outputs.go_version }}
       - name: setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Install GoReleaser
@@ -180,10 +184,12 @@ jobs:
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Check out code
         uses: actions/checkout@v4
+      - id: go_version
+        name: Read go version
+        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
       - uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
-          check-latest: true
+          go-version: ${{ steps.go_version.outputs.go_version }}
       - uses: turtlequeue/setup-babashka@v1.7.0
         with:
           babashka-version: ${{ env.BB_VERSION }}
@@ -259,11 +265,14 @@ jobs:
         with:
           fetch-depth: 0
           path: enterprise-opa
+      - id: go_version
+        name: Read go version
+        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
+        working-directory: enterprise-opa
       - uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: ${{ steps.go_version.outputs.go_version }}
           cache-dependency-path: enterprise-opa/go.sum
-          check-latest: true
       - name: Build and E2E
         run: |
           go mod tidy
@@ -339,10 +348,12 @@ jobs:
       - name: Override GH Token Env Var
         run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: actions/checkout@v4
+      - id: go_version
+        name: Read go version
+        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
       - uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
-          check-latest: true
+          go-version: ${{ steps.go_version.outputs.go_version }}
       - name: setup github token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/StyraInc.insteadOf https://github.com/StyraInc
       - run: go install golang.org/x/vuln/cmd/govulncheck@latest
@@ -364,10 +375,12 @@ jobs:
         run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@v4
+      - id: go_version
+        name: Read go version
+        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
       - uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
-          check-latest: true
+          go-version: ${{ steps.go_version.outputs.go_version }}
       - name: setup github token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/StyraInc.insteadOf https://github.com/StyraInc
       - run: make fuzz
