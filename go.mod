@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go v1.51.14
 	github.com/benthosdev/benthos/v4 v4.26.0
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/cespare/xxhash/v2 v2.2.0
+	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/docker/go-connections v0.5.0
