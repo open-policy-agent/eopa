@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -184,16 +185,21 @@ func (c *Data) transformAndSave(ctx context.Context, n int, iter *kgo.FetchesRec
 		i++
 	}
 	if err := c.Rego.Ingest(ctx, c.Path(), batch); err != nil {
-		c.log.Error("plugin %s at %s: %w", c.Name(), c.Config.path, err)
+		c.log.Error("plugin %s at %s: %v", c.Name(), c.Config.path, err)
 	}
 }
 
 func (c *Data) kgoLogger() kgo.Logger {
-	return &wrap{c.log}
+	return &wrap{
+		Logger: c.log,
+		debug:  os.Getenv("EOPA_KAFKA_DEBUG") != "",
+	}
 }
 
 type wrap struct {
 	logging.Logger
+
+	debug bool
 }
 
 func (w *wrap) Level() kgo.LogLevel {
@@ -205,10 +211,11 @@ func (w *wrap) Level() kgo.LogLevel {
 	case logging.Info:
 		return kgo.LogLevelWarn
 	case logging.Debug:
-		return kgo.LogLevelDebug
-	default:
-		return kgo.LogLevelNone
+		if w.debug {
+			return kgo.LogLevelDebug
+		}
 	}
+	return kgo.LogLevelNone
 }
 
 func (w *wrap) Log(level kgo.LogLevel, msg string, keyvals ...any) {
@@ -225,6 +232,8 @@ func (w *wrap) Log(level kgo.LogLevel, msg string, keyvals ...any) {
 	case kgo.LogLevelInfo:
 		w.WithFields(fields).Info(msg)
 	case kgo.LogLevelDebug:
-		w.WithFields(fields).Debug(msg)
+		if w.debug {
+			w.WithFields(fields).Debug(msg)
+		}
 	}
 }
