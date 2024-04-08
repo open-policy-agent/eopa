@@ -5,11 +5,13 @@
 package kafka
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -162,6 +164,54 @@ transform[key] := val if {
 			}
 
 			// if we reach this, the diff was "" => our expectation was met
+
+			{ // check prometheus metrics
+				resp, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", eopaHTTPPort))
+				if err != nil {
+					t.Fatal(err)
+				}
+				expS := []string{
+					"kafka_messages_buffered_fetch_records_total",
+					"kafka_messages_buffered_produce_records_total",
+					`kafka_messages_connects_total{node_id="[0-9]"}`,
+					`kafka_messages_connects_total{node_id="seed_0"}`,
+					`kafka_messages_fetch_bytes_total{node_id="[0-9]",topic="toothpaste"}`,
+					`kafka_messages_read_bytes_total{node_id="[0-9]"}`,
+					`kafka_messages_read_bytes_total{node_id="seed_0"}`,
+					`kafka_messages_write_bytes_total{node_id="[0-9]"}`,
+					`kafka_messages_write_bytes_total{node_id="seed_0"}`,
+				}
+				exp := make([]func(string) bool, len(expS))
+				for i := range expS {
+					exp[i] = regexp.MustCompile(expS[i]).MatchString
+				}
+				act := []string{}
+				scanner := bufio.NewScanner(resp.Body)
+				for scanner.Scan() {
+					line := scanner.Text()
+					if !strings.HasPrefix(line, "kafka_") {
+						continue
+					}
+					sp := strings.Split(line, " ")
+					act = append(act, sp[0])
+				}
+				if err := scanner.Err(); err != nil {
+					t.Fatal(err)
+				}
+				match := 0
+			ACT:
+				for _, a := range act {
+					for _, e := range exp {
+						if e(a) {
+							match++
+							continue ACT
+						}
+					}
+				}
+				if match != len(expS) {
+					t.Errorf("contains unexpected metrics: %v", act)
+				}
+			}
 
 			// finally, check consumer group registration
 			admCl := kadm.NewClient(cl)

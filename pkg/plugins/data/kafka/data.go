@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/plugin/kprom"
 
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/plugins"
@@ -50,6 +52,15 @@ func (c *Data) Start(ctx context.Context) error {
 		kgo.SeedBrokers(c.Config.URLs...),
 		kgo.WithLogger(c.kgoLogger()),
 		kgo.DialTLSConfig(c.Config.tls), // if it's nil, it stays nil
+
+	}
+	if reg := c.manager.PrometheusRegister(); reg != nil {
+		path := strings.ReplaceAll(c.Config.Path, ".", ":")
+		opts = append(opts,
+			kgo.WithHooks(kprom.NewMetrics("kafka_"+path,
+				kprom.Registerer(reg),
+			)),
+		)
 	}
 
 	switch c.Config.From {
