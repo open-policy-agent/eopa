@@ -6,10 +6,6 @@ ifeq ($(AUTH_RELEASE), $(NEWEST))
 LATEST := --tags latest
 LATEST_DEBUG := --tags latest-debug
 endif
-# only auth-build-ci tag builds get put into 'enterprise-opa' packages repository
-export KO_DOCKER_REPO=ghcr.io/styrainc/enterprise-opa
-else
-export KO_DOCKER_REPO=ghcr.io/styrainc/enterprise-opa-private
 endif
 
 GOVERSION ?= $(shell cat ./.go-version)
@@ -19,6 +15,9 @@ GOOS := $(shell go env GOOS)
 # default KO_DEFAULTBASEIMAGE = cgr.dev/chainguard/static
 KO_DEBUG_IMAGE ?= cgr.dev/chainguard/busybox:latest
 
+# all images are pushed into the public repo
+# only release images are tagged "latest"
+export KO_DOCKER_REPO=ghcr.io/styrainc/enterprise-opa
 KO_BUILD := ko build . --image-label org.opencontainers.image.source=https://github.com/StyraInc/enterprise-opa
 KO_BUILD_LOCAL := KO_DOCKER_REPO=ko.local $(KO_BUILD) --base-import-paths
 KO_BUILD_DEPLOY := $(KO_BUILD) --bare --platform=linux/amd64,linux/arm64
