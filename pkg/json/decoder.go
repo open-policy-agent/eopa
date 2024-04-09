@@ -27,8 +27,20 @@ type Decoder struct {
 	iter    *jsoniter.Iterator
 }
 
+func newDecoder(iter *jsoniter.Iterator) *Decoder {
+	return &Decoder{
+		strings: make(map[string]*String),
+		keys:    make(map[interface{}]*[]string),
+		iter:    iter,
+	}
+}
+
 func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{strings: make(map[string]*String), keys: make(map[interface{}]*[]string), iter: jsoniter.Parse(config, r, 512)}
+	return newDecoder(jsoniter.Parse(config, r, 512))
+}
+
+func NewStringDecoder(s string) *Decoder {
+	return newDecoder(jsoniter.ParseString(config, s))
 }
 
 func (d *Decoder) error() error {

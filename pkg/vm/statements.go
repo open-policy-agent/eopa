@@ -161,6 +161,8 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		return isTypeBuiltin(state, args, typeNumber)
 	case ast.IsNull.Name:
 		return isTypeBuiltin(state, args, typeNull)
+	case ast.JSONUnmarshal.Name:
+		return jsonUnmarshalBuiltin(state, args)
 	case ast.TypeNameBuiltin.Name:
 		return typenameBuiltin(state, args)
 	case ast.NumbersRange.Name:

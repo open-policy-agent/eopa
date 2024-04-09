@@ -21,6 +21,25 @@ import (
 var globCacheLock = sync.Mutex{}
 var globCache = map[string]glob.Glob{}
 
+func jsonUnmarshalBuiltin(state *State, args []Value) error {
+	if isUndefinedType(args[0]) {
+		return nil
+	}
+
+	s, ok, err := builtinStringOperand(state, args[0], 1)
+	if err != nil || !ok {
+		return err
+	}
+
+	decoded, err := fjson.NewStringDecoder(s).Decode()
+	if err != nil {
+		return err
+	}
+
+	state.SetReturnValue(Unused, decoded)
+	return nil
+}
+
 func memberBuiltin(state *State, args []Value) error {
 	if isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
@@ -276,8 +295,8 @@ func stringsConcatBuiltin(state *State, args []Value) error {
 		return nil
 	}
 
-	join, err := builtinStringOperand(state, args[0], 1)
-	if err != nil {
+	join, ok, err := builtinStringOperand(state, args[0], 1)
+	if err != nil || !ok {
 		return err
 	}
 
@@ -372,13 +391,13 @@ func stringsEndsWithBuiltin(state *State, args []Value) error {
 		return nil
 	}
 
-	s, err := builtinStringOperand(state, args[0], 1)
-	if err != nil {
+	s, ok, err := builtinStringOperand(state, args[0], 1)
+	if err != nil || !ok {
 		return err
 	}
 
-	suffix, err := builtinStringOperand(state, args[1], 2)
-	if err != nil {
+	suffix, ok, err := builtinStringOperand(state, args[1], 2)
+	if err != nil || !ok {
 		return err
 	}
 
@@ -392,13 +411,13 @@ func stringsStartsWithBuiltin(state *State, args []Value) error {
 		return nil
 	}
 
-	s, err := builtinStringOperand(state, args[0], 1)
-	if err != nil {
+	s, ok, err := builtinStringOperand(state, args[0], 1)
+	if err != nil || !ok {
 		return err
 	}
 
-	prefix, err := builtinStringOperand(state, args[1], 2)
-	if err != nil {
+	prefix, ok, err := builtinStringOperand(state, args[1], 2)
+	if err != nil || !ok {
 		return err
 	}
 
@@ -412,8 +431,8 @@ func stringsSprintfBuiltin(state *State, args []Value) error {
 		return nil
 	}
 
-	s, err := builtinStringOperand(state, args[0], 1)
-	if err != nil {
+	s, ok, err := builtinStringOperand(state, args[0], 1)
+	if err != nil || !ok {
 		return err
 	}
 
@@ -522,22 +541,22 @@ func countBuiltin(state *State, args []Value) error {
 	return nil
 }
 
-func builtinStringOperand(state *State, value Value, pos int) (string, error) {
+func builtinStringOperand(state *State, value Value, pos int) (string, bool, error) {
 	s, ok := value.(*fjson.String)
-	if !ok {
-		v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
-		if err != nil {
-			return "", err
-		}
-
-		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
-			Code:    topdown.TypeErr,
-			Message: builtins.NewOperandTypeErr(pos, v, "string").Error(),
-		})
-		return "", nil
+	if ok {
+		return s.Value(), true, nil
 	}
 
-	return s.Value(), nil
+	v, err := state.ValueOps().ToAST(state.Globals.Ctx, value)
+	if err != nil {
+		return "", false, err
+	}
+
+	state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
+		Code:    topdown.TypeErr,
+		Message: builtins.NewOperandTypeErr(pos, v, "string").Error(),
+	})
+	return "", false, nil
 }
 
 func builtinSetOperand(state *State, value Value, pos int) (fjson.Set, error) {
@@ -1014,12 +1033,12 @@ func globMatchBuiltin(state *State, args []Value) error {
 	if isUndefinedType(args[2]) || isUndefinedType(args[1]) || isUndefinedType(args[0]) {
 		return nil
 	}
-	pattern, err := builtinStringOperand(state, args[0], 1)
-	if err != nil {
+	pattern, ok, err := builtinStringOperand(state, args[0], 1)
+	if err != nil || !ok {
 		return err
 	}
-	match, err := builtinStringOperand(state, args[2], 1)
-	if err != nil {
+	match, ok, err := builtinStringOperand(state, args[2], 1)
+	if err != nil || !ok {
 		return err
 	}
 
