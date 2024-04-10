@@ -158,7 +158,10 @@ LOOP:
 				c.log.Debug("fetched %d records", n)
 				before := time.Now()
 				c.transformAndSave(ctx, n, rs.RecordIter())
-				c.log.Debug("transformed and saved %d records in %v", n, time.Since(before))
+				c.log.WithFields(map[string]any{
+					"count":       n,
+					"duration_ms": time.Since(before).Milliseconds(),
+				}).Debug("transformed and saved %d records in %v", n, time.Since(before))
 			}
 		}
 	}
