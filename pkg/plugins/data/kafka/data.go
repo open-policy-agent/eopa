@@ -76,6 +76,7 @@ func (c *Data) Start(ctx context.Context) error {
 
 	if c.Config.ConsumerGroup {
 		group := fmt.Sprintf("eopa_%s_%s", c.manager.ID, c.Config.Path)
+		c.log.Info("using consumer group \"%s\" for kafka data plugin on path %s", group, c.Config.Path)
 		opts = append(opts, kgo.ConsumerGroup(group))
 	}
 
