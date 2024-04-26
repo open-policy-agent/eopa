@@ -425,9 +425,11 @@ jobs:
         GOOS:
           - windows
           - linux
-          - darwin
         GOARCH:
           - amd64
+        include:
+          - GOOS: darwin
+            GOARCH: arm64
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
@@ -479,7 +481,7 @@ jobs:
             GOARCH: amd64
           - os: macos-latest
             GOOS: darwin
-            GOARCH: amd64
+            GOARCH: arm64
           - os: windows-latest
             GOOS: windows
             GOARCH: amd64
