@@ -329,8 +329,6 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 
 	params.rt.StoreBuilder = storage.New2
 
-	params.rt.SkipPluginRegistration = true
-
 	params.rt.BundleLazyLoadingMode = params.rt.BundleMode
 
 	params.rt.NDBCacheEnabled = true // We need this for LIA.
@@ -369,6 +367,18 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 		//           no need to add the fallback telemetry gatherer here.
 	}
 	runtime.RegisterGatherers(params.rt.TelemetryGatherers)
+
+	params.rt.ExtraDiscoveryOpts = []func(*discovery.Discovery){
+		discovery.Factories(map[string]plugins.Factory{
+			data.Name:            data.Factory(),
+			impact.Name:          impact.Factory(),
+			grpc.PluginName:      grpc.Factory(),
+			dl.DLPluginName:      dl.Factory(),
+			opa_envoy.PluginName: &opa_envoy.Factory{}, // Hack(philip): This is ugly, but necessary because upstream lacks the Factory() function.
+		}),
+		discovery.Hooks(hs),
+	}
+
 	rt, err := runtime.NewRuntime(ctx, params.rt)
 	if err != nil {
 		return nil, err
@@ -386,23 +396,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 		otel.SetTracerProvider(tp)
 	}
 
-	// register the discovery plugin
-	disco, err := discovery.New(rt.Manager,
-		discovery.Metrics(rt.Metrics()),
-		discovery.Factories(map[string]plugins.Factory{
-			data.Name:            data.Factory(),
-			impact.Name:          impact.Factory(),
-			grpc.PluginName:      grpc.Factory(),
-			dl.DLPluginName:      dl.Factory(),
-			opa_envoy.PluginName: &opa_envoy.Factory{}, // Hack(philip): This is ugly, but necessary because upstream lacks the Factory() function.
-		}),
-		discovery.Hooks(hs),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("config error: %w", err)
-	}
-
-	rt.Manager.Register(discovery.Name, disco)
+	disco := discovery.Lookup(rt.Manager)
 	telemetry.Setup(rt.Manager, disco)
 
 	signalTelemetry(rt.Manager)

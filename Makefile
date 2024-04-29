@@ -127,12 +127,12 @@ fuzz:
 	go test $(BUILD_ARGS)  ./pkg/json -fuzz FuzzDecode -fuzztime ${FUZZ_TIME} -v -run '^$$'
 
 update:
-	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.63.0
+	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.64.1
 	go mod tidy
 
 update-e2e:
 	cd e2e \
-		&& go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.63.0 \
+		&& go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.64.1 \
 		&& go mod tidy
 
 update-examples:

@@ -31,10 +31,11 @@ func TestConvert(t *testing.T) {
 				},
 				Modules: []bundle.ModuleFile{
 					{
-						URL:    "/foo/corge/corge.rego",
-						Path:   "/foo/corge/corge.rego",
-						Parsed: ast.MustParseModule(`package foo.corge`),
-						Raw:    []byte("package foo.corge\n"),
+						URL:          "/foo/corge/corge.rego",
+						Path:         "/foo/corge/corge.rego",
+						RelativePath: "/foo/corge/corge.rego",
+						Parsed:       ast.MustParseModule(`package foo.corge`),
+						Raw:          []byte("package foo.corge\n"),
 					},
 				},
 				Manifest: bundle.Manifest{

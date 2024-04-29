@@ -251,7 +251,7 @@ func ExampleBJSONBundleViaDiscovery() {
 	opts.Logger = logging.New()
 	opts.Config = strings.NewReader(fmt.Sprintf(`
 services:
-- name: disco
+- name: bndl
   url: %[1]s
 discovery:
   resource: disco.tgz

@@ -11,6 +11,37 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.21.0
+
+[![OPA v0.64.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.64.1)](https://github.com/open-policy-agent/opa/releases/tag/v0.64.1)
+[![Regal v0.21.3](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.21.3&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.21.3)
+
+This release includes an enhancement to the Apache Kafka data source, and updates the OPA version used in Enterprise OPA to [v0.64.1](https://github.com/open-policy-agent/opa/releases/tag/v0.64.1), and brings in various dependency bumps.
+
+### Kafka data source: prometheus metrics (per-instance)
+
+Each instance of the Kafka data plugin now contributes a bunch of Prometheus metrics to the global metrics endpoint:
+
+    kafka_MOUNTPOINT_METRIC
+
+Where MOUNTPOINT is `foo:bar` for a Kafka data plugin configured to manage `data.foo.bar`. (The Prometheus metrics naming restrictions forbid
+both "." and "/" in metric names.)
+
+### Kafka data source: logging enhancements
+
+When run with log level "debug", the low-level Kafka logs are overwhelming most of the times.
+They are now suppressed by default, and can be inspected when running with the environment variable `EOPA_KAFKA_DEBUG`, like:
+
+    EOPA_KAFKA_DEBUG=1 eopa run -s -ldebug -c eopa.yaml transform.rego
+
+In addition to that, the _consumer group_ (if configured) is now logged when the data source plugin is initiated.
+Also, new key/value fields were introduced to read the batch size and transformation time from the logs more easily.
+
+### VM: builtin function `json.unmarshal` is now natively implemented
+
+This improves the performance by lowered data conversion overheads.
+This, too, benefits Kafka transforms because they always include a `json.unmarshal` call.
+
 ## v1.20.0
 
 [![OPA v0.63.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.63.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.63.0)
