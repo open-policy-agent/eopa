@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/fs"
 	"path/filepath"
+	"sync"
 
 	embedded "github.com/styrainc/enterprise-opa-private/library"
 
@@ -12,8 +13,11 @@ import (
 
 var modules map[string]*ast.Module
 var packages map[string]string // "data.system.eopa.utils.dynamodb.v1" -> its filename == key in modules
+var mtx = &sync.Mutex{}
 
 func Init() (err error) {
+	mtx.Lock()
+	defer mtx.Unlock()
 	ast.DefaultModuleLoader(loader)
 	modules, packages, err = toMap(embedded.Library)
 	return

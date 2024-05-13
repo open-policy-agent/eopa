@@ -424,6 +424,15 @@ func TestMongoDBFindVault(t *testing.T) {
 	tc, addr, token := startVaultMulti(t, "secret", secrets)
 	t.Cleanup(func() { tc.Terminate(context.Background()) })
 
+	nonEmpty := func(f func(*testing.T, rego.ResultSet)) func(*testing.T, rego.ResultSet) {
+		return func(t *testing.T, rs rego.ResultSet) {
+			if len(rs) == 0 {
+				t.Fatal("expected non-empty result")
+			}
+			f(t, rs)
+		}
+	}
+
 	env := map[string]string{
 		"VAULT_ADDRESS": addr,
 		"VAULT_TOKEN":   token,
@@ -564,7 +573,7 @@ p := mongodb.find_one({"database": "database", "collection": "collection", "filt
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.note, runRegoTests(tc.exp,
+		t.Run(tc.note, runRegoTests(nonEmpty(tc.exp),
 			rego.Runtime(ast.NewTerm(ast.MustInterfaceToValue(map[string]any{"env": env}))),
 			rego.Module("example.rego", `package example
 import data.system.eopa.utils.mongodb.v1.vault as mongodb
