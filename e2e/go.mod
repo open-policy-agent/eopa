@@ -16,10 +16,10 @@ require (
 	github.com/rogpeppe/go-internal v1.12.0
 	github.com/rs/zerolog v1.32.0
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
-	github.com/testcontainers/testcontainers-go v0.30.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.30.0
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.30.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.30.0
+	github.com/testcontainers/testcontainers-go v0.31.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.31.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.31.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.31.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
