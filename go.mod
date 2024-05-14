@@ -48,7 +48,7 @@ require (
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/open-policy-agent/opa v0.64.1
 	github.com/open-policy-agent/opa-envoy-plugin v0.46.1
-	github.com/prometheus/client_golang v1.19.0
+	github.com/prometheus/client_golang v1.19.1
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/rs/zerolog v1.32.0
 	github.com/sbabiv/xml2map v1.2.1
