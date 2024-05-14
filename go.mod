@@ -61,14 +61,14 @@ require (
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.9.0
 	github.com/styrainc/regal v0.21.3
-	github.com/testcontainers/testcontainers-go v0.30.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.30.0
-	github.com/testcontainers/testcontainers-go/modules/localstack v0.30.0
-	github.com/testcontainers/testcontainers-go/modules/mssql v0.30.0
-	github.com/testcontainers/testcontainers-go/modules/mysql v0.30.0
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.30.0
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.30.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.30.0
+	github.com/testcontainers/testcontainers-go v0.31.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.31.0
+	github.com/testcontainers/testcontainers-go/modules/localstack v0.31.0
+	github.com/testcontainers/testcontainers-go/modules/mssql v0.31.0
+	github.com/testcontainers/testcontainers-go/modules/mysql v0.31.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.31.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.31.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.31.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/plugin/kprom v1.1.0
 	github.com/twmb/franz-go/plugin/kzerolog v1.0.0

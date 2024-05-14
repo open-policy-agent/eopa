@@ -628,7 +628,8 @@ func startMSSQL(t *testing.T) backend {
 }
 
 func testLogger(t testing.TB) testcontainers.CustomizeRequestOption {
-	return testcontainers.CustomizeRequestOption(func(req *testcontainers.GenericContainerRequest) {
+	return testcontainers.CustomizeRequestOption(func(req *testcontainers.GenericContainerRequest) error {
 		req.Logger = testcontainers.TestLogger(t)
+		return nil
 	})
 }
