@@ -47,7 +47,7 @@ require (
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/open-policy-agent/opa v0.64.1
-	github.com/open-policy-agent/opa-envoy-plugin v0.46.1
+	github.com/open-policy-agent/opa-envoy-plugin v0.64.1-envoy
 	github.com/prometheus/client_golang v1.19.1
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/rs/zerolog v1.32.0
@@ -342,6 +342,7 @@ require (
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.51.0 // indirect
+	go.opentelemetry.io/contrib/propagators/b3 v1.21.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.26.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.26.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.25.0 // indirect
@@ -357,7 +358,7 @@ require (
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.20.0 // indirect
+	golang.org/x/tools v0.21.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240415180920-8c6c420018be // indirect
@@ -387,4 +388,4 @@ replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.61.1-0.20240426183039-51006c0cb3ed
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.64.2-0.20240426183039-51006c0cb3ed
