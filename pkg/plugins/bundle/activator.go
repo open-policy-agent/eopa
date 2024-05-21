@@ -311,8 +311,12 @@ func (*CustomActivator) Activate(opts *bundleApi.ActivateOpts) error {
 	return activateBundles(opts)
 }
 
+// Note(philip): Originally, this function would convert the bundle in-place to
+// answer some validation queries. The converted objects would be thrown away,
+// meaning the (*inmem.store).Truncate() call later would have to redo all the
+// conversion work again. For larger (>1 GB) OPA bundles, this resulted in
+// prohibitive slowdowns.
 func activateBundles(opts *bundleApi.ActivateOpts) error {
-
 	// Build collections of bundle names, modules, and roots to erase
 	erase := map[string]struct{}{}
 	names := map[string]struct{}{}
@@ -362,19 +366,42 @@ func activateBundles(opts *bundleApi.ActivateOpts) error {
 		return err
 	}
 
-	// Validate data in bundle does not contain paths outside the bundle's roots.
+	// Note(philip): This block does in in-place replacement of the JSON
+	// bundleApi.Raw content for OPA bundles with their EOPA BJSON equivalents.
+	// This saves re-processing the data multiple times down the line,
+	// noticeably in (*inmem.store).Truncate.
 	for name, b := range snapshotBundles {
-
-		for _, item := range b.Raw {
+		for idx, item := range b.Raw {
 			path := filepath.ToSlash(item.Path)
-
 			if filepath.Base(path) == "data.json" {
 				val, isBJSON, err := MaybeBjsonFromBinary(item.Value)
 				if err != nil {
 					return err
 				}
+
 				if isBJSON {
 					telemetry.SetBJSON(name)
+				}
+
+				bs, err := bjson.Marshal(val)
+				if err != nil {
+					return err
+				}
+				b.Raw[idx] = bundleApi.Raw{Path: item.Path, Value: bs}
+			}
+		}
+	}
+
+	// Validate data in bundle does not contain paths outside the bundle's roots.
+	for _, b := range snapshotBundles {
+		for _, item := range b.Raw {
+			path := filepath.ToSlash(item.Path)
+
+			if filepath.Base(path) == "data.json" {
+				// Note(philip): This will *always* be a BJSON type by this point.
+				val, _, err := MaybeBjsonFromBinary(item.Value)
+				if err != nil {
+					return err
 				}
 
 				valObj, ok := val.(bjson.Object)
