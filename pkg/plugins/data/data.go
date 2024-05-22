@@ -13,6 +13,7 @@ import (
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/benthos"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/git"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/http"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/kafka"
@@ -27,13 +28,14 @@ import (
 const Name = "data"
 
 var dataPluginRegistry = map[string]plugins.Factory{
-	git.Name:     git.Factory(),
-	http.Name:    http.Factory(),
-	kafka.Name:   kafka.Factory(),
-	ldap.Name:    ldap.Factory(),
-	mongodb.Name: mongodb.Factory(),
-	okta.Name:    okta.Factory(),
-	s3.Name:      s3.Factory(),
+	git.Name:               git.Factory(),
+	http.Name:              http.Factory(),
+	kafka.Name:             kafka.Factory(),
+	ldap.Name:              ldap.Factory(),
+	mongodb.Name:           mongodb.Factory(),
+	okta.Name:              okta.Factory(),
+	s3.Name:                s3.Factory(),
+	string(benthos.Pulsar): benthos.Factory(benthos.Pulsar),
 } // type -> plugin
 
 // Data plugin
