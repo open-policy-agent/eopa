@@ -3,18 +3,16 @@ package kafka_test
 import (
 	"context"
 	"fmt"
-	"io"
-	"os"
+	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/rs/zerolog"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/testcontainers/testcontainers-go/modules/redpanda"
 	"github.com/twmb/franz-go/pkg/kgo"
-	"github.com/twmb/franz-go/plugin/kzerolog"
+	"github.com/twmb/franz-go/plugin/kslog"
 
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/util"
@@ -306,17 +304,13 @@ transform[key] := val if {
 }
 
 func kafkaClient(broker string, extra ...kgo.Opt) (*kgo.Client, error) {
-	var logger zerolog.Logger
-	if testing.Verbose() {
-		logger = zerolog.New(os.Stderr)
-	} else {
-		logger = zerolog.New(io.Discard)
-	}
+	logger := kslog.New(slog.Default())
+	_ = logger
 
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(broker),
-		kgo.WithLogger(kzerolog.New(&logger)),
 		kgo.AllowAutoTopicCreation(),
+		// kgo.WithLogger(logger), // uncomment for debugging
 	}
 	return kgo.NewClient(append(opts, extra...)...)
 }

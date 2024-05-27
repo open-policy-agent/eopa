@@ -1,6 +1,8 @@
 module github.com/styrainc/enterprise-opa-private
 
-go 1.21
+go 1.21.0
+
+toolchain go1.22.3
 
 require (
 	git.sr.ht/~charles/graph v0.0.1
@@ -51,7 +53,6 @@ require (
 	github.com/open-policy-agent/opa-envoy-plugin v0.64.1-envoy
 	github.com/prometheus/client_golang v1.19.1
 	github.com/redis/go-redis/v9 v9.5.1
-	github.com/rs/zerolog v1.32.0
 	github.com/sbabiv/xml2map v1.2.1
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
@@ -73,7 +74,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/vault v0.31.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/plugin/kprom v1.1.0
-	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
+	github.com/twmb/franz-go/plugin/kslog v1.0.0
 	go.mongodb.org/mongo-driver v1.15.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.51.0
 	go.opentelemetry.io/otel v1.26.0

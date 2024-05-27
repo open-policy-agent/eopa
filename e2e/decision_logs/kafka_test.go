@@ -9,7 +9,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"sort"
@@ -23,10 +23,9 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/testcontainers/testcontainers-go/modules/redpanda"
 
-	"github.com/rs/zerolog"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/scram"
-	"github.com/twmb/franz-go/plugin/kzerolog"
+	"github.com/twmb/franz-go/plugin/kslog"
 
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
 )
@@ -250,14 +249,14 @@ func testKafka(t *testing.T, ctx context.Context, cs ...testcontainers.Container
 }
 
 func kafkaClient(broker, topic string, o ...kgo.Opt) (*kgo.Client, error) {
-	// logger := zerolog.New(os.Stderr) // for debugging
-	logger := zerolog.New(io.Discard)
+	logger := kslog.New(slog.Default())
+	_ = logger
 
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(broker),
-		kgo.WithLogger(kzerolog.New(&logger)),
 		kgo.AllowAutoTopicCreation(),
 		kgo.ConsumeTopics(topic),
+		// kgo.WithLogger(logger), // uncomment for debugging
 	}
 	return kgo.NewClient(append(opts, o...)...)
 }

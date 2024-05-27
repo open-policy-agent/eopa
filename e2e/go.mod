@@ -1,6 +1,8 @@
 module github.com/styrainc/enterprise-opa-private/e2e
 
-go 1.21
+go 1.21.0
+
+toolchain go1.22.3
 
 replace github.com/styrainc/enterprise-opa-private => ../
 
@@ -14,7 +16,6 @@ require (
 	github.com/minio/minio-go/v7 v7.0.70
 	github.com/open-policy-agent/opa v0.64.1
 	github.com/rogpeppe/go-internal v1.12.0
-	github.com/rs/zerolog v1.32.0
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
 	github.com/testcontainers/testcontainers-go v0.31.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.31.0
@@ -22,7 +23,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/vault v0.31.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/twmb/franz-go/plugin/kzerolog v1.0.0
+	github.com/twmb/franz-go/plugin/kslog v1.0.0
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 )
 
@@ -53,7 +54,7 @@ require (
 	github.com/apache/arrow/go/arrow v0.0.0-20211112161151-bc219186db40 // indirect
 	github.com/apache/arrow/go/v14 v14.0.2 // indirect
 	github.com/apache/thrift v0.18.1 // indirect
-	github.com/aws/aws-sdk-go v1.53.2 // indirect
+	github.com/aws/aws-sdk-go v1.53.3 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.25.2 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.1 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.5 // indirect
@@ -95,7 +96,7 @@ require (
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
-	github.com/fatih/color v1.16.0 // indirect
+	github.com/fatih/color v1.17.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
@@ -268,7 +269,7 @@ require (
 	modernc.org/libc v1.49.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
-	modernc.org/sqlite v1.29.9 // indirect
+	modernc.org/sqlite v1.29.10 // indirect
 	modernc.org/strutil v1.2.0 // indirect
 	modernc.org/token v1.1.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect

@@ -1,6 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: gomod
+    open-pull-requests-limit: 0
     directory: /
     schedule:
       interval: daily
@@ -18,6 +19,7 @@ updates:
         patterns:
           - "github.com/twmb/*"
   - package-ecosystem: gomod
+    open-pull-requests-limit: 10
     directory: /e2e
     schedule:
       interval: daily

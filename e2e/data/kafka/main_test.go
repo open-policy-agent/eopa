@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"os"
@@ -20,13 +21,12 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/rs/zerolog"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/testcontainers/testcontainers-go/modules/redpanda"
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
-	"github.com/twmb/franz-go/plugin/kzerolog"
+	"github.com/twmb/franz-go/plugin/kslog"
 
 	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	"github.com/styrainc/enterprise-opa-private/e2e/wait"
@@ -243,13 +243,13 @@ transform[key] := val if {
 }
 
 func kafkaClient(broker string) (*kgo.Client, error) {
-	// logger := zerolog.New(os.Stderr) // for debugging
-	logger := zerolog.New(io.Discard)
+	logger := kslog.New(slog.Default())
+	_ = logger
 
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(broker),
-		kgo.WithLogger(kzerolog.New(&logger)),
 		kgo.AllowAutoTopicCreation(),
+		// kgo.WithLogger(logger), // uncomment for debugging
 	}
 	return kgo.NewClient(opts...)
 }
