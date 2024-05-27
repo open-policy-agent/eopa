@@ -72,7 +72,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/pulsar v0.31.0
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.31.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.31.0
-	github.com/twmb/franz-go v1.16.1
+	github.com/twmb/franz-go v1.17.0
 	github.com/twmb/franz-go/plugin/kprom v1.1.0
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
 	go.mongodb.org/mongo-driver v1.15.0
@@ -333,7 +333,7 @@ require (
 	github.com/tilinna/z85 v1.0.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.13 // indirect
 	github.com/tklauser/numcpus v0.7.0 // indirect
-	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
+	github.com/twmb/franz-go/pkg/kmsg v1.8.0 // indirect
 	github.com/urfave/cli/v2 v2.27.1 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
