@@ -94,8 +94,8 @@ github.com/PaesslerAG/jsonpath v0.1.1 h1:c1/AToHQMVsduPAa4Vh6xp2U0evy4t8SWp8imEs
 github.com/PaesslerAG/jsonpath v0.1.1/go.mod h1:lVboNxFGal/VwW6d9JzIy56bUsYAP6tH/x80vjnCseY=
 github.com/ProtonMail/go-crypto v1.0.0 h1:LRuvITjQWX+WIfr930YHG2HNfjR1uOfyf5vE0kC2U78=
 github.com/ProtonMail/go-crypto v1.0.0/go.mod h1:EjAoLdwvbIOoOQr3ihjnSoLZRtE8azugULFRteWMNc0=
-github.com/StyraInc/opa v0.64.2-0.20240426183039-51006c0cb3ed h1:bhxNpfgLmPpOPyZSeA6k7xExkQQxYB5xSve6dasIWEU=
-github.com/StyraInc/opa v0.64.2-0.20240426183039-51006c0cb3ed/go.mod h1:j4VeLorVpKipnkQ2TDjWshEuV3cvP/rHzQhYaraUXZY=
+github.com/StyraInc/opa v0.64.2-0.20240528225426-b6e4fe36faf4 h1:05EP9TOk+uS+ZFosoN7Ex4NoJkhFPcwm0pBh2YZ3f34=
+github.com/StyraInc/opa v0.64.2-0.20240528225426-b6e4fe36faf4/go.mod h1:1/8fgJi6YS3DnN1X5RP9KbdZVECKJULRPCIO9b8bnRs=
 github.com/agnivade/levenshtein v1.1.1 h1:QY8M92nrzkmr798gCo3kmMyqXFzdQVpxLlGPRBij0P8=
 github.com/agnivade/levenshtein v1.1.1/go.mod h1:veldBMzWxcCG2ZvUTKD2kJNRdCk5hVbJomOvKkmgYbo=
 github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
