@@ -11,8 +11,8 @@ require (
 	github.com/docker/go-connections v0.5.0
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/google/go-cmp v0.6.0
-	github.com/hashicorp/go-retryablehttp v0.7.6
-	github.com/hashicorp/vault/api v1.13.0
+	github.com/hashicorp/go-retryablehttp v0.7.7
+	github.com/hashicorp/vault/api v1.14.0
 	github.com/minio/minio-go/v7 v7.0.70
 	github.com/open-policy-agent/opa v0.64.1
 	github.com/rogpeppe/go-internal v1.12.0
@@ -140,13 +140,13 @@ require (
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.7 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-5 // indirect
-	github.com/hashicorp/vault/api/auth/approle v0.6.0 // indirect
+	github.com/hashicorp/vault/api/auth/approle v0.7.0 // indirect
 	github.com/influxdata/go-syslog/v3 v3.0.0 // indirect
 	github.com/itchyny/gojq v0.12.14 // indirect
 	github.com/itchyny/timefmt-go v0.1.5 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
-	github.com/jackc/pgx/v5 v5.5.5 // indirect
+	github.com/jackc/pgx/v5 v5.6.0 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
