@@ -10,7 +10,7 @@ require (
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/agnivade/levenshtein v1.1.1
 	github.com/apache/pulsar-client-go v0.12.1
-	github.com/aws/aws-sdk-go v1.53.3
+	github.com/aws/aws-sdk-go v1.53.13
 	github.com/benthosdev/benthos/v4 v4.27.0
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cespare/xxhash/v2 v2.3.0
