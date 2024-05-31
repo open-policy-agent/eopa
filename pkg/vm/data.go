@@ -410,6 +410,16 @@ func (*DataOperations) IsArray(ctx context.Context, v interface{}) (bool, error)
 	}
 }
 
+func (*DataOperations) IsSet(ctx context.Context, v interface{}) (bool, error) {
+	switch v.(type) {
+	case fjson.Set:
+		return true, nil
+	default:
+		_, err := castJSON(ctx, v)
+		return false, err
+	}
+}
+
 func (*DataOperations) IsObject(ctx context.Context, v interface{}) (bool, error) {
 	switch v.(type) {
 	case fjson.Object, IterableObject, fjson.Object2:

@@ -10,42 +10,43 @@ import (
 )
 
 const (
-	typeStatementArrayAppend      = 1
-	typeStatementAssignInt        = 2
-	typeStatementAssignVar        = 3
-	typeStatementAssignVarOnce    = 4
-	typeStatementBlockStmt        = 5
-	typeStatementBreakStmt        = 6
-	typeStatementCall             = 7
-	typeStatementCallDynamic      = 8
-	typeStatementDot              = 9
-	typeStatementEqual            = 10
-	typeStatementIsArray          = 11
-	typeStatementIsDefined        = 12
-	typeStatementIsObject         = 13
-	typeStatementIsUndefined      = 14
-	typeStatementLen              = 15
-	typeStatementMakeArray        = 16
-	typeStatementMakeNull         = 17
-	typeStatementMakeNumberInt    = 18
-	typeStatementMakeNumberRef    = 19
-	typeStatementMakeObject       = 20
-	typeStatementMakeSet          = 21
-	typeStatementNop              = 22
-	typeStatementNot              = 23
-	typeStatementNotEqual         = 24
-	typeStatementObjectInsert     = 25
-	typeStatementObjectInsertOnce = 26
-	typeStatementObjectMerge      = 27
-	typeStatementResetLocal       = 28
-	typeStatementResultSetAdd     = 29
-	typeStatementReturnLocal      = 30
-	typeStatementScan             = 31
-	typeStatementSetAdd           = 32
-	typeStatementWith             = 33
+	typeStatementArrayAppend = iota + 1
+	typeStatementAssignInt
+	typeStatementAssignVar
+	typeStatementAssignVarOnce
+	typeStatementBlockStmt
+	typeStatementBreakStmt
+	typeStatementCall
+	typeStatementCallDynamic
+	typeStatementDot
+	typeStatementEqual
+	typeStatementIsArray
+	typeStatementIsDefined
+	typeStatementIsObject
+	typeStatementIsSet
+	typeStatementIsUndefined
+	typeStatementLen
+	typeStatementMakeArray
+	typeStatementMakeNull
+	typeStatementMakeNumberInt
+	typeStatementMakeNumberRef
+	typeStatementMakeObject
+	typeStatementMakeSet
+	typeStatementNop
+	typeStatementNot
+	typeStatementNotEqual
+	typeStatementObjectInsert
+	typeStatementObjectInsertOnce
+	typeStatementObjectMerge
+	typeStatementResetLocal
+	typeStatementResultSetAdd
+	typeStatementReturnLocal
+	typeStatementScan
+	typeStatementSetAdd
+	typeStatementWith
 
-	typeBuiltin  = 0
-	typeFunction = 1
+	typeBuiltin
+	typeFunction
 )
 
 type (
@@ -80,6 +81,7 @@ type (
 	equal            []byte
 	isArray          []byte
 	isDefined        []byte
+	isSet            []byte
 	isObject         []byte
 	isUndefined      []byte
 	lenStmt          []byte
@@ -916,8 +918,30 @@ func (i isObject) Type() uint32 {
 	return getType(i)
 }
 
-//go:inline
 func (i isObject) Source() LocalOrConst {
+	return getLocalOrConst(i, 4)
+}
+
+func (isSet) Write(source LocalOrConst) []byte {
+	l := 4 + 4
+	d := make([]byte, 0, l)
+
+	d = appendUint32(d, 0) // Type length placeholder.
+	d = appendLocalOrConst(d, source)
+
+	if l != len(d) {
+		panic(fmt.Sprintf("isSet %d %d", l, len(d)))
+	}
+
+	putTypeLength(d, 0, typeStatementIsSet, uint32(len(d)))
+	return d
+}
+
+func (i isSet) Type() uint32 {
+	return getType(i)
+}
+
+func (i isSet) Source() LocalOrConst {
 	return getLocalOrConst(i, 4)
 }
 

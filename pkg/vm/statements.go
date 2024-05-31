@@ -365,6 +365,7 @@ var exs = [...]func([]byte, *State) (bool, uint32, error){
 	typeStatementEqual:            n[equal],
 	typeStatementIsArray:          n[isArray],
 	typeStatementIsDefined:        n[isDefined],
+	typeStatementIsSet:            n[isSet],
 	typeStatementIsObject:         n[isObject],
 	typeStatementIsUndefined:      n[isUndefined],
 	typeStatementLen:              n[lenStmt],
@@ -734,6 +735,21 @@ func (i isArray) Execute(state *State) (bool, uint32, error) {
 	if err != nil {
 		return false, 0, err
 	}
+	return !is, 0, nil
+}
+
+func (i isSet) Execute(state *State) (bool, uint32, error) {
+	source := i.Source()
+	sourceValue := state.Value(source)
+	if defined := !isUndefinedType(sourceValue); !defined {
+		return true, 0, nil
+	}
+
+	is, err := state.ValueOps().IsSet(state.Globals.Ctx, sourceValue)
+	if err != nil {
+		return false, 0, err
+	}
+
 	return !is, 0, nil
 }
 

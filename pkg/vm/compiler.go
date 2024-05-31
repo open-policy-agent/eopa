@@ -290,6 +290,10 @@ func (c *Compiler) compileBlock(b *ir.Block) ([]byte, error) {
 			source := c.localOrConst(stmt.Source)
 			data = isArray{}.Write(source)
 
+		case *ir.IsSetStmt:
+			source := c.localOrConst(stmt.Source)
+			data = isSet{}.Write(source)
+
 		case *ir.IsObjectStmt:
 			source := c.localOrConst(stmt.Source)
 			data = isObject{}.Write(source)
