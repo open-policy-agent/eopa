@@ -40,7 +40,7 @@ require (
 	github.com/keygen-sh/keygen-go/v2 v2.9.1
 	github.com/liamg/memoryfs v1.6.0
 	github.com/lib/pq v1.10.9
-	github.com/microsoft/go-mssqldb v1.7.1
+	github.com/microsoft/go-mssqldb v1.7.2
 	github.com/minio/minio-go/v7 v7.0.70
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mithrandie/csvq v1.18.1
