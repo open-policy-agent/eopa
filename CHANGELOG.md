@@ -11,6 +11,86 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.22.0
+
+[![OPA v0.65.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.65.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.65.0)
+[![Regal v0.22.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.22.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.22.0)
+
+This release includes an new Apache Pulsar data source, a Bulk Eval HTTP API for evaluating a policy with multiple inputs in one request, and performance improvements when loading large bundles.
+
+It also updates the OPA version used in Enterprise OPA to [v0.65.0](https://github.com/open-policy-agent/opa/releases/tag/v0.65.0), and brings in various dependency bumps.
+
+### Pulsar Data Source
+
+Enterprise OPA can now subscribe to Apache Pulsar topics:
+
+```yaml
+# enterprise-opa.yaml
+plugins:
+  data:
+    users:
+      type: pulsar
+      url: pulsar://pulsar.corp.com:6650
+      topics:
+      - users
+      rego_transform: "data.pulsar.transform"
+```
+
+[See the docs for more information.](https://docs.styra.com/enterprise-opa/reference/configuration/data/pulsar)
+
+### Bulk HTTP API
+
+You can now do multiple policy evaluations in one request:
+
+```http
+POST /v1/batch/data/policy/allow
+{
+  "inputs": {
+    "id-1": {
+      "user": "alice",
+      "action": "read",
+      "resource": "book"
+    },
+    "id-2": {
+      "user": "alice",
+      "action": "create",
+      "resource": "book"
+    },
+    "id-3": {
+      "user": "alice",
+      "action": "delete",
+      "resource": "book"
+    }
+  }
+}
+```
+The response looks like this:
+
+```json
+{
+  "responses": {
+    "id-1": {
+      "result": true
+    },
+    "id-1": {
+      "result": true
+    },
+    "id-3": {
+      "result": false
+    },
+  }
+}
+```
+
+It supports the standard query parameters (like `pretty`, `metrics`, `strict-builtin-errors`).
+
+### Very large bundles performance
+
+Previously, activating a bundle did some unneeded work.
+It became apparent, and problematic, when using very large bundles (1+ GB).
+The issue has been fixed, leading to noticable performance improvements when using very large bundles.
+
+
 ## v1.21.0
 
 [![OPA v0.64.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.64.1)](https://github.com/open-policy-agent/opa/releases/tag/v0.64.1)
@@ -332,7 +412,7 @@ These releases are release engineering improvements and fixes for our automated 
 This is a bug fix release for an exception that occurred when using a
 per-output mask or drop decision that included a print() statement.
 
-It's only relevant to you if 
+It's only relevant to you if
 - you are using the `eopa_dl` decision logs plugin,
 - with a per-output mask_decision or drop_decision,
 - and that decision includes a `print()` call.
