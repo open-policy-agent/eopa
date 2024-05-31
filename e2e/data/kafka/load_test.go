@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/benthosdev/benthos/v4/public/components/kafka"
-	_ "github.com/benthosdev/benthos/v4/public/components/pure"          // "generate" input
-	_ "github.com/benthosdev/benthos/v4/public/components/pure/extended" // fake() builtin
-	"github.com/benthosdev/benthos/v4/public/service"
+	"github.com/redpanda-data/benthos/v4/public/service"
+	_ "github.com/redpanda-data/connect/v4/public/components/kafka"
+	_ "github.com/redpanda-data/connect/v4/public/components/pure"          // "generate" input
+	_ "github.com/redpanda-data/connect/v4/public/components/pure/extended" // fake() builtin
 
 	"github.com/testcontainers/testcontainers-go"
 
