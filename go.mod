@@ -50,7 +50,7 @@ require (
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/open-policy-agent/opa v0.65.0
-	github.com/open-policy-agent/opa-envoy-plugin v0.64.1-envoy
+	github.com/open-policy-agent/opa-envoy-plugin v0.65.0-envoy
 	github.com/prometheus/client_golang v1.19.1
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/sbabiv/xml2map v1.2.1

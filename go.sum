@@ -873,8 +873,8 @@ github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7J
 github.com/onsi/gomega v1.9.0/go.mod h1:Ho0h+IUsWyvy1OpqCwxlQ/21gkhVunqlU8fDGcoTdcA=
 github.com/onsi/gomega v1.27.10 h1:naR28SdDFlqrG6kScpT8VWpu1xWY5nJRCF3XaYyBjhI=
 github.com/onsi/gomega v1.27.10/go.mod h1:RsS8tutOdbdgzbPtzzATp12yT7kM5I5aElG3evPbQ0M=
-github.com/open-policy-agent/opa-envoy-plugin v0.64.1-envoy h1:YCH3+S/tbivQS7lZDsdNbZkHYp8lpFcUIAYzAkLwWKo=
-github.com/open-policy-agent/opa-envoy-plugin v0.64.1-envoy/go.mod h1:oesxvjmmIO3p0nPmy/xzv9oEsL4B+Ofdmd5vnHNZzAA=
+github.com/open-policy-agent/opa-envoy-plugin v0.65.0-envoy h1:HN/mBZeRpcNUmcOVZddxW0lhtQTagiLTPxf+mszXI1s=
+github.com/open-policy-agent/opa-envoy-plugin v0.65.0-envoy/go.mod h1:K7QVzQXxhv0S0PkDwazG/NZN6Jtaq0jQqfW0fftjPBU=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.0 h1:8SG7/vwALn54lVB/0yZ/MMwhFrPYtpEHQb2IpWsCzug=
