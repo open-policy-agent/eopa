@@ -82,7 +82,7 @@ auth-deploy-ci-debug:
 # goreleaser uses latest version tag.
 .PHONY: release release-ci release-wasm release-single
 release:
-	HOSTNAME=$(HOSTNAME) goreleaser release --snapshot --skip-publish --clean
+	HOSTNAME=$(HOSTNAME) goreleaser release --snapshot --skip=publish --clean
 
 release-single:
 	HOSTNAME=$(HOSTNAME) goreleaser build --snapshot --clean --single-target
