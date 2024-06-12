@@ -84,7 +84,7 @@ require (
 	golang.org/x/sync v0.7.0
 	golang.org/x/term v0.21.0
 	google.golang.org/grpc v1.64.0
-	google.golang.org/protobuf v1.34.1
+	google.golang.org/protobuf v1.34.2
 	gopkg.in/h2non/gock.v1 v1.1.2
 	modernc.org/sqlite v1.30.1
 	sigs.k8s.io/yaml v1.4.0
