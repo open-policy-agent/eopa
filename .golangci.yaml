@@ -42,3 +42,4 @@ issues:
     - "exported: type name will be used (.*) by other packages, and that stutters"
   exclude-dirs:
     - pkg/json/internal # copied from stdlib
+    - internal/benthos # internalized benthos code
