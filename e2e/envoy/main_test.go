@@ -46,6 +46,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestSimple(t *testing.T) {
+	t.Skip("Docker Image Format v1 is no longer supported; this test needs a new echo service.")
 	ctx := context.Background()
 	const config = `plugins:
   envoy_ext_authz_grpc:
@@ -74,7 +75,7 @@ allow if {
   input.parsed_body = {
     "text": "Maddaddam"
   }
-} 
+}
 `
 	// Start up containers.
 	eopa, _, eopaErr := loadEnterpriseOPA(t, "yages.pb", fmt.Sprintf(config, bind, eopaHTTPPort), policy, eopaHTTPPort)
