@@ -1,8 +1,8 @@
 module github.com/styrainc/enterprise-opa-private
 
-go 1.21.0
+go 1.22
 
-toolchain go1.22.3
+toolchain go1.22.4
 
 require (
 	git.sr.ht/~charles/graph v0.0.1
@@ -62,7 +62,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
-	github.com/styrainc/regal v0.22.0
+	github.com/styrainc/regal v0.23.1
 	github.com/testcontainers/testcontainers-go v0.31.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.31.0
 	github.com/testcontainers/testcontainers-go/modules/localstack v0.31.0

@@ -44,7 +44,7 @@ func record() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "record",
 		Short: "Start recording",
-		RunE: func(c *cobra.Command, args []string) error {
+		RunE: func(c *cobra.Command, _ []string) error {
 			ctx, cancel := context.WithCancel(c.Context())
 			defer cancel()
 

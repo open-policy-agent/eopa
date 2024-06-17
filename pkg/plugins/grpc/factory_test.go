@@ -18,7 +18,7 @@ import (
 )
 
 func TestValidate(t *testing.T) {
-	isConfig := func(t *testing.T, path string, exp grpc.Config) func(*testing.T, any, error) {
+	isConfig := func(exp grpc.Config) func(*testing.T, any, error) {
 		return func(t *testing.T, c any, err error) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -44,7 +44,7 @@ func TestValidate(t *testing.T) {
 			config: `
 addr: 127.0.0.1:8083
 `,
-			checks: isConfig(t, "grpc.updates", grpc.Config{
+			checks: isConfig(grpc.Config{
 				Addr: "127.0.0.1:8083",
 			}),
 		},

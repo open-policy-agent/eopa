@@ -124,7 +124,7 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 		Use:   "eopa",
 		Short: "Enterprise OPA",
 
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			if instructionLimit > 0 {
 				rego_vm.SetLimits(instructionLimit)
 			}

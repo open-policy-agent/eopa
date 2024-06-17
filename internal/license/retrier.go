@@ -68,7 +68,7 @@ func retrier(ctx context.Context, delay time.Duration, maxAttempts int, logger l
 			),
 			ctx,
 		),
-		func(err error, d time.Duration) {
+		func(err error, _ time.Duration) {
 			if hasDeadline && maxAttempts != 1 { // if we're only doing one attempt, don't log this
 				timeBeforeShutdown := time.Until(deadline)
 				logger.Warn("%v: retrying for %v before shutdown", err, timeBeforeShutdown.Truncate(time.Minute))

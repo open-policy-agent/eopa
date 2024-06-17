@@ -14,7 +14,7 @@ function onLoad() {
   const urlParams = new URLSearchParams(window.location.search);
   const port = urlParams.get('callback')
   console.log(document.cookie.split("; "));
-  
+
   fetch("http://127.0.0.1:"+port, {
     credentials: "include",
   });
@@ -28,7 +28,7 @@ window.onload = onLoad;
 </html>`
 
 func main() {
-	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		c := http.Cookie{
 			Name:     "gossid",
 			Value:    "sesame",

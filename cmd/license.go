@@ -35,7 +35,7 @@ func LicenseCmd(lic *license.Checker, lparams *keygen.LicenseParams) *cobra.Comm
 	c := &cobra.Command{
 		Use:   "license",
 		Short: "License status",
-		RunE: func(c *cobra.Command, args []string) error {
+		RunE: func(c *cobra.Command, _ []string) error {
 			c.SilenceErrors = true
 			c.SilenceUsage = true
 
@@ -82,7 +82,7 @@ func TrialCmd(client trial.Client) *cobra.Command {
 		Short:        "Create a new Enterprise OPA trial license.",
 		Long:         "Gather all of the data needed to create a new Enterprise OPA trial license and create one. Any information not provided via flags is collected interactively. Upon success, the new trial license key is printed to stdout.",
 		SilenceUsage: true,
-		RunE: func(c *cobra.Command, args []string) error {
+		RunE: func(*cobra.Command, []string) error {
 			return trial.Run(trial.RunTrialArgs{
 				Input:   input,
 				KeyOnly: keyOnly,

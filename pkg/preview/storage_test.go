@@ -87,7 +87,7 @@ func TestTransactionIterReturnsEarly(t *testing.T) {
 	ctx := context.Background()
 	transaction := iterableTestTransaction(ctx, t, testStore(t))
 	iterations := 0
-	transaction.Iter(ctx, func(k, v any) (bool, error) {
+	transaction.Iter(ctx, func(_, _ any) (bool, error) {
 		iterations++
 		return true, nil
 	})

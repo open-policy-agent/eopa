@@ -93,7 +93,7 @@ func (p *grpcServerPlugin) Start(context.Context) error {
 	// Note(philip): Triggers so that if the runtime reloads the policies,
 	// the gRPC server sees the change.
 	config := storage.TriggerConfig{
-		OnCommit: func(_ context.Context, _ storage.Transaction, ev storage.TriggerEvent) {
+		OnCommit: func(context.Context, storage.Transaction, storage.TriggerEvent) {
 			// Note(philip): Write-lock server instance before replacing the cache.
 			p.server.mtx.Lock()
 			defer p.server.mtx.Unlock()

@@ -134,7 +134,7 @@ func TestTrialInteractiveError(t *testing.T) {
 		Company:   defaultInput.Company,
 	}
 
-	runFormFunc := func(element tui.FormElement) (string, error) {
+	runFormFunc := func(tui.FormElement) (string, error) {
 		return "", expectedError
 	}
 

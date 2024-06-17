@@ -134,7 +134,7 @@ func TestStoreRead(t *testing.T) {
 
 					opts.Stores = append(opts.Stores, StoreOptions{
 						Paths: paths,
-						New: func(ctx context.Context, logger logging.Logger, prom prometheus.Registerer, opts interface{}) (storage.Store, error) {
+						New: func(context.Context, logging.Logger, prometheus.Registerer, interface{}) (storage.Store, error) {
 							return store, nil
 						},
 					})
@@ -190,7 +190,7 @@ func TestStoreWrite(t *testing.T) {
 
 					opts.Stores = append(opts.Stores, StoreOptions{
 						Paths: paths,
-						New: func(ctx context.Context, logger logging.Logger, prom prometheus.Registerer, opts interface{}) (storage.Store, error) {
+						New: func(context.Context, logging.Logger, prometheus.Registerer, interface{}) (storage.Store, error) {
 							return store, nil
 						},
 					})

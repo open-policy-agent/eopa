@@ -50,8 +50,8 @@ Build with `make build`, run with `make run`, publish with `make push`.
 - `Makefile`: top-level make
 - `main.go`: golang main
 - `go.mod`, `go.sum`: golang module configuration: 'make update'
-- `.goreleaser.yaml`, `.goreleaser-wasm.yaml`: goreleaser build scripts
-- `.golangci.yaml`, `.golangci-optional.yml`: golang lint configuration
+- `.goreleaser.yaml`: goreleaser build scripts
+- `.golangci.yaml`: golang lint configuration
 - `.github/workflows`: github actions
 - `.ko.yaml`: ko-build
 
@@ -235,4 +235,3 @@ git tag v0.100.1
 # push
 git push origin v0.100.1
 ```
-

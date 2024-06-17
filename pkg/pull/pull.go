@@ -380,7 +380,7 @@ func (c *cl) checkStaleFiles() error {
 func (c *cl) writeToFS() error {
 	// We walk the memfs and create whatever we find in the OS target
 	// directory.
-	return fs.WalkDir(c.fs, c.target, func(path string, d fs.DirEntry, err error) error {
+	return fs.WalkDir(c.fs, c.target, func(path string, _ fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

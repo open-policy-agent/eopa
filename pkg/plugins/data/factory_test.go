@@ -284,7 +284,7 @@ downdates:
   - updates
   rego_transform: data.utils.transform_events
 `,
-			checks: func(tb testing.TB, c any, err error) {
+			checks: func(tb testing.TB, _ any, err error) {
 				var poe *data.PathOverlapError
 				if errors.As(err, &poe) {
 					return
@@ -321,7 +321,7 @@ kafka.updates:
 `,
 			checks: func(tb testing.TB, _ any, err error) {
 				if exp, act := "data plugin kafka (kafka.updates): need at least one topic", err.Error(); exp != act {
-					t.Errorf("expected error %q, got %q", exp, act)
+					tb.Errorf("expected error %q, got %q", exp, act)
 				}
 			},
 		},
@@ -342,10 +342,10 @@ kafka.updates:
 `,
 			checks: func(tb testing.TB, _ any, err error) {
 				if err == nil {
-					t.Fatal("expected error")
+					tb.Fatal("expected error")
 				}
 				if exp, act := "data plugin kafka (kafka.updates): unknown SASL mechanism", err.Error(); exp != act {
-					t.Errorf("expected error %q, got %q", exp, act)
+					tb.Errorf("expected error %q, got %q", exp, act)
 				}
 			},
 		},

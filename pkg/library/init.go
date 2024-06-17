@@ -45,7 +45,7 @@ func loader(res map[string]*ast.Module) (map[string]*ast.Module, error) {
 func toMap(fsys fs.FS) (map[string]*ast.Module, map[string]string, error) {
 	mods := make(map[string]*ast.Module)
 	pkgs := make(map[string]string)
-	if err := fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
+	if err := fs.WalkDir(fsys, ".", func(p string, _ fs.DirEntry, _ error) error {
 		if filepath.Ext(p) == ".rego" {
 			fd, err := fsys.Open(p)
 			if err != nil {

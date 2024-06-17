@@ -71,7 +71,7 @@ func main() {
 		Use:   "iropt",
 		Short: "iropt allows optimizing a Rego IR plan, and supports the same CLI options as EOPA.",
 		Long:  ``,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(*cobra.Command, []string) {
 			// Get input Rego file from stdin or a file on disk.
 			var fileBytes bytes.Buffer
 			if filename == "" {

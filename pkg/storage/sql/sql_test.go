@@ -9,7 +9,6 @@ import (
 	"github.com/open-policy-agent/opa/logging"
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/open-policy-agent/opa/util"
-	"github.com/open-policy-agent/opa/util/test"
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
@@ -73,82 +72,80 @@ func TestDataTableValidation(t *testing.T) {
 		}
 	}
 
-	test.WithTempFS(map[string]string{}, func(dir string) {
-		ctx := context.Background()
+	ctx := context.Background()
 
-		if _, err := New(ctx, logging.NewNoOpLogger(), nil,
-			options.WithTables([]TableOpt{
-				{Table: "foo_bar", Path: storage.MustParsePath("/foo/bar")},
-				{Table: "foo_bar_baz", Path: storage.MustParsePath("/foo/bar/baz")},
-			})); err == nil {
-			t.Fatal("expected error")
-		} else if sErr, ok := err.(*storage.Error); !ok {
-			t.Fatal("expected storage error but got:", err)
-		} else if sErr.Code != storage.InternalErr || sErr.Message != "tables overlap: [/foo/bar /foo/bar/baz]" {
-			t.Fatal("unexpected code or message, got:", err)
-		}
+	if _, err := New(ctx, logging.NewNoOpLogger(), nil,
+		options.WithTables([]TableOpt{
+			{Table: "foo_bar", Path: storage.MustParsePath("/foo/bar")},
+			{Table: "foo_bar_baz", Path: storage.MustParsePath("/foo/bar/baz")},
+		})); err == nil {
+		t.Fatal("expected error")
+	} else if sErr, ok := err.(*storage.Error); !ok {
+		t.Fatal("expected storage error but got:", err)
+	} else if sErr.Code != storage.InternalErr || sErr.Message != "tables overlap: [/foo/bar /foo/bar/baz]" {
+		t.Fatal("unexpected code or message, got:", err)
+	}
 
-		if _, err := New(ctx, logging.NewNoOpLogger(), nil,
-			options.WithTables([]TableOpt{
-				{Table: "foo_bar", Path: storage.MustParsePath("/foo/bar"), KeyColumns: []string{}},
-			})); err == nil {
-			t.Fatal("expected error")
-		} else if sErr, ok := err.(*storage.Error); !ok {
-			t.Fatal("expected storage error but got:", err)
-		} else if sErr.Code != storage.InternalErr || sErr.Message != "table has invalid column(s): /foo/bar" {
-			t.Fatal("unexpected code or message, got:", err)
-		}
+	if _, err := New(ctx, logging.NewNoOpLogger(), nil,
+		options.WithTables([]TableOpt{
+			{Table: "foo_bar", Path: storage.MustParsePath("/foo/bar"), KeyColumns: []string{}},
+		})); err == nil {
+		t.Fatal("expected error")
+	} else if sErr, ok := err.(*storage.Error); !ok {
+		t.Fatal("expected storage error but got:", err)
+	} else if sErr.Code != storage.InternalErr || sErr.Message != "table has invalid column(s): /foo/bar" {
+		t.Fatal("unexpected code or message, got:", err)
+	}
 
-		if _, err := New(ctx, logging.NewNoOpLogger(), nil,
-			options.WithTables([]TableOpt{
-				{Table: "foo_bar", Path: storage.MustParsePath("/foo/bar"), KeyColumns: []string{"k"}},
-			})); err == nil {
-			t.Fatal("expected error")
-		} else if sErr, ok := err.(*storage.Error); !ok {
-			t.Fatal("expected storage error but got:", err)
-		} else if sErr.Code != storage.InternalErr || sErr.Message != "table has invalid column(s): /foo/bar" {
-			t.Fatal("unexpected code or message, got:", err)
-		}
+	if _, err := New(ctx, logging.NewNoOpLogger(), nil,
+		options.WithTables([]TableOpt{
+			{Table: "foo_bar", Path: storage.MustParsePath("/foo/bar"), KeyColumns: []string{"k"}},
+		})); err == nil {
+		t.Fatal("expected error")
+	} else if sErr, ok := err.(*storage.Error); !ok {
+		t.Fatal("expected storage error but got:", err)
+	} else if sErr.Code != storage.InternalErr || sErr.Message != "table has invalid column(s): /foo/bar" {
+		t.Fatal("unexpected code or message, got:", err)
+	}
 
-		// set up two tables
-		s, err := New(ctx, logging.NewNoOpLogger(), nil,
-			options.WithTables([]TableOpt{
-				{Table: "foo_bar", Path: storage.MustParsePath("/foo/bar"), KeyColumns: []string{"k"}, ValueColumns: []ValueColumnOpt{{Column: "v", Type: ColumnTypeJSON}}},
-				{Table: "foo_baz", Path: storage.MustParsePath("/foo/baz"), KeyColumns: []string{"k1", "k2"}, ValueColumns: []ValueColumnOpt{{Column: "vv", Type: ColumnTypeJSON}}},
-			}))
-		if err != nil {
-			t.Fatal(err)
-		}
+	// set up two tables
+	s, err := New(ctx, logging.NewNoOpLogger(), nil,
+		options.WithTables([]TableOpt{
+			{Table: "foo_bar", Path: storage.MustParsePath("/foo/bar"), KeyColumns: []string{"k"}, ValueColumns: []ValueColumnOpt{{Column: "v", Type: ColumnTypeJSON}}},
+			{Table: "foo_baz", Path: storage.MustParsePath("/foo/baz"), KeyColumns: []string{"k1", "k2"}, ValueColumns: []ValueColumnOpt{{Column: "vv", Type: ColumnTypeJSON}}},
+		}))
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		closeFn(ctx, s.(*Store))
+	closeFn(ctx, s.(*Store))
 
-		// init with same settings: nothing wrong
-		s, err = New(ctx, logging.NewNoOpLogger(), nil,
-			options.WithTables([]TableOpt{
-				{Table: "foo_bar", Path: storage.MustParsePath("/foo/bar"), KeyColumns: []string{"k"}, ValueColumns: []ValueColumnOpt{{Column: "v", Type: ColumnTypeJSON}}},
-				{Table: "foo_baz", Path: storage.MustParsePath("/foo/baz"), KeyColumns: []string{"k1", "k2"}, ValueColumns: []ValueColumnOpt{{Column: "vv", Type: ColumnTypeJSON}}},
-			}))
-		if err != nil {
-			t.Fatal(err)
-		}
+	// init with same settings: nothing wrong
+	s, err = New(ctx, logging.NewNoOpLogger(), nil,
+		options.WithTables([]TableOpt{
+			{Table: "foo_bar", Path: storage.MustParsePath("/foo/bar"), KeyColumns: []string{"k"}, ValueColumns: []ValueColumnOpt{{Column: "v", Type: ColumnTypeJSON}}},
+			{Table: "foo_baz", Path: storage.MustParsePath("/foo/baz"), KeyColumns: []string{"k1", "k2"}, ValueColumns: []ValueColumnOpt{{Column: "vv", Type: ColumnTypeJSON}}},
+		}))
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		closeFn(ctx, s.(*Store))
+	closeFn(ctx, s.(*Store))
 
-		// adding another table
-		s, err = New(ctx, logging.NewNoOpLogger(), nil,
-			options.WithTables([]TableOpt{
-				{Table: "foo_bar", Path: storage.MustParsePath("/foo/bar"), KeyColumns: []string{"k"}, ValueColumns: []ValueColumnOpt{{Column: "v", Type: ColumnTypeJSON}}},
-				{Table: "foo_baz", Path: storage.MustParsePath("/foo/baz"), KeyColumns: []string{"k1", "k2"}, ValueColumns: []ValueColumnOpt{{Column: "vv", Type: ColumnTypeJSON}}},
-				{Table: "foo_qux", Path: storage.MustParsePath("/foo/qux"), KeyColumns: []string{"k3", "k4"}, ValueColumns: []ValueColumnOpt{{Column: "vvv", Type: ColumnTypeJSON}}},
-			}))
-		if err != nil {
-			t.Fatal(err)
-		}
+	// adding another table
+	s, err = New(ctx, logging.NewNoOpLogger(), nil,
+		options.WithTables([]TableOpt{
+			{Table: "foo_bar", Path: storage.MustParsePath("/foo/bar"), KeyColumns: []string{"k"}, ValueColumns: []ValueColumnOpt{{Column: "v", Type: ColumnTypeJSON}}},
+			{Table: "foo_baz", Path: storage.MustParsePath("/foo/baz"), KeyColumns: []string{"k1", "k2"}, ValueColumns: []ValueColumnOpt{{Column: "vv", Type: ColumnTypeJSON}}},
+			{Table: "foo_qux", Path: storage.MustParsePath("/foo/qux"), KeyColumns: []string{"k3", "k4"}, ValueColumns: []ValueColumnOpt{{Column: "vvv", Type: ColumnTypeJSON}}},
+		}))
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		closeFn(ctx, s.(*Store))
+	closeFn(ctx, s.(*Store))
 
-		// TODO: Currently a schema change is not detected.
-	})
+	// TODO: Currently a schema change is not detected.
 }
 
 func TestDataTableReadsAndWrites(t *testing.T) {
@@ -538,40 +535,38 @@ func TestDataTableReadsAndWrites(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
-			test.WithTempFS(map[string]string{}, func(dir string) {
-				ctx := context.Background()
-				s, err := New(ctx, logging.NewNoOpLogger(), nil, options.WithTables(tc.tables))
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer func() {
-					s.(*Store).Close(ctx)
-				}()
+			ctx := context.Background()
+			s, err := New(ctx, logging.NewNoOpLogger(), nil, options.WithTables(tc.tables))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				s.(*Store).Close(ctx)
+			}()
 
-				for _, x := range tc.sequence {
-					switch x := x.(type) {
-					case testCount:
-						x.assert(t, s.(*Store))
-					case testWrite:
-						executeTestWrite(ctx, t, s, x)
-					case testRead:
-						result, err := storage.ReadOne(ctx, s, storage.MustParsePath(x.path))
-						if err != nil {
-							t.Fatal(err)
-						}
-						var exp fjson.Json
-						if x.exp != "" {
-							exp, _ = fjson.New(util.MustUnmarshalJSON([]byte(x.exp)))
-						}
-
-						if exp.Compare(fjson.MustNew(result)) != 0 {
-							t.Fatalf("expected %v but got %v", x.exp, result)
-						}
-					default:
-						panic("unexpected type")
+			for _, x := range tc.sequence {
+				switch x := x.(type) {
+				case testCount:
+					x.assert(t, s.(*Store))
+				case testWrite:
+					executeTestWrite(ctx, t, s, x)
+				case testRead:
+					result, err := storage.ReadOne(ctx, s, storage.MustParsePath(x.path))
+					if err != nil {
+						t.Fatal(err)
 					}
+					var exp fjson.Json
+					if x.exp != "" {
+						exp, _ = fjson.New(util.MustUnmarshalJSON([]byte(x.exp)))
+					}
+
+					if exp.Compare(fjson.MustNew(result)) != 0 {
+						t.Fatalf("expected %v but got %v", x.exp, result)
+					}
+				default:
+					panic("unexpected type")
 				}
-			})
+			}
 		})
 	}
 }

@@ -557,7 +557,7 @@ func TestInMemoryTriggersUnregister(t *testing.T) {
 
 	var called bool
 	_, err := store.Register(ctx, writeTxn, storage.TriggerConfig{
-		OnCommit: func(ctx context.Context, txn storage.Transaction, evt storage.TriggerEvent) {
+		OnCommit: func(_ context.Context, _ storage.Transaction, evt storage.TriggerEvent) {
 			if !evt.IsZero() {
 				called = true
 			}
@@ -568,7 +568,7 @@ func TestInMemoryTriggersUnregister(t *testing.T) {
 	}
 
 	handle, err := store.Register(ctx, writeTxn, storage.TriggerConfig{
-		OnCommit: func(ctx context.Context, txn storage.Transaction, evt storage.TriggerEvent) {
+		OnCommit: func(_ context.Context, _ storage.Transaction, evt storage.TriggerEvent) {
 			if !evt.IsZero() {
 				t.Fatalf("Callback should have been unregistered")
 			}

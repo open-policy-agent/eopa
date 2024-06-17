@@ -128,7 +128,7 @@ func TestTree(t *testing.T) {
 
 					switch i := result.(type) {
 					case node:
-						err = i.Iter(ctx, func(key, value interface{}) (bool, error) {
+						err = i.Iter(ctx, func(key, _ interface{}) (bool, error) {
 							if keys == nil {
 								keys = make([]string, 0)
 							}

@@ -9,7 +9,7 @@ import (
 )
 
 func TestValidate(t *testing.T) {
-	isConfig := func(t *testing.T, exp impact.Config) func(*testing.T, any, error) {
+	isConfig := func(exp impact.Config) func(*testing.T, any, error) {
 		return func(t *testing.T, c any, err error) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -33,14 +33,14 @@ func TestValidate(t *testing.T) {
 			config: `
 {}
 `,
-			checks: isConfig(t, impact.Config{}),
+			checks: isConfig(impact.Config{}),
 		},
 		{
 			note: "decision logs enabled",
 			config: `
 decision_logs: true
 `,
-			checks: isConfig(t, impact.Config{
+			checks: isConfig(impact.Config{
 				DecisionLogs: true,
 			}),
 		},

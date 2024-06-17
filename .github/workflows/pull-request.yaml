@@ -42,9 +42,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.55.2
-          skip-pkg-cache: true
-          skip-build-cache: true
+          version: v1.59.1
           args: --timeout=10m --out-format=colored-line-number,github-actions
       # Do a pre-flight check to ensure we don't bother with `buf` unless
       # we have protobuf changes present.

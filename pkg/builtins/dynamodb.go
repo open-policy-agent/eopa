@@ -476,7 +476,7 @@ func builtinDynamoDBQuery(bctx topdown.BuiltinContext, operands []*ast.Term, ite
 			err2 error
 		)
 
-		if err := client.QueryPagesWithContext(bctx.Context, &request, func(output *dynamodb.QueryOutput, last bool) bool {
+		if err := client.QueryPagesWithContext(bctx.Context, &request, func(output *dynamodb.QueryOutput, _last bool) bool {
 			for _, item := range output.Items {
 				row := make(map[string]interface{})
 				err2 = dynamodbattribute.UnmarshalMap(item, &row)

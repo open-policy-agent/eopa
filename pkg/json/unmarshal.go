@@ -39,7 +39,7 @@ func (decoder *Decoder) UnmarshalString() (string, error) {
 
 func (decoder *Decoder) UnmarshalObject(f func(property string, decoder *Decoder) error) error {
 	var err error
-	decoder.iter.ReadMapCB(func(iter *jsoniter.Iterator, field string) bool {
+	decoder.iter.ReadMapCB(func(_ *jsoniter.Iterator, field string) bool {
 		err = f(field, decoder)
 		return err == nil
 	})
@@ -51,7 +51,7 @@ func (decoder *Decoder) UnmarshalObject(f func(property string, decoder *Decoder
 
 func (decoder *Decoder) UnmarshalArray(f func(decoder *Decoder) error) error {
 	var err error
-	decoder.iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
+	decoder.iter.ReadArrayCB(func(*jsoniter.Iterator) bool {
 		err = f(decoder)
 		return err == nil
 	})

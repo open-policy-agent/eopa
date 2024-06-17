@@ -57,8 +57,8 @@ plugins:
 					"title":  "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
 				},
 			},
-			handler: func(tb testing.TB) http.HandlerFunc {
-				return func(writer http.ResponseWriter, request *http.Request) {
+			handler: func(testing.TB) http.HandlerFunc {
+				return func(writer http.ResponseWriter, _ *http.Request) {
 					writer.Write([]byte(`
 {
   "userId": 1,
@@ -86,8 +86,8 @@ plugins:
 					},
 				},
 			},
-			handler: func(tb testing.TB) http.HandlerFunc {
-				return func(writer http.ResponseWriter, request *http.Request) {
+			handler: func(testing.TB) http.HandlerFunc {
+				return func(writer http.ResponseWriter, _ *http.Request) {
 					writer.Write([]byte(`
 {
   "userId": "admin",
@@ -120,9 +120,9 @@ plugins:
 					"title":  "quia et suscipit suscipit recusandae consequuntur expedita et cum reprehenderit molestiae ut ut quas totam nostrum rerum est autem sunt rem eveniet architecto",
 				},
 			},
-			handler: func(tb testing.TB) http.HandlerFunc {
+			handler: func(testing.TB) http.HandlerFunc {
 				first := true
-				return func(writer http.ResponseWriter, request *http.Request) {
+				return func(writer http.ResponseWriter, _ *http.Request) {
 					if first {
 						writer.Write([]byte(`
 {
@@ -298,21 +298,19 @@ plugins:
       type: http
       url: %[1]s
 `
-	handler := func(tb testing.TB) http.HandlerFunc {
-		return func(writer http.ResponseWriter, request *http.Request) {
-			writer.Write([]byte(`
+	var handler http.HandlerFunc = func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Write([]byte(`
 {
   "userId": 1,
   "id": 1,
   "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",
 }`,
-			))
-		}
+		))
 	}
 
 	defer goleak.VerifyNone(t)
 
-	srv := httptest.NewServer(handler(t))
+	srv := httptest.NewServer(handler)
 	defer srv.Close()
 	ctx := context.Background()
 	cfg := fmt.Sprintf(config, srv.URL)

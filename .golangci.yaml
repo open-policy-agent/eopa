@@ -1,15 +1,10 @@
 run:
   timeout: 5m
-  skip-dirs:
-    - pkg/json/internal # copied from stdlib
   build-tags:
     - use_opa_fork
 linters-settings:
   lll:
     line-length: 200
-
-  misspell:
-    locale: US
 
   revive:
     rules:
@@ -22,7 +17,6 @@ linters-settings:
 
 output:
   print-issued-lines: true
-  format: github-actions
   sort-results: true
 
 linters:
@@ -34,7 +28,6 @@ linters:
     - gofmt
     - goimports
     - unused
-    - misspell
     - typecheck
     - staticcheck
     - gosimple
@@ -47,3 +40,5 @@ issues:
     - "var-naming: type (.*Json.*) should be "
     - "unexported-return: exported method (.*) returns unexported type"
     - "exported: type name will be used (.*) by other packages, and that stutters"
+  exclude-dirs:
+    - pkg/json/internal # copied from stdlib
