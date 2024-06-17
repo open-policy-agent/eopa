@@ -11,7 +11,6 @@ require (
 	github.com/agnivade/levenshtein v1.1.1
 	github.com/apache/pulsar-client-go v0.12.1
 	github.com/aws/aws-sdk-go v1.53.19
-	github.com/benthosdev/benthos/v4 v4.27.0
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/charmbracelet/bubbles v0.18.0
@@ -53,6 +52,8 @@ require (
 	github.com/open-policy-agent/opa-envoy-plugin v0.65.0-envoy
 	github.com/prometheus/client_golang v1.19.1
 	github.com/redis/go-redis/v9 v9.5.3
+	github.com/redpanda-data/benthos/v4 v4.30.0
+	github.com/redpanda-data/connect/v4 v4.30.1
 	github.com/sbabiv/xml2map v1.2.1
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
@@ -117,7 +118,7 @@ require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/ardielle/ardielle-go v1.5.2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
-	github.com/aws/aws-lambda-go v1.46.0 // indirect
+	github.com/aws/aws-lambda-go v1.47.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.25.2 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.1 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.27.5 // indirect
@@ -149,7 +150,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.28.2 // indirect
 	github.com/aws/smithy-go v1.20.1 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.4.0 // indirect
 	github.com/bytecodealliance/wasmtime-go/v3 v3.0.2 // indirect
@@ -212,7 +212,6 @@ require (
 	github.com/google/flatbuffers v24.3.25+incompatible // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/pprof v0.0.0-20240409012703-83162a5b38cd // indirect
-	github.com/gorilla/css v1.0.0 // indirect
 	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0 // indirect
@@ -262,7 +261,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/microcosm-cc/bluemonday v1.0.25 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mithrandie/go-file/v2 v2.1.0 // indirect
@@ -398,6 +396,3 @@ replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
 replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.65.1-0.20240530211100-548294624618
-
-// https://github.com/benthosdev/benthos/pull/2592 + https://github.com/benthosdev/benthos/pull/2602
-replace github.com/benthosdev/benthos/v4 => github.com/srenatus/benthos/v4 v4.27.1-0.20240522123546-c0fc010a0dd8

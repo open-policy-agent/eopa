@@ -7,16 +7,16 @@ import (
 	"strings"
 	"sync"
 
-	_ "github.com/benthosdev/benthos/v4/public/components/aws" // aws_s3
-	_ "github.com/benthosdev/benthos/v4/public/components/elasticsearch"
-	_ "github.com/benthosdev/benthos/v4/public/components/io" // file/stdout cache/output
-	_ "github.com/benthosdev/benthos/v4/public/components/kafka"
-	_ "github.com/benthosdev/benthos/v4/public/components/otlp"
-	_ "github.com/benthosdev/benthos/v4/public/components/pure"     // basics
-	_ "github.com/benthosdev/benthos/v4/public/components/sql/base" // SQL internals
-	_ "modernc.org/sqlite"                                          // SQLite support
+	_ "github.com/redpanda-data/benthos/v4/public/components/io"   // file/stdout cache/output
+	_ "github.com/redpanda-data/benthos/v4/public/components/pure" // basics
+	_ "github.com/redpanda-data/connect/v4/public/components/aws"  // aws_s3
+	_ "github.com/redpanda-data/connect/v4/public/components/elasticsearch"
+	_ "github.com/redpanda-data/connect/v4/public/components/kafka"
+	_ "github.com/redpanda-data/connect/v4/public/components/otlp"
+	_ "github.com/redpanda-data/connect/v4/public/components/sql/base" // SQL internals
+	_ "modernc.org/sqlite"                                             // SQLite support
 
-	"github.com/benthosdev/benthos/v4/public/service"
+	"github.com/redpanda-data/benthos/v4/public/service"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 
