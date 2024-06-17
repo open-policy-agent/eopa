@@ -46,7 +46,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestSimple(t *testing.T) {
-	t.Skip("Docker Image Format v1 is no longer supported; this test needs a new echo service.")
 	ctx := context.Background()
 	const config = `plugins:
   envoy_ext_authz_grpc:
@@ -156,9 +155,10 @@ func testEnvoy(t *testing.T, ctx context.Context, eopaHost string, eopaPort int,
 // Envoy's gRPC proxying capabilities for the demo.
 func testTestsrv(t *testing.T, ctx context.Context) (testcontainers.Container, string, int) {
 	req := testcontainers.ContainerRequest{
-		Image:        "quay.io/mhausenblas/yages:0.1.0",
+		Image:        "golang:latest",
 		ExposedPorts: []string{"9000/tcp"},
 		WaitingFor:   tc_wait.ForExposedPort(),
+		Cmd:          []string{"go", "run", "github.com/mhausenblas/yages@latest"},
 	}
 
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{

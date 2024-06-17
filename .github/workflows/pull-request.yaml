@@ -189,7 +189,6 @@ jobs:
           echo "binary=$(pwd)/eopa" >> $GITHUB_OUTPUT
           pwd >> $GITHUB_PATH
           chmod +x eopa
-      - run: docker pull quay.io/mhausenblas/yages:0.1.0
       - run: make e2e
         env:
           BINARY: ${{ steps.enterprise-opa.outputs.binary }}
