@@ -8,7 +8,8 @@ updates:
     groups:
       aws-sdk:
         patterns:
-          - "github.com/aws/aws-sdk-go-v2*"
+          - "github.com/aws/aws-sdk-go-v2/*"
+          - "github.com/aws/aws-sdk-go"
       go.opentelemetry.io:
         patterns:
           - "go.opentelemetry.io/*"
