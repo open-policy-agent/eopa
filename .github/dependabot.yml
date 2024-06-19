@@ -6,6 +6,9 @@ updates:
     schedule:
       interval: daily
     groups:
+      aws-sdk:
+        patterns:
+          - "github.com/aws/aws-sdk-go-v2*"
       go.opentelemetry.io:
         patterns:
           - "go.opentelemetry.io/*"
