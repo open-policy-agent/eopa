@@ -272,7 +272,7 @@ jobs:
           go-version: ${{ steps.go_version.outputs.go_version }}
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      - uses: ko-build/setup-ko@v0.6
+      - uses: ko-build/setup-ko@v0.7
       - name: Build
         run: make build
       - name: Upload image tarball
