@@ -11,7 +11,7 @@ require (
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/agnivade/levenshtein v1.1.1
 	github.com/apache/pulsar-client-go v0.12.1
-	github.com/aws/aws-sdk-go v1.54.5
+	github.com/aws/aws-sdk-go v1.54.6
 	github.com/aws/aws-sdk-go-v2 v1.30.0
 	github.com/aws/aws-sdk-go-v2/config v1.27.21
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.21
