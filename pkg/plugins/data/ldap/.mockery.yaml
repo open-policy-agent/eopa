@@ -1,0 +1,14 @@
+# To regenerate the mocks, just run `mockery` in this directory.
+quiet: False
+disable-version-string: True
+with-expecter: True
+mockname: "{{.InterfaceName}}"
+filename: "client.go"
+outpkg: mocks
+dir: mocks
+packages:
+  github.com/go-ldap/ldap/v3:
+    interfaces:
+      Client:
+        config:
+          with-expecter: False

@@ -3,6 +3,8 @@
 package mocks
 
 import (
+	context "context"
+
 	ldap "github.com/go-ldap/ldap/v3"
 	mock "github.com/stretchr/testify/mock"
 
@@ -20,6 +22,10 @@ type Client struct {
 func (_m *Client) Add(_a0 *ldap.AddRequest) error {
 	ret := _m.Called(_a0)
 
+	if len(ret) == 0 {
+		panic("no return value specified for Add")
+	}
+
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*ldap.AddRequest) error); ok {
 		r0 = rf(_a0)
@@ -33,6 +39,10 @@ func (_m *Client) Add(_a0 *ldap.AddRequest) error {
 // Bind provides a mock function with given fields: username, password
 func (_m *Client) Bind(username string, password string) error {
 	ret := _m.Called(username, password)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Bind")
+	}
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, string) error); ok {
@@ -48,6 +58,10 @@ func (_m *Client) Bind(username string, password string) error {
 func (_m *Client) Close() error {
 	ret := _m.Called()
 
+	if len(ret) == 0 {
+		panic("no return value specified for Close")
+	}
+
 	var r0 error
 	if rf, ok := ret.Get(0).(func() error); ok {
 		r0 = rf()
@@ -61,6 +75,10 @@ func (_m *Client) Close() error {
 // Compare provides a mock function with given fields: dn, attribute, value
 func (_m *Client) Compare(dn string, attribute string, value string) (bool, error) {
 	ret := _m.Called(dn, attribute, value)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Compare")
+	}
 
 	var r0 bool
 	var r1 error
@@ -86,6 +104,10 @@ func (_m *Client) Compare(dn string, attribute string, value string) (bool, erro
 func (_m *Client) Del(_a0 *ldap.DelRequest) error {
 	ret := _m.Called(_a0)
 
+	if len(ret) == 0 {
+		panic("no return value specified for Del")
+	}
+
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*ldap.DelRequest) error); ok {
 		r0 = rf(_a0)
@@ -99,6 +121,10 @@ func (_m *Client) Del(_a0 *ldap.DelRequest) error {
 // DirSync provides a mock function with given fields: searchRequest, flags, maxAttrCount, cookie
 func (_m *Client) DirSync(searchRequest *ldap.SearchRequest, flags int64, maxAttrCount int64, cookie []byte) (*ldap.SearchResult, error) {
 	ret := _m.Called(searchRequest, flags, maxAttrCount, cookie)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DirSync")
+	}
 
 	var r0 *ldap.SearchResult
 	var r1 error
@@ -122,9 +148,33 @@ func (_m *Client) DirSync(searchRequest *ldap.SearchRequest, flags int64, maxAtt
 	return r0, r1
 }
 
+// DirSyncAsync provides a mock function with given fields: ctx, searchRequest, bufferSize, flags, maxAttrCount, cookie
+func (_m *Client) DirSyncAsync(ctx context.Context, searchRequest *ldap.SearchRequest, bufferSize int, flags int64, maxAttrCount int64, cookie []byte) ldap.Response {
+	ret := _m.Called(ctx, searchRequest, bufferSize, flags, maxAttrCount, cookie)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DirSyncAsync")
+	}
+
+	var r0 ldap.Response
+	if rf, ok := ret.Get(0).(func(context.Context, *ldap.SearchRequest, int, int64, int64, []byte) ldap.Response); ok {
+		r0 = rf(ctx, searchRequest, bufferSize, flags, maxAttrCount, cookie)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(ldap.Response)
+		}
+	}
+
+	return r0
+}
+
 // ExternalBind provides a mock function with given fields:
 func (_m *Client) ExternalBind() error {
 	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for ExternalBind")
+	}
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func() error); ok {
@@ -140,6 +190,10 @@ func (_m *Client) ExternalBind() error {
 func (_m *Client) GetLastError() error {
 	ret := _m.Called()
 
+	if len(ret) == 0 {
+		panic("no return value specified for GetLastError")
+	}
+
 	var r0 error
 	if rf, ok := ret.Get(0).(func() error); ok {
 		r0 = rf()
@@ -153,6 +207,10 @@ func (_m *Client) GetLastError() error {
 // IsClosing provides a mock function with given fields:
 func (_m *Client) IsClosing() bool {
 	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsClosing")
+	}
 
 	var r0 bool
 	if rf, ok := ret.Get(0).(func() bool); ok {
@@ -168,6 +226,10 @@ func (_m *Client) IsClosing() bool {
 func (_m *Client) Modify(_a0 *ldap.ModifyRequest) error {
 	ret := _m.Called(_a0)
 
+	if len(ret) == 0 {
+		panic("no return value specified for Modify")
+	}
+
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*ldap.ModifyRequest) error); ok {
 		r0 = rf(_a0)
@@ -182,6 +244,10 @@ func (_m *Client) Modify(_a0 *ldap.ModifyRequest) error {
 func (_m *Client) ModifyDN(_a0 *ldap.ModifyDNRequest) error {
 	ret := _m.Called(_a0)
 
+	if len(ret) == 0 {
+		panic("no return value specified for ModifyDN")
+	}
+
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*ldap.ModifyDNRequest) error); ok {
 		r0 = rf(_a0)
@@ -195,6 +261,10 @@ func (_m *Client) ModifyDN(_a0 *ldap.ModifyDNRequest) error {
 // ModifyWithResult provides a mock function with given fields: _a0
 func (_m *Client) ModifyWithResult(_a0 *ldap.ModifyRequest) (*ldap.ModifyResult, error) {
 	ret := _m.Called(_a0)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ModifyWithResult")
+	}
 
 	var r0 *ldap.ModifyResult
 	var r1 error
@@ -222,6 +292,10 @@ func (_m *Client) ModifyWithResult(_a0 *ldap.ModifyRequest) (*ldap.ModifyResult,
 func (_m *Client) NTLMUnauthenticatedBind(domain string, username string) error {
 	ret := _m.Called(domain, username)
 
+	if len(ret) == 0 {
+		panic("no return value specified for NTLMUnauthenticatedBind")
+	}
+
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, string) error); ok {
 		r0 = rf(domain, username)
@@ -235,6 +309,10 @@ func (_m *Client) NTLMUnauthenticatedBind(domain string, username string) error 
 // PasswordModify provides a mock function with given fields: _a0
 func (_m *Client) PasswordModify(_a0 *ldap.PasswordModifyRequest) (*ldap.PasswordModifyResult, error) {
 	ret := _m.Called(_a0)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PasswordModify")
+	}
 
 	var r0 *ldap.PasswordModifyResult
 	var r1 error
@@ -262,6 +340,10 @@ func (_m *Client) PasswordModify(_a0 *ldap.PasswordModifyRequest) (*ldap.Passwor
 func (_m *Client) Search(_a0 *ldap.SearchRequest) (*ldap.SearchResult, error) {
 	ret := _m.Called(_a0)
 
+	if len(ret) == 0 {
+		panic("no return value specified for Search")
+	}
+
 	var r0 *ldap.SearchResult
 	var r1 error
 	if rf, ok := ret.Get(0).(func(*ldap.SearchRequest) (*ldap.SearchResult, error)); ok {
@@ -284,9 +366,33 @@ func (_m *Client) Search(_a0 *ldap.SearchRequest) (*ldap.SearchResult, error) {
 	return r0, r1
 }
 
+// SearchAsync provides a mock function with given fields: ctx, searchRequest, bufferSize
+func (_m *Client) SearchAsync(ctx context.Context, searchRequest *ldap.SearchRequest, bufferSize int) ldap.Response {
+	ret := _m.Called(ctx, searchRequest, bufferSize)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchAsync")
+	}
+
+	var r0 ldap.Response
+	if rf, ok := ret.Get(0).(func(context.Context, *ldap.SearchRequest, int) ldap.Response); ok {
+		r0 = rf(ctx, searchRequest, bufferSize)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(ldap.Response)
+		}
+	}
+
+	return r0
+}
+
 // SearchWithPaging provides a mock function with given fields: searchRequest, pagingSize
 func (_m *Client) SearchWithPaging(searchRequest *ldap.SearchRequest, pagingSize uint32) (*ldap.SearchResult, error) {
 	ret := _m.Called(searchRequest, pagingSize)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchWithPaging")
+	}
 
 	var r0 *ldap.SearchResult
 	var r1 error
@@ -319,6 +425,10 @@ func (_m *Client) SetTimeout(_a0 time.Duration) {
 func (_m *Client) SimpleBind(_a0 *ldap.SimpleBindRequest) (*ldap.SimpleBindResult, error) {
 	ret := _m.Called(_a0)
 
+	if len(ret) == 0 {
+		panic("no return value specified for SimpleBind")
+	}
+
 	var r0 *ldap.SimpleBindResult
 	var r1 error
 	if rf, ok := ret.Get(0).(func(*ldap.SimpleBindRequest) (*ldap.SimpleBindResult, error)); ok {
@@ -350,6 +460,10 @@ func (_m *Client) Start() {
 func (_m *Client) StartTLS(_a0 *tls.Config) error {
 	ret := _m.Called(_a0)
 
+	if len(ret) == 0 {
+		panic("no return value specified for StartTLS")
+	}
+
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*tls.Config) error); ok {
 		r0 = rf(_a0)
@@ -360,9 +474,33 @@ func (_m *Client) StartTLS(_a0 *tls.Config) error {
 	return r0
 }
 
+// Syncrepl provides a mock function with given fields: ctx, searchRequest, bufferSize, mode, cookie, reloadHint
+func (_m *Client) Syncrepl(ctx context.Context, searchRequest *ldap.SearchRequest, bufferSize int, mode ldap.ControlSyncRequestMode, cookie []byte, reloadHint bool) ldap.Response {
+	ret := _m.Called(ctx, searchRequest, bufferSize, mode, cookie, reloadHint)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Syncrepl")
+	}
+
+	var r0 ldap.Response
+	if rf, ok := ret.Get(0).(func(context.Context, *ldap.SearchRequest, int, ldap.ControlSyncRequestMode, []byte, bool) ldap.Response); ok {
+		r0 = rf(ctx, searchRequest, bufferSize, mode, cookie, reloadHint)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(ldap.Response)
+		}
+	}
+
+	return r0
+}
+
 // TLSConnectionState provides a mock function with given fields:
 func (_m *Client) TLSConnectionState() (tls.ConnectionState, bool) {
 	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for TLSConnectionState")
+	}
 
 	var r0 tls.ConnectionState
 	var r1 bool
@@ -388,6 +526,10 @@ func (_m *Client) TLSConnectionState() (tls.ConnectionState, bool) {
 func (_m *Client) UnauthenticatedBind(username string) error {
 	ret := _m.Called(username)
 
+	if len(ret) == 0 {
+		panic("no return value specified for UnauthenticatedBind")
+	}
+
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string) error); ok {
 		r0 = rf(username)
@@ -402,6 +544,10 @@ func (_m *Client) UnauthenticatedBind(username string) error {
 func (_m *Client) Unbind() error {
 	ret := _m.Called()
 
+	if len(ret) == 0 {
+		panic("no return value specified for Unbind")
+	}
+
 	var r0 error
 	if rf, ok := ret.Get(0).(func() error); ok {
 		r0 = rf()
@@ -412,13 +558,12 @@ func (_m *Client) Unbind() error {
 	return r0
 }
 
-type mockConstructorTestingTNewClient interface {
+// NewClient creates a new instance of Client. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
+// The first argument is typically a *testing.T value.
+func NewClient(t interface {
 	mock.TestingT
 	Cleanup(func())
-}
-
-// NewClient creates a new instance of Client. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
-func NewClient(t mockConstructorTestingTNewClient) *Client {
+}) *Client {
 	mock := &Client{}
 	mock.Mock.Test(t)
 
