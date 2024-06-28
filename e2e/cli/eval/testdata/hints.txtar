@@ -187,11 +187,17 @@ For more information, see: https://docs.styra.com/opa/errors/rego-compile-error/
 package p
 q := "
 -- exp/parse-assign/stdout --
-1 error occurred: parse-assign.rego:2: rego_parse_error: unexpected assign token: expected rule value term (e.g., q := <VALUE> { ... })
+3 errors occurred:
+parse-assign.rego:2: rego_parse_error: non-terminated string
 	q := "
-	  ^
+	     ^
+parse-assign.rego:2: rego_parse_error: illegal token
+	q := "
+	     ^
+parse-assign.rego:2: rego_parse_error: illegal token
+	q := "
+	     ^
 -- exp/parse-assign/stderr --
-For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-assign-token
 -- parse-identifier.rego --
 package p
 import rego.v1
