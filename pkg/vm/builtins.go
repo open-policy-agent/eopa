@@ -1104,6 +1104,12 @@ func globCompile(id, pattern string, delimiters []rune) (glob.Glob, error) {
 	globCacheLock.Lock()
 	defer globCacheLock.Unlock()
 	var err error
+	if len(globCache) > 100 {
+		for i := range globCache {
+			delete(globCache, i)
+			break
+		}
+	}
 	p, ok := globCache[id]
 	if ok {
 		return p, nil
