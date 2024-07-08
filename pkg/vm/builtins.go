@@ -1105,6 +1105,7 @@ func globCompile(id, pattern string, delimiters []rune) (glob.Glob, error) {
 	defer globCacheLock.Unlock()
 	var err error
 	if len(globCache) > 100 {
+		// Eject one item from the cache at random.
 		for i := range globCache {
 			delete(globCache, i)
 			break
