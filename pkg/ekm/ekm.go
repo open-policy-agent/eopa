@@ -135,7 +135,7 @@ func (e *EKM) onConfig(ctx context.Context, conf *config.Config) (*config.Config
 			kubernetes.WithServiceAccountTokenPath(vc.Vault.K8sService.ServiceToken),
 		)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Kubernetes auth method: %w", err)
+			return nil, nil, fmt.Errorf("kubernetes auth method: %w", err)
 		}
 
 		authInfo, err := vaultClient.Auth().Login(ctx, k8sAuth)

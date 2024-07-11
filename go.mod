@@ -74,15 +74,15 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/styrainc/regal v0.23.1
-	github.com/testcontainers/testcontainers-go v0.31.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.31.0
-	github.com/testcontainers/testcontainers-go/modules/localstack v0.31.0
-	github.com/testcontainers/testcontainers-go/modules/mssql v0.31.0
-	github.com/testcontainers/testcontainers-go/modules/mysql v0.31.0
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.31.0
-	github.com/testcontainers/testcontainers-go/modules/pulsar v0.31.0
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.31.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.31.0
+	github.com/testcontainers/testcontainers-go v0.32.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.32.0
+	github.com/testcontainers/testcontainers-go/modules/localstack v0.32.0
+	github.com/testcontainers/testcontainers-go/modules/mssql v0.32.0
+	github.com/testcontainers/testcontainers-go/modules/mysql v0.32.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.32.0
+	github.com/testcontainers/testcontainers-go/modules/pulsar v0.32.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.32.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.32.0
 	github.com/twmb/franz-go v1.17.0
 	github.com/twmb/franz-go/plugin/kprom v1.1.0
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
@@ -173,9 +173,9 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.5 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/distribution/reference v0.5.0 // indirect
+	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v25.0.3+incompatible // indirect
-	github.com/docker/docker v25.0.5+incompatible // indirect
+	github.com/docker/docker v27.0.3+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -260,6 +260,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mithrandie/go-file/v2 v2.1.0 // indirect
 	github.com/mithrandie/ternary v1.1.1 // indirect
+	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect

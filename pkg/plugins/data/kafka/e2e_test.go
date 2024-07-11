@@ -335,7 +335,7 @@ func waitForStorePath(ctx context.Context, t *testing.T, store storage.Store, pa
 }
 
 func testKafka(t *testing.T, ctx context.Context, cs ...testcontainers.ContainerCustomizer) (string, testcontainers.Container) {
-	tc, err := kafka.RunContainer(ctx, cs...)
+	tc, err := kafka.Run(ctx, "confluentinc/confluent-local:7.6.1", cs...)
 	if err != nil {
 		t.Fatalf("could not start kafka: %s", err)
 	}
@@ -353,7 +353,7 @@ func testRedPanda(t *testing.T, ctx context.Context, cs ...testcontainers.Contai
 	opts := []testcontainers.ContainerCustomizer{
 		redpanda.WithAutoCreateTopics(),
 	}
-	tc, err := redpanda.RunContainer(ctx, append(opts, cs...)...)
+	tc, err := redpanda.Run(ctx, "docker.redpanda.com/redpandadata/redpanda:v23.3.18", append(opts, cs...)...)
 	if err != nil {
 		t.Fatalf("could not start kafka: %s", err)
 	}

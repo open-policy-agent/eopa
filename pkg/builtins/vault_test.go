@@ -189,7 +189,6 @@ func startVaultMulti(t *testing.T, mount string, data map[string]map[string]stri
 	token := "root-token"
 	opts := []testcontainers.ContainerCustomizer{
 		testLogger(t),
-		testcontainers.WithImage("hashicorp/vault:1.15.4"),
 		testcontainersvault.WithToken(token),
 	}
 
@@ -208,7 +207,7 @@ func startVaultMulti(t *testing.T, mount string, data map[string]map[string]stri
 	}
 
 	ctx := context.Background()
-	srv, err := testcontainersvault.RunContainer(ctx, opts...)
+	srv, err := testcontainersvault.Run(ctx, "hashicorp/vault:1.15.4", opts...)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -365,9 +365,8 @@ func startDynamoDB(t *testing.T) (testcontainers.Container, string) {
 	ctx := context.Background()
 	opts := []testcontainers.ContainerCustomizer{
 		testLogger(t),
-		testcontainers.WithImage("localstack/localstack:2.3.0"),
 	}
-	ddb, err := localstack.RunContainer(ctx, opts...)
+	ddb, err := localstack.Run(ctx, "localstack/localstack:2.3.0", opts...)
 	if err != nil {
 		t.Fatal(err)
 	}

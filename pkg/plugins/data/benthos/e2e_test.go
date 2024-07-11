@@ -256,9 +256,8 @@ func waitForStorePath(ctx context.Context, t *testing.T, store storage.Store, pa
 }
 
 func testPulsar(t *testing.T, ctx context.Context, cs ...testcontainers.ContainerCustomizer) (string, *tc_pulsar.Container) {
-	tc, err := tc_pulsar.RunContainer(ctx,
+	tc, err := tc_pulsar.Run(ctx, "docker.io/apachepulsar/pulsar:3.2.2",
 		append(cs,
-			testcontainers.WithImage("docker.io/apachepulsar/pulsar:3.2.2"),
 			testcontainers.WithWaitStrategy(
 				wait.ForAll(
 					wait.ForHTTP("/admin/v2/clusters").

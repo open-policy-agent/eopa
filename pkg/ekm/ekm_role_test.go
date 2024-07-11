@@ -18,12 +18,11 @@ func createVaultTestRoleCluster(t *testing.T) (*testcontainervault.VaultContaine
 	t.Helper()
 
 	opts := []testcontainers.ContainerCustomizer{
-		testcontainers.WithImage("hashicorp/vault:1.15.4"),
 		testcontainervault.WithToken(token),
 		testcontainervault.WithInitCommand("secrets enable -version=2 -path=kv kv"),
 	}
 
-	vault, err := testcontainervault.RunContainer(context.Background(), opts...)
+	vault, err := testcontainervault.Run(context.Background(), "hashicorp/vault:1.15.4", opts...)
 	if err != nil {
 		t.Fatal(err)
 	}

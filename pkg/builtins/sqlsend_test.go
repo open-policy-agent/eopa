@@ -537,7 +537,7 @@ func populate(tb testing.TB, file string, init string) {
 func startMySQL(t *testing.T) backend {
 	t.Helper()
 
-	srv, err := mysql.RunContainer(context.Background(), testLogger(t))
+	srv, err := mysql.Run(context.Background(), "mysql:9.0.0", testLogger(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -566,7 +566,7 @@ func startMySQL(t *testing.T) backend {
 func startPostgreSQL(t *testing.T) backend {
 	t.Helper()
 
-	srv, err := postgres.RunContainer(context.Background(), testLogger(t),
+	srv, err := postgres.Run(context.Background(), "postgres:16.3", testLogger(t),
 		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(5*time.Second)),
 	)
 	if err != nil {
@@ -598,7 +598,7 @@ func startMSSQL(t *testing.T) backend {
 	t.Helper()
 	password := "dEa9de93391d4312b18!520"
 
-	srv, err := mssql.RunContainer(context.Background(), testLogger(t),
+	srv, err := mssql.Run(context.Background(), "mcr.microsoft.com/mssql/server:2022-RTM-GDR1-ubuntu-20.04", testLogger(t),
 		mssql.WithAcceptEULA(),
 		mssql.WithPassword(password),
 	)

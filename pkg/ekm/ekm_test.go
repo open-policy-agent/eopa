@@ -38,12 +38,11 @@ func createVaultTestCluster(t *testing.T, url string) (*testcontainervault.Vault
 	t.Helper()
 
 	opts := []testcontainers.ContainerCustomizer{
-		testcontainers.WithImage("hashicorp/vault:1.15.4"),
 		testcontainervault.WithToken(token),
 		testcontainervault.WithInitCommand("secrets enable -version=2 -path=kv kv"),
 	}
 
-	vault, err := testcontainervault.RunContainer(context.Background(), opts...)
+	vault, err := testcontainervault.Run(context.Background(), "hashicorp/vault:1.15.4", opts...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +160,7 @@ func setKey(vlogical *hcvault.Logical, p string, value map[string]string) error 
 }
 
 func writeFile(file string, buffer string) error {
-	err := os.WriteFile(file, []byte(buffer), 0666)
+	err := os.WriteFile(file, []byte(buffer), 0o666)
 	if err != nil {
 		return fmt.Errorf("could not write %v: %w", file, err)
 	}
