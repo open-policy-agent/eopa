@@ -73,7 +73,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
-	github.com/styrainc/regal v0.23.1
+	github.com/styrainc/regal v0.24.0
 	github.com/testcontainers/testcontainers-go v0.32.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.32.0
 	github.com/testcontainers/testcontainers-go/modules/localstack v0.32.0
@@ -283,7 +283,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opencontainers/runc v1.1.12 // indirect
-	github.com/owenrumney/go-sarif/v2 v2.3.1 // indirect
+	github.com/owenrumney/go-sarif/v2 v2.3.3 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pdevine/go-asciisprite v0.1.6 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
