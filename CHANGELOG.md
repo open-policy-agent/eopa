@@ -11,6 +11,15 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.24.0
+
+[![OPA v0.67.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.67.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.67.0)
+[![Regal v0.24.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.24.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.24.0)
+
+This release updates the OPA version used in Enterprise OPA to [v0.67.0](https://github.com/open-policy-agent/opa/releases/tag/v0.67.0), and updates Regal to [v0.24.0](https://github.com/StyraInc/regal/releases/tag/v0.24.0)
+
+The OPA version bump includes max request body size limits (a potentially breaking change for clients who use enormous request sizes), optimizations around request handling, and improved performance under load for gzipped requests.
+
 
 ## v1.23.0
 
@@ -19,7 +28,7 @@ This optimization is now enabled by default, so your policies will immediately b
 
 It also updates the OPA version used in Enterprise OPA to [v0.66.0](https://github.com/open-policy-agent/opa/releases/tag/v0.66.0), and brings in various dependency bumps.
 
-The OPA version dump includes memory usage improvements when loading gigantic bundles.
+The OPA version bump includes memory usage improvements when loading gigantic bundles.
 
 
 ## v1.22.0

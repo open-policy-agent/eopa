@@ -1,6 +1,7 @@
 # Styra Enterprise OPA Private
 
-![OPA v0.66.0](https://openpolicyagent.org/badge/v0.66.0)
+![OPA v0.67.0](https://openpolicyagent.org/badge/v0.67.0)
+[![Regal v0.24.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.24.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.24.0)
 
 ## Github Source and Project
 
@@ -112,7 +113,7 @@ Then we update the reference in Enterprise OPA:
    - You will need to do this step for the `e2e/` folder as well, since it's dependencies are managed as a separate Go workspace.
    - This step should also be repeated for each subfolder under `examples/`, along with a `go mod tidy` run for each example.
 2. Update `eopa-xx` in the `update` target of the Makefile
-3. Run `make update`.
+3. Run `make update && make update-e2e && make update-examples`.
 4. Bump the OPA version number in the `README.md` badge at the top
 5. Commit the changes and push a PR to `github.com/StyraInc/enterprise-opa-private`.
 
