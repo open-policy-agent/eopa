@@ -398,7 +398,8 @@ jobs:
           base: main.out
           head: branch.out
           comment-header: "escape analysis differences"
-          comment-footer: "This is informational. I does not indicate a problem with the code change."
+          comment-footer: "This is informational. It does not indicate a problem with the code change."
+          token: ${{ github.token }}
 
         # benchmark, gobenchdata
       - run: make benchmark
