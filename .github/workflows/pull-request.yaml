@@ -394,6 +394,7 @@ jobs:
       - run: diffheap ./pkg/vm > ../main.out
         working-directory: main
       - uses: int128/diff-action@v1
+        if: ${{ github.ref != 'refs/heads/main' && github.actor != 'dependabot[bot]' }}
         with:
           base: main.out
           head: branch.out
