@@ -70,8 +70,8 @@ github.com/OneOfOne/xxhash v1.2.8/go.mod h1:eZbhyaAYD41SGSSsnmcpxVoRiQ/MPUTjUdII
 github.com/ProtonMail/go-crypto v1.0.0 h1:LRuvITjQWX+WIfr930YHG2HNfjR1uOfyf5vE0kC2U78=
 github.com/ProtonMail/go-crypto v1.0.0/go.mod h1:EjAoLdwvbIOoOQr3ihjnSoLZRtE8azugULFRteWMNc0=
 github.com/RaveNoX/go-jsoncommentstrip v1.0.0/go.mod h1:78ihd09MekBnJnxpICcwzCMzGrKSKYe4AqU6PDYYpjk=
-github.com/StyraInc/opa v0.67.1-0.20240729151843-3905007d08b3 h1:HfbMlbo6+WRvd31hF22yKkpTbCTi57rvZsgPlVQFADQ=
-github.com/StyraInc/opa v0.67.1-0.20240729151843-3905007d08b3/go.mod h1:2TL6WnYXVED+y43R0qVHmHZK04pbcyIFTtkZOotD6/M=
+github.com/StyraInc/opa v0.67.1-0.20240731214453-d90f1a9ceda5 h1:vyL+TQXiHfkelk4LQqAazFnh1bvpaLkTtA6Rro95q4E=
+github.com/StyraInc/opa v0.67.1-0.20240731214453-d90f1a9ceda5/go.mod h1:2TL6WnYXVED+y43R0qVHmHZK04pbcyIFTtkZOotD6/M=
 github.com/agnivade/levenshtein v1.1.1 h1:QY8M92nrzkmr798gCo3kmMyqXFzdQVpxLlGPRBij0P8=
 github.com/agnivade/levenshtein v1.1.1/go.mod h1:veldBMzWxcCG2ZvUTKD2kJNRdCk5hVbJomOvKkmgYbo=
 github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
