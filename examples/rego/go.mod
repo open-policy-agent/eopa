@@ -4,7 +4,7 @@ go 1.22
 
 toolchain go1.22.5
 
-require github.com/open-policy-agent/opa v0.67.0
+require github.com/open-policy-agent/opa v0.67.1
 
 require github.com/styrainc/enterprise-opa-private v1.5.0
 
@@ -80,10 +80,10 @@ require (
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
-	modernc.org/libc v1.52.1 // indirect
+	modernc.org/libc v1.55.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
-	modernc.org/sqlite v1.30.2 // indirect
+	modernc.org/sqlite v1.31.1 // indirect
 	modernc.org/strutil v1.2.0 // indirect
 	modernc.org/token v1.1.0 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect

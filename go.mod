@@ -58,7 +58,7 @@ require (
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/olivere/elastic/v7 v7.0.32
-	github.com/open-policy-agent/opa v0.67.0
+	github.com/open-policy-agent/opa v0.67.1
 	github.com/open-policy-agent/opa-envoy-plugin v0.67.0-envoy
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/prometheus/client_golang v1.19.1
@@ -386,4 +386,4 @@ replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.67.1-0.20240731214453-d90f1a9ceda5
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.67.2-0.20240805190047-bceb14b4c4c5

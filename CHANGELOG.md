@@ -11,6 +11,14 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.24.2
+
+[![OPA v0.67.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.67.1)](https://github.com/open-policy-agent/opa/releases/tag/v0.67.1)
+[![Regal v0.24.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.24.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.24.0)
+
+This release updates the OPA version used in Enterprise OPA to [v0.67.1](https://github.com/open-policy-agent/opa/releases/tag/v0.67.1), which includes a bugfix for chunked request handling.
+
+
 ## v1.24.1
 
 [![OPA v0.67.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.67.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.67.0)
