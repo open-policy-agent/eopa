@@ -1,7 +1,6 @@
 module github.com/styrainc/enterprise-opa-private/e2e
 
 go 1.22
-
 toolchain go1.22.5
 
 replace github.com/styrainc/enterprise-opa-private => ../
@@ -15,7 +14,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.74
 	github.com/open-policy-agent/opa v0.67.1
 	github.com/redpanda-data/benthos/v4 v4.33.0
-	github.com/redpanda-data/connect/v4 v4.31.0
+	github.com/redpanda-data/connect/v4 v4.32.1
 	github.com/rogpeppe/go-internal v1.12.0
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
 	github.com/testcontainers/testcontainers-go v0.32.0
@@ -101,7 +100,7 @@ require (
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/generikvault/gvalstrings v0.0.0-20180926130504-471f38f0112a // indirect
 	github.com/go-faker/faker/v4 v4.4.2 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
