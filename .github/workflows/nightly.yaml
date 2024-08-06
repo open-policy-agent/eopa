@@ -14,6 +14,15 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -112,6 +121,15 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -172,6 +190,16 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
+        if: matrix.os == 'ubuntu-22.04'
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -230,6 +258,16 @@ jobs:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
         if: matrix.os != 'windows-latest'
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
+        if: matrix.os == 'ubuntu-22.04'
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -259,6 +297,15 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
       - uses: open-policy-agent/setup-opa@v2
       - name: checkout Enterprise OPA
         uses: actions/checkout@v4
@@ -365,6 +412,15 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2

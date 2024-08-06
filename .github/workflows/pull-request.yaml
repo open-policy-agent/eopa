@@ -22,6 +22,15 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -94,6 +103,15 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -153,6 +171,15 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -251,6 +278,15 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -287,6 +323,15 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -331,6 +376,15 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -360,6 +414,15 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -433,6 +496,15 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@v2
@@ -493,6 +565,16 @@ jobs:
           netsh int ipv4 show dynamicport tcp
           netsh int ipv4 show excludedportrange protocol=tcp
         if: matrix.os == 'windows-latest'
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
+        if: matrix.os == 'ubuntu-22.04'
       - name: Download cross-build binaries
         uses: actions/download-artifact@v4
         with:
