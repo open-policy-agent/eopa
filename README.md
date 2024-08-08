@@ -200,6 +200,7 @@ Setting the tag version will trigger the .github/workflows/push-tags.yaml action
 
 ```
 # check the current tag/release
+git fetch
 git tag -l --sort -version:refname | head -n 1
 ```
 

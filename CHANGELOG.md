@@ -11,6 +11,31 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.24.3
+
+[![OPA v0.67.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.67.1)](https://github.com/open-policy-agent/opa/releases/tag/v0.67.1)
+[![Regal v0.24.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.24.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.24.0)
+
+This release updates Enterprise OPA to allow for environment variable substitution for the config produced by the discovery bundle. This release also updates some dependencies.
+
+For example, with the environment variable `ENV1=test1`, and this config is used via discovery:
+
+```yaml
+bundle:
+    name: ${ENV1}
+decision_logs: {}
+status: {}
+```
+
+Enterprise OPA would interpret the configuration like so:
+
+```yaml
+bundle:
+    name: test1
+decision_logs: {}
+status: {}
+```
+
 ## v1.24.2
 
 [![OPA v0.67.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.67.1)](https://github.com/open-policy-agent/opa/releases/tag/v0.67.1)
