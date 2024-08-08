@@ -60,7 +60,7 @@ Build with `make build`, run with `make run`, publish with `make push`.
 
 - `make`: build eopa
 - `make fmt`: go fmt
-- `make update`: update module configuration
+- `make update`/`make update-e2e`/`make update-examples`: update module configuration
 - `make test`: run unittests
 - `make check`: run linter
 
@@ -93,7 +93,7 @@ While this repository tracks the code required to build Styra Enterprise OPA, so
 
 ### How can I update the `eopa` branch of the github.com/StyraInc/opa fork?
 
-- `make update`
+- `make update && make update-e2e && make update-examples`
 
 ### How do I update OPA in Enterprise OPA?
 
