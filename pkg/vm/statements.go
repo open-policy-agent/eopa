@@ -1,6 +1,8 @@
 package vm
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"unsafe"
 
@@ -639,18 +641,76 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 		return nil
 	})
 
-	if err := state.Func(call.Func()).Execute(inner, args); err != nil {
+	fid := call.Func()
+	if err := state.Func(fid).Execute(inner, args); err != nil {
 		return false, 0, err
 	}
 
 	result, ok := inner.Return()
 	if !ok {
+		if err := record(state, fid, nil); err != nil {
+			return false, 0, err
+		}
+
 		return true, 0, nil
 	}
 
 	resultValue := inner.Local(result)
+	if err := record(state, fid, resultValue); err != nil {
+		return false, 0, err
+	}
+
 	state.SetValue(call.Result(), resultValue)
 	return false, 0, nil
+}
+
+// record records call results into context to be extracted after plan
+// execution completes.
+func record(state *State, fid int, resultValue interface{}) error {
+	switch intermediateResultsMode {
+	case intermediateResultsDisabled: // nothing to do
+	case intermediateResultsNoValueMode:
+		state.Globals.IntermediateResults[fid] = nil
+
+	case intermediateResultsHashMode:
+		var h string
+
+		if resultValue != nil {
+			hasher := sha256.New()
+			if err := hashImpl(state.Globals.Ctx, resultValue, hasher); err != nil {
+				return err
+			}
+
+			h = hex.EncodeToString(hasher.Sum(nil))
+		} else {
+			h = "0000000000000000000000000000000000000000000000000000000000000000"
+		}
+
+		if m, ok := state.Globals.IntermediateResults[fid].(map[string]struct{}); ok {
+			m[h] = struct{}{}
+		} else {
+			state.Globals.IntermediateResults[fid] = map[string]struct{}{h: {}}
+		}
+
+	case intermediateResultsValueMode:
+		a, ok := state.Globals.IntermediateResults[fid].([]interface{})
+		if !ok {
+			a = make([]interface{}, 0)
+		}
+
+		if resultValue != nil {
+			v, err := state.Globals.vm.ops.ToInterface(state.Globals.Ctx, resultValue)
+			if err != nil {
+				return err
+			}
+
+			a = append(a, v)
+		}
+
+		state.Globals.IntermediateResults[fid] = a
+	}
+
+	return nil
 }
 
 func (d dot) Execute(state *State) (bool, uint32, error) {

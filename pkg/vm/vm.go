@@ -6,6 +6,8 @@ import (
 	gjson "encoding/json"
 	"errors"
 	"io"
+	"os"
+	gstrings "strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -40,6 +42,15 @@ var (
 	statePool = sync.Pool{
 		New: newStateElement,
 	}
+
+	intermediateResultsMode = gstrings.ToUpper(gstrings.TrimSpace(os.Getenv("OPA_DECISIONS_INTERMEDIATE_RESULTS"))) // Legal values are NO_VALUE, SHA256, VALUE
+)
+
+const (
+	intermediateResultsDisabled    = ""
+	intermediateResultsNoValueMode = "NO_VALUE"
+	intermediateResultsHashMode    = "SHA256"
+	intermediateResultsValueMode   = "VALUE"
 )
 
 type (
@@ -96,6 +107,7 @@ type (
 		memoize                []map[k]Value
 		Limits                 Limits
 		StrictBuiltinErrors    bool
+		IntermediateResults    map[int]interface{}
 	}
 
 	Limits struct {
@@ -274,6 +286,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 			ResultSet:              vm.ops.MakeSet(),
 			Cache:                  opts.Cache,
 			InterQueryBuiltinCache: opts.InterQueryBuiltinCache,
+			IntermediateResults:    make(map[int]interface{}),
 		}
 		globals.cancel.Init(ctx)
 		defer globals.cancel.Exit()
@@ -300,6 +313,41 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 
 		if opts.StrictBuiltinErrors && len(globals.BuiltinErrors) > 0 {
 			return nil, globals.BuiltinErrors[0]
+		}
+
+		switch intermediateResultsMode {
+		case intermediateResultsDisabled: // nothing to do
+		case intermediateResultsNoValueMode, intermediateResultsHashMode, intermediateResultsValueMode:
+			if m := getIntermediateResults(ctx); m != nil {
+				fs := vm.executable.Functions()
+
+				for id, results := range globals.IntermediateResults {
+					if f := fs.Function(id); !f.IsBuiltin() {
+						name := gstrings.TrimPrefix(f.Name(), "g0.data.")
+
+						switch intermediateResultsMode {
+						case intermediateResultsNoValueMode:
+							m[name] = nil
+
+						case intermediateResultsHashMode:
+							// Convert the map used to filter out duplicates to slice.
+
+							results := results.(map[string]struct{})
+							l := make([]interface{}, 0, len(results))
+
+							for hash := range results {
+								l = append(l, hash)
+							}
+
+							m[name] = l
+
+						case intermediateResultsValueMode:
+							// No conversion, return all computed values, including duplicates.
+							m[name] = results
+						}
+					}
+				}
+			}
 		}
 
 		r, err := vm.ops.ToAST(ctx, globals.ResultSet)
