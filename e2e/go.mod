@@ -12,7 +12,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hashicorp/vault/api v1.14.0
-	github.com/minio/minio-go/v7 v7.0.74
+	github.com/minio/minio-go/v7 v7.0.75
 	github.com/open-policy-agent/opa v0.67.1
 	github.com/redpanda-data/benthos/v4 v4.34.0
 	github.com/redpanda-data/connect/v4 v4.32.1
@@ -226,7 +226,7 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af // indirect
 	github.com/skeema/knownhosts v1.2.2 // indirect
-	github.com/snowflakedb/gosnowflake v1.10.1 // indirect
+	github.com/snowflakedb/gosnowflake v1.11.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
 	github.com/tilinna/z85 v1.0.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.13 // indirect
