@@ -22,7 +22,7 @@ func MaybeBjsonFromBinary(bs []byte) (b bjson.Json, isBJSON bool, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if s, ok := r.(string); ok {
-				err = fmt.Errorf(s)
+				err = fmt.Errorf("bjson decoding error: %s", s)
 			} else {
 				err = fmt.Errorf("bjson decoding error")
 			}

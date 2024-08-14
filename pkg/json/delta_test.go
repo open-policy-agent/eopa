@@ -906,7 +906,7 @@ func TestDeltaObjectTypes(t *testing.T) {
 		patches := make(map[int64]int64)
 
 		if _, _, err := diffImpl(test.ra, test.oa, 0, test.rb, test.ob, true, &buffer, patches, newEncodingCache(), newHashCache(test.ra), newHashCache(test.rb)); err != nil {
-			t.Errorf(err.Error())
+			t.Error(err.Error())
 		}
 
 		if buffer.Len() > 0 {
