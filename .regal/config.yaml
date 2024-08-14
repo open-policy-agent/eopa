@@ -1,5 +1,9 @@
 rules:
   bugs:
+    argument-always-wildcard:
+      ignore:
+        files:
+          - library/utils
     constant-condition:
       level: error
       ignore:
@@ -13,6 +17,10 @@ rules:
     implicit-future-keywords:
       level: ignore
   style:
+    external-reference:
+      ignore:
+        files:
+          - library/utils
     rule-name-repeats-package:
       ignore:
         files:
