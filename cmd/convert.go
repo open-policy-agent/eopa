@@ -8,7 +8,7 @@ import (
 
 func Convert() *cobra.Command {
 	return &cobra.Command{
-		Use:   "convert",
+		Use:   "convert <path to input bundle> <path to output converted bundle>",
 		Short: "Convert OPA bundle to binary bundle",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(c *cobra.Command, args []string) error {
