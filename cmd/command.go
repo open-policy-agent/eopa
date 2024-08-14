@@ -284,10 +284,6 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 		},
 	}
 
-	// New Enterprise OPA commands
-	root.AddCommand(initBundle())
-	root.AddCommand(liaCtl())
-
 	// add OPA commands to root
 	dummyRoot := &cobra.Command{Use: "eopa"}
 
