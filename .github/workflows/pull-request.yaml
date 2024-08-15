@@ -309,13 +309,18 @@ jobs:
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: ko-build/setup-ko@v0.7
-      - name: Build
-        run: make build
+      - name: Build images
+        run: make build build-debug
       - name: Upload image tarball
         uses: actions/upload-artifact@v4
         with:
           name: image
           path: local.tar
+      - name: Upload debug image tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-debug
+          path: local-debug.tar
 
   goreleaser:
     name: Goreleaser build
@@ -368,6 +373,50 @@ jobs:
         with:
           name: binary
           path: dist/linux-windows-build_linux_amd64_v1/eopa
+
+  smoke-docker:
+    name: Smoke test docker images
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: install skopeo
+        uses: jaxxstorm/action-install-gh-release@v1.12.0
+        with:
+          repo: lework/skopeo-binary
+          extension-matching: disable
+          tag: v1.16.0
+          cache: enable
+          rename-to: skopeo
+          chmod: 0755
+      - name: Download image tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: image
+      - name: Download debug image tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: image-debug
+      - name: load images
+        run: |
+          skopeo copy docker-archive:local.tar docker-daemon:ko.local/enterprise-opa-private:edge
+          skopeo copy docker-archive:local-debug.tar docker-daemon:ko.local/enterprise-opa-private:edge-debug
+      - name: docker build based on image
+        run: |
+          docker build -t test .
+          docker run test eopa version
+        working-directory: e2e/docker
 
   smoke-cli:
     name: Smoke Test CLI

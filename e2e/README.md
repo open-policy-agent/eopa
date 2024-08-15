@@ -4,7 +4,6 @@
 
 ```
 make eopa
-make build-local
 export BINARY=<PathToEnterpriseOPAExecutable>
 make e2e
 ```

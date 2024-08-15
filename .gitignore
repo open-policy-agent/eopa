@@ -1,7 +1,13 @@
 go.work
 go.work.sum
-bin/
-dist/
-.idea/
+/bin/
+/dist/
+/.idea/
 capabilities.json
 tmp-docs/
+
+/local.tar
+/local-debug.tar
+/base.tar
+/base-debug.tar
+/sbom-*.spdx.json

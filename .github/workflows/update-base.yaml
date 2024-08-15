@@ -1,0 +1,43 @@
+name: Update base image
+
+on:
+  workflow_dispatch: {}
+  pull_request: {}
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Build and push base images
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: Override GH Token Env Var
+        run: |
+          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+          echo "GITHUB_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build & Publish OCI
+        id: apko
+        uses: chainguard-images/actions/apko-publish@49e3bc2feb790da6c3a7f749b38c769174c4ad54
+        with:
+          config: apko.yaml
+          archs: x86_64,aarch64
+          tag: ghcr.io/styrainc/eopa-base:latest
+      - name: Build & Publish OCI (Debug)
+        id: apko-debug
+        uses: chainguard-images/actions/apko-publish@49e3bc2feb790da6c3a7f749b38c769174c4ad54
+        with:
+          config: apko-debug.yaml
+          archs: x86_64,aarch64
+          tag: ghcr.io/styrainc/eopa-debug:latest

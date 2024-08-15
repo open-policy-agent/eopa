@@ -1,0 +1,5 @@
+include: apko.yaml
+contents:
+  packages:
+    - wolfi-base
+    - curl

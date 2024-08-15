@@ -12,8 +12,23 @@ GOVERSION ?= $(shell cat ./.go-version)
 GOARCH := $(shell go env GOARCH)
 GOOS := $(shell go env GOOS)
 
-# default KO_DEFAULTBASEIMAGE = cgr.dev/chainguard/static
-KO_DEBUG_IMAGE ?= cgr.dev/chainguard/busybox:latest
+ifeq ($(shell uname -m), x86_64)
+	ARCH := amd64
+else
+	ARCH := arm64
+endif
+
+KO_DEBUG_BASE_IMAGE_LOCAL := ko.local/kobase:debug
+KO_BASE_IMAGE_LOCAL := ko.local/kobase:base
+KO_DEBUG_BASE_IMAGE := ghcr.io/styrainc/eopa-debug:latest
+KO_BASE_IMAGE := ghcr.io/styrainc/eopa-base:latest
+ifdef CI
+	KO_DEBUG_BASE_IMAGE_LOCAL_REF := $(KO_DEBUG_BASE_IMAGE)
+	KO_BASE_IMAGE_LOCAL_REF := $(KO_BASE_IMAGE)
+else
+	KO_DEBUG_BASE_IMAGE_LOCAL_REF := $(KO_DEBUG_BASE_IMAGE_LOCAL)-$(ARCH)
+	KO_BASE_IMAGE_LOCAL_REF := $(KO_BASE_IMAGE_LOCAL)-$(ARCH)
+endif
 
 # all images are pushed into the public repo
 # only release images are tagged "latest"
@@ -49,35 +64,56 @@ eopa:
 # i.e. linux/amd64 only.
 .PHONY: build build-local run build-local-debug push deploy-ci deploy-ci-debug auth-deploy-ci auth-deploy-ci-debug
 
+base-image:
+ifdef CI
+	@echo skipping local image build in CI
+else
+	apko build --arch=host apko.yaml $(KO_BASE_IMAGE_LOCAL) base.tar
+	docker load --quiet --input=base.tar
+	rm base.tar
+endif
+
+base-image-debug:
+ifdef CI
+	@echo skipping local image build in CI
+else
+	apko build --arch=host apko-debug.yaml $(KO_DEBUG_BASE_IMAGE_LOCAL) base-debug.tar
+	docker load --quiet --input=base-debug.tar
+	rm base-debug.tar
+endif
+
 # build container image file: local.tar
-build:
-	$(KO_BUILD) --push=false --tarball=local.tar
+build: base-image
+	KO_DEFAULTBASEIMAGE=$(KO_BASE_IMAGE_LOCAL_REF) $(KO_BUILD) --push=false --tarball=local.tar
+
+build-debug: base-image-debug
+	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_BASE_IMAGE_LOCAL_REF) $(KO_BUILD) --disable-optimizations --push=false --tarball=local-debug.tar
 
 # build and run local ko-build container (no tags)
 run: build-local
 	docker run -e EOPA_LICENSE_TOKEN -e EOPA_LICENSE_KEY -p 8181:8181 -v $$(pwd):/cwd -w /cwd ko.local/enterprise-opa-private:edge run --server --log-level debug
 
 # build local container image (tagged)
-build-local:
-	$(KO_BUILD_LOCAL) --tags $(VERSION) --tags edge
+build-local: build
+	skopeo copy docker-archive:local.tar docker-daemon:ko.local/enterprise-opa-private:edge
 
 # build container.
 # execute: docker run -it --rm --entrypoint sh ko.local/enterprise-opa-private:edge-debug
-build-local-debug:
-	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) $(KO_BUILD_LOCAL) --disable-optimizations --tags $(VERSION)-debug --tags edge-debug
+build-local-debug: build-debug
+	skopeo copy docker-archive:local-debug.tar docker-daemon:ko.local/enterprise-opa-private:edge-debug
 
 deploy-ci: push
-push:
-	$(KO_BUILD_DEPLOY) --tags $(VERSION) --tags edge
+push: # HERE the base image needs to be multi-arch!
+	KO_DEFAULTBASEIMAGE=$(KO_BASE_IMAGE) $(KO_BUILD_DEPLOY) --tags $(VERSION) --tags edge
 
 deploy-ci-debug:
-	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) $(KO_BUILD_DEPLOY) --disable-optimizations --tags $(VERSION)-debug --tags edge-debug
+	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_BASE_IMAGE) $(KO_BUILD_DEPLOY) --disable-optimizations --tags $(VERSION)-debug --tags edge-debug
 
 auth-deploy-ci:
-	$(KO_BUILD_DEPLOY) --tags $(EOPA_VERSION) $(LATEST)
+	KO_DEFAULTBASEIMAGE=$(KO_BASE_IMAGE) $(KO_BUILD_DEPLOY) --tags $(EOPA_VERSION) $(LATEST)
 
 auth-deploy-ci-debug:
-	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_IMAGE) $(KO_BUILD_DEPLOY) --disable-optimizations --tags $(EOPA_VERSION)-debug $(LATEST_DEBUG)
+	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_BASE_IMAGE) $(KO_BUILD_DEPLOY) --disable-optimizations --tags $(EOPA_VERSION)-debug $(LATEST_DEBUG)
 
 # goreleaser uses latest version tag.
 .PHONY: release release-ci release-wasm release-single

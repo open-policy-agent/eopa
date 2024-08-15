@@ -19,7 +19,9 @@ Install using brew or directly from download page.
 - [golang](https://go.dev/dl/): `brew install go`
 - [golanglint-ci](https://golangci-lint.run/usage/install/): `brew install golangci-lint`
 - [ko-build](https://github.com/ko-build/ko): `brew install ko`
-- [Docker](https://docs.docker.com/desktop/install/mac-install/)
+- [skopeo](https://github.com/containers/skopeo/tree/main): `brew install skopeo`
+- [apko](https://github.com/chainguard-dev/apko): `brew install apko`
+- [Docker](https://docs.docker.com/desktop/install/mac-install/) (or OrbStack)
 - Make: `xcode-select --install`
 - [goreleaser](https://goreleaser.com): `brew install goreleaser`
 - [protobuf](https://developers.google.com/protocol-buffers): see `pkg/grpc/README.md`

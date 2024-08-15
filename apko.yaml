@@ -1,0 +1,36 @@
+contents:
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+  repositories:
+    - https://packages.wolfi.dev/os
+  packages:
+    - wolfi-baselayout
+    - ca-certificates-bundle
+    - tzdata
+
+paths:
+  - path: /ko-app/enterprise-opa-private # https://github.com/chainguard-dev/apko/issues/1270
+    type: empty-file
+  - path: /bin/eopa
+    type: symlink
+    source: /ko-app/enterprise-opa-private
+  - path: /bin/opa
+    type: symlink
+    source: /ko-app/enterprise-opa-private
+  - path: /opa
+    type: symlink
+    source: /ko-app/enterprise-opa-private
+
+archs:
+  - x86_64
+  - arm64
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
