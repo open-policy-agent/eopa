@@ -3,3 +3,11 @@ contents:
   packages:
     - wolfi-base
     - curl
+    - grpcurl
+    - bind-tools # dig
+    - htop
+    - iputils
+    - kafkacat
+    - strace
+    - tcpdump
+    - openldap-clients
