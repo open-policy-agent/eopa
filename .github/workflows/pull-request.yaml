@@ -12,7 +12,7 @@ concurrency:
 
 env:
   GOPRIVATE: github.com/StyraInc/opa
-  REGAL_VERSION: 0.24.0
+  REGAL_VERSION: 0.25.0
   BB_VERSION: 1.3.191
 
 jobs:
