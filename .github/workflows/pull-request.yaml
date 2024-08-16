@@ -309,8 +309,25 @@ jobs:
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: ko-build/setup-ko@v0.7
+      - name: Check for base image changes (apko.yaml, apko-debug.yaml)
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            apko:
+              - 'apko*.yaml'
+      - name: Install apko
+        uses: jaxxstorm/action-install-gh-release@v1.12.0
+        with:
+          repo: chainguard-dev/apko
+          tag: v0.14.7
+          cache: enable
+          binaries-location: apko_0.14.7_linux_amd64
+        if: steps.changes.outputs.apko == 'true'
       - name: Build images
         run: make build build-debug
+        env:
+          SKIP_IMAGES: ${{ steps.changes.outputs.apko == 'false' }}
       - name: Upload image tarball
         uses: actions/upload-artifact@v4
         with:

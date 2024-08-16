@@ -22,7 +22,8 @@ KO_DEBUG_BASE_IMAGE_LOCAL := ko.local/kobase:debug
 KO_BASE_IMAGE_LOCAL := ko.local/kobase:base
 KO_DEBUG_BASE_IMAGE := ghcr.io/styrainc/eopa-debug:latest
 KO_BASE_IMAGE := ghcr.io/styrainc/eopa-base:latest
-ifdef CI
+
+ifeq ($(SKIP_IMAGES), true)
 	KO_DEBUG_BASE_IMAGE_LOCAL_REF := $(KO_DEBUG_BASE_IMAGE)
 	KO_BASE_IMAGE_LOCAL_REF := $(KO_BASE_IMAGE)
 else
@@ -65,17 +66,17 @@ eopa:
 .PHONY: build build-local run build-local-debug push deploy-ci deploy-ci-debug auth-deploy-ci auth-deploy-ci-debug
 
 base-image:
-ifdef CI
-	@echo skipping local image build in CI
-else
+ifeq ($(SKIP_IMAGES), true)
+	@echo skipping local image build
+  else
 	apko build --arch=host apko.yaml $(KO_BASE_IMAGE_LOCAL) base.tar
 	docker load --quiet --input=base.tar
 	rm base.tar
 endif
 
 base-image-debug:
-ifdef CI
-	@echo skipping local image build in CI
+ifeq ($(SKIP_IMAGES), true)
+	@echo skipping local image build
 else
 	apko build --arch=host apko-debug.yaml $(KO_DEBUG_BASE_IMAGE_LOCAL) base-debug.tar
 	docker load --quiet --input=base-debug.tar

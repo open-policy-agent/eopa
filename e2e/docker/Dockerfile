@@ -6,6 +6,16 @@ RUN /bin/eopa version
 RUN opa version
 RUN /bin/opa version
 RUN /opa version
+# test presence of some debug utils
+RUN type kcat
+RUN type curl
+RUN type grpcurl
+RUN type dig
+RUN type ping
+RUN type htop
+RUN type strace
+RUN type tcpdump
+RUN type ldapsearch
 
 # test that it also copies cleanly and can be used on alpine
 FROM alpine:latest AS throwaway
@@ -15,5 +25,7 @@ RUN opa version
 # test that we can copy eopa from the non-debug image
 FROM alpine:latest
 COPY --from=ko.local/enterprise-opa-private:edge /bin/eopa /bin/opa /opa /ko-app/enterprise-opa-private /bin/
+# to ensure that "builder" is built
+COPY --from=builder /bin/opa /tmp/
 RUN diff /bin/eopa /bin/opa
 RUN diff /bin/eopa /bin/enterprise-opa-private
