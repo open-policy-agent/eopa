@@ -50,6 +50,8 @@ jobs:
       - uses: ko-build/setup-ko@v0.7
       - name: Build
         run: make build
+        env:
+          SKIP_IMAGES: true
         working-directory: enterprise-opa
       - name: Upload image tarball
         uses: actions/upload-artifact@v4
