@@ -23,7 +23,7 @@ require (
 	github.com/cespare/xxhash v1.1.0
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/charmbracelet/bubbles v0.18.0
-	github.com/charmbracelet/bubbletea v0.26.6
+	github.com/charmbracelet/bubbletea v0.27.0
 	github.com/docker/go-connections v0.5.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
@@ -154,7 +154,7 @@ require (
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/charmbracelet/harmonica v0.2.0 // indirect
 	github.com/charmbracelet/lipgloss v0.9.1 // indirect
-	github.com/charmbracelet/x/ansi v0.1.2 // indirect
+	github.com/charmbracelet/x/ansi v0.1.4 // indirect
 	github.com/charmbracelet/x/input v0.1.0 // indirect
 	github.com/charmbracelet/x/term v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.1.0 // indirect
@@ -355,7 +355,7 @@ require (
 	golang.org/x/mod v0.20.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
-	golang.org/x/sys v0.23.0 // indirect
+	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
