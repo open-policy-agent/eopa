@@ -33,16 +33,17 @@ import (
 )
 
 type payload struct {
-	Result     any            `json:"result"`
-	Metrics    map[string]int `json:"metrics"`
-	ID         int            `json:"req_id"`
-	DecisionID string         `json:"decision_id"`
-	Labels     payloadLabels  `json:"labels"`
-	NDBC       map[string]any `json:"nd_builtin_cache"`
-	Input      any            `json:"input"`
-	Erased     []string       `json:"erased"`
-	Masked     []string       `json:"masked"`
-	Timestamp  time.Time      `json:"timestamp"`
+	Result       any            `json:"result"`
+	Metrics      map[string]int `json:"metrics"`
+	ID           int            `json:"req_id"`
+	DecisionID   string         `json:"decision_id"`
+	Labels       payloadLabels  `json:"labels"`
+	NDBC         map[string]any `json:"nd_builtin_cache"`
+	Input        any            `json:"input"`
+	Erased       []string       `json:"erased"`
+	Masked       []string       `json:"masked"`
+	Timestamp    time.Time      `json:"timestamp"`
+	Intermediate map[string]any `json:"intermediate_results"`
 }
 
 type payloadLabels struct {
@@ -56,7 +57,7 @@ var standardLabels = payloadLabels{
 	Version: os.Getenv("EOPA_VERSION"),
 }
 
-var stdIgnores = cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "DecisionID", "Labels.ID", "NDBC")
+var stdIgnores = cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "DecisionID", "Labels.ID", "NDBC", "Intermediate")
 
 var eopaHTTPPort int
 
@@ -78,7 +79,7 @@ func TestMain(m *testing.M) {
 func TestDecisionLogsConsoleOutput(t *testing.T) {
 	policy := `
 package test
-import future.keywords
+import rego.v1
 
 # always succeeds, but adds nd_builtin_cache entry
 coin if rand.intn("coin", 2)
@@ -269,7 +270,7 @@ plugins:
 func TestDecisionLogsComplexResult(t *testing.T) {
 	policy := `
 package test
-import future.keywords
+import rego.v1
 
 p := {"foo": "bar", "replace": "box", "remove": {"this": 42}} if input.a == "b"
 
@@ -353,7 +354,7 @@ plugins:
 func TestDecisionLogsMemoryBatching(t *testing.T) {
 	policy := `
 package test
-import future.keywords
+import rego.v1
 
 # always succeeds, but adds nd_builtin_cache entry
 coin if rand.intn("coin", 2)
@@ -457,7 +458,7 @@ const jsonType = "application/json"
 func TestDecisionLogsServiceOutput(t *testing.T) {
 	policy := `
 package test
-import future.keywords
+import rego.v1
 
 coin if rand.intn("coin", 2)
 `
@@ -571,7 +572,7 @@ func TestDecisionLogsHttpRetry(t *testing.T) {
 	expectedRetries := 5
 	policy := `
 package test
-import future.keywords
+import rego.v1
 
 coin if rand.intn("coin", 2)`
 
@@ -662,10 +663,11 @@ plugins:
 	}
 }
 
+// In this test, we also check that intermediate_results make it through the eopa_dl plugin
 func TestDecisionLogsServiceAndConsoleOutput(t *testing.T) {
 	policy := `
 package test
-import future.keywords
+import rego.v1
 
 coin if rand.intn("coin", 2)
 `
@@ -720,11 +722,15 @@ plugins:
 	logsHTTP := collectDL(t, &buf, true, 1)
 	logsConsole := collectDL(t, eopaOut, false, 1)
 	dl := payload{
-		Result: true,
-		ID:     1,
-		Labels: standardLabels,
+		Result:       true,
+		ID:           1,
+		Labels:       standardLabels,
+		Intermediate: map[string]any{"test.coin": []any{true}},
 	}
-	if diff := cmp.Diff(dl, logsHTTP[0], stdIgnores); diff != "" {
+
+	// NB(sr): we're not ignoring "Intermediate" here
+	ignores := cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "DecisionID", "Labels.ID", "NDBC")
+	if diff := cmp.Diff(dl, logsHTTP[0], ignores); diff != "" {
 		t.Errorf("diff: (-want +got):\n%s", diff)
 	}
 	if diff := cmp.Diff(logsHTTP, logsConsole); diff != "" {
@@ -735,7 +741,7 @@ plugins:
 func TestDecisionLogsServiceOutputWithOAuth2(t *testing.T) {
 	policy := `
 package test
-import future.keywords
+import rego.v1
 
 coin if rand.intn("coin", 2)
 `
@@ -802,7 +808,7 @@ plugins:
 func TestDecisionLogsServiceOutputWithTLS(t *testing.T) {
 	policy := `
 package test
-import future.keywords
+import rego.v1
 
 coin if rand.intn("coin", 2)
 `
@@ -915,6 +921,7 @@ func loadEnterpriseOPA(t *testing.T, config, policy string, httpPort int, opts .
 	eopa.Env = append(eopa.Environ(),
 		"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
 		"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
+		"OPA_DECISIONS_INTERMEDIATE_RESULTS=VALUE",
 	)
 
 	t.Cleanup(func() {

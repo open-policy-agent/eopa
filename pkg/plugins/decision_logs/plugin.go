@@ -146,6 +146,9 @@ func (p *Logger) Log(ctx context.Context, e logs.EventV1) error {
 	if e.Error != nil {
 		ev["error"] = e.Error
 	}
+	if ir, ok := intermediateResults(e); ok {
+		ev["intermediate_results"] = ir
+	}
 	return p.stream.Consume(ctx, ev)
 }
 
