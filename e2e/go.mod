@@ -18,10 +18,10 @@ require (
 	github.com/redpanda-data/connect/v4 v4.33.0
 	github.com/rogpeppe/go-internal v1.12.0
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
-	github.com/testcontainers/testcontainers-go v0.32.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.32.0
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.32.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.32.0
+	github.com/testcontainers/testcontainers-go v0.33.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.33.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.33.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.33.0
 	github.com/twmb/franz-go v1.17.1
 	github.com/twmb/franz-go/pkg/kadm v1.13.0
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
@@ -46,7 +46,6 @@ require (
 	github.com/Jeffail/shutdown v1.0.0 // indirect
 	github.com/JohnCGriffin/overflow v0.0.0-20211019200055-46fa312c352c // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/Microsoft/hcsshim v0.12.3 // indirect
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
 	github.com/PaesslerAG/gval v1.2.2 // indirect
 	github.com/PaesslerAG/jsonpath v0.1.1 // indirect
