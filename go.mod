@@ -62,7 +62,7 @@ require (
 	github.com/open-policy-agent/opa v0.67.1
 	github.com/open-policy-agent/opa-envoy-plugin v0.67.1-envoy
 	github.com/ory/dockertest/v3 v3.11.0
-	github.com/prometheus/client_golang v1.20.0
+	github.com/prometheus/client_golang v1.20.1
 	github.com/redis/go-redis/v9 v9.6.1
 	github.com/redpanda-data/benthos/v4 v4.35.0
 	github.com/sbabiv/xml2map v1.2.1
