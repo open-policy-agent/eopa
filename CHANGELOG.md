@@ -12,6 +12,88 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.24.7
+
+[![OPA v0.67.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.67.1)](https://github.com/open-policy-agent/opa/releases/tag/v0.67.1)
+[![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.24.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.24.0)
+
+This patch contains a new optional field for [Batch Query API](https://docs.styra.com/enterprise-opa/reference/api-reference/batch-api) requests: `common_input`.
+This field allows factoring out common top-level keys in an input object, which can greatly reduce request sizes in some cases.
+
+Here is an example:
+```json
+{
+  "inputs": {
+    "A": {
+      "user": "alice",
+      "action": "write",
+    },
+    "B": {
+      "user": "bob"
+    },
+    "C": {
+      "user": "eve"
+    }
+  },
+  "common_input": {
+    "action": "read",
+    "object": "id1234"
+  }
+}
+```
+
+The above request using `common_input` is equivalent to sending this request:
+```json
+{
+  "inputs": {
+    "A": {
+      "user": "alice",
+      "action": "write",
+      "object": "id1234"
+    },
+    "B": {
+      "user": "bob",
+      "action": "read",
+      "object": "id1234"
+    },
+    "C": {
+      "user": "eve",
+      "action": "read",
+      "object": "id1234"
+    }
+  }
+}
+```
+
+### Conflict resolution
+
+In cases where the types are both JSON Objects, the objects' top-level keys will be merged non-recursively.
+In the event of a conflict where both `common_input` and the per-query input have the same key, the per-query input's key/value pair is used, as shown in the earlier example where `common_input` provides the `"action": "read"` key/value pair, and query `"A"` provides `"action": "write"` for the same top-level key/value pair.
+
+In cases where the `common_input`'s type conflicts with that of the per-query input, the per-query input value is used.
+
+Example:
+```json
+{
+  "inputs": {
+    "A": [1, 2, 3]
+  },
+  "common_input": {
+    "foo": "bar"
+  }
+}
+```
+
+The above example is equivalent to the following request, because the input type overrides:
+```json
+{
+  "inputs": {
+    "A": [1, 2, 3]
+  }
+}
+```
+
+
 ## v1.24.6
 
 [![OPA v0.67.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.67.1)](https://github.com/open-policy-agent/opa/releases/tag/v0.67.1)
