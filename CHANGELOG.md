@@ -12,12 +12,90 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.24.8
+
+[![OPA v0.67.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.67.1)](https://github.com/open-policy-agent/opa/releases/tag/v0.67.1)
+[![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.24.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.24.0)
+
+This release upgrades the `common_input` field for the [Batch Query API](https://docs.styra.com/enterprise-opa/reference/api-reference/batch-api) to support recursive merges with each per-query input. This is expected to allow further reduction of request sizes when the majority of each query's input would be shared data.
+
+Here is an example of the recursive merging in action:
+```json
+{
+  "inputs": {
+    "A": {
+      "user": {
+        "name": "alice",
+        "type": "admin"
+      },
+      "action": "write",
+    },
+    "B": {
+      "user": {
+        "name": "bob",
+        "type": "employee"
+      }
+    },
+    "C": {
+      "user": {"name": "eve"}
+    }
+  },
+  "common_input": {
+    "user": {
+      "company": "Acme Corp",
+      "type": "user",
+    },
+    "action": "read",
+    "object": "id1234"
+  }
+}
+```
+
+The above request using `common_input` is equivalent to sending this request:
+```json
+{
+  "inputs": {
+    "A": {
+      "user": {
+        "name": "alice",
+        "company": "Acme Corp",
+        "type": "admin"
+      },
+      "action": "write",
+      "object": "id1234"
+    },
+    "B": {
+      "user": {
+        "name": "bob",
+        "company": "Acme Corp",
+        "type": "employee"
+      },
+      "action": "read",
+      "object": "id1234"
+    },
+    "C": {
+      "user": {
+        "name": "eve",
+        "company": "Acme Corp",
+        "type": "user",
+      },
+      "action": "read",
+      "object": "id1234"
+    }
+  }
+}
+```
+
+In the event of matching keys between the `common_input` and the per-query `input` object, the per-query input's value is used.
+This behavior is intentionally like the [behavior of `object.union` in Rego](https://www.openpolicyagent.org/docs/latest/policy-reference/#builtin-object-objectunion).
+
+
 ## v1.24.7
 
 [![OPA v0.67.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.67.1)](https://github.com/open-policy-agent/opa/releases/tag/v0.67.1)
 [![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.24.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.24.0)
 
-This patch contains a new optional field for [Batch Query API](https://docs.styra.com/enterprise-opa/reference/api-reference/batch-api) requests: `common_input`.
+This release contains a new optional field for [Batch Query API](https://docs.styra.com/enterprise-opa/reference/api-reference/batch-api) requests: `common_input`.
 This field allows factoring out common top-level keys in an input object, which can greatly reduce request sizes in some cases.
 
 Here is an example:
