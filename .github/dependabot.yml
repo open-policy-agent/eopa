@@ -20,6 +20,9 @@ updates:
       testcontainers:
         patterns:
           - "github.com/testcontainers/*"
+      redpanda:
+        patterns:
+          - "github.com/redpanda-data/*"
       franz-go:
         patterns:
           - "github.com/twmb/*"
