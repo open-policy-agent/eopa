@@ -1,8 +1,8 @@
 exec eopa version
 ! stderr .
 stdout '^Version: ' # empty in CI builds
-stdout '^OPA Version: [0-9]+\.[0-9]+\.[0-9]+' # could have ""-0.20231115111619-bcf82eb40572" trailer
-stdout '^Regal Version: [0-9]+\.[0-9]+\.[0-9]+$'
+stdout '^OPA Version: [0-9]+\.[0-9]+\.[0-9]+' # could have "-0.20231115111619-bcf82eb40572" trailer
+stdout '^Regal Version: [0-9]+\.[0-9]+\.[0-9]+' # temporary: also some trailer like above, while we're using a branch
 stdout '^Build Timestamp: ' # don't care
 [darwin] [amd64] stdout 'Platform: darwin/amd64'
 [darwin] [arm64] stdout 'Platform: darwin/arm64'

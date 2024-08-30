@@ -12,10 +12,20 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.25.0
+
+[![OPA v0.68.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.68.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.68.0)
+[![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.25.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.25.0)
+
+This release updates the OPA version used in Enterprise OPA to [v0.68.0](https://github.com/open-policy-agent/opa/releases/tag/v0.68.0).
+
+It also includes various dependency bumps.
+
+
 ## v1.24.8
 
 [![OPA v0.67.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.67.1)](https://github.com/open-policy-agent/opa/releases/tag/v0.67.1)
-[![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.24.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.24.0)
+[![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.25.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.25.0)
 
 This release upgrades the `common_input` field for the [Batch Query API](https://docs.styra.com/enterprise-opa/reference/api-reference/batch-api) to support recursive merges with each per-query input. This is expected to allow further reduction of request sizes when the majority of each query's input would be shared data.
 
@@ -93,7 +103,7 @@ This behavior is intentionally like the [behavior of `object.union` in Rego](htt
 ## v1.24.7
 
 [![OPA v0.67.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.67.1)](https://github.com/open-policy-agent/opa/releases/tag/v0.67.1)
-[![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.24.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.24.0)
+[![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.25.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.25.0)
 
 This release contains a new optional field for [Batch Query API](https://docs.styra.com/enterprise-opa/reference/api-reference/batch-api) requests: `common_input`.
 This field allows factoring out common top-level keys in an input object, which can greatly reduce request sizes in some cases.
@@ -175,7 +185,7 @@ The above example is equivalent to the following request, because the input type
 ## v1.24.6
 
 [![OPA v0.67.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.67.1)](https://github.com/open-policy-agent/opa/releases/tag/v0.67.1)
-[![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.24.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.24.0)
+[![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.25.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.25.0)
 
 This patch contains optimizations and bugfixes for the [Batch Query API](https://docs.styra.com/enterprise-opa/reference/api-reference/batch-api) when used with [OPA authorization policies](https://www.openpolicyagent.org/docs/latest/security/#authentication-and-authorization).
 
@@ -183,7 +193,7 @@ This patch contains optimizations and bugfixes for the [Batch Query API](https:/
 ## v1.24.5
 
 [![OPA v0.67.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.67.1)](https://github.com/open-policy-agent/opa/releases/tag/v0.67.1)
-[![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.24.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.24.0)
+[![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.25.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.25.0)
 
 This patch contains optimizations for the [Batch Query API](https://docs.styra.com/enterprise-opa/reference/api-reference/batch-api), and also updates the Regal version used in Enterprise OPA to version [v0.25.0](https://github.com/StyraInc/regal/releases/tag/v0.25.0).
 
