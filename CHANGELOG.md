@@ -12,6 +12,14 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.25.1
+
+[![OPA v0.68.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.68.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.68.0)
+[![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.25.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.25.0)
+
+This release contains optimizations for the [Batch Query API](https://docs.styra.com/enterprise-opa/reference/api-reference/batch-api).
+
+
 ## v1.25.0
 
 [![OPA v0.68.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.68.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.68.0)

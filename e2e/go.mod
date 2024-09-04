@@ -1,6 +1,7 @@
 module github.com/styrainc/enterprise-opa-private/e2e
 
-go 1.22.0
+go 1.22.5
+
 replace github.com/styrainc/enterprise-opa-private => ../
 
 require (
@@ -281,4 +282,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.67.2-0.20240827160634-754ad86731e3
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v0.67.1-0.20240904163142-4c1be661fac4
