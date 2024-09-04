@@ -1,7 +1,7 @@
 # Styra Enterprise OPA Private
 
 ![OPA v0.67.1](https://openpolicyagent.org/badge/v0.67.1)
-[![Regal v0.25.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.25.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.25.0)
+[![Regal v0.26.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.26.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.26.0)
 
 ## Github Source and Project
 
