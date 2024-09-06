@@ -6,7 +6,7 @@ stdout 'Category:\s+style'
 [windows] stdout 'Location:\s+policies\\test.rego'
 [!windows] stdout 'Location:\s+policies/test.rego'
 stdout 'Documentation:\s+https://docs\.styra\.com/regal/rules/style/opa-fmt'
-stdout '1 file linted\. 1 violation found\.'
+stdout '1 file linted\. 2 violations found\.'
 
 exec eopa lint policies_pass
 ! stderr .
@@ -15,14 +15,14 @@ stdout '1 file linted\. No violations found\.'
 ! exec eopa lint policies_sql
 ! stderr .
 stdout 'Rule:\s+function-arg-return'
-stdout '1 file linted\. 1 violation found\.'
+stdout '1 file linted\. 2 violations found\.'
 
 -- policies/test.rego --
 package policies.test
 import rego.v1
 allow := true
--- policies_pass/p.rego --
-package policies.test
+-- policies_pass/this_doesnt_matter.rego --
+package policies_pass
 
 import rego.v1
 
