@@ -9,7 +9,7 @@ require (
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.7
-	github.com/hashicorp/vault/api v1.14.0
+	github.com/hashicorp/vault/api v1.15.0
 	github.com/minio/minio-go/v7 v7.0.76
 	github.com/open-policy-agent/opa v0.68.0
 	github.com/redpanda-data/benthos/v4 v4.37.0
@@ -73,7 +73,6 @@ require (
 	github.com/bufbuild/protocompile v0.10.0 // indirect
 	github.com/bwmarrin/snowflake v0.3.0 // indirect
 	github.com/bytecodealliance/wasmtime-go/v3 v3.0.2 // indirect
-	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
