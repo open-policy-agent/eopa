@@ -104,7 +104,7 @@ require (
 	google.golang.org/grpc v1.66.1
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/h2non/gock.v1 v1.1.2
-	modernc.org/sqlite v1.33.0
+	modernc.org/sqlite v1.33.1
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -368,6 +368,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
+	modernc.org/libc v1.55.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
 	modernc.org/strutil v1.2.0 // indirect
