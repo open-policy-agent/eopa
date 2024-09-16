@@ -325,7 +325,7 @@ jobs:
       - name: Build and E2E
         run: |
           go mod tidy
-          go build -o regal main.go
+          go build -tags=regal_standalone -o regal main.go
           REGAL_BIN=$(pwd)/regal go test -tags e2e github.com/styrainc/regal/e2e -v -skip 'TestTestRegalBundledBundle|TestLintPprof'
         working-directory: enterprise-opa/examples/regal
         env:
