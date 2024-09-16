@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"math"
 	"sync"
 	"time"
 
@@ -84,11 +83,11 @@ type (
 	databaseKey struct {
 		driver                string
 		dsn                   string
-		maxOpenConnections    int64
-		maxIdleConnections    int64
+		maxOpenConnections    int
+		maxIdleConnections    int
 		connectionMaxIdleTime time.Duration
 		connectionMaxLifetime time.Duration
-		maxPreparedStatements int64
+		maxPreparedStatements int
 	}
 
 	databaseConnection struct {
@@ -370,7 +369,7 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 	return iter(ast.NewTerm(responseObj))
 }
 
-func (p *databasePool) Get(_ context.Context, driver string, dsn string, maxOpenConnections int64, maxIdleConnections int64, connectionMaxIdleTime time.Duration, connectionMaxLifetime time.Duration, maxPreparedStatements int64) (*databaseConnection, error) {
+func (p *databasePool) Get(_ context.Context, driver string, dsn string, maxOpenConnections int, maxIdleConnections int, connectionMaxIdleTime time.Duration, connectionMaxLifetime time.Duration, maxPreparedStatements int) (*databaseConnection, error) {
 	p.mu.Lock()
 
 	key := databaseKey{
@@ -407,31 +406,21 @@ func (p *databasePool) Get(_ context.Context, driver string, dsn string, maxOpen
 		return existing, nil
 	}
 
-	newDb.SetMaxOpenConns(convertToInt(maxOpenConnections))
-	newDb.SetMaxIdleConns(convertToInt(maxIdleConnections))
+	newDb.SetMaxOpenConns(maxOpenConnections)
+	newDb.SetMaxIdleConns(maxIdleConnections)
 	newDb.SetConnMaxIdleTime(connectionMaxIdleTime)
 	newDb.SetConnMaxLifetime(connectionMaxLifetime)
 
 	defer p.mu.Unlock()
 
 	db = &databaseConnection{db: newDb}
-	db.statements, err = lru.NewWithEvict[string, *databaseStmt](convertToInt(maxPreparedStatements), db.evict)
+	db.statements, err = lru.NewWithEvict[string, *databaseStmt](maxPreparedStatements, db.evict)
 	if err != nil {
 		return nil, err
 	}
 
 	p.dbs[key] = db
 	return db, nil
-}
-
-func convertToInt(n int64) int {
-	if n > math.MaxInt {
-		return math.MaxInt
-	} else if n < math.MinInt {
-		return math.MinInt
-	}
-
-	return int(n)
 }
 
 func (c *databaseConnection) Query(bctx topdown.BuiltinContext, query string, args ...any) (*sql.Rows, error) {

@@ -262,8 +262,8 @@ func builtinredisQuery(bctx topdown.BuiltinContext, operands []*ast.Term, iter f
 		Addr:     addr,
 		Password: password,
 		Username: username,
-		DB:       int(db),
-		Protocol: int(protocol),
+		DB:       db,
+		Protocol: protocol,
 	})
 
 	cmdConstructor, ok := redisAllowedCommands[strings.ToLower(command)]

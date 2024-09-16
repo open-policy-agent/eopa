@@ -181,7 +181,7 @@ func getRequestTimeoutWithDefault(obj ast.Object, key string, def time.Duration)
 	}
 }
 
-func getRequestIntWithDefault(obj ast.Object, key string, def int64) (int64, error) {
+func getRequestIntWithDefault(obj ast.Object, key string, def int) (int, error) {
 	v := obj.Get(ast.StringTerm(key))
 	if v == nil {
 		return def, nil
@@ -189,23 +189,23 @@ func getRequestIntWithDefault(obj ast.Object, key string, def int64) (int64, err
 
 	switch n := v.Value.(type) {
 	case ast.Number:
-		i, ok := n.Int64()
+		i, ok := n.Int()
 		if !ok {
-			return 0, fmt.Errorf("invalid number value %v, must be int64", v)
+			return 0, fmt.Errorf("invalid number value %v, must be int", v)
 		}
 		return i, nil
 
 	case ast.String:
 		var err error
-		i, err := strconv.ParseInt(string(n), 10, 64)
+		i, err := strconv.ParseInt(string(n), 10, 32)
 		if err == nil {
 			return 0, fmt.Errorf("invalid string value %v, must be integer", v)
 		}
 
-		return i, nil
+		return int(i), nil
 
 	default:
-		return 0, builtins.NewOperandErr(1, "'int64' must be one of {string, number} but got %s", ast.TypeName(n))
+		return 0, builtins.NewOperandErr(1, "'int32' must be one of {string, number} but got %s", ast.TypeName(n))
 	}
 }
 

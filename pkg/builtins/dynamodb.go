@@ -443,12 +443,13 @@ func builtinDynamoDBQuery(bctx topdown.BuiltinContext, operands []*ast.Term, ite
 		return &s
 	}
 
-	paramInt := func(i int64) *int64 {
+	paramInt := func(i int) *int64 {
 		if i <= 0 {
 			return nil
 		}
 
-		return &i
+		j := int64(i)
+		return &j
 	}
 
 	queryErr = func() error {
