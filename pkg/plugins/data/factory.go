@@ -27,12 +27,12 @@ func Factory() plugins.Factory {
 	return &factory{}
 }
 
-func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
+func (factory) New(m *plugins.Manager, config any) plugins.Plugin {
 	m.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateNotReady})
 	p := &Data{
 		manager: m,
 		config:  config.(Config),
-		plugins: make(map[string]plugins.Plugin),
+		plugins: make(map[string]plugins.Plugin, len(config.(Config).DataPlugins)),
 	}
 	for path, dp := range p.config.DataPlugins {
 		p.plugins[path] = dp.Factory.New(p.manager, dp.Config)

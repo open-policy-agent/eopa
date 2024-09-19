@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"testing"
 	"time"
@@ -62,12 +63,6 @@ func TestEKM(t *testing.T) {
 	vault := startVaultServer(t, ctx)
 	defer vault.Terminate(ctx)
 
-	eopa, eopaOut := eopaRun(t, eopaHTTPPort)
-	if err := eopa.Start(); err != nil {
-		t.Fatal(err)
-	}
-	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Discovery update processed successfully") }, time.Second)
-
 	// Now we assert that the config kv replacement has happend on the discovery config,
 	// by calling a test server that expects the proper token
 	lis, err := net.Listen("tcp", "127.0.0.1:9999")
@@ -76,6 +71,17 @@ func TestEKM(t *testing.T) {
 	}
 	tokenServer.Listener = lis
 	tokenServer.Start()
+
+	config, err := os.ReadFile("ekm.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	eopa, eopaOut := eopaRun(t, eopaHTTPPort, config)
+	if err := eopa.Start(); err != nil {
+		t.Fatal(err)
+	}
+	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Discovery update processed successfully") }, time.Second)
 
 	{ // store policy
 		const policy = `package test
@@ -93,7 +99,25 @@ result := http.send({"method": "GET", "url": "http://127.0.0.1:9999/test"}).body
 	{ // query policy
 		resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/v1/data/test/result", eopaHTTPPort), "application/json", nil)
 		if err != nil {
-			t.Fatalf("send policy: %v", err)
+			t.Fatalf("query policy: %v", err)
+		}
+		payload := struct {
+			Result struct {
+				Hey string
+			}
+		}{}
+
+		if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		if payload.Result.Hey != "there" {
+			t.Error("unexpected response")
+		}
+	}
+	{ // query data plugin from tree
+		resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/v1/data/from/http", eopaHTTPPort), "application/json", nil)
+		if err != nil {
+			t.Fatalf("send request: %v", err)
 		}
 		payload := struct {
 			Result struct {
@@ -187,26 +211,33 @@ func startVaultServer(t *testing.T, ctx context.Context) *testcontainervault.Vau
 	if err := setKey(vlogical, "kv/data/discovery/rsa:data/key", map[string]any{"key": string(dat)}); err != nil {
 		t.Fatal(err)
 	}
+	if err := setKey(vlogical, "kv/data/plugin/header:data/value", map[string]any{"value": "sesame"}); err != nil {
+		t.Fatal(err)
+	}
 
 	t.Setenv("VAULT_ADDR", address)
 	t.Setenv("VAULT_TOKEN", token)
 	return cluster
 }
 
-func eopaRun(t *testing.T, httpPort int, extraArgs ...string) (*exec.Cmd, *bytes.Buffer) {
+func eopaRun(t *testing.T, httpPort int, config []byte) (*exec.Cmd, *bytes.Buffer) {
 	logLevel := "debug"
 	buf := bytes.Buffer{}
 	std := bytes.Buffer{}
+
+	configPath := path.Join(t.TempDir(), "ekm.yaml")
+	if err := os.WriteFile(configPath, config, 0o755); err != nil {
+		t.Fatal(err)
+	}
 
 	args := []string{
 		"run",
 		"--server",
 		"--addr", fmt.Sprintf("localhost:%d", httpPort),
 		"--log-level", logLevel,
-		"--config-file", "ekm.yaml",
+		"--config-file", configPath,
 		"--disable-telemetry",
 	}
-	args = append(args, extraArgs...)
 	eopa := exec.Command(binary(), args...)
 	eopa.Stderr = &buf
 	eopa.Stdout = &std

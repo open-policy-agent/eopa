@@ -10,6 +10,17 @@
     "acmecorp": {
     }
   },
+  "plugins": {
+    "data": {
+      "from.http": {
+        "url": "http://127.0.0.1:9999/test",
+        "type": "http",
+        "headers": {
+          "Authorization": "Bearer ${vault(kv/data/plugin/header:data/value)}"
+        }
+      }
+    }
+  },
   "ekm": {
     "vault": {
       "access_type": "token",

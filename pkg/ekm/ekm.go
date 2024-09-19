@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 
+	"github.com/Jeffail/gabs/v2"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/api/auth/approle"
 	"github.com/hashicorp/vault/api/auth/kubernetes"
@@ -259,6 +261,12 @@ func (e *EKM) onConfig(ctx context.Context, conf *config.Config) (*config.Config
 	} else {
 		resetHTTPSend()
 	}
+
+	// deal with v2 replacements
+	conf, err = replaceV2(vlogical, conf)
+	if err != nil {
+		return nil, nil, err
+	}
 	return conf, lparams, nil
 }
 
@@ -342,25 +350,25 @@ func unmarshalAndValidate(config []byte, c *Config) error {
 }
 
 func (e *EKM) filter(vlogical *vault.Logical, input json.RawMessage, overrides *map[string]string) (json.RawMessage, error) {
-	if len(*overrides) > 0 {
-		data := make(map[string]any)
-		if len(input) > 0 {
-			err := json.Unmarshal(input, &data)
-			if err != nil {
-				return nil, fmt.Errorf("filter unmarshal failure: %w", err)
-			}
-		}
-
-		srvs := e.convertOverrideToMap(vlogical, overrides)
-		c := mergeValues(data, srvs)
-
-		s, err := json.Marshal(c)
-		if err != nil {
-			return nil, fmt.Errorf("filter marshal failure: %w", err)
-		}
-		return s, nil
+	if len(*overrides) == 0 {
+		return input, nil
 	}
-	return input, nil
+	data := make(map[string]any)
+	if len(input) > 0 {
+		err := json.Unmarshal(input, &data)
+		if err != nil {
+			return nil, fmt.Errorf("filter unmarshal failure: %w", err)
+		}
+	}
+
+	srvs := e.convertOverrideToMap(vlogical, overrides)
+	c := mergeValues(data, srvs)
+
+	s, err := json.Marshal(c)
+	if err != nil {
+		return nil, fmt.Errorf("filter marshal failure: %w", err)
+	}
+	return s, nil
 }
 
 func (e *EKM) convertOverrideToMap(vlogical *vault.Logical, input *map[string]string) map[string]any {
@@ -423,4 +431,107 @@ func mergeValues(dest map[string]any, src map[string]any) map[string]any {
 		dest[k] = mergeValues(destMap, nextMap)
 	}
 	return dest
+}
+
+func replaceV2(vc *vault.Logical, conf *config.Config) (*config.Config, error) {
+	var err error
+	// services
+	if len(conf.Services) > 0 {
+		conf.Services, err = replaceRaw(conf.Services, vc)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// keys
+	if len(conf.Keys) > 0 {
+		conf.Keys, err = replaceRaw(conf.Keys, vc)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// plugins
+	for p, pc := range conf.Plugins {
+		conf.Plugins[p], err = replaceRaw(pc, vc)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return conf, nil
+}
+
+func replaceRaw(j json.RawMessage, vc *vault.Logical) (json.RawMessage, error) {
+	m := map[string]any{}
+	if err := json.Unmarshal(j, &m); err != nil {
+		return nil, err
+	}
+	r := gabs.Wrap(m)
+	if err := replaceLeaves(r, vc); err != nil {
+		return nil, err
+	}
+	return r.Bytes(), nil
+}
+
+func replaceLeaves(m *gabs.Container, vc *vault.Logical) error {
+	// is it a map?
+	if cm := m.ChildrenMap(); len(cm) > 0 {
+		for k, c := range cm {
+			if s, ok := c.Data().(string); ok {
+				n, err := replaceString(s, vc)
+				if err != nil {
+					return err
+				}
+				m.Set(n, k)
+			}
+			if err := replaceLeaves(c, vc); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// NOTE(sr): Children() also covers objects, but we'd not be able
+	// to retrieve their keys. We need them, so we use ChildrenMap()
+	// above. If it's an object, we'll never reach this part of the
+	// code.
+	for i, c := range m.Children() { // it's an array (or not, in which case it's ignored)
+		if s, ok := c.Data().(string); ok {
+			n, err := replaceString(s, vc)
+			if err != nil {
+				return err
+			}
+			m.SetIndex(n, i)
+		}
+		if err := replaceLeaves(c, vc); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+var fullReplacement = regexp.MustCompile(`^\${vault\(([^\)]+)\)}$`)
+var substringReplacement = regexp.MustCompile(`\${vault\(([^\)]+)\)}`)
+
+func replaceString(v string, vc *vault.Logical) (any, error) {
+	// case a: value replacement, like {"auth": "${vault.get(...)}"} => replace entire value with any (for now only strings, might be more)
+	// NOTE(sr): This wouldn't have to be different from case (b) if it were only for strings
+	// but I think it would be nice to extend this to pull whole objects from vault later.
+	if m := fullReplacement.FindStringSubmatch(v); len(m) == 2 {
+		return lookupKey(vc, m[1])
+	}
+
+	// case b: substring, like "Bearer ${vault.get(...)}" => insert substring
+	var err error
+	n := substringReplacement.ReplaceAllStringFunc(v, func(m string) string {
+		if err != nil {
+			return ""
+		}
+		vaultKey := m[len("${vault(") : len(m)-len(")}")]
+		m, err = lookupKey(vc, vaultKey)
+		return m
+	})
+	return n, err
 }

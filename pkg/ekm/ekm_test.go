@@ -1,7 +1,6 @@
 package ekm
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	hcvault "github.com/hashicorp/vault/api"
 	"github.com/testcontainers/testcontainers-go"
 	testcontainervault "github.com/testcontainers/testcontainers-go/modules/vault"
@@ -87,6 +87,12 @@ func createVaultTestCluster(t *testing.T, url string) (*testcontainervault.Vault
 	if err := setKey(vlogical, "kv/data/tls/bearer:data/token", map[string]string{"url": url + testpath, "token": "token_good", "scheme": "Bearer", "content-type": "application/json"}); err != nil {
 		t.Error(err)
 	}
+	if err := setKey(vlogical, "kv/data/kafka/sasl:data", map[string]string{"username": "USERNAME", "password": "password", "scram": "scram", "bits": "256"}); err != nil {
+		t.Error(err)
+	}
+	if err := setKey(vlogical, "kv/data/http-dl/authn:data/bearer", map[string]string{"bearer": "token_good"}); err != nil {
+		t.Error(err)
+	}
 
 	_, err = lookupKey(vlogical, "kv/data/acmecorp/bearer:data/token")
 	if err != nil {
@@ -101,6 +107,18 @@ func createVaultTestCluster(t *testing.T, url string) (*testcontainervault.Vault
 		t.Error(err)
 	}
 	_, err = lookupKey(vlogical, "kv/data/tls/bearer:data/content-type")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = lookupKey(vlogical, "kv/data/kafka/sasl:data/username")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = lookupKey(vlogical, "kv/data/kafka/sasl:data/password")
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = lookupKey(vlogical, "kv/data/http-dl/authn:data/bearer")
 	if err != nil {
 		t.Error(err)
 	}
@@ -184,55 +202,191 @@ func TestEKM(t *testing.T) {
 	}
 	defer os.Remove("token_file")
 
-	t.Run("EKM", func(t *testing.T) {
-		conf := config.Config{
-			Extra:    map[string]json.RawMessage{"ekm": []byte(`{"vault": {"license": {"key": "kv/data/license:data/key"}, "url": "` + address + `", "access_type": "token", "token_file": "token_file", "keys": {"jwt_signing.key": "kv/data/sign:data/private_key"}, "services": {"acmecorp.url": "kv/data/acmecorp:data/url", "acmecorp.credentials.bearer.token": "kv/data/acmecorp/bearer:data/token"}, "httpsend": {"https://www.acmecorp.com": {"url": "kv/data/tls/bearer:data/url", "headers": {"Authorization": {"scheme": "kv/data/tls/bearer:data/scheme", "bearer": "kv/data/tls/bearer:data/token"}, "Content-Type": "kv/data/tls/bearer:data/content-type"} } } } }`)},
-			Services: []byte(`{"acmecorp": {"credentials": {"bearer": {"token": "bear"} } } }`),
-			Keys:     []byte(`{"jwt_signing": {"key": "test"} }`),
-		}
+	t.Run("config replacements", func(t *testing.T) {
+		t.Run("services", func(t *testing.T) {
+			conf := config.Config{
+				Extra: map[string]json.RawMessage{"ekm": []byte(`{"vault":
+					{
+					  "url": "` + address + `",
+					  "access_type": "token",
+					  "token_file": "token_file",
+					  "services": {
+					    "acmecorp.url": "kv/data/acmecorp:data/url",
+					    "acmecorp.credentials.bearer.token": "kv/data/acmecorp/bearer:data/token"
+					  }
+					}}`)},
+				Services: []byte(`{"acmecorp": {"credentials": {"bearer": {"token": "bear"} } } }`),
+			}
+			e := NewEKM(nil)
+			e.SetLogger(logging.New())
+			cnf, err := e.OnConfig(context.Background(), &conf)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		e := NewEKM(nil)
-		e.SetLogger(logging.New())
-		cnf, err := e.OnConfig(context.Background(), &conf)
-		if err != nil {
-			t.Error(err)
-		}
-		if !bytes.Equal(cnf.Services, []byte(`{"acmecorp":{"credentials":{"bearer":{"token":"token1"}},"url":"`+address+`"}}`)) {
-			t.Errorf("invalid services: got %v", string(cnf.Services))
-		}
+			compareConfigs(t, cnf.Services, `{"acmecorp":{"credentials":{"bearer":{"token":"token1"}},"url":"`+address+`"}}`)
+		})
 
-		if !bytes.Equal(cnf.Keys, []byte(`{"jwt_signing":{"key":"private_key1"}}`)) {
-			t.Errorf("invalid keys: got %v", string(cnf.Keys))
-		}
+		t.Run("keys", func(t *testing.T) {
+			conf := config.Config{
+				Extra: map[string]json.RawMessage{"ekm": []byte(`{"vault":
+					{
+					  "url": "` + address + `",
+					  "access_type": "token",
+					  "token_file": "token_file",
+					  "keys": {
+					    "jwt_signing.key": "kv/data/sign:data/private_key"
+					  }
+					}}`)},
+				Keys: []byte(`{"jwt_signing": {"key": "test"} }`),
+			}
+			e := NewEKM(nil)
+			e.SetLogger(logging.New())
+			cnf, err := e.OnConfig(context.Background(), &conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			compareConfigs(t, cnf.Keys, `{"jwt_signing":{"key":"private_key1"}}`)
+		})
 	})
 
-	// test http.send and EKM
-	const simpleRego = `package test
+	t.Run("v2", func(t *testing.T) {
+		t.Run("services", func(t *testing.T) {
+			conf := config.Config{
+				Extra: map[string]json.RawMessage{"ekm": []byte(`{"vault":
+					{
+					  "url": "` + address + `",
+					  "access_type": "token",
+					  "token_file": "token_file"
+					}}`)},
+				Services: []byte(`{"acmecorp": {"url": "${vault(kv/data/acmecorp:data/url)}", "credentials": {"bearer": {"token": "${vault(kv/data/acmecorp/bearer:data/token)}"} } } }`),
+			}
+			e := NewEKM(nil)
+			e.SetLogger(logging.New())
+			cnf, err := e.OnConfig(context.Background(), &conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			compareConfigs(t, cnf.Services, `{"acmecorp":{"credentials":{"bearer":{"token":"token1"}},"url":"`+address+`"}}`)
+		})
+
+		t.Run("keys", func(t *testing.T) {
+			conf := config.Config{
+				Extra: map[string]json.RawMessage{"ekm": []byte(`{"vault":
+					{
+					  "url": "` + address + `",
+					  "access_type": "token",
+					  "token_file": "token_file"
+					}}`)},
+				Keys: []byte(`{"jwt_signing": {"key": "${vault(kv/data/sign:data/private_key)}"} }`),
+			}
+			e := NewEKM(nil)
+			e.SetLogger(logging.New())
+			cnf, err := e.OnConfig(context.Background(), &conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			compareConfigs(t, cnf.Keys, `{"jwt_signing":{"key":"private_key1"}}`)
+		})
+
+		t.Run("plugins", func(t *testing.T) {
+			conf := config.Config{
+				Extra: map[string]json.RawMessage{"ekm": []byte(`{"vault":
+					{
+					  "url": "` + address + `",
+					  "access_type": "token",
+					  "token_file": "token_file"
+					}}`)},
+				// NOTE(sr): We're testing three things:
+				// full replacement (sasl_password)
+				// single substring replacement (sasl_username)
+				// multiple substring replacement (sasl_mechanism) -- unlikely, but let's support it
+				Plugins: map[string]json.RawMessage{"data": []byte(`{"kafka.messages": {
+					  "urls": ["kafka.broker:9092"],
+					  "sasl_mechanism": "${vault(kv/data/kafka/sasl:data/scram)}-sha-${vault(kv/data/kafka/sasl:data/bits)}",
+					  "sasl_username": "${vault(kv/data/kafka/sasl:data/username)}@styra.com",
+					  "sasl_password": "${vault(kv/data/kafka/sasl:data/password)}"
+					 }}`),
+					"eopa_dl": []byte(`{
+						"outputs": [
+							{
+							  "type": "http",
+							  "headers": {
+							    "Authorization": "bearer ${vault(kv/data/http-dl/authn:data/bearer)}"
+					          }
+					        }
+						]
+					}`)},
+			}
+			e := NewEKM(nil)
+			e.SetLogger(logging.New())
+			cnf, err := e.OnConfig(context.Background(), &conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			compareConfigs(t, cnf.Plugins["data"],
+				`{"kafka.messages":{"sasl_mechanism":"scram-sha-256","sasl_password":"password","sasl_username":"USERNAME@styra.com","urls":["kafka.broker:9092"]}}`)
+			compareConfigs(t, cnf.Plugins["eopa_dl"],
+				`{"outputs": [{"type": "http", "headers": {"Authorization": "bearer token_good"}}]}`)
+		})
+	})
+
+	t.Run("http.send", func(t *testing.T) {
+		conf := config.Config{
+			Extra: map[string]json.RawMessage{"ekm": []byte(`{"vault":
+					{
+					  "url": "` + address + `",
+					  "access_type": "token",
+					  "token_file": "token_file",
+					  "httpsend": {
+					    "https://www.acmecorp.com": {
+					      "url": "kv/data/tls/bearer:data/url",
+					      "headers": {
+					        "Authorization": {
+					          "scheme": "kv/data/tls/bearer:data/scheme",
+					          "bearer": "kv/data/tls/bearer:data/token"
+					        },
+					        "Content-Type": "kv/data/tls/bearer:data/content-type"
+					      }
+					    }
+					  }
+					}}`)},
+		}
+		e := NewEKM(nil)
+		e.SetLogger(logging.New())
+		_, err := e.OnConfig(context.Background(), &conf)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		const simpleRego = `package test
 default allow := false
 allow {
   resp = http.send({"headers": {"Content-Type": "application/text"}, "method": "get", "url": "https://www.acmecorp.com", "raise_error": true})
   resp.raw_body == "Success"
 }`
 
-	bundle := createBundle(t, simpleRego)
+		bundle := createBundle(t, simpleRego)
 
-	t.Run("httpsend.success", func(t *testing.T) {
-		const simpleQuery = "test/allow"
-		const simpleResult = `{{"result": true}}`
-		policy := setup(t, bundle, simpleQuery)
-		testCompiler(t, policy, "{}", simpleQuery, simpleResult, bundle.Data)
-	})
+		t.Run("success", func(t *testing.T) {
+			const simpleQuery = "test/allow"
+			const simpleResult = `{{"result": true}}`
+			policy := setup(t, bundle, simpleQuery)
+			testCompiler(t, policy, "{}", simpleQuery, simpleResult, bundle.Data)
+		})
 
-	// change the token
-	if err := setKey(vlogical, "kv/data/tls/bearer:data/token", map[string]string{"url": srv.URL + testpath, "token": "token_bad", "scheme": "Bearer", "content-type": "application/json"}); err != nil {
-		t.Error(err)
-	}
+		// change the token
+		if err := setKey(vlogical, "kv/data/tls/bearer:data/token", map[string]string{"url": srv.URL + testpath, "token": "token_bad", "scheme": "Bearer", "content-type": "application/json"}); err != nil {
+			t.Error(err)
+		}
 
-	t.Run("httpsend.badtoken", func(t *testing.T) {
-		const simpleQuery = "test/allow"
-		const simpleResult = `{{"result": false}}`
-		policy := setup(t, bundle, simpleQuery)
-		testCompiler(t, policy, "{}", simpleQuery, simpleResult, bundle.Data)
+		t.Run("badtoken", func(t *testing.T) {
+			const simpleQuery = "test/allow"
+			const simpleResult = `{{"result": false}}`
+			policy := setup(t, bundle, simpleQuery)
+			testCompiler(t, policy, "{}", simpleQuery, simpleResult, bundle.Data)
+		})
 	})
 }
 
@@ -302,5 +456,19 @@ func matchResult(tb testing.TB, result string, v vm.Value) {
 	t := ast.MustParseTerm(result)
 	if x.Compare(t.Value) != 0 {
 		tb.Fatalf("got %v wanted %v\n", v, result)
+	}
+}
+
+func compareConfigs(t *testing.T, act json.RawMessage, exp string) {
+	t.Helper()
+	var a0, e0 map[string]any
+	if err := json.Unmarshal(act, &a0); err != nil {
+		t.Fatalf("unmarshal 'act': %v", err)
+	}
+	if err := json.Unmarshal([]byte(exp), &e0); err != nil {
+		t.Fatalf("unmarshal 'exp': %v", err)
+	}
+	if diff := cmp.Diff(e0, a0); diff != "" {
+		t.Errorf("unexpected diff: (-want, +got):\n%s", diff)
 	}
 }
