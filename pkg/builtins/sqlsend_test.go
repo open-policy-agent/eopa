@@ -598,7 +598,7 @@ func startMSSQL(t *testing.T) backend {
 	t.Helper()
 	password := "dEa9de93391d4312b18!520"
 
-	srv, err := mssql.Run(context.Background(), "mcr.microsoft.com/mssql/server:2022-RTM-GDR1-ubuntu-20.04", testLogger(t),
+	srv, err := mssql.Run(context.Background(), "mcr.microsoft.com/mssql/server:2022-latest", testLogger(t),
 		mssql.WithAcceptEULA(),
 		mssql.WithPassword(password),
 	)
