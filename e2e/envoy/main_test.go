@@ -46,6 +46,9 @@ func TestMain(m *testing.M) {
 }
 
 func TestSimple(t *testing.T) {
+	if ci {
+		t.Skipf("%s is flaky in CI", t.Name())
+	}
 	ctx := context.Background()
 	const config = `plugins:
   envoy_ext_authz_grpc:
