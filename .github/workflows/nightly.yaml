@@ -361,7 +361,7 @@ jobs:
           vuln-type: os,library
           severity: CRITICAL,HIGH
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTIONS_RUNTIME_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   trivy-scan-repo:
     name: Trivy security scan repo
@@ -383,6 +383,8 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
           severity: CRITICAL,HIGH
+        env:
+          ACTIONS_RUNTIME_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   govulncheck:
     name: Go vulnerability check
