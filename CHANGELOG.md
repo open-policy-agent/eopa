@@ -12,6 +12,48 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.26.0
+
+[![OPA v0.68.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.68.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.68.0)
+[![Regal v0.27.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.27.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.27.0)
+
+This release contains various version bumps and an improvement to EKM ergonomics!
+
+
+### External Key Manager (EKM): Simplified configuration, support for plugin configs
+
+Starting with this release, you no longer need to reference _service_ and _keys_ replacements via JSON pointers, but you can use direct lookups, like
+
+```yaml
+services:
+  acmecorp:
+    credentials:
+      bearer:
+        scheme: "bearer"
+        token: "${vault(kv/data/acmecorp/bearer:data/token)}"
+```
+
+Furthermore, these are **also supported in plugins** allowing you to retrieve secrets for their configurations as well.
+
+These replacement can also be done in substrings, like this:
+
+```yaml
+decision_logs:
+  plugin: eopa_dl
+plugins:
+  eopa_dl:
+    output:
+    - type: http
+      url: https://myservice.corp.com/v1/logs
+      headers:
+        Authorization: "bearer ${vault(kv/data/logs:data/token)}"
+```
+
+Replacements also happen on discovery bundles, if their config includes lookup calls of this sort.
+
+[See here for the docs on _Using Secrets from HashiCorp Vault_](https://docs.styra.com/enterprise-opa/reference/configuration/using-secrets/from-hashicorp-vault).
+
+
 ## v1.25.1
 
 [![OPA v0.68.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.68.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.68.0)
