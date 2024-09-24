@@ -63,7 +63,7 @@ decision_logs:
 	}
 
 	const policy = `package envoy.authz
-import future.keywords.if
+import rego.v1
 
 default allow := false
 
@@ -121,7 +121,7 @@ func testEnvoy(t *testing.T, ctx context.Context, eopaHost string, eopaPort int,
 	}
 
 	req := testcontainers.ContainerRequest{
-		Image:        "envoyproxy/envoy:v1.29-latest",
+		Image:        "envoyproxy/envoy:v1.31-latest",
 		ExposedPorts: []string{"51051/tcp"},
 		Cmd:          []string{"envoy", "-c", "/etc/envoy/envoy.yaml", "--component-log-level", "ext_authz:trace"},
 		WaitingFor:   tc_wait.ForListeningPort(nat.Port("51051/tcp")),
@@ -155,7 +155,7 @@ func testEnvoy(t *testing.T, ctx context.Context, eopaHost string, eopaPort int,
 // Envoy's gRPC proxying capabilities for the demo.
 func testTestsrv(t *testing.T, ctx context.Context) (testcontainers.Container, string, int) {
 	req := testcontainers.ContainerRequest{
-		Image:        "golang:latest",
+		Image:        "golang:1.21",
 		ExposedPorts: []string{"9000/tcp"},
 		WaitingFor:   tc_wait.ForExposedPort(),
 		Cmd:          []string{"go", "run", "github.com/mhausenblas/yages@latest"},
