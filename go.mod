@@ -376,11 +376,6 @@ require (
 	oras.land/oras-go/v2 v2.5.0 // indirect
 )
 
-// glog's init function does a lookup of the current user, and that can be quite
-// expensive on windows. We only need glog as a third-party dependency (of badger),
-// and badger only calls it to die with a log messsage.
-replace github.com/golang/glog => ./build/replacements/github.com/golang/glog
-
 // keyring is used as an upstream dependency for a few libraries (including
 // benthos), and has an ongoing bug that has to be worked around:
 //   https://github.com/99designs/keyring/issues/103
