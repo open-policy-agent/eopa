@@ -17,8 +17,6 @@ import (
 	"github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/library"
-
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 
 	"github.com/testcontainers/testcontainers-go"
@@ -27,12 +25,6 @@ import (
 
 func TestNeo4jQuery(t *testing.T) {
 	t.Parallel()
-
-	// force the library methods to load so we can access the vault helpers
-	err := library.Init()
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	username := "neo4j"
 	password := "letmein!"

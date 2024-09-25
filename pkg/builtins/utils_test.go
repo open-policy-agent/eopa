@@ -14,7 +14,6 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/topdown/cache"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/library"
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
 
@@ -23,10 +22,6 @@ func TestPostgresEnvSend(t *testing.T) {
 
 	be := startPostgreSQL(t)
 	t.Cleanup(be.cleanup)
-
-	if err := library.Init(); err != nil {
-		t.Fatal(err)
-	}
 
 	// first we dissect the conn string into user, password, host etc
 	// and set them as temporary env vars
@@ -97,10 +92,6 @@ func TestPostgresVaultSend(t *testing.T) {
 
 	be := startPostgreSQL(t)
 	t.Cleanup(be.cleanup)
-
-	if err := library.Init(); err != nil {
-		t.Fatal(err)
-	}
 
 	// first we dissect the conn string into user, password, host etc
 	// and set them as vault data
@@ -207,10 +198,6 @@ func TestMysqlVaultSend(t *testing.T) {
 	be := startMySQL(t)
 	t.Cleanup(be.cleanup)
 
-	if err := library.Init(); err != nil {
-		t.Fatal(err)
-	}
-
 	re := regexp.MustCompile(`^([a-z]+):([a-z]+)@tcp\(([a-z0-9:.]+)\)/([a-z]+)\?tls=([a-z-]+)$`)
 	ms := re.FindStringSubmatch(be.conn)
 	if len(ms) < 6 {
@@ -313,10 +300,6 @@ import data.system.eopa.utils.mysql.v1.vault as mysql
 func TestVaultSecret(t *testing.T) {
 	t.Parallel()
 
-	if err := library.Init(); err != nil {
-		t.Fatal(err)
-	}
-
 	tc, addr, token := startVault(t, "a", "b/c/d", map[string]string{"fox": "trot"})
 	t.Cleanup(func() { tc.Terminate(context.Background()) })
 
@@ -401,10 +384,6 @@ func TestMongoDBFindVault(t *testing.T) {
 	username, password := "alice", "wasspord"
 	tc, endpoint := startMongoDB(t, username, password)
 	t.Cleanup(func() { tc.Terminate(ctx) })
-
-	if err := library.Init(); err != nil {
-		t.Fatal(err)
-	}
 
 	u, err := url.Parse(endpoint)
 	if err != nil {
@@ -591,10 +570,6 @@ func TestDynamoDBGetVault(t *testing.T) {
 
 	tc, endpoint := startDynamoDB(t)
 	t.Cleanup(func() { tc.Terminate(ctx) })
-
-	if err := library.Init(); err != nil {
-		t.Fatal(err)
-	}
 
 	dummy := "dummy"
 	databag := map[string]string{

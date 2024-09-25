@@ -17,8 +17,6 @@ import (
 	"github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/library"
-
 	"github.com/redis/go-redis/v9"
 
 	"github.com/testcontainers/testcontainers-go"
@@ -27,12 +25,6 @@ import (
 
 func TestRedisQuery(t *testing.T) {
 	t.Parallel()
-
-	// force the library methods to load so we can access the vault helpers
-	err := library.Init()
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	password := "letmein!"
 	username := "redis"
