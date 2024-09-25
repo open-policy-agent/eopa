@@ -9,7 +9,7 @@ require (
 	github.com/Jeffail/gabs/v2 v2.7.0
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/OneOfOne/xxhash v1.2.8
-	github.com/agnivade/levenshtein v1.1.1
+	github.com/agnivade/levenshtein v1.2.0
 	github.com/apache/pulsar-client-go v0.13.1
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/aws/aws-sdk-go-v2 v1.31.0
