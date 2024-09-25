@@ -13,12 +13,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/open-policy-agent/opa/util"
 	"github.com/testcontainers/testcontainers-go"
 	tc_wait "github.com/testcontainers/testcontainers-go/wait"
 
@@ -28,27 +28,29 @@ import (
 
 //go:embed envoy.yaml
 var envoyConfigFmt []byte
-var eopaHTTPPort int
+var eopaEnvoyGRPCPort, eopaGRPCPort int
 
 var ci = os.Getenv("CI") != ""
 
-func TestMain(m *testing.M) {
+func freePort(first int) int {
 	r := rand.New(rand.NewSource(2908))
 	for {
-		port := r.Intn(38181) + 1
+		port := r.Intn(first) + 1
 		if utils.IsTCPPortBindable(port) {
-			eopaHTTPPort = port
-			break
+			return port
 		}
 	}
+	panic("unreachable")
+}
+
+func TestMain(m *testing.M) {
+	eopaEnvoyGRPCPort = freePort(38181)
+	eopaGRPCPort = freePort(eopaEnvoyGRPCPort)
 
 	os.Exit(m.Run())
 }
 
 func TestSimple(t *testing.T) {
-	if ci {
-		t.Skipf("%s is flaky in CI", t.Name())
-	}
 	ctx := context.Background()
 	const config = `plugins:
   envoy_ext_authz_grpc:
@@ -56,7 +58,9 @@ func TestSimple(t *testing.T) {
     path: envoy/authz/allow
     dry-run: false
     enable-reflection: true
-    proto-descriptor: yages.pb
+    proto-descriptor: data.pb
+  grpc:
+    addr: "%[1]s:%[3]d"
 decision_logs:
   console: true
 `
@@ -66,47 +70,42 @@ decision_logs:
 	}
 
 	const policy = `package envoy.authz
+
 import rego.v1
 
 default allow := false
 
-allow if input.parsed_path = ["yages.Echo", "Ping"] # Ping is OK
-
 allow if {
-  input.parsed_path = ["yages.Echo", "Reverse"]
-  input.parsed_body = {
-    "text": "Maddaddam"
-  }
+	input.parsed_path = ["eopa.data.v1.DataService", "GetData"]
+	input.parsed_body = {
+		"input": {"document": {"foo": "bar"}},
+		"path": "/what/ever",
+	}
 }
 `
 	// Start up containers.
-	eopa, _, eopaErr := loadEnterpriseOPA(t, "yages.pb", fmt.Sprintf(config, bind, eopaHTTPPort), policy, eopaHTTPPort)
+	eopa, _, eopaErr := loadEnterpriseOPA(t, "data.pb", fmt.Sprintf(config, bind, eopaEnvoyGRPCPort, eopaGRPCPort), policy, eopaEnvoyGRPCPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
 	wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, 5*time.Second)
 
-	ts, tsHost, tsPort := testTestsrv(t, ctx)
-	t.Cleanup(func() { ts.Terminate(ctx) })
-
 	eopaHost := "host.docker.internal"
 	if ci {
 		eopaHost = "172.17.0.1"
 	}
-	envoy, envoyEndpoint := testEnvoy(t, ctx, eopaHost, eopaHTTPPort, tsHost, tsPort)
+	envoy, envoyEndpoint := testEnvoy(t, ctx, eopaHost, eopaEnvoyGRPCPort, eopaGRPCPort)
 	t.Cleanup(func() { envoy.Terminate(ctx) })
 
-	// Try to get the simplest query to go through Envoy, authorized by the Envoy plugin (EOPA), and the
-	// "upstream" service, YAGES.
+	// Try to get the query to go through Envoy, authorized by the Envoy plugin (EOPA), and the
+	// "upstream" service, EOPA's Data gRPC service.
 	if err := grpcurl(t,
-		fmt.Sprintf("-protoset ./yages.pb -plaintext %s yages.Echo.Ping", envoyEndpoint)); err != nil {
-		t.Fatalf("Ping stderr: %s", string(err.(*exec.ExitError).Stderr))
-	}
-
-	// Try a query that is only permitted if the request payload matches.
-	if err := grpcurl(t,
-		fmt.Sprintf(`-protoset ./yages.pb -d {"text":"Maddaddam"} -plaintext %s yages.Echo.Reverse`, envoyEndpoint)); err != nil {
-		t.Fatalf("Reverse stderr: %s", string(err.(*exec.ExitError).Stderr))
+		fmt.Sprintf(`-protoset ./data.pb -d {"path":"/what/ever","input":{"document":{"foo":"bar"}}} -plaintext %s eopa.data.v1.DataService/GetData`, envoyEndpoint)); err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			t.Fatalf("GetData stderr: %s", string(ee.Stderr))
+		} else {
+			t.Fatal(err)
+		}
 	}
 
 	// If we reach this, none of our calls failed with a Permission Denied.
@@ -114,11 +113,11 @@ allow if {
 	// to deny requests on ext_authz failures, so this means we're OK!
 }
 
-func testEnvoy(t *testing.T, ctx context.Context, eopaHost string, eopaPort int, tsHost string, tsPort int) (testcontainers.Container, string) {
+func testEnvoy(t *testing.T, ctx context.Context, eopaHost string, eopaEnvoyPort, eopaPort int) (testcontainers.Container, string) {
 	dir := t.TempDir()
 	cfg := "./envoy.yaml"
 	tpath := filepath.Join(dir, cfg)
-	config := fmt.Sprintf(string(envoyConfigFmt), tsHost, tsPort, eopaHost, eopaPort)
+	config := fmt.Sprintf(string(envoyConfigFmt), eopaHost, eopaEnvoyPort, eopaGRPCPort)
 	if err := os.WriteFile(tpath, []byte(config), 0x777); err != nil {
 		t.Fatalf("write file: %v", err)
 	}
@@ -153,46 +152,13 @@ func testEnvoy(t *testing.T, ctx context.Context, eopaHost string, eopaPort int,
 	return c, fmt.Sprintf("127.0.0.1:%s", port.Port())
 }
 
-// Runs a simple echo service, see https://mhausenblas.info/yages/
-// Note(philip): This has nothing to do with our gRPC API, we're just using
-// Envoy's gRPC proxying capabilities for the demo.
-func testTestsrv(t *testing.T, ctx context.Context) (testcontainers.Container, string, int) {
-	req := testcontainers.ContainerRequest{
-		Image:        "golang:1.21",
-		ExposedPorts: []string{"9000/tcp"},
-		WaitingFor:   tc_wait.ForExposedPort(),
-		Cmd:          []string{"go", "run", "github.com/mhausenblas/yages@latest"},
-	}
-
-	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Logger:           testcontainers.TestLogger(t),
-		Started:          true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ip := "host.docker.internal"
-	if ci {
-		ip = "172.17.0.1"
-	}
-	port, err := c.MappedPort(ctx, "9000/tcp")
-	if err != nil {
-		t.Fatal(err)
-	}
-	iport, err := strconv.Atoi(port.Port())
-	if err != nil {
-		t.Fatal(err)
-	}
-	return c, ip, iport
-}
-
 func grpcurl(t *testing.T, args string) error {
 	t.Helper()
-	stdout, err := exec.Command("grpcurl", strings.Split(args, " ")...).Output()
-	t.Logf("grpcurl %s: %s", args, string(stdout))
-	return err
+	return util.WaitFunc(func() bool {
+		stdout, err := exec.Command("grpcurl", strings.Split(args, " ")...).Output()
+		t.Logf("grpcurl %s: %s (err: %v)", args, string(stdout), err)
+		return err == nil
+	}, 250*time.Millisecond, 5*time.Second)
 }
 
 func loadEnterpriseOPA(t *testing.T, protobuf, config, policy string, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {

@@ -54,7 +54,7 @@ static_resources:
             address:
               socket_address:
                 address: %[1]s
-                port_value: %[2]d
+                port_value: %[3]d
   - name: opa-envoy
     connect_timeout: 1.25s
     type: LOGICAL_DNS
@@ -67,8 +67,8 @@ static_resources:
         - endpoint:
             address:
               socket_address:
-                address: %[3]s
-                port_value: %[4]d
+                address: %[1]s
+                port_value: %[2]d
 layered_runtime:
   layers:
     - name: static_layer_0

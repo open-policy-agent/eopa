@@ -1,2 +1,2 @@
-yages.pb: yages-schema.proto
-	protoc --include_imports -o "$@" "$<"
+data.pb: ../../proto/eopa/data/v1/data.proto
+	protoc --proto_path ../../proto --include_imports -o "$@" "$<"
