@@ -20,6 +20,7 @@ import (
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/util"
 
+	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
@@ -288,7 +289,7 @@ plugins:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			defer goleak.VerifyNone(t)
+			defer goleak.VerifyNone(t, common.Defaults...)
 
 			dir := t.TempDir()
 			cfg := fmt.Sprintf(tt.config, dir)
@@ -321,7 +322,7 @@ plugins:
       polling_interval: 10s
       file_path: data.json
 `
-	defer goleak.VerifyNone(t)
+	defer goleak.VerifyNone(t, common.Defaults...)
 
 	dir := t.TempDir()
 	cfg := fmt.Sprintf(config, dir)

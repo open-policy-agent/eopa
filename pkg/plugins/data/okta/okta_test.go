@@ -19,6 +19,7 @@ import (
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/util"
 
+	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
@@ -850,7 +851,7 @@ plugins:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			defer goleak.VerifyNone(t, goleak.IgnoreTopFunction("github.com/patrickmn/go-cache.(*janitor).Run"))
+			defer goleak.VerifyNone(t, common.Defaults...)
 
 			httpmock.Activate()
 			defer httpmock.DeactivateAndReset()
@@ -880,6 +881,8 @@ plugins:
 }
 
 func TestOKTAOwned(t *testing.T) {
+	defer goleak.VerifyNone(t, common.Defaults...)
+
 	config := `
 plugins:
   data:
@@ -892,7 +895,6 @@ plugins:
       roles: true
       apps: true
 `
-	defer goleak.VerifyNone(t, goleak.IgnoreTopFunction("github.com/patrickmn/go-cache.(*janitor).Run"))
 
 	ctx := context.Background()
 	store := inmem.New()

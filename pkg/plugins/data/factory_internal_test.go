@@ -12,6 +12,7 @@ import (
 	"github.com/open-policy-agent/opa/storage"
 	"go.uber.org/goleak"
 
+	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/kafka"
 	eopa_storage "github.com/styrainc/enterprise-opa-private/pkg/storage"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
@@ -19,7 +20,7 @@ import (
 
 func TestKafkaReconfigure(t *testing.T) {
 	t.Run("change path", func(t *testing.T) {
-		defer goleak.VerifyNone(t)
+		defer goleak.VerifyNone(t, common.Defaults...)
 
 		// When the subtree path is changed, stop the plugin and start it with the new location
 		// NOTE(sr): We could try to do better than that, but then we'd need to keep track of
@@ -66,7 +67,7 @@ kafka.updates:
 	})
 
 	t.Run("change config, keep path", func(t *testing.T) {
-		defer goleak.VerifyNone(t)
+		defer goleak.VerifyNone(t, common.Defaults...)
 
 		mgr := getTestManager()
 		config := `
@@ -108,7 +109,7 @@ kafka.updates:
 	})
 
 	t.Run("removing plugin removes data", func(t *testing.T) {
-		defer goleak.VerifyNone(t)
+		defer goleak.VerifyNone(t, common.Defaults...)
 
 		mgr := getTestManager()
 		config := `
@@ -162,7 +163,7 @@ kafka.updates:
 	})
 
 	t.Run("removing plugin removes data but keeps tree intact if there is other data", func(t *testing.T) {
-		defer goleak.VerifyNone(t)
+		defer goleak.VerifyNone(t, common.Defaults...)
 
 		mgr := getTestManager()
 		config := `

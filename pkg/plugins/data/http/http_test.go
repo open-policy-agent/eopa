@@ -21,6 +21,7 @@ import (
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/util"
 
+	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
@@ -257,7 +258,7 @@ plugins:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			defer goleak.VerifyNone(t)
+			defer goleak.VerifyNone(t, common.Defaults...)
 
 			srv := httptest.NewServer(tt.handler(t))
 			defer srv.Close()
@@ -308,7 +309,7 @@ plugins:
 		))
 	}
 
-	defer goleak.VerifyNone(t)
+	defer goleak.VerifyNone(t, common.Defaults...)
 
 	srv := httptest.NewServer(handler)
 	defer srv.Close()

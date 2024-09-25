@@ -13,6 +13,7 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 
+	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
@@ -61,7 +62,7 @@ addr: 127.0.0.1:8083
 
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
-			defer goleak.VerifyNone(t)
+			defer goleak.VerifyNone(t, common.Defaults...)
 			mgr := getTestManager()
 			g, err := grpc.Factory().Validate(mgr, []byte(tc.config))
 			if tc.checks != nil {
@@ -88,7 +89,7 @@ addr: 127.0.0.1:9090
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			defer goleak.VerifyNone(t)
+			defer goleak.VerifyNone(t, common.Defaults...)
 			ctx := context.Background()
 
 			mgr := getTestManager()

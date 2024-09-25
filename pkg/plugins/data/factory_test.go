@@ -18,6 +18,7 @@ import (
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/storage"
 
+	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/git"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/http"
@@ -850,7 +851,7 @@ s3.test:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			defer goleak.VerifyNone(t, goleak.IgnoreTopFunction("github.com/patrickmn/go-cache.(*janitor).Run"))
+			defer goleak.VerifyNone(t, common.Defaults...)
 
 			mgr := getTestManager()
 			c, err := data.Factory().Validate(mgr, []byte(tt.config))

@@ -18,16 +18,10 @@ import (
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/util"
 
+	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
-
-// TODO(philipc): Let's remove these when we find out where the leaked http
-// connections are coming from.
-var LeakOptions = []goleak.Option{
-	goleak.IgnoreTopFunction("internal/poll.runtime_pollWait"),
-	goleak.IgnoreTopFunction("net/http.(*persistConn).writeLoop"),
-}
 
 type Responder struct {
 	Method    string
@@ -299,7 +293,7 @@ plugins:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			defer goleak.VerifyNone(t, LeakOptions...)
+			defer goleak.VerifyNone(t, common.Defaults...)
 
 			httpmock.Activate()
 			defer httpmock.DeactivateAndReset()
@@ -338,7 +332,7 @@ plugins:
       access_id: foo
       secret: bar
 `
-	defer goleak.VerifyNone(t, LeakOptions...)
+	defer goleak.VerifyNone(t, common.Defaults...)
 
 	ctx := context.Background()
 	store := inmem.New()
