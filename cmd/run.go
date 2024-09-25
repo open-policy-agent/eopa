@@ -75,10 +75,12 @@ func initRun(opa *cobra.Command, brand string, lic *license.Checker, lparams *li
 				return fallback(c, args)
 			}
 		} else { // do the license validate and activate asynchronously
-			if err := lic.ValidateLicenseWithRetry(c.Context(), lparams); err != nil {
-				fmt.Fprintln(os.Stderr, err.Error())
-				os.Exit(license.ErrorExitCode)
-			}
+			go func() {
+				if err := lic.ValidateLicenseWithRetry(c.Context(), lparams); err != nil {
+					fmt.Fprintln(os.Stderr, err.Error())
+					os.Exit(license.ErrorExitCode)
+				}
+			}()
 		}
 
 		enableEOPAOnly()
