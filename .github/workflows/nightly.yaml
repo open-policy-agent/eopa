@@ -361,7 +361,7 @@ jobs:
           vuln-type: os,library
           severity: CRITICAL,HIGH
         env:
-          ACTIONS_RUNTIME_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:latest
 
   trivy-scan-repo:
     name: Trivy security scan repo
@@ -384,7 +384,7 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
         env:
-          ACTIONS_RUNTIME_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:latest
 
   govulncheck:
     name: Go vulnerability check
