@@ -1,0 +1,102 @@
+# This test ensures that the `eopa run` command allows setting the glob+regex cache
+#
+# NOTE: port 61153 was chosen at random, so that if we run in parallel with
+# other tests, we won't fail to bind to the interface.
+
+#
+# glob.match
+#
+
+# we expect a nonzero exit code on windows
+[windows] ! exec eopa run --config-file eopa-config.yaml --log-level error --addr 127.0.0.1:61153 --server pol.rego &eopa&
+[!windows]  exec eopa run --config-file eopa-config.yaml --log-level error --addr 127.0.0.1:61153 --server pol.rego &eopa&
+! stdout .
+! stderr .
+
+# block until the server reports health OK
+httpwait 'http://localhost:61153/health' '{}'
+
+# first request: miss
+exec curl --output call01 -Ss --request POST --url 'http://localhost:61153/v1/data/foo/g?metrics' --data '{"input": {"p": "*/*", "s": "a/b"}}'
+! stderr .
+! stdout .
+exec jq .metrics.counter_rego_builtin_glob_interquery_value_cache_hits call01
+stdout null
+
+# second request: hit
+exec curl --output call02 -Ss --request POST --url 'http://localhost:61153/v1/data/foo/g?metrics' --data '{"input": {"p": "*/*", "s": "a/b"}}'
+! stderr .
+! stdout .
+exec jq .metrics.counter_rego_builtin_glob_interquery_value_cache_hits call02
+stdout 1
+
+# put one more pattern in there: the old one will be dropped
+exec curl --output call03 -Ss --request POST --url 'http://localhost:61153/v1/data/foo/g?metrics' --data '{"input": {"p": "*/*/*", "s": "a/b/c"}}'
+! stderr .
+! stdout .
+exec jq .metrics.counter_rego_builtin_glob_interquery_value_cache_hits call03
+stdout null
+
+exec curl --output call04 -Ss --request POST --url 'http://localhost:61153/v1/data/foo/g?metrics' --data '{"input": {"p": "*/*", "s": "a/b"}}'
+! stderr .
+! stdout .
+exec jq .metrics.counter_rego_builtin_glob_interquery_value_cache_hits call04
+stdout null
+
+stop eopa
+! stdout .
+! stderr .
+
+#
+# regex.match
+#
+
+# we expect a nonzero exit code on windows
+[windows] ! exec eopa run --config-file eopa-config.yaml --log-level error --addr 127.0.0.1:61153 --server pol.rego &eopa&
+[!windows]  exec eopa run --config-file eopa-config.yaml --log-level error --addr 127.0.0.1:61153 --server pol.rego &eopa&
+! stdout .
+! stderr .
+
+# block until the server reports health OK
+httpwait 'http://localhost:61153/health' '{}'
+
+# first request: miss
+exec curl --output call01 -Ss --request POST --url 'http://localhost:61153/v1/data/foo/r?metrics' --data '{"input": {"p": "\w", "s": "a"}}'
+! stderr .
+! stdout .
+exec jq .metrics.counter_rego_builtin_glob_interquery_value_cache_hits call01
+stdout null
+
+# second request: hit
+exec curl --output call02 -Ss --request POST --url 'http://localhost:61153/v1/data/foo/r?metrics' --data '{"input": {"p": "\w", "s": "a"}}'
+! stderr .
+! stdout .
+exec jq .metrics.counter_rego_builtin_glob_interquery_value_cache_hits call02
+stdout 1
+
+# put one more pattern in there: the old one will be dropped
+exec curl --output call03 -Ss --request POST --url 'http://localhost:61153/v1/data/foo/r?metrics' --data '{"input": {"p": "\s", "s": " "}}'
+! stderr .
+! stdout .
+exec jq .metrics.counter_rego_builtin_glob_interquery_value_cache_hits call03
+stdout null
+
+exec curl --output call04 -Ss --request POST --url 'http://localhost:61153/v1/data/foo/g?metrics' --data '{"input": {"p": "\w", "s": "a"}}'
+! stderr .
+! stdout .
+exec jq .metrics.counter_rego_builtin_glob_interquery_value_cache_hits call04
+stdout null
+
+stop eopa
+! stdout .
+! stderr .
+
+-- eopa-config.yaml --
+caching:
+  inter_query_builtin_value_cache:
+    max_num_entries: 1
+-- pol.rego --
+package foo
+import rego.v1
+g := glob.match(input.p, ["/"], input.s)
+r := regex.match(input.p, input.s)

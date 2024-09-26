@@ -179,18 +179,19 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 	// implementations using AST types.
 
 	bctx := topdown.BuiltinContext{
-		Context:                state.Globals.Ctx,
-		Metrics:                state.Globals.Metrics,
-		Seed:                   state.Globals.Seed,
-		Time:                   ast.UIntNumberTerm(uint64(state.Globals.Time.UnixNano())),
-		Cancel:                 &state.Globals.cancel,
-		Runtime:                state.Globals.Runtime,
-		Cache:                  state.Globals.Cache,
-		NDBuiltinCache:         state.Globals.NDBCache,
-		InterQueryBuiltinCache: state.Globals.InterQueryBuiltinCache,
-		PrintHook:              state.Globals.PrintHook,
-		Capabilities:           state.Globals.Capabilities,
-		DistributedTracingOpts: state.Globals.TracingOpts,
+		Context:                     state.Globals.Ctx,
+		Metrics:                     state.Globals.Metrics,
+		Seed:                        state.Globals.Seed,
+		Time:                        ast.UIntNumberTerm(uint64(state.Globals.Time.UnixNano())),
+		Cancel:                      &state.Globals.cancel,
+		Runtime:                     state.Globals.Runtime,
+		Cache:                       state.Globals.Cache,
+		NDBuiltinCache:              state.Globals.NDBCache,
+		InterQueryBuiltinCache:      state.Globals.InterQueryBuiltinCache,
+		InterQueryBuiltinValueCache: state.Globals.InterQueryBuiltinValueCache,
+		PrintHook:                   state.Globals.PrintHook,
+		Capabilities:                state.Globals.Capabilities,
+		DistributedTracingOpts:      state.Globals.TracingOpts,
 	}
 
 	a := make([]*ast.Term, len(args))

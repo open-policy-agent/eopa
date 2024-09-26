@@ -152,20 +152,21 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 	}
 
 	result, err := v.Eval(ctx, "eval", vm.EvalOpts{
-		Metrics:                ectx.Metrics(),
-		Input:                  input,
-		Time:                   ectx.Time(),
-		Seed:                   seed,
-		Runtime:                rt,
-		Cache:                  builtins.Cache{},
-		NDBCache:               ectx.NDBCache(),
-		InterQueryBuiltinCache: ectx.InterQueryBuiltinCache(),
-		PrintHook:              ectx.PrintHook(),
-		StrictBuiltinErrors:    ectx.StrictBuiltinErrors(),
-		Capabilities:           ectx.Capabilities(),
-		TracingOpts:            tracingOpts(ectx),
-		Limits:                 limits,
-		BuiltinFuncs:           t.builtinFuncs,
+		Metrics:                     ectx.Metrics(),
+		Input:                       input,
+		Time:                        ectx.Time(),
+		Seed:                        seed,
+		Runtime:                     rt,
+		Cache:                       builtins.Cache{},
+		NDBCache:                    ectx.NDBCache(),
+		InterQueryBuiltinCache:      ectx.InterQueryBuiltinCache(),
+		InterQueryBuiltinValueCache: ectx.InterQueryBuiltinValueCache(),
+		PrintHook:                   ectx.PrintHook(),
+		StrictBuiltinErrors:         ectx.StrictBuiltinErrors(),
+		Capabilities:                ectx.Capabilities(),
+		TracingOpts:                 tracingOpts(ectx),
+		Limits:                      limits,
+		BuiltinFuncs:                t.builtinFuncs,
 	})
 	ectx.Metrics().Timer(evalTimer).Stop()
 	if err != nil {

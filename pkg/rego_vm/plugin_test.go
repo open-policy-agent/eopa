@@ -16,11 +16,56 @@ import (
 	opa_storage "github.com/open-policy-agent/opa/storage"
 	opa_inmem "github.com/open-policy-agent/opa/storage/inmem"
 	"github.com/open-policy-agent/opa/topdown/builtins"
+	"github.com/open-policy-agent/opa/topdown/cache"
 	"github.com/open-policy-agent/opa/types"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
+
+// For EOPA, this test is twofold:
+// glob.match is handled by an overridden builtin implementation, so it manages the caching itself;
+// regex.match is not -- so we're also checking that the plumbing rego -> vm -> topdown works
+func TestEvalWithInterQueryValueCache(t *testing.T) {
+	vm := rego.Target(rego_vm.Target)
+	ctx := context.Background()
+	// add an inter-query value cache
+	config, _ := cache.ParseCachingConfig(nil)
+	interQueryValueCache := cache.NewInterQueryValueCache(ctx, config)
+	m := metrics.New()
+	query := `regex.match("foo.*", "foobar")`
+	_, err := rego.New(vm, rego.Query(query), rego.InterQueryBuiltinValueCache(interQueryValueCache), rego.Metrics(m)).Eval(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// eval again with same query
+	// this request should be served by the cache
+	_, err = rego.New(vm, rego.Query(query), rego.InterQueryBuiltinValueCache(interQueryValueCache), rego.Metrics(m)).Eval(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exp, act := uint64(1), m.Counter("rego_builtin_regex_interquery_value_cache_hits").Value(); exp != act {
+		t.Fatalf("expected %d cache hits, got %d", exp, act)
+	}
+	query = `glob.match("*.example.com", ["."], "api.example.com")`
+	_, err = rego.New(vm, rego.Query(query), rego.InterQueryBuiltinValueCache(interQueryValueCache), rego.Metrics(m)).Eval(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// eval again with same query
+	// this request should be served by the cache
+	_, err = rego.New(vm, rego.Query(query), rego.InterQueryBuiltinValueCache(interQueryValueCache), rego.Metrics(m)).Eval(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = rego.New(vm, rego.Query(query), rego.InterQueryBuiltinValueCache(interQueryValueCache), rego.Metrics(m)).Eval(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exp, act := uint64(2), m.Counter("rego_builtin_glob_interquery_value_cache_hits").Value(); exp != act {
+		t.Fatalf("expected %d cache hits, got %d", exp, act)
+	}
+}
 
 func TestNDBCache(t *testing.T) {
 	ndbc := builtins.NDBCache{}
@@ -28,7 +73,7 @@ func TestNDBCache(t *testing.T) {
 		rego.Target(rego_vm.Target),
 		rego.Query("data.x.p = x"),
 		rego.Module("test.rego", `package x
-import future.keywords.if
+import rego.v1
 p := rand.intn("x", 2) if numbers.range(1, 2)`), // only one of the builtins is non-det
 		rego.NDBuiltinCache(ndbc),
 	)
@@ -427,7 +472,7 @@ p if { # miss
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
 			policy := `package test
-import future.keywords
+import rego.v1
 ` + tc.mod
 
 			m := metrics.New()

@@ -5,21 +5,18 @@ import (
 	"math"
 	"math/big"
 	gostrings "strings"
-	"sync"
 
 	"github.com/gobwas/glob"
 	"golang.org/x/exp/slices"
 
+	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/metrics"
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
+	"github.com/open-policy-agent/opa/topdown/cache"
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
-
-// NOTE(sr): A global map as cache used like this would be trouble if user-provided
-// data was used as pattern in calls go glob.match. Let's hope it never is.
-var globCacheLock = sync.Mutex{}
-var globCache = map[string]glob.Glob{}
 
 func jsonUnmarshalBuiltin(state *State, args []Value) error {
 	if isUndefinedType(args[0]) {
@@ -1092,7 +1089,7 @@ func globMatchBuiltin(state *State, args []Value) error {
 	}
 	id := builder.String()
 
-	g, err := globCompile(id, pattern, delimiters)
+	g, err := globCompile(state.Globals.Metrics, state.Globals.InterQueryBuiltinValueCache, id, pattern, delimiters)
 	if err != nil {
 		return err
 	}
@@ -1100,21 +1097,29 @@ func globMatchBuiltin(state *State, args []Value) error {
 	return nil
 }
 
-func globCompile(id, pattern string, delimiters []rune) (glob.Glob, error) {
-	globCacheLock.Lock()
-	defer globCacheLock.Unlock()
-	var err error
-	if len(globCache) > 100 {
-		// Eject one item from the cache at random.
-		for i := range globCache {
-			delete(globCache, i)
-			break
-		}
+const metricGlobCacheHit = "rego_builtin_glob_interquery_value_cache_hits"
+
+func globCompile(m metrics.Metrics, c cache.InterQueryValueCache, id, pattern string, delimiters []rune) (glob.Glob, error) {
+	if c == nil { // 'eopa eval', just do it
+		return glob.Compile(pattern, delimiters...)
 	}
-	p, ok := globCache[id]
+
+	val, ok := c.Get(ast.String(id))
 	if ok {
-		return p, nil
+		pat, valid := val.(glob.Glob)
+		if !valid {
+			// The cache key may exist for a different value type (eg. regex).
+			// In this case, we calculate the glob and return the result w/o updating the cache.
+			// NOTE(sr): comment from OPA sources, following their logic here
+			return glob.Compile(pattern, delimiters...)
+		}
+		m.Counter(metricGlobCacheHit).Incr()
+		return pat, nil
 	}
-	globCache[id], err = glob.Compile(pattern, delimiters...)
-	return globCache[id], err
+	pat, err := glob.Compile(pattern, delimiters...)
+	if err != nil {
+		return nil, err
+	}
+	c.Insert(ast.String(id), pat)
+	return pat, nil
 }

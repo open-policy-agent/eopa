@@ -62,20 +62,21 @@ type (
 	}
 
 	EvalOpts struct {
-		Time                   time.Time
-		PrintHook              print.Hook
-		Metrics                metrics.Metrics
-		Seed                   io.Reader
-		Runtime                interface{}
-		InterQueryBuiltinCache cache.InterQueryCache
-		Input                  *interface{} // Input as golang native data.
-		Limits                 *Limits
-		Cache                  builtins.Cache
-		NDBCache               builtins.NDBCache
-		Capabilities           *ast.Capabilities
-		BuiltinFuncs           map[string]*topdown.Builtin
-		TracingOpts            tracing.Options
-		StrictBuiltinErrors    bool
+		Time                        time.Time
+		PrintHook                   print.Hook
+		Metrics                     metrics.Metrics
+		Seed                        io.Reader
+		Runtime                     interface{}
+		InterQueryBuiltinCache      cache.InterQueryCache
+		InterQueryBuiltinValueCache cache.InterQueryValueCache
+		Input                       *interface{} // Input as golang native data.
+		Limits                      *Limits
+		Cache                       builtins.Cache
+		NDBCache                    builtins.NDBCache
+		Capabilities                *ast.Capabilities
+		BuiltinFuncs                map[string]*topdown.Builtin
+		TracingOpts                 tracing.Options
+		StrictBuiltinErrors         bool
 	}
 
 	// State holds all the evaluation state and is passed along the statements as the evaluation progresses.
@@ -87,27 +88,28 @@ type (
 	}
 
 	Globals struct {
-		Time                   time.Time
-		Metrics                metrics.Metrics
-		PrintHook              print.Hook
-		InterQueryBuiltinCache cache.InterQueryCache
-		Ctx                    context.Context
-		Seed                   io.Reader
-		cancel                 cancel
-		Cache                  builtins.Cache
-		vm                     *VM
-		BuiltinFuncs           map[string]*topdown.Builtin
-		Capabilities           *ast.Capabilities
-		Input                  *interface{}
-		NDBCache               builtins.NDBCache
-		Runtime                *ast.Term
-		ResultSet              fjson.Set
-		BuiltinErrors          []error
-		TracingOpts            tracing.Options
-		memoize                []map[k]Value
-		Limits                 Limits
-		StrictBuiltinErrors    bool
-		IntermediateResults    map[int]interface{}
+		Time                        time.Time
+		Metrics                     metrics.Metrics
+		PrintHook                   print.Hook
+		InterQueryBuiltinCache      cache.InterQueryCache
+		InterQueryBuiltinValueCache cache.InterQueryValueCache
+		Ctx                         context.Context
+		Seed                        io.Reader
+		cancel                      cancel
+		Cache                       builtins.Cache
+		vm                          *VM
+		BuiltinFuncs                map[string]*topdown.Builtin
+		Capabilities                *ast.Capabilities
+		Input                       *interface{}
+		NDBCache                    builtins.NDBCache
+		Runtime                     *ast.Term
+		ResultSet                   fjson.Set
+		BuiltinErrors               []error
+		TracingOpts                 tracing.Options
+		memoize                     []map[k]Value
+		Limits                      Limits
+		StrictBuiltinErrors         bool
+		IntermediateResults         map[int]interface{}
 	}
 
 	Limits struct {
@@ -268,25 +270,26 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 		}
 
 		globals := &Globals{
-			vm:                     vm,
-			Limits:                 *opts.Limits,
-			memoize:                []map[k]Value{{}},
-			Ctx:                    ctx,
-			Input:                  input,
-			Metrics:                opts.Metrics,
-			Time:                   opts.Time,
-			Seed:                   opts.Seed,
-			Runtime:                runtime,
-			PrintHook:              opts.PrintHook,
-			StrictBuiltinErrors:    opts.StrictBuiltinErrors,
-			NDBCache:               opts.NDBCache,
-			Capabilities:           opts.Capabilities,
-			TracingOpts:            opts.TracingOpts,
-			BuiltinFuncs:           opts.BuiltinFuncs,
-			ResultSet:              vm.ops.MakeSet(),
-			Cache:                  opts.Cache,
-			InterQueryBuiltinCache: opts.InterQueryBuiltinCache,
-			IntermediateResults:    make(map[int]interface{}),
+			vm:                          vm,
+			Limits:                      *opts.Limits,
+			memoize:                     []map[k]Value{{}},
+			Ctx:                         ctx,
+			Input:                       input,
+			Metrics:                     opts.Metrics,
+			Time:                        opts.Time,
+			Seed:                        opts.Seed,
+			Runtime:                     runtime,
+			PrintHook:                   opts.PrintHook,
+			StrictBuiltinErrors:         opts.StrictBuiltinErrors,
+			NDBCache:                    opts.NDBCache,
+			Capabilities:                opts.Capabilities,
+			TracingOpts:                 opts.TracingOpts,
+			BuiltinFuncs:                opts.BuiltinFuncs,
+			ResultSet:                   vm.ops.MakeSet(),
+			Cache:                       opts.Cache,
+			InterQueryBuiltinCache:      opts.InterQueryBuiltinCache,
+			InterQueryBuiltinValueCache: opts.InterQueryBuiltinValueCache,
+			IntermediateResults:         make(map[int]interface{}),
 		}
 		globals.cancel.Init(ctx)
 		defer globals.cancel.Exit()
