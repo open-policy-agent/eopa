@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/sourcegraph/conc/pool"
@@ -47,12 +48,18 @@ func Lookup(manager *plugins.Manager) *Impact {
 
 var mutex = &sync.Mutex{}
 var singleton *Impact
+var enabled = atomic.Bool{}
 
 type EvalContext interface {
 	CompiledQuery() ast.Body
 	NDBCache() builtins.NDBCache
 	ParsedInput() ast.Value
 	Metrics() metrics.Metrics
+}
+
+// Enabled returns if the LIA plugin is enabled
+func Enabled() bool {
+	return enabled.Load()
 }
 
 // Enqueue is the quick and dirty entrypoint that the singleton Impact plugin works from
@@ -133,6 +140,7 @@ func (i *Impact) Start(ctx context.Context) error {
 
 	mutex.Lock()
 	singleton = i
+	enabled.Store(true)
 	mutex.Unlock()
 
 	i.manager.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateOK})
@@ -143,6 +151,7 @@ func (i *Impact) Stop(context.Context) {
 	i.cancel()
 	i.workers.Wait()
 	i.manager.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateNotReady})
+	enabled.Store(false)
 }
 
 func (i *Impact) Reconfigure(context.Context, any) {

@@ -181,6 +181,8 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 	}
 	statsToMetrics(ectx.Metrics(), s)
 
-	go impact.Enqueue(ctx, ectx, result)
+	if impact.Enabled() {
+		go impact.Enqueue(ctx, ectx, result)
+	}
 	return result, nil
 }
