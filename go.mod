@@ -102,7 +102,7 @@ require (
 	golang.org/x/sync v0.8.0
 	golang.org/x/term v0.25.0
 	google.golang.org/grpc v1.67.1
-	google.golang.org/protobuf v1.34.2
+	google.golang.org/protobuf v1.35.1
 	gopkg.in/h2non/gock.v1 v1.1.2
 	modernc.org/sqlite v1.33.1
 	sigs.k8s.io/yaml v1.4.0
