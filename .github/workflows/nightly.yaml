@@ -352,7 +352,7 @@ jobs:
         # Equivalent to:
         # $ trivy image $IMAGE
       - name: Run Trivy scan on image
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.26.0
         with:
           image-ref: ${{ steps.enterprise-opa.outputs.image }}
           format: table
@@ -361,7 +361,7 @@ jobs:
           vuln-type: os,library
           severity: CRITICAL,HIGH
         env:
-          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:latest
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db
 
   trivy-scan-repo:
     name: Trivy security scan repo
@@ -376,7 +376,7 @@ jobs:
       # Equivalent to:
       # $ trivy fs .
       - name: Run Trivy scan on repo
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.26.0
         with:
           scan-type: fs
           format: table
@@ -384,7 +384,7 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
         env:
-          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:latest
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db
 
   govulncheck:
     name: Go vulnerability check
