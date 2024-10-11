@@ -77,6 +77,7 @@ type (
 		BuiltinFuncs                map[string]*topdown.Builtin
 		TracingOpts                 tracing.Options
 		StrictBuiltinErrors         bool
+		ExternalCancel              topdown.Cancel
 	}
 
 	// State holds all the evaluation state and is passed along the statements as the evaluation progresses.
@@ -139,8 +140,9 @@ type (
 	StringIndexConst int
 
 	cancel struct {
-		exit  chan struct{}
-		value int32
+		exit      chan struct{}
+		value     int32
+		extCancel topdown.Cancel
 	}
 )
 
@@ -291,8 +293,15 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 			InterQueryBuiltinValueCache: opts.InterQueryBuiltinValueCache,
 			IntermediateResults:         make(map[int]interface{}),
 		}
-		globals.cancel.Init(ctx)
-		defer globals.cancel.Exit()
+		// If we're provided an external (probably shared) topdown.Cancel, let's
+		// use it.
+		if opts.ExternalCancel != nil {
+			globals.cancel.FromTopdownCancel(opts.ExternalCancel)
+		} else {
+			// We manage our own eval cancellation with a one-off goroutine.
+			globals.cancel.Init(ctx)
+			defer globals.cancel.Exit()
+		}
 
 		state := newState(globals, StatisticsGet(ctx))
 		defer state.Release()
@@ -728,7 +737,6 @@ func (s *State) Instr(i int64) error {
 
 	if s.Globals.cancel.Cancelled() {
 		return context.Canceled
-
 	}
 	if instructions > s.Globals.Limits.Instructions {
 		// TODO: Consider using context.WithCancelCause.
@@ -803,16 +811,29 @@ func (c *cancel) Init(ctx context.Context) {
 	go c.wait(ctx)
 }
 
+func (c *cancel) FromTopdownCancel(ext topdown.Cancel) {
+	c.extCancel = ext
+}
+
 func (c *cancel) Cancel() {
-	atomic.StoreInt32(&c.value, 1)
+	if c.extCancel == nil {
+		atomic.StoreInt32(&c.value, 1)
+	} else {
+		c.extCancel.Cancel()
+	}
 }
 
 func (c *cancel) Cancelled() bool { // opa Cancel interface contains Cancelled function
-	return atomic.LoadInt32(&c.value) != 0
+	if c.extCancel == nil {
+		return atomic.LoadInt32(&c.value) != 0
+	}
+	return c.extCancel.Cancelled()
 }
 
 func (c *cancel) Exit() {
-	close(c.exit)
+	if c.exit != nil {
+		close(c.exit)
+	}
 }
 
 func (c *cancel) wait(ctx context.Context) {

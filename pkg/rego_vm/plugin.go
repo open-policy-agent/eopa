@@ -167,6 +167,7 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		TracingOpts:                 tracingOpts(ectx),
 		Limits:                      limits,
 		BuiltinFuncs:                t.builtinFuncs,
+		ExternalCancel:              getExternalCancel(ectx),
 	})
 	ectx.Metrics().Timer(evalTimer).Stop()
 	if err != nil {
