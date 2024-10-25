@@ -10,7 +10,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hashicorp/vault/api v1.15.0
-	github.com/minio/minio-go/v7 v7.0.78
+	github.com/minio/minio-go/v7 v7.0.79
 	github.com/open-policy-agent/opa v0.69.0
 	github.com/redpanda-data/benthos/v4 v4.39.0
 	github.com/redpanda-data/connect/v4 v4.38.0
