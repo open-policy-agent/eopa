@@ -33,6 +33,7 @@ require (
 	github.com/go-jose/go-jose/v3 v3.0.3
 	github.com/go-ldap/ldap/v3 v3.4.8
 	github.com/go-sql-driver/mysql v1.8.1
+	github.com/go-viper/mapstructure/v2 v2.2.1
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
@@ -51,7 +52,6 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/microsoft/go-mssqldb v1.7.2
 	github.com/minio/minio-go/v7 v7.0.79
-	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mithrandie/csvq v1.18.1
 	github.com/mithrandie/csvq-driver v1.7.0
 	github.com/mithrandie/go-text v1.6.0
@@ -260,6 +260,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mithrandie/go-file/v2 v2.1.0 // indirect
 	github.com/mithrandie/ternary v1.1.1 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect

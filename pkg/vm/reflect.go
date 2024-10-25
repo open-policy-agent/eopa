@@ -3,7 +3,7 @@ package vm
 import (
 	"reflect"
 
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 )
 
 // toNative is called via FromInterface's default case: it's a bit of a
