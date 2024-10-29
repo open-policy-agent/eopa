@@ -1174,10 +1174,10 @@ output:
 			},
 		},
 		{
-			note: "gcp_cloud_storage output with batching",
+			note: "gcs output with batching",
 			config: `
 output:
-  type: gcp_cloud_storage
+  type: gcs
   bucket: dl
   credentials_json_file: /root/some-creds.json
   batching:
@@ -1192,7 +1192,7 @@ output:
 					memoryBuffer: &memBufferOpts{
 						MaxBytes: defaultMemoryMaxBytes,
 					},
-					outputs: []output{&outputGCPCSOpts{
+					outputs: []output{&outputGCSOpts{
 						Bucket:          "dl",
 						CredentialsJSON: "/root/some-creds.json",
 						Batching: &batchOpts{
@@ -1226,16 +1226,16 @@ output:
 			},
 		},
 		{
-			note: "gcp_cloud_storage output missing bucket",
+			note: "gcs output missing bucket",
 			config: `
 output:
-  type: gcp_cloud_storage
+  type: gcs
 `, // NOTE: credentials_json_file is optional, the SDK will use an ENV var if unset, GOOGLE_APPLICATION_CREDENTIALS
 			checks: func(t testing.TB, _ any, err error) {
 				if err == nil {
 					t.Fatal("expected error")
 				}
-				if exp, act := "output gcp_cloud_storage missing required configs: bucket", err.Error(); exp != act {
+				if exp, act := "output gcs missing required configs: bucket", err.Error(); exp != act {
 					t.Errorf("expected error %q, got %q", exp, act)
 				}
 			},

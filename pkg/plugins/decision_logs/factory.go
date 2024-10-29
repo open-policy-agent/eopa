@@ -341,14 +341,14 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 			batchingBackCompat(outputS3.Batching, m.Logger())
 		}
 		return outputS3, nil
-	case "gcp_cloud_storage":
-		outputGCPCS := new(outputGCPCSOpts)
-		if err := util.Unmarshal(outputRaw, outputGCPCS); err != nil {
+	case "gcs":
+		outputGCS := new(outputGCSOpts)
+		if err := util.Unmarshal(outputRaw, outputGCS); err != nil {
 			return nil, err
 		}
 		missing := []string{}
 		for k, v := range map[string]string{
-			"bucket": outputGCPCS.Bucket,
+			"bucket": outputGCS.Bucket,
 		} {
 			if v == "" {
 				missing = append(missing, k)
@@ -356,9 +356,9 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 		}
 		if len(missing) > 0 {
 			sort.Strings(missing)
-			return nil, fmt.Errorf("output gcp_cloud_storage missing required configs: %s", strings.Join(missing, ", "))
+			return nil, fmt.Errorf("output gcs missing required configs: %s", strings.Join(missing, ", "))
 		}
-		return outputGCPCS, nil
+		return outputGCS, nil
 	case "experimental":
 		outputExp := new(outputExpOpts)
 		if err := util.Unmarshal(outputRaw, outputExp); err != nil {

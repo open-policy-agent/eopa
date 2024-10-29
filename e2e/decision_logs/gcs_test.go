@@ -21,10 +21,10 @@ import (
 
 const gcpBucket = "logs"
 
-func TestDecisionLogsGCPCSOutput(t *testing.T) {
+func TestDecisionLogsGCSOutput(t *testing.T) {
 	policy := `
 package test
-import future.keywords
+import rego.v1
 
 coin if rand.intn("coin", 2)
 `
@@ -37,7 +37,7 @@ plugins:
     buffer:
       type: unbuffered
     output:
-      type: gcp_cloud_storage
+      type: gcs
       bucket: %[1]s
 `
 

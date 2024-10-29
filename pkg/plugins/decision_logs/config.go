@@ -545,7 +545,7 @@ func (s *outputS3Opts) Benthos() map[string]any {
 	return map[string]any{"aws_s3": m}
 }
 
-type outputGCPCSOpts struct {
+type outputGCSOpts struct {
 	Bucket          string `json:"bucket"`
 	CredentialsJSON string `json:"credentials_json_file"`
 
@@ -554,7 +554,7 @@ type outputGCPCSOpts struct {
 	*OutputProcessors
 }
 
-func (s *outputGCPCSOpts) Benthos() map[string]any {
+func (s *outputGCSOpts) Benthos() map[string]any {
 	m := map[string]any{
 		"bucket":       s.Bucket,
 		"path":         `eopa=${!json("labels.id")}/ts=${!json("timestamp").ts_parse("2006-01-02T15:04:05Z07:00").ts_unix()}/decision_id=${!json("decision_id")}.json`,
