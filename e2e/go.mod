@@ -12,7 +12,7 @@ require (
 	github.com/hashicorp/vault/api v1.15.0
 	github.com/minio/minio-go/v7 v7.0.79
 	github.com/open-policy-agent/opa v0.69.0
-	github.com/redpanda-data/benthos/v4 v4.39.0
+	github.com/redpanda-data/benthos/v4 v4.40.0
 	github.com/redpanda-data/connect/v4 v4.38.0
 	github.com/rogpeppe/go-internal v1.13.1
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
