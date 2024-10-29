@@ -886,6 +886,8 @@ plugins:
 	_ = collectDL(t, &buf, true, 1)
 }
 
+type gcpOverrideEndpoint string
+
 func loadEnterpriseOPA(t *testing.T, config, policy string, httpPort int, opts ...any) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	var silent bool
 	logLevel := "debug" // Needed for checking if server is ready
@@ -893,6 +895,8 @@ func loadEnterpriseOPA(t *testing.T, config, policy string, httpPort int, opts .
 		switch o := o.(type) {
 		case bool:
 			silent = o
+		case gcpOverrideEndpoint:
+			t.Setenv("STORAGE_EMULATOR_HOST", string(o))
 		}
 	}
 

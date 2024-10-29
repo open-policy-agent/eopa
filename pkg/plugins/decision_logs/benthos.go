@@ -11,6 +11,7 @@ import (
 	_ "github.com/redpanda-data/benthos/v4/public/components/pure"      // basics
 	_ "github.com/styrainc/enterprise-opa-private/internal/benthos/aws" // aws_s3
 	_ "github.com/styrainc/enterprise-opa-private/internal/benthos/elasticsearch"
+	_ "github.com/styrainc/enterprise-opa-private/internal/benthos/gcp" // gcp_cloud_storage
 	_ "github.com/styrainc/enterprise-opa-private/internal/benthos/kafka"
 	_ "github.com/styrainc/enterprise-opa-private/internal/benthos/otlp"     // OpenTelemetry
 	_ "github.com/styrainc/enterprise-opa-private/internal/benthos/sql/base" // SQL internals

@@ -1173,6 +1173,73 @@ output:
 				}
 			},
 		},
+		{
+			note: "gcp_cloud_storage output with batching",
+			config: `
+output:
+  type: gcp_cloud_storage
+  bucket: dl
+  credentials_json_file: /root/some-creds.json
+  batching:
+    at_count: 42
+    at_bytes: 43
+    at_period: "300ms"
+    format: array
+    compress: true
+`,
+			checks: func(t testing.TB, a any, err error) {
+				isConfig(Config{
+					memoryBuffer: &memBufferOpts{
+						MaxBytes: defaultMemoryMaxBytes,
+					},
+					outputs: []output{&outputGCPCSOpts{
+						Bucket:          "dl",
+						CredentialsJSON: "/root/some-creds.json",
+						Batching: &batchOpts{
+							Period:   "300ms",
+							Count:    42,
+							Bytes:    43,
+							Format:   "array",
+							Compress: true,
+						},
+					}},
+				})(t, a, err)
+
+				isBenthos(map[string]any{
+					"gcp_cloud_storage": map[string]any{
+						"batching": map[string]any{
+							"byte_size": 43,
+							"count":     42,
+							"period":    "300ms",
+							"processors": []map[string]any{
+								{"mutation": s3MetaMapping},
+								{"archive": map[string]any{"format": string("json_array")}},
+								{"compress": map[string]any{"algorithm": string("gzip")}},
+							},
+						},
+						"bucket":           "dl",
+						"path":             `eopa=${!@eopa_id}/first_ts=${!@first_ts}/last_ts=${!@last_ts}/batch_id=${!uuid_v4()}.json.gz`,
+						"content_type":     "application/json",
+						"credentials_json": "/root/some-creds.json",
+					},
+				})(t, a, err)
+			},
+		},
+		{
+			note: "gcp_cloud_storage output missing bucket",
+			config: `
+output:
+  type: gcp_cloud_storage
+`, // NOTE: credentials_json_file is optional, the SDK will use an ENV var if unset, GOOGLE_APPLICATION_CREDENTIALS
+			checks: func(t testing.TB, _ any, err error) {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				if exp, act := "output gcp_cloud_storage missing required configs: bucket", err.Error(); exp != act {
+					t.Errorf("expected error %q, got %q", exp, act)
+				}
+			},
+		},
 	}
 
 	for _, tc := range tests {

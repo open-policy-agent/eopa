@@ -487,7 +487,7 @@ type outputS3Opts struct {
 	tls *sinkAuthTLS
 }
 
-var s3MetaMapping = `meta eopa_id = json("labels.id").from(0)
+const s3MetaMapping = `meta eopa_id = json("labels.id").from(0)
 meta first_ts = json("timestamp").from(0).ts_parse("2006-01-02T15:04:05Z07:00").ts_unix()
 meta last_ts = json("timestamp").from(-1).ts_parse("2006-01-02T15:04:05Z07:00").ts_unix()
 `
@@ -543,6 +543,53 @@ func (s *outputS3Opts) Benthos() map[string]any {
 		"secret": s.AccessSecret,
 	}
 	return map[string]any{"aws_s3": m}
+}
+
+type outputGCPCSOpts struct {
+	Bucket          string `json:"bucket"`
+	CredentialsJSON string `json:"credentials_json_file"`
+
+	Batching *batchOpts `json:"batching,omitempty"`
+
+	*OutputProcessors
+}
+
+func (s *outputGCPCSOpts) Benthos() map[string]any {
+	m := map[string]any{
+		"bucket":       s.Bucket,
+		"path":         `eopa=${!json("labels.id")}/ts=${!json("timestamp").ts_parse("2006-01-02T15:04:05Z07:00").ts_unix()}/decision_id=${!json("decision_id")}.json`,
+		"content_type": "application/json",
+	}
+	if b := s.Batching; b != nil {
+		bMap := b.Benthos()
+		bProc, ok := bMap["processors"].([]map[string]any)
+		if !ok {
+			bProc = []map[string]any{}
+		}
+
+		if b.Format != "none" {
+			// Add mapping processor to pull out data from the first batch item for use in the naming scheme
+			processors := make([]map[string]any, 1, len(bProc)+1)
+			processors[0] = map[string]any{
+				"mutation": s3MetaMapping,
+			}
+			processors = append(processors, bProc...)
+			bMap["processors"] = processors
+			objectPath := `eopa=${!@eopa_id}/first_ts=${!@first_ts}/last_ts=${!@last_ts}/batch_id=${!uuid_v4()}.json`
+			if b.Format != "array" {
+				// Make the extension `.jsonl` in non-array mode indicating json lines format
+				objectPath += "l"
+			}
+			if b.Compress {
+				objectPath += ".gz"
+			}
+			m["path"] = objectPath
+		}
+
+		m["batching"] = bMap
+	}
+	m["credentials_json"] = s.CredentialsJSON
+	return map[string]any{"gcp_cloud_storage": m}
 }
 
 // This output is for experimentation and not part of the public feature set.
