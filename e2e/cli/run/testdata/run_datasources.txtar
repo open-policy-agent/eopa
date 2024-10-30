@@ -4,11 +4,11 @@
 # uses syncmock to simulate the DAS API, downloads it, and then launches the
 # EOPA server.
 #
-# NOTE: ports 33249 (syncmock) and 41072 (eopa) were chosen at random, so that
+# NOTE: ports 63249 (syncmock) and 61072 (eopa) were chosen at random, so that
 # if we run in parallel with other tests, we won't fail to bind to the
 # interface.
 
-! exec syncmock --port 33249 --cookie-file .styra-session &
+! exec syncmock --port 63249 --cookie-file .styra-session &
 [darwin] exec sleep 1
 
 exec eopa pull --log-level warn
@@ -16,26 +16,26 @@ exec eopa pull --log-level warn
 ! stderr .
 
 # we expect a nonzero exit code on windows
-[windows] ! exec eopa run --log-level error --addr 127.0.0.1:41072 --server &eopa&
-[!windows]  exec eopa run --log-level error --addr 127.0.0.1:41072 --server &eopa&
+[windows] ! exec eopa run --log-level error --addr 127.0.0.1:61072 --server &eopa&
+[!windows]  exec eopa run --log-level error --addr 127.0.0.1:61072 --server &eopa&
 ! stdout .
 ! stderr .
 
 # block until the server reports health OK
-httpwait 'http://localhost:41072/health' '{}'
+httpwait 'http://localhost:61072/health' '{}'
 
 # policy access test
-exec curl -Ss --request GET --url http://localhost:41072/v1/data/libraries/lib02/envoy
+exec curl -Ss --request GET --url http://localhost:61072/v1/data/libraries/lib02/envoy
 cmp stdout exp/stdout_policy_allow
 ! stderr .
 
 # token access test (datsource)
-exec curl -Ss --request GET --url http://localhost:41072/v1/data/libraries/lib02/token
+exec curl -Ss --request GET --url http://localhost:61072/v1/data/libraries/lib02/token
 cmp stdout exp/stdout_token
 ! stderr .
 
 # thing access test (datsource)
-exec curl -Ss --request GET --url http://localhost:41072/v1/data/libraries/lib02/thing
+exec curl -Ss --request GET --url http://localhost:61072/v1/data/libraries/lib02/thing
 cmp stdout exp/stdout_thing
 ! stderr .
 
@@ -47,7 +47,7 @@ stop eopa
 opensesame
 
 -- .styra.yaml --
-url: http://127.0.0.1:33249
+url: http://127.0.0.1:63249
 data:
   - .styra/include
 
