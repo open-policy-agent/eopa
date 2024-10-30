@@ -77,15 +77,15 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/styrainc/regal v0.28.0
-	github.com/testcontainers/testcontainers-go v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/localstack v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/mssql v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/mysql v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/pulsar v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.33.0
+	github.com/testcontainers/testcontainers-go v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/localstack v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/mssql v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/mysql v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/pulsar v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.34.0
 	github.com/twmb/franz-go v1.18.0
 	github.com/twmb/franz-go/plugin/kprom v1.1.0
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
@@ -180,7 +180,7 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
-	github.com/cpuguy83/dockercfg v0.3.1 // indirect
+	github.com/cpuguy83/dockercfg v0.3.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.5 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
