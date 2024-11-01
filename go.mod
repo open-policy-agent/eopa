@@ -62,7 +62,7 @@ require (
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/olivere/elastic/v7 v7.0.32
 	github.com/open-policy-agent/opa v0.70.0
-	github.com/open-policy-agent/opa-envoy-plugin v0.70.0-envoy
+	github.com/open-policy-agent/opa-envoy-plugin v0.70.0-envoy-1
 	github.com/ory/dockertest/v3 v3.11.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/redis/go-redis/v9 v9.7.0
