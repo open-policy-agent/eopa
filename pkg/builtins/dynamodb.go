@@ -85,9 +85,9 @@ var (
 		Description: "Returns DynamoDB get result row.",
 		Decl: types.NewFunction(
 			types.Args(
-				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))),
+				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))).Description("query object"),
 			),
-			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))),
+			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("result row"),
 		),
 		Nondeterministic: true,
 	}
@@ -97,9 +97,9 @@ var (
 		Description: "Returns DynamoDB query result rows.",
 		Decl: types.NewFunction(
 			types.Args(
-				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))),
+				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))).Description("query object"),
 			),
-			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))),
+			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("result row"),
 		),
 		Nondeterministic: true,
 	}

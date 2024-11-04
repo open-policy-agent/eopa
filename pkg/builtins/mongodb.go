@@ -58,9 +58,9 @@ var (
 		Description: "Returns query result rows to the given MongoDB operation.",
 		Decl: types.NewFunction(
 			types.Args(
-				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))),
+				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))).Description("query object"),
 			),
-			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))),
+			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("query result rows"),
 		),
 		Nondeterministic: true,
 	}
@@ -69,9 +69,9 @@ var (
 		Description: "Returns query result row to the given MongoDB operation.",
 		Decl: types.NewFunction(
 			types.Args(
-				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))),
+				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))).Description("query object"),
 			),
-			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))),
+			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("query result rows"),
 		),
 		Nondeterministic: true,
 	}

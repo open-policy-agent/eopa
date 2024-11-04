@@ -132,9 +132,9 @@ var (
 		Description: "Returns the result of the given Redis command.",
 		Decl: types.NewFunction(
 			types.Args(
-				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))),
+				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))).Description("query object"),
 			),
-			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))),
+			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("response object"),
 		),
 		Nondeterministic: true,
 	}

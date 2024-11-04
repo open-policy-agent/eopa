@@ -13,9 +13,9 @@ var (
 		Name: rego.RegoEvalName,
 		Decl: types.NewFunction(
 			types.Args(
-				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))),
+				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))).Description("rego eval request"),
 			),
-			types.Named("output", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))),
+			types.Named("output", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("rego eval result"),
 		),
 		Nondeterministic: true,
 	}
