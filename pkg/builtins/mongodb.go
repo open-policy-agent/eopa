@@ -63,6 +63,7 @@ var (
 			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("query result rows"),
 		),
 		Nondeterministic: true,
+		Categories:       docs("https://docs.styra.com/enterprise-opa/reference/built-in-functions/mongodb"),
 	}
 	mongoDBFindOne = &ast.Builtin{
 		Name:        mongoDBFindOneName,
@@ -74,6 +75,7 @@ var (
 			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("query result rows"),
 		),
 		Nondeterministic: true,
+		Categories:       docs("https://docs.styra.com/enterprise-opa/reference/built-in-functions/mongodb"),
 	}
 
 	mongoDBFindLatencyMetricKey       = "rego_builtin_mongodb_find"

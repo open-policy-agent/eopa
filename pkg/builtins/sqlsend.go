@@ -67,6 +67,7 @@ var (
 			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("query result rows"),
 		),
 		Nondeterministic: true,
+		Categories:       docs("https://docs.styra.com/enterprise-opa/reference/built-in-functions/sql"),
 	}
 
 	sqlSendLatencyMetricKey    = "rego_builtin_sql_send"

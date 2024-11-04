@@ -90,6 +90,7 @@ var (
 			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("result row"),
 		),
 		Nondeterministic: true,
+		Categories:       docs("https://docs.styra.com/enterprise-opa/reference/built-in-functions/dynamodb"),
 	}
 
 	dynamoDBQuery = &ast.Builtin{
@@ -102,6 +103,7 @@ var (
 			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("result row"),
 		),
 		Nondeterministic: true,
+		Categories:       docs("https://docs.styra.com/enterprise-opa/reference/built-in-functions/dynamodb"),
 	}
 
 	dynamoDBGetLatencyMetricKey      = "rego_builtin_dynamodb_get"

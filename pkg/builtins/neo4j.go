@@ -59,6 +59,7 @@ var (
 			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("response object"),
 		),
 		Nondeterministic: true,
+		Categories:       docs("https://docs.styra.com/enterprise-opa/reference/built-in-functions/neo4j"),
 	}
 )
 

@@ -430,3 +430,7 @@ func enterpriseOPAExtensions(f *ast.Capabilities) {
 	f.Features = append(f.Features, features...)
 	f.Builtins = append(f.Builtins, Builtins...)
 }
+
+func docs(u string, extra ...string) []string {
+	return append(extra, fmt.Sprintf("url=%s", u))
+}
