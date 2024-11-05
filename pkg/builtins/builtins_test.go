@@ -24,7 +24,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestAllBuiltinsHaveMetadata(t *testing.T) {
-	docsExceptions := []string{"rego.eval"} // these don't have public docs (yet)
+	docsExceptions := []string{"rego.eval", "ucast.as_sql"} // these don't have public docs (yet)
 	for _, b := range builtins.Builtins {
 		t.Run(b.Name, func(t *testing.T) {
 			namedAndDescribed(t, "arg", b.Decl.NamedFuncArgs().Args...)

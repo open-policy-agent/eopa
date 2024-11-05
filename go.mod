@@ -1,6 +1,6 @@
 module github.com/styrainc/enterprise-opa-private
 
-go 1.22.5
+go 1.23
 
 toolchain go1.23.0
 
@@ -46,6 +46,7 @@ require (
 	github.com/hashicorp/vault/api v1.15.0
 	github.com/hashicorp/vault/api/auth/approle v0.8.0
 	github.com/hashicorp/vault/api/auth/kubernetes v0.8.0
+	github.com/huandu/go-sqlbuilder v1.30.1
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/jarcoal/httpmock v1.2.0
 	github.com/json-iterator/go v1.1.12
@@ -246,6 +247,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.6 // indirect
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-5 // indirect
+	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/influxdata/go-syslog/v3 v3.0.0 // indirect
 	github.com/itchyny/gojq v0.12.16 // indirect

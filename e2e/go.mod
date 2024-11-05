@@ -1,6 +1,8 @@
 module github.com/styrainc/enterprise-opa-private/e2e
 
-go 1.22.5
+go 1.23
+
+toolchain go1.23.1
 
 replace github.com/styrainc/enterprise-opa-private => ../
 
@@ -167,6 +169,8 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-5 // indirect
 	github.com/hashicorp/vault/api/auth/approle v0.8.0 // indirect
+	github.com/huandu/go-sqlbuilder v1.30.1 // indirect
+	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/influxdata/go-syslog/v3 v3.0.0 // indirect
 	github.com/itchyny/gojq v0.12.16 // indirect
 	github.com/itchyny/timefmt-go v0.1.6 // indirect
@@ -212,7 +216,7 @@ require (
 	github.com/mtibben/percent v0.2.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
-	github.com/neo4j/neo4j-go-driver/v5 v5.25.0 // indirect
+	github.com/neo4j/neo4j-go-driver/v5 v5.26.0 // indirect
 	github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect

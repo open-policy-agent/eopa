@@ -79,6 +79,7 @@ var DefaultBuiltins = [...]*ast.Builtin{
 	vaultSend,
 	neo4jQuery,
 	redisQuery,
+	ucastAsSQL,
 }
 
 func getRequestStringWithDefault(obj ast.Object, key string, def string) (string, error) {
