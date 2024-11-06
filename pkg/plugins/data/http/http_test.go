@@ -26,7 +26,13 @@ import (
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m, common.Defaults...)
+}
+
 func TestHTTPData(t *testing.T) {
+	t.Parallel()
+
 	const transform = `package e2e
 	import future.keywords
 	transform.users[id] := d {
@@ -107,7 +113,7 @@ plugins:
     http.placeholder:
       type: http
       url: %[1]s
-      polling_interval: 10s
+      polling_interval: 1s
 `,
 			expectedData: []map[string]any{
 				{
@@ -258,7 +264,7 @@ plugins:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			defer goleak.VerifyNone(t, common.Defaults...)
+			t.Parallel()
 
 			srv := httptest.NewServer(tt.handler(t))
 			defer srv.Close()
@@ -284,7 +290,7 @@ plugins:
 				}
 				// wait until next interval, except this is the last expected item
 				if i != len(tt.expectedData)-1 {
-					time.Sleep(11 * time.Second)
+					time.Sleep(1 * time.Second)
 				}
 			}
 		})
@@ -292,6 +298,8 @@ plugins:
 }
 
 func TestHTTPOwned(t *testing.T) {
+	t.Parallel()
+
 	config := `
 plugins:
   data:
@@ -308,8 +316,6 @@ plugins:
 }`,
 		))
 	}
-
-	defer goleak.VerifyNone(t, common.Defaults...)
 
 	srv := httptest.NewServer(handler)
 	defer srv.Close()

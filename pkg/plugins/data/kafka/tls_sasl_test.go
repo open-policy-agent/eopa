@@ -25,11 +25,13 @@ import (
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
-const caCertPath = "testdata/tls/ca.pem"
-const clientCertPath = "testdata/tls/client-cert.pem"
-const clientKeyPath = "testdata/tls/client-key.pem"
-const serverCertPath = "testdata/tls/server-cert.pem"
-const serverKeyPath = "testdata/tls/server-key.pem"
+const (
+	caCertPath     = "testdata/tls/ca.pem"
+	clientCertPath = "testdata/tls/client-cert.pem"
+	clientKeyPath  = "testdata/tls/client-key.pem"
+	serverCertPath = "testdata/tls/server-cert.pem"
+	serverKeyPath  = "testdata/tls/server-key.pem"
+)
 
 const transform = `package e2e
 import future.keywords
@@ -45,6 +47,8 @@ transform[key] := val if {
 `
 
 func TestTLS(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	topic := "cipot"
 	config := `
@@ -132,6 +136,8 @@ plugins:
 const user, pass = "admin", "wasspord"
 
 func TestSASL(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	topic := "cipot"
 	config := `
@@ -193,6 +199,8 @@ plugins:
 }
 
 func TestPlainFrom(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	topic := "cipot"
 	config := `
@@ -260,6 +268,8 @@ plugins:
 }
 
 func TestTLSAndSASL(t *testing.T) {
+	t.Parallel()
+
 	t.Skip("testcontainer module redpanda can't deal with sasl and tls at the same time")
 	ctx := context.Background()
 	topic := "cipot"

@@ -4,31 +4,36 @@ import (
 	"time"
 )
 
-const DefaultInterval = 30 * time.Second
+const (
+	DefaultInterval    = 30 * time.Second
+	DefaultMinInterval = 1 * time.Second
+)
 
-func ParseInterval(s string, def time.Duration) (time.Duration, error) {
-	v, err := ParseDuration(s, def)
+// ParseInterval parses the given string into a time.Duration.
+// minDuration ensures that a misconfiguration will not result in excessive polling.
+func ParseInterval(s string, defaultDuration time.Duration, minDuration time.Duration) (time.Duration, error) {
+	v, err := ParseDuration(s, defaultDuration)
 	if err != nil {
 		return v, err
 	}
 
-	if v < 10*time.Second {
-		return 10 * time.Second, nil
+	if v < minDuration {
+		return minDuration, nil
 	}
 
 	return v, nil
 }
 
-func ParseDuration(s string, def time.Duration) (time.Duration, error) {
+func ParseDuration(s string, defaultDuration time.Duration) (time.Duration, error) {
 	if s == "" {
-		return def, nil
+		return defaultDuration, nil
 	}
 	v, err := time.ParseDuration(s)
 	if err != nil {
-		return def, err
+		return defaultDuration, err
 	}
 	if v == 0 {
-		return def, nil
+		return defaultDuration, nil
 	}
 	return v, nil
 }

@@ -10,6 +10,8 @@ import (
 )
 
 func TestBenthosLint(t *testing.T) {
+	t.Parallel()
+
 	// NOTE(sr): These tests ensure that we don't spit out benthos configs
 	// that are invalid.
 	tests := []struct {
@@ -64,6 +66,8 @@ audience: everyone
 
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
+			t.Parallel()
+
 			config := `plugins:
   data:
     pulsar:

@@ -18,12 +18,16 @@ import (
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
-const rootUser = "uid=admin,ou=people,dc=example,dc=com"
-const rootPassword = "password"
+const (
+	rootUser     = "uid=admin,ou=people,dc=example,dc=com"
+	rootPassword = "password"
+)
 
 var retryClient = rhttp.NewClient().StandardClient()
 
 func TestDataLDAP(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	addr, tx := testServer(ctx, t)
 	t.Cleanup(func() { tx.Terminate(ctx) })

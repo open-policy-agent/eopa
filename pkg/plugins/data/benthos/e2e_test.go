@@ -43,6 +43,8 @@ const (
 )
 
 func TestBenthosPulsar(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	topic, topic2 := "cipot", "btw"
 	configPlain := `
@@ -110,6 +112,7 @@ transform[key] := val if {
 
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
+			t.Parallel()
 
 			broker, tx := testPulsar(t, ctx, tc.extra...)
 			t.Cleanup(func() { tx.Terminate(ctx) })
@@ -204,6 +207,8 @@ transform[key] := val if {
 }
 
 func TestBenthosPulsarOwned(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	topic := "cipot"
 	config := `

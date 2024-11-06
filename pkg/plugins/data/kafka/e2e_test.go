@@ -21,6 +21,8 @@ import (
 )
 
 func TestKafkaData(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	topic := "cipot"
 	topic2 := "btw"
@@ -112,6 +114,8 @@ transform[key] := val if {
 }
 
 func TestKafkaOwned(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	topic := "cipot"
 	config := `
@@ -164,6 +168,8 @@ transform[key] := val if {
 //  7. another message is published on the topic, same key as (1.)
 //  8. the newest version of the message replaces the previous one
 func TestKafkaPolicyUpdate(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	topic := "cipot"
 	config := `

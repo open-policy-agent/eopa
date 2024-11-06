@@ -30,6 +30,8 @@ import (
 const username, password = "root", "password"
 
 func TestMongoDB(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	mongodb, uri := startMongoDB(t, username, password)
 	t.Cleanup(func() { mongodb.Terminate(ctx) })
@@ -96,6 +98,8 @@ plugins:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			store := inmem.New()
 			mgr := pluginMgr(t, store, strings.ReplaceAll(strings.ReplaceAll(tt.config, "URI", uri), "AUTH", auth))
 
@@ -118,6 +122,8 @@ plugins:
 }
 
 func TestRegoTransform(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	tx, uri := startMongoDB(t, username, password)
 	t.Cleanup(func() { tx.Terminate(ctx) })

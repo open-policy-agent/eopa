@@ -25,7 +25,13 @@ import (
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m, common.Defaults...)
+}
+
 func TestGitData(t *testing.T) {
+	t.Parallel()
+
 	const transform = `package e2e
 	import future.keywords
 	transform.raw := input.incoming
@@ -242,8 +248,9 @@ plugins:
 				}
 				expected := map[string]any{
 					"bar": map[string]any{
-						"bar.yaml": map[string]any{"" +
-							"bar": "yaml",
+						"bar.yaml": map[string]any{
+							"" +
+								"bar": "yaml",
 						},
 						"bar.yml": map[string]any{
 							"bar": "yml",
@@ -289,7 +296,7 @@ plugins:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			defer goleak.VerifyNone(t, common.Defaults...)
+			t.Parallel()
 
 			dir := t.TempDir()
 			cfg := fmt.Sprintf(tt.config, dir)
@@ -313,6 +320,8 @@ plugins:
 }
 
 func TestGitOwned(t *testing.T) {
+	t.Parallel()
+
 	config := `
 plugins:
   data:
@@ -322,7 +331,6 @@ plugins:
       polling_interval: 10s
       file_path: data.json
 `
-	defer goleak.VerifyNone(t, common.Defaults...)
 
 	dir := t.TempDir()
 	cfg := fmt.Sprintf(config, dir)

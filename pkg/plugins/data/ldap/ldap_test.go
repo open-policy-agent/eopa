@@ -35,6 +35,8 @@ var (
 )
 
 func TestLDAPDataMocks(t *testing.T) {
+	t.Parallel()
+
 	var (
 		searchResult    *goldap.SearchResult
 		convertedResult []any
@@ -101,6 +103,8 @@ plugins:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			client := &mocks.Client{}
 			defer client.AssertExpectations(t)
 
@@ -133,6 +137,8 @@ plugins:
 }
 
 func TestLDAPOwned(t *testing.T) {
+	t.Parallel()
+
 	config := `
 plugins:
   data:         

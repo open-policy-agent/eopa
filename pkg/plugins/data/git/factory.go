@@ -74,7 +74,7 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 	if c.path, err = utils.AddDataPrefixAndParsePath(c.Path); err != nil {
 		return nil, err
 	}
-	if c.interval, err = utils.ParseInterval(c.Interval, 5*time.Minute); err != nil {
+	if c.interval, err = utils.ParseInterval(c.Interval, 5*time.Minute, utils.DefaultMinInterval); err != nil {
 		return nil, err
 	}
 	if r := c.RegoTransformRule; r != "" {

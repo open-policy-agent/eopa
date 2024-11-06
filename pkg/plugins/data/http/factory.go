@@ -88,7 +88,7 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) 
 	if c.path, err = utils.AddDataPrefixAndParsePath(c.Path); err != nil {
 		return nil, err
 	}
-	if c.interval, err = utils.ParseInterval(c.Interval, utils.DefaultInterval); err != nil {
+	if c.interval, err = utils.ParseInterval(c.Interval, utils.DefaultInterval, utils.DefaultMinInterval); err != nil {
 		return nil, err
 	}
 	if c.timeout, err = utils.ParseDuration(c.Timeout, 0); err != nil {
