@@ -25,7 +25,7 @@ func TestUCASTNodeAsSQL(t *testing.T) {
 			Note:    "Nil argument",
 			Source:  UCASTNode{Type: "field", Op: "eq", Field: "name", Value: nil},
 			Dialect: "postgres",
-			Result:  "WHERE ",
+			Result:  "",
 		},
 		{
 			Note:    "Laundered nil argument",
