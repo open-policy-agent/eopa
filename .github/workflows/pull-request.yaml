@@ -435,6 +435,34 @@ jobs:
           docker run test eopa version
         working-directory: e2e/docker
 
+  smoke-caps:
+    name: Smoke Test Capabilities
+    runs-on: ubuntu-22.04
+    needs: goreleaser
+    steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Download binary tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: binary
+      - uses: open-policy-agent/setup-opa@v2 # version doesn't matter, latest is fine
+      - name: build bundle with OPA
+        run: |
+          chmod +x ./eopa
+          ./eopa capabilities --current > eopa-capabilities.json
+          opa build --capabilities eopa-capabilities.json test/cli/smoke/
+
   smoke-cli:
     name: Smoke Test CLI
     runs-on: ubuntu-22.04
