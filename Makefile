@@ -136,7 +136,7 @@ release-wasm:
 # utilities
 .PHONY: test test-race e2e benchmark fmt check fuzz update
 test:
-	go test $(BUILD_ARGS) ./...
+	GODEBUG=x509negativeserial=1 go test $(BUILD_ARGS) ./...
 
 test-examples-%:
 	cd examples/$* && \
