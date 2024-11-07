@@ -46,7 +46,7 @@ require (
 	github.com/hashicorp/vault/api v1.15.0
 	github.com/hashicorp/vault/api/auth/approle v0.8.0
 	github.com/hashicorp/vault/api/auth/kubernetes v0.8.0
-	github.com/huandu/go-sqlbuilder v1.31.0
+	github.com/huandu/go-sqlbuilder v1.32.0
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/jarcoal/httpmock v1.2.0
 	github.com/json-iterator/go v1.1.12
