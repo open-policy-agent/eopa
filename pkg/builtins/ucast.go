@@ -1,7 +1,6 @@
 package builtins
 
 import (
-	"encoding/json"
 	"slices"
 
 	"github.com/huandu/go-sqlbuilder"
@@ -9,7 +8,6 @@ import (
 	"github.com/open-policy-agent/opa/topdown"
 	"github.com/open-policy-agent/opa/topdown/builtins"
 	"github.com/open-policy-agent/opa/types"
-	"github.com/open-policy-agent/opa/util"
 )
 
 const (
@@ -26,9 +24,10 @@ var (
 		Description: "Translates a UCAST conditions AST into an SQL WHERE clause of the given dialect.",
 		Decl: types.NewFunction(
 			types.Args(
-				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))).Description("ucast conditions object"),
+				types.Named("conditions_ast", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("ucast conditions object"),
+				types.Named("dialect", types.NewString()).Description("dialect"),
 			),
-			types.Named("response", types.NewString()).Description("dialect"),
+			types.Named("result", types.NewString()).Description("generated sql"),
 		),
 		// Categories: docs("https://docs.styra.com/enterprise-opa/reference/built-in-functions/ucast"),
 	}
@@ -134,12 +133,75 @@ func (u *UCASTNode) AsSQL(cond *sqlbuilder.Cond, dialect string) string {
 			}
 		}
 	}
+
 	return ""
+}
+
+func launderType(x interface{}) *interface{} {
+	return &x
+}
+
+// This method recursively traverses the object provided, and attempts to
+// construct a UCASTNode tree from it.
+func regoObjectToUCASTNode(obj *ast.Term) (*UCASTNode, error) {
+	out := &UCASTNode{}
+
+	ty := obj.Get(ast.StringTerm("type"))
+	op := obj.Get(ast.StringTerm("operator"))
+	field := obj.Get(ast.StringTerm("field"))
+	value := obj.Get(ast.StringTerm("value"))
+
+	if ty == nil || op == nil {
+		return nil, builtins.NewOperandErr(1, "ucast.as_sql", "type and operator fields are required")
+	}
+	out.Type = string(ty.Value.(ast.String))
+	out.Op = string(op.Value.(ast.String))
+
+	if field != nil {
+		out.Field = string(field.Value.(ast.String))
+	}
+
+	// Change handling, based on type. If we get an array, recurse.
+	// Numeric types also have to be converted from json.Number to int/float.
+	if value != nil {
+		switch x := value.Value.(type) {
+		case *ast.Array:
+			var iterErr error
+			nodes := make([]UCASTNode, 0, x.Len())
+			x.Foreach(func(elem *ast.Term) {
+				node, err := regoObjectToUCASTNode(elem)
+				if err != nil {
+					iterErr = err
+				}
+				nodes = append(nodes, *node)
+			})
+			if iterErr != nil {
+				return nil, iterErr
+			}
+			out.Value = launderType(nodes)
+		case ast.Number:
+			if intNum, ok := x.Int64(); ok {
+				out.Value = launderType(intNum)
+			} else if floatNum, ok := x.Float64(); ok {
+				out.Value = launderType(floatNum)
+			} else {
+				out.Value = launderType(x)
+			}
+		default:
+			valueIf, err := ast.JSON(value.Value)
+			if err != nil {
+				return nil, err
+			}
+			out.Value = launderType(valueIf)
+		}
+	}
+
+	return out, nil
 }
 
 // Renders a ucast conditional tree as SQL for a given SQL dialect.
 func builtinUcastAsSQL(_ topdown.BuiltinContext, operands []*ast.Term, iter func(*ast.Term) error) error {
-	obj, err := builtins.ObjectOperand(operands[0].Value, 1)
+	_, err := builtins.ObjectOperand(operands[0].Value, 1)
 	if err != nil {
 		return err
 	}
@@ -149,12 +211,8 @@ func builtinUcastAsSQL(_ topdown.BuiltinContext, operands []*ast.Term, iter func
 	}
 
 	// Round-trip through JSON to extract something we can interpret over.
-	var conds UCASTNode
-	bs, err := json.Marshal(obj)
+	conds, err := regoObjectToUCASTNode(operands[0])
 	if err != nil {
-		return err
-	}
-	if err := util.Unmarshal(bs, &conds); err != nil {
 		return err
 	}
 
