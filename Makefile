@@ -144,7 +144,7 @@ test-examples-%:
 	  go test .
 
 test-race:
-	go test $(BUILD_ARGS) ./... -race
+	GODEBUG=x509negativeserial=1 go test $(BUILD_ARGS) ./... -race
 
 e2e:
 	cd e2e && \
