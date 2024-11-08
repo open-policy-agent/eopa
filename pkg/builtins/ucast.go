@@ -1,6 +1,7 @@
 package builtins
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/huandu/go-sqlbuilder"
@@ -24,7 +25,7 @@ var (
 		Description: "Translates a UCAST conditions AST into an SQL WHERE clause of the given dialect.",
 		Decl: types.NewFunction(
 			types.Args(
-				types.Named("conditions_ast", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("ucast conditions object"),
+				types.Named("conditions", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("ucast conditions object"),
 				types.Named("dialect", types.NewString()).Description("dialect"),
 			),
 			types.Named("result", types.NewString()).Description("generated sql"),
@@ -72,7 +73,7 @@ func interpolateByDialect(dialect string, s string, args []interface{}) (string,
 }
 
 // Uses our SQL generator library to build up a larger SQL expression.
-func (u *UCASTNode) AsSQL(cond *sqlbuilder.Cond, dialect string) string {
+func (u *UCASTNode) AsSQL(cond *sqlbuilder.Cond, dialect string) (string, error) {
 	cond.Args.Flavor = dialectToFlavor(dialect)
 	uType := u.Type
 	operator := u.Op
@@ -83,58 +84,72 @@ func (u *UCASTNode) AsSQL(cond *sqlbuilder.Cond, dialect string) string {
 	case slices.Contains(fieldOps, operator) || uType == "field":
 		// Note: We should add unary operations under this case, like NOT.
 		if value == nil {
-			return ""
+			return "", fmt.Errorf("field expression requires a value")
 		}
 		switch operator {
 		case "eq":
-			return cond.Equal(field, *value)
+			return cond.Equal(field, *value), nil
 		case "ne":
-			return cond.NotEqual(field, *value)
+			return cond.NotEqual(field, *value), nil
 		case "gt":
-			return cond.GreaterThan(field, *value)
+			return cond.GreaterThan(field, *value), nil
 		case "lt":
-			return cond.LessThan(field, *value)
+			return cond.LessThan(field, *value), nil
 		case "ge", "gte":
-			return cond.GreaterEqualThan(field, *value)
+			return cond.GreaterEqualThan(field, *value), nil
 		case "le", "lte":
-			return cond.LessEqualThan(field, *value)
+			return cond.LessEqualThan(field, *value), nil
+		default:
+			return "", fmt.Errorf("unrecognized operator: %s", operator)
 		}
 	case slices.Contains(documentOps, operator) || uType == "document":
 		// Note: We should add unary operations under this case, like NOT.
 		if value == nil {
-			return ""
+			return "", fmt.Errorf("document expression 'exists' requires a value")
 		}
 		if operator == "exists" {
-			return cond.Exists(*value)
+			return cond.Exists(*value), nil
 		}
+		return "", fmt.Errorf("unrecognized operator: %s", operator)
 	case slices.Contains(compoundOps, operator) || uType == "compound":
 		switch operator {
 		case "and":
 			if value == nil {
-				return ""
+				return "", fmt.Errorf("compound expression 'and' requires a value")
 			}
 			if values, ok := (*value).([]UCASTNode); ok {
 				conds := make([]string, 0, len(values))
 				for _, c := range values {
-					conds = append(conds, c.AsSQL(cond, dialect))
+					condition, err := c.AsSQL(cond, dialect)
+					if err != nil {
+						return "", err
+					}
+					conds = append(conds, condition)
 				}
-				return cond.And(conds...)
+				return cond.And(conds...), nil
 			}
+			return "", fmt.Errorf("value must be an array")
 		case "or":
 			if value == nil {
-				return ""
+				return "", fmt.Errorf("compound expression 'or' requires a value")
 			}
 			if values, ok := (*value).([]UCASTNode); ok {
 				conds := make([]string, 0, len(values))
 				for _, c := range values {
-					conds = append(conds, c.AsSQL(cond, dialect))
+					condition, err := c.AsSQL(cond, dialect)
+					if err != nil {
+						return "", err
+					}
+					conds = append(conds, condition)
 				}
-				return cond.Or(conds...)
+				return cond.Or(conds...), nil
 			}
+			return "", fmt.Errorf("value must be an array")
 		}
+		return "", fmt.Errorf("unrecognized operator: %s", operator)
+	default:
+		return "", fmt.Errorf("unrecognized operator: %s", operator)
 	}
-
-	return ""
 }
 
 func launderType(x interface{}) *interface{} {
@@ -219,7 +234,11 @@ func builtinUcastAsSQL(_ topdown.BuiltinContext, operands []*ast.Term, iter func
 	// Build up the SQL expression using the UCASTNode tree.
 	cond := sqlbuilder.NewCond()
 	where := sqlbuilder.NewWhereClause()
-	where.AddWhereExpr(cond.Args, conds.AsSQL(cond, string(dialect)))
+	conditionStr, err := conds.AsSQL(cond, string(dialect))
+	if err != nil {
+		return err
+	}
+	where.AddWhereExpr(cond.Args, conditionStr)
 	s, args := where.BuildWithFlavor(dialectToFlavor(string(dialect)))
 
 	// Interpolate in the arguments into the SQL string.

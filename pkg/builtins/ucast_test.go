@@ -37,6 +37,7 @@ func TestUCASTNodeAsSQL(t *testing.T) {
 			Source:  UCASTNode{Type: "field", Op: "eq", Field: "name", Value: nil},
 			Dialect: "postgres",
 			Result:  "",
+			Error:   "field expression requires a value",
 		},
 		{
 			Note:    "Laundered nil argument",
@@ -70,9 +71,15 @@ func TestUCASTNodeAsSQL(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.Note, func(t *testing.T) {
+			t.Parallel()
+
 			cond := sqlbuilder.NewCond()
 			where := sqlbuilder.NewWhereClause()
-			where.AddWhereExpr(cond.Args, tc.Source.AsSQL(cond, tc.Dialect))
+			conditionStr, err := tc.Source.AsSQL(cond, tc.Dialect)
+			if err != nil && tc.Error != err.Error() {
+				t.Fatal(err)
+			}
+			where.AddWhereExpr(cond.Args, conditionStr)
 			s, args := where.BuildWithFlavor(sqlbuilder.PostgreSQL)
 
 			actual, err := interpolateByDialect(tc.Dialect, s, args)
@@ -125,10 +132,26 @@ func TestUCASTAsSQLBuiltin(t *testing.T) {
 			Dialect: "postgres",
 			Result:  `{{"result": {"p": "WHERE (name = E'bob' AND salary > 50000 AND (role = E'admin' OR salary >= 100000))"} }}`,
 		},
+		{
+			Note:    "malformed field expression",
+			Source:  `p := ucast.as_sql({"type": "field", "operator": "or", "field": "name", "value": []}, "postgres")`,
+			Dialect: "postgres",
+			Result:  `{{"result": {"p": "WHERE name = NULL"} }}`,
+			Error:   "eval_builtin_error: ucast.as_sql: unrecognized operator: or",
+		},
+		{
+			Note:    "malformed compound expression",
+			Source:  `p := ucast.as_sql({"type": "compound", "operator": "and", "value": "AAA"}, "postgres")`,
+			Dialect: "postgres",
+			Result:  `{{"result": {"p": "WHERE name = NULL"} }}`,
+			Error:   "eval_builtin_error: ucast.as_sql: value must be an array",
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.Note, func(t *testing.T) {
+			t.Parallel()
+
 			executeUCASTAsSQLTest(t, "package t\n"+tc.Source, "t", tc.Result, tc.Error, time.Now())
 		})
 	}
