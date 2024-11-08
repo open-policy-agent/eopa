@@ -106,7 +106,7 @@ func TestUCASTAsSQLBuiltin(t *testing.T) {
 	}{
 		{
 			Note:    "null argument",
-			Source:  `p := ucast.as_sql({"type": "field", "operator": "eq", "field": "name", "value": null}, "postgres")`,
+			Source:  `p := ucast.as_sql({"type": "field", "operator": "eq", "field": "name", "value": null}, "postgres", {})`,
 			Dialect: "postgres",
 			Result:  `{{"result": {"p": "WHERE name = NULL"} }}`,
 		},
@@ -115,7 +115,7 @@ func TestUCASTAsSQLBuiltin(t *testing.T) {
 			Source: `p := ucast.as_sql({"type": "compound", "operator": "and", "value": [
 				{"type": "field", "operator": "eq", "field": "name", "value": "bob"},
 				{"type": "field", "operator": "gt", "field": "salary", "value": 50000},
-			]}, "postgres")`,
+			]}, "postgres", {})`,
 			Dialect: "postgres",
 			Result:  `{{"result": {"p": "WHERE (name = E'bob' AND salary > 50000)"} }}`,
 		},
@@ -128,20 +128,33 @@ func TestUCASTAsSQLBuiltin(t *testing.T) {
 					{"type": "field", "operator": "eq", "field": "role", "value": "admin"},
 					{"type": "field", "operator": "ge", "field": "salary", "value": 100000},
 				]},
-			]}, "postgres")`,
+			]}, "postgres", {})`,
 			Dialect: "postgres",
 			Result:  `{{"result": {"p": "WHERE (name = E'bob' AND salary > 50000 AND (role = E'admin' OR salary >= 100000))"} }}`,
 		},
 		{
+			Note: "nested compound expression with table and column name translations",
+			Source: `p := ucast.as_sql({"type": "compound", "operator": "and", "value": [
+				{"type": "field", "operator": "eq", "field": "users.name", "value": "bob"},
+				{"type": "field", "operator": "gt", "field": "finance.salary", "value": 50000},
+				{"type": "compound", "operator": "or", "value": [
+					{"type": "field", "operator": "eq", "field": "users.role", "value": "admin"},
+					{"type": "field", "operator": "ge", "field": "finance.salary", "value": 100000},
+				]},
+			]}, "postgres", {"users": {"$self": "users0", "name": "name0", "role": "role0"}, "finance": {"salary": "salary0"}})`,
+			Dialect: "postgres",
+			Result:  `{{"result": {"p": "WHERE (users0.name0 = E'bob' AND finance.salary0 > 50000 AND (users0.role0 = E'admin' OR finance.salary0 >= 100000))"} }}`,
+		},
+		{
 			Note:    "malformed field expression",
-			Source:  `p := ucast.as_sql({"type": "field", "operator": "or", "field": "name", "value": []}, "postgres")`,
+			Source:  `p := ucast.as_sql({"type": "field", "operator": "or", "field": "name", "value": []}, "postgres", {})`,
 			Dialect: "postgres",
 			Result:  `{{"result": {"p": "WHERE name = NULL"} }}`,
 			Error:   "eval_builtin_error: ucast.as_sql: unrecognized operator: or",
 		},
 		{
 			Note:    "malformed compound expression",
-			Source:  `p := ucast.as_sql({"type": "compound", "operator": "and", "value": "AAA"}, "postgres")`,
+			Source:  `p := ucast.as_sql({"type": "compound", "operator": "and", "value": "AAA"}, "postgres", {})`,
 			Dialect: "postgres",
 			Result:  `{{"result": {"p": "WHERE name = NULL"} }}`,
 			Error:   "eval_builtin_error: ucast.as_sql: value must be an array",

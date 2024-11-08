@@ -3,6 +3,7 @@ package builtins
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/open-policy-agent/opa/ast"
@@ -27,6 +28,7 @@ var (
 			types.Args(
 				types.Named("conditions", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("ucast conditions object"),
 				types.Named("dialect", types.NewString()).Description("dialect"),
+				types.Named("translations", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("table and column name translations"),
 			),
 			types.Named("result", types.NewString()).Description("generated sql"),
 		),
@@ -70,6 +72,37 @@ func interpolateByDialect(dialect string, s string, args []interface{}) (string,
 	default:
 		return sqlbuilder.SQLite.Interpolate(s, args)
 	}
+}
+
+// Handles splitting an SQL table/column field name into its component pieces,
+// and then translates the parts over appropriately when possible.
+func translateField(field string, translations *ast.Term) string {
+	var outTable, outColumn string
+	if translations == nil {
+		return field
+	}
+	before, after, found := strings.Cut(field, ".")
+	outTable = before
+	outColumn = after
+	// Is there a translation available for the table name?
+	if tableMapping := translations.Get(ast.StringTerm(before)); tableMapping != nil {
+		if _, ok := tableMapping.Value.(ast.Object); ok {
+			// See if there's a mapping for the table name, and remap.
+			if tableName := tableMapping.Get(ast.StringTerm("$self")); tableName != nil {
+				outTable = string(tableName.Value.(ast.String))
+			}
+			// If we have a column name, try remapping it.
+			if found {
+				if columnName := tableMapping.Get(ast.StringTerm(after)); columnName != nil {
+					outColumn = string(columnName.Value.(ast.String))
+				}
+			}
+		}
+	}
+	if found {
+		return outTable + "." + outColumn
+	}
+	return outTable
 }
 
 // Uses our SQL generator library to build up a larger SQL expression.
@@ -158,7 +191,7 @@ func launderType(x interface{}) *interface{} {
 
 // This method recursively traverses the object provided, and attempts to
 // construct a UCASTNode tree from it.
-func regoObjectToUCASTNode(obj *ast.Term) (*UCASTNode, error) {
+func regoObjectToUCASTNode(obj *ast.Term, translations *ast.Term) (*UCASTNode, error) {
 	out := &UCASTNode{}
 
 	ty := obj.Get(ast.StringTerm("type"))
@@ -173,7 +206,7 @@ func regoObjectToUCASTNode(obj *ast.Term) (*UCASTNode, error) {
 	out.Op = string(op.Value.(ast.String))
 
 	if field != nil {
-		out.Field = string(field.Value.(ast.String))
+		out.Field = translateField(string(field.Value.(ast.String)), translations)
 	}
 
 	// Change handling, based on type. If we get an array, recurse.
@@ -184,7 +217,7 @@ func regoObjectToUCASTNode(obj *ast.Term) (*UCASTNode, error) {
 			var iterErr error
 			nodes := make([]UCASTNode, 0, x.Len())
 			x.Foreach(func(elem *ast.Term) {
-				node, err := regoObjectToUCASTNode(elem)
+				node, err := regoObjectToUCASTNode(elem, translations)
 				if err != nil {
 					iterErr = err
 				}
@@ -216,7 +249,9 @@ func regoObjectToUCASTNode(obj *ast.Term) (*UCASTNode, error) {
 
 // Renders a ucast conditional tree as SQL for a given SQL dialect.
 func builtinUcastAsSQL(_ topdown.BuiltinContext, operands []*ast.Term, iter func(*ast.Term) error) error {
-	_, err := builtins.ObjectOperand(operands[0].Value, 1)
+	obj := operands[0]
+	translations := operands[2]
+	_, err := builtins.ObjectOperand(obj.Value, 1)
 	if err != nil {
 		return err
 	}
@@ -224,9 +259,13 @@ func builtinUcastAsSQL(_ topdown.BuiltinContext, operands []*ast.Term, iter func
 	if err != nil {
 		return err
 	}
+	_, err = builtins.ObjectOperand(translations.Value, 3)
+	if err != nil {
+		return err
+	}
 
 	// Round-trip through JSON to extract something we can interpret over.
-	conds, err := regoObjectToUCASTNode(operands[0])
+	conds, err := regoObjectToUCASTNode(obj, translations)
 	if err != nil {
 		return err
 	}
