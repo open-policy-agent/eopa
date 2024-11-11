@@ -317,7 +317,7 @@ jobs:
             apko:
               - 'apko*.yaml'
       - name: Install apko
-        uses: jaxxstorm/action-install-gh-release@v1.12.0
+        uses: jaxxstorm/action-install-gh-release@v1.13.0
         with:
           repo: chainguard-dev/apko
           tag: v0.14.7
@@ -409,7 +409,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
       - name: install skopeo
-        uses: jaxxstorm/action-install-gh-release@v1.12.0
+        uses: jaxxstorm/action-install-gh-release@v1.13.0
         with:
           repo: lework/skopeo-binary
           extension-matching: disable
