@@ -40,6 +40,7 @@ func TestSQLSend(t *testing.T) {
 		mysql
 		postgres
 		sqlserver
+		oracle
 		none
 	)
 
@@ -54,6 +55,7 @@ func TestSQLSend(t *testing.T) {
 		mysql:     startMySQL(t),
 		postgres:  startPostgreSQL(t),
 		sqlserver: startMSSQL(t),
+		oracle:    startOracle(t),
 	}
 
 	now := time.Now()
@@ -79,7 +81,7 @@ func TestSQLSend(t *testing.T) {
 			note:    "unknown driver",
 			backend: none,
 			query:   `p = resp { sql.send({"driver": "pg", "data_source_name": "", "query": ""}, resp)}`,
-			error:   `eval_type_error: sql.send: operand 1 unknown driver pg, must be one of {"mysql", "postgres", "snowflake", "sqlite"}`,
+			error:   `eval_type_error: sql.send: operand 1 unknown driver pg, must be one of {"mysql", "oracle", "postgres", "snowflake", "sqlite", "sqlserver"}`,
 		},
 		{
 			note:            "a single row query",
@@ -188,6 +190,13 @@ sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALU
 			note:            "postgresql: a single row query",
 			backend:         postgres,
 			query:           `p = resp { sql.send({"driver": "postgres", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
+			result:          `{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
+			preparedQueries: 1,
+		},
+		{
+			note:            "oracle: a single row query",
+			backend:         oracle,
+			query:           `p = resp { sql.send({"driver": "oracle", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
 			result:          `{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
 			preparedQueries: 1,
 		},
@@ -513,7 +522,7 @@ func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string
 	}
 }
 
-var initSQL = `
+const initSQL = `
         CREATE TABLE T1 (ID TEXT, VALUE TEXT);
         CREATE TABLE T2 (ID TEXT, VALUE TEXT);
 
@@ -617,6 +626,60 @@ func startMSSQL(t *testing.T) backend {
 	}
 
 	for _, s := range strings.Split(initSQL, ";") {
+		if s := strings.TrimSpace(s); s != "" {
+			if _, err := db.Exec(s); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	return backend{conn: connStr, cleanup: func() { srv.Terminate(context.Background()) }}
+}
+
+func startOracle(t *testing.T) backend {
+	t.Helper()
+	user := "oracleuser"
+	sysPassword := "abcde"
+	password := "dEa9de93391d4312b18!520"
+
+	ctx := context.Background()
+	srv, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "gvenzl/oracle-free:slim-faststart",
+			ExposedPorts: []string{"1521/tcp"},
+			Env: map[string]string{
+				"ORACLE_PASSWORD":   sysPassword,
+				"APP_USER":          user,
+				"APP_USER_PASSWORD": password,
+			},
+
+			WaitingFor: wait.ForAll(
+				wait.ForLog("DATABASE IS READY TO USE!").WithStartupTimeout(60*time.Second),
+				wait.ForListeningPort("1521/tcp"),
+			),
+		},
+		Logger:  testcontainers.TestLogger(t),
+		Started: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	endpoint, err := srv.Endpoint(ctx, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	connStr := fmt.Sprintf("oracle://%s:%s@%s/%s", user, password, endpoint, "FREEPDB1")
+
+	db, err := sql.Open("oracle", connStr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Oracle doesn't have a 'TEXT' column type
+	initSQLORC := strings.ReplaceAll(initSQL, "TEXT", "VARCHAR2(255)")
+
+	for _, s := range strings.Split(initSQLORC, ";") {
 		if s := strings.TrimSpace(s); s != "" {
 			if _, err := db.Exec(s); err != nil {
 				t.Fatal(err)
