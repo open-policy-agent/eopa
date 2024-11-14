@@ -12,6 +12,25 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.30.0
+
+[![OPA v0.70.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.70.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.70.0)
+[![Regal v0.29.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.29.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.29.0)
+
+With this release, the built-in `sql.send()` can be used to talk to Oracle Databases.
+This release further includes various dependency bumps and updates the embedded Regal version to [v0.29.0](https://github.com/StyraInc/regal/releases/tag/v0.29.0).
+
+
+### `sql.send` supports Oracle
+
+`sql.send` now supports Oracle databases! To connect to it, use a `data_source_name` of
+
+    oracle://USER:PASSWORD@HOST:PORT/DATABASE
+
+See [the `sql.send` documentation](https://docs.styra.com/enterprise-opa/reference/built-in-functions/sql)
+for all details about the built-in.
+
+
 ## v1.29.1
 
 [![OPA v0.70.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.70.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.70.0)
