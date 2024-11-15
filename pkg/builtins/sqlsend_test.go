@@ -459,6 +459,29 @@ func TestRegoZanzibar(t *testing.T) {
 	}
 }
 
+func TestValidateDSN(t *testing.T) {
+	for _, tc := range []struct {
+		note, dsn, exp string
+		err            error
+	}{
+		{
+			note: "drop snowflake scheme",
+			dsn:  "snowflake://user:password@org-acc/db",
+			exp:  "user:password@org-acc/db",
+		},
+	} {
+		t.Run(tc.note, func(t *testing.T) {
+			act, err := validateDSN(tc.dsn)
+			if err != tc.err {
+				t.Fatalf("unexpected error, want %v (%[1]T), got %v (%[2]T)", tc.err, err)
+			}
+			if act != tc.exp {
+				t.Errorf("unexpected dsn, want %q, got %q", tc.exp, act)
+			}
+		})
+	}
+}
+
 func execute(tb testing.TB, interQueryCache cache.InterQueryCache, module string, query string, expectedResult string, expectedError string, now time.Time, input *interface{}, expectedInterQueryCacheHits int, expectedPreparedQueries int) {
 	b := &bundle.Bundle{
 		Modules: []bundle.ModuleFile{

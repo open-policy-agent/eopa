@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -164,6 +165,11 @@ func builtinSQLSend(bctx topdown.BuiltinContext, operands []*ast.Term, iter func
 	}
 
 	dsn, err := getRequestString(obj, "data_source_name")
+	if err != nil {
+		return err
+	}
+
+	dsn, err = validateDSN(dsn)
 	if err != nil {
 		return err
 	}
@@ -520,6 +526,14 @@ func validateDriver(d string) (string, error) {
 	case "mysql", "sqlite", "snowflake", "sqlserver", "oracle": // OK
 	default:
 		return "", builtins.NewOperandErr(1, "unknown driver %s, must be one of %v", d, supportedDrivers)
+	}
+	return d, nil
+}
+
+func validateDSN(d string) (string, error) {
+	switch {
+	case strings.HasPrefix(d, "snowflake://"):
+		return d[12:], nil // drop "snowflake://"
 	}
 	return d, nil
 }
