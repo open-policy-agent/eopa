@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"io"
 	"sync"
 	"time"
 
@@ -12,7 +13,8 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // database/sql compatible driver for pgx
 	_ "github.com/microsoft/go-mssqldb"
 	_ "github.com/sijms/go-ora/v2" // pure-go oracle driver
-	_ "github.com/snowflakedb/gosnowflake"
+	snowflake "github.com/snowflakedb/gosnowflake"
+
 	"modernc.org/sqlite"
 
 	lru "github.com/hashicorp/golang-lru/v2"
@@ -526,6 +528,7 @@ func init() {
 	RegisterBuiltinFunc(sqlSendName, builtinSQLSend)
 
 	mysql.SetLogger(null{})
+	snowflake.GetLogger().SetOutput(io.Discard)
 }
 
 // Suppress error messages from Go MySQL driver like "[mysql] 2023/07/27 15:59:30 packets.go:37: unexpected EOF"
