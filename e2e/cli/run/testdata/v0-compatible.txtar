@@ -1,0 +1,22 @@
+[windows] ! exec eopa run --log-level error --addr 127.0.0.1:61659 --server --v0-compatible p0.rego &eopa0&
+[!windows]  exec eopa run --log-level error --addr 127.0.0.1:61659 --server --v0-compatible p0.rego &eopa0&
+! stdout .
+! stderr .
+
+# block until the server reports health OK
+httpwait 'http://localhost:61659/health' '{}'
+
+# query out data we expect to be present
+exec curl -Ss --url http://localhost:61659/v1/data/p/q -d '{"input": {"foo": "bar"}}'
+! stderr .
+cmp stdout exp/stdout
+
+stop eopa0
+! stdout .
+! stderr .
+
+-- p0.rego --
+package p
+q[input] { input.foo }
+-- exp/stdout --
+{"result":[{"foo":"bar"}]}

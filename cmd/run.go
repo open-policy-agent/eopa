@@ -113,6 +113,8 @@ type runCmdParams struct {
 	pubKey             string
 	pubKeyID           string
 	skipBundleVerify   bool
+	v0Compatible       bool
+	v1Compatible       bool
 	excludeVerifyFiles []string
 }
 
@@ -180,6 +182,8 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 		{"skip-version-check", &skipVersionCheck},
 		{"disable-telemetry", &disableTelemetry},
 		{"skip-verify", &p.skipBundleVerify},
+		{"v1-compatible", &p.v1Compatible},
+		{"v0-compatible", &p.v0Compatible},
 	} {
 		*f.param, err = c.Flags().GetBool(f.flag)
 		if err != nil {
@@ -322,6 +326,10 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	}.Apply
 
 	params.rt.SkipBundleVerification = params.skipBundleVerify
+
+	// v0 and v1 compat
+	params.rt.V0Compatible = params.v0Compatible
+	params.rt.V1Compatible = params.v1Compatible
 
 	bvc, err := buildVerificationConfig(params.pubKey, params.pubKeyID, params.algorithm, params.scope, params.excludeVerifyFiles)
 	if err != nil {

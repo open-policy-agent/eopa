@@ -1,0 +1,37 @@
+# This test ensures that the `eopa run` command respects the --v1-compatible parameter.
+
+# running without it, or with --v0-compatible, it'll fail
+! exec eopa run --log-level error --addr 127.0.0.1:61599 --server p.rego
+cmp stdout exp/v0_stdout
+! exec eopa run --log-level error --addr 127.0.0.1:61599 --server --v0-compatible p.rego
+cmp stdout exp/v0_stdout
+
+# we expect a nonzero exit code on windows
+[windows] ! exec eopa run --log-level error --addr 127.0.0.1:61599 --server --v1-compatible p.rego &eopa&
+[!windows]  exec eopa run --log-level error --addr 127.0.0.1:61599 --server --v1-compatible p.rego &eopa&
+! stdout .
+! stderr .
+
+# block until the server reports health OK
+httpwait 'http://localhost:61599/health' '{}'
+
+# query out data we expect to be present
+exec curl -Ss --url http://localhost:61599/v1/data/p/q -d '{"input": {"foo": "bar"}}'
+! stderr .
+cmp stdout exp/stdout
+
+stop eopa
+! stdout .
+! stderr .
+
+-- p.rego --
+package p
+q contains input if input.foo
+-- exp/stdout --
+{"result":[{"foo":"bar"}]}
+-- exp/v0_stdout --
+run error: load error: 4 errors occurred during loading:
+p.rego:2: rego_parse_error: var cannot be used for rule name
+p.rego:2: rego_parse_error: var cannot be used for rule name
+p.rego:2: rego_parse_error: refs cannot be used for rule head
+p.rego:2: rego_parse_error: var cannot be used for rule name
