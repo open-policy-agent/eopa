@@ -213,18 +213,20 @@ func regoObjectToUCASTNode(obj *ast.Term, translations *ast.Term) (*UCASTNode, e
 	// Numeric types also have to be converted from json.Number to int/float.
 	if value != nil {
 		switch x := value.Value.(type) {
-		case *ast.Array:
-			var iterErr error
+		case interface {
+			Iter(func(*ast.Term) error) error
+			Len() int
+		}:
 			nodes := make([]UCASTNode, 0, x.Len())
-			x.Foreach(func(elem *ast.Term) {
+			if err := x.Iter(func(elem *ast.Term) error {
 				node, err := regoObjectToUCASTNode(elem, translations)
 				if err != nil {
-					iterErr = err
+					return err
 				}
 				nodes = append(nodes, *node)
-			})
-			if iterErr != nil {
-				return nil, iterErr
+				return nil
+			}); err != nil {
+				return nil, err
 			}
 			out.Value = launderType(nodes)
 		case ast.Number:

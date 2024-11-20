@@ -103,6 +103,7 @@ func TestUCASTAsSQLBuiltin(t *testing.T) {
 		Dialect string
 		Result  string
 		Error   string
+		Query   string
 	}{
 		{
 			Note:    "null argument",
@@ -118,6 +119,16 @@ func TestUCASTAsSQLBuiltin(t *testing.T) {
 			]}, "postgres", {})`,
 			Dialect: "postgres",
 			Result:  `{{"result": {"p": "WHERE (name = E'bob' AND salary > 50000)"} }}`,
+		},
+		{
+			Note: "basic compound expression built via multi-value rule",
+			Source: `
+a contains {"type": "field", "operator": "eq", "field": "name", "value": "bob"}
+a contains {"type": "field", "operator": "gt", "field": "salary", "value": 50000}
+p := ucast.as_sql({"type": "compound", "operator": "and", "value": a}, "postgres", {})`,
+			Dialect: "postgres",
+			Query:   "t/p",
+			Result:  `{{"result": "WHERE (name = E'bob' AND salary > 50000)"}}`,
 		},
 		{
 			Note: "basic nested compound expression",
@@ -164,8 +175,12 @@ func TestUCASTAsSQLBuiltin(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.Note, func(t *testing.T) {
 			t.Parallel()
+			query := "t"
+			if q := tc.Query; q != "" {
+				query = q
+			}
 
-			executeUCASTAsSQLTest(t, "package t\n"+tc.Source, "t", tc.Result, tc.Error, time.Now())
+			executeUCASTAsSQLTest(t, "package t\n"+tc.Source, query, tc.Result, tc.Error, time.Now())
 		})
 	}
 }
@@ -177,12 +192,12 @@ func executeUCASTAsSQLTest(tb testing.TB, module string, query string, expectedR
 				URL:    "/url",
 				Path:   "/foo.rego",
 				Raw:    []byte(module),
-				Parsed: ast.MustParseModule(module),
+				Parsed: ast.MustParseModuleWithOpts(module, ast.ParserOptions{RegoVersion: ast.RegoV1}),
 			},
 		},
 	}
 
-	compiler := compile.New().WithTarget(compile.TargetPlan).WithBundle(b).WithEntrypoints(query)
+	compiler := compile.New().WithTarget(compile.TargetPlan).WithBundle(b).WithEntrypoints(query).WithRegoVersion(ast.RegoV1)
 	if err := compiler.Build(context.Background()); err != nil {
 		tb.Fatal(err)
 	}
