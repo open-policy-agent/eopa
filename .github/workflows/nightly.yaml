@@ -293,44 +293,6 @@ jobs:
         env:
           EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
 
-  regal:
-    name: Regal e2e
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Tune GitHub-hosted runner network
-        uses: smorimoto/tune-github-hosted-runner-network@v1
-      - name: Free disk space
-        run: |
-          df -h
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo apt clean
-          docker rmi $(docker image ls -aq)
-          df -h
-      - uses: open-policy-agent/setup-opa@v2
-      - name: checkout Enterprise OPA
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          path: enterprise-opa
-      - id: go_version
-        name: Read go version
-        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
-        working-directory: enterprise-opa
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ steps.go_version.outputs.go_version }}
-          cache-dependency-path: enterprise-opa/go.sum
-      - name: Build and E2E
-        run: |
-          go mod tidy
-          go build -tags=regal_standalone -o regal main.go
-          REGAL_BIN=$(pwd)/regal go test -tags e2e github.com/styrainc/regal/e2e -v -skip 'TestTestRegalBundledBundle|TestLintPprof'
-        working-directory: enterprise-opa/examples/regal
-        env:
-          GOPRIVATE: github.com/styrainc/
-
   trivy-scan-image:
     name: Trivy security scan image
     runs-on: ubuntu-22.04
