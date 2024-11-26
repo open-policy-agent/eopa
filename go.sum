@@ -927,6 +927,8 @@ github.com/testcontainers/testcontainers-go/modules/kafka v0.34.0 h1:LrMlsBH+nKJ
 github.com/testcontainers/testcontainers-go/modules/kafka v0.34.0/go.mod h1:4BIbeoKY/ZAf86MvWT5xJW5TvxbCPg67I5rBvwFsx4A=
 github.com/testcontainers/testcontainers-go/modules/localstack v0.34.0 h1:WkjVmea0XQyGTY10Er8fOsVjHQ77iJCmTExnx6fC3Tw=
 github.com/testcontainers/testcontainers-go/modules/localstack v0.34.0/go.mod h1:rTo76O/BBeAtfazMQqLvfwBrntBBwDP7/+Z60dm3e9U=
+github.com/testcontainers/testcontainers-go/modules/minio v0.34.0 h1:OpUqT7VV/d+wriDMHcCZCUfOoFE6wiHnGVzJOXqq8lU=
+github.com/testcontainers/testcontainers-go/modules/minio v0.34.0/go.mod h1:0iaOtVNCzu04KcXHgmdNE7aelKaMUwC9x1M0oe6h1sw=
 github.com/testcontainers/testcontainers-go/modules/mssql v0.34.0 h1:4Pf7ILuLnxhpeTgQfKzEMPuMQhasU3VaYer9l5HrQ3s=
 github.com/testcontainers/testcontainers-go/modules/mssql v0.34.0/go.mod h1:L2eMWZ49X0XjewabzJ6TXSY5z4SAWM/2WOBqlIxYFD8=
 github.com/testcontainers/testcontainers-go/modules/mysql v0.34.0 h1:Tqz17mGXjPORHFS/oBUGdeJyIsZXLsVVHRhaBqhewGI=

@@ -7,14 +7,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/google/go-cmp/cmp"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
 	"github.com/open-policy-agent/opa/storage"
 	"github.com/testcontainers/testcontainers-go"
-	tc_wait "github.com/testcontainers/testcontainers-go/wait"
+	tc_minio "github.com/testcontainers/testcontainers-go/modules/minio"
 
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
@@ -74,30 +73,20 @@ transform[k] := v if {
 }
 
 func minioContainer(ctx context.Context, t *testing.T) (testcontainers.Container, string) {
-	healthPort, err := nat.NewPort("tcp", "9000")
+	t.Helper()
+	tc, err := tc_minio.Run(ctx, "minio/minio:latest", testcontainers.CustomizeRequestOption(func(r *testcontainers.GenericContainerRequest) error {
+		r.ContainerRequest.Env["MINIO_ROOT_USER"] = minioRootUser
+		r.ContainerRequest.Env["MINIO_ROOT_PASSWORD"] = minioRootPassword
+		return nil
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	req := testcontainers.ContainerRequest{
-		Image:        "minio/minio:latest",
-		ExposedPorts: []string{"9000/tcp"},
-		WaitingFor:   tc_wait.ForHTTP("/minio/health/live").WithPort(healthPort),
-		Env: map[string]string{
-			"MINIO_ROOT_USER":     minioRootUser,
-			"MINIO_ROOT_PASSWORD": minioRootPassword,
-		},
-		Entrypoint: []string{"sh"},
-		Cmd:        []string{"-c", fmt.Sprintf("mkdir -p /data/%s && minio server /data", bucket)},
+	cs, err := tc.ConnectionString(ctx)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	c := must(testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Logger:           testcontainers.TestLogger(t),
-		Started:          true,
-	}))(t)
-	mappedPort := must(c.MappedPort(ctx, "9000/tcp"))(t)
-	return c, "127.0.0.1:" + mappedPort.Port()
+	return tc, cs
 }
 
 func storeWithPolicy(ctx context.Context, t *testing.T, transform string) storage.Store {
@@ -112,8 +101,12 @@ func storeWithPolicy(ctx context.Context, t *testing.T, transform string) storag
 }
 
 func putData(ctx context.Context, t *testing.T, endpoint string, data any) {
+	t.Helper()
 	bs := must(json.Marshal(data))(t)
 	cl := must(minio.New(endpoint, &minio.Options{Creds: credentials.NewStaticV4(minioRootPassword, minioRootPassword, "")}))(t)
+	if err := cl.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	must(cl.PutObject(ctx, bucket, file, bytes.NewReader(bs), int64(len(bs)), minio.PutObjectOptions{ContentType: "application/octet-stream"}))(t)
 }
 
