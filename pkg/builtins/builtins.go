@@ -80,6 +80,7 @@ var DefaultBuiltins = [...]*ast.Builtin{
 	neo4jQuery,
 	redisQuery,
 	ucastAsSQL,
+	ucastExpand,
 }
 
 func getRequestStringWithDefault(obj ast.Object, key string, def string) (string, error) {

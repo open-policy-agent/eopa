@@ -3,6 +3,7 @@ package builtins
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -233,5 +234,87 @@ func executeUCASTAsSQLTest(tb testing.TB, module string, query string, expectedR
 
 	if t := ast.MustParseTerm(expectedResult); v.Compare(t.Value) != 0 {
 		tb.Fatalf("got %v wanted %v\n", v, expectedResult)
+	}
+}
+
+func TestExpand(t *testing.T) {
+	for _, tc := range []struct {
+		note     string
+		input    string
+		expected string
+		err      error
+	}{
+		{
+			note:     "simple eq",
+			input:    `{"users.name": "alice"}`,
+			expected: `{"type": "field", "operator": "eq", "field": "users.name", "value": "alice"}`,
+		},
+		{
+			note:     "explicit eq",
+			input:    `{"users.name": {"eq": "alice"}}`,
+			expected: `{"type": "field", "operator": "eq", "field": "users.name", "value": "alice"}`,
+		},
+		{
+			note:     "simple op",
+			input:    `{"users.age": {"gt": 20}}`,
+			expected: `{"type": "field", "operator": "gt", "field": "users.age", "value": 20}`,
+		},
+		{
+			note:  "simple op, multiple field conditions",
+			input: `{"users.age": {"gt": 20, "lt": 100}}`,
+			err:   errMultipleFieldConditions,
+		},
+		{
+			note:  "compound and",
+			input: `{"users.age": {"gt": 20}, "users.name": "alice"}`,
+			expected: `{"type": "compound", "operator": "and", "value": [
+						{"type": "field", "operator": "gt", "field": "users.age", "value": 20},
+						{"type": "field", "operator": "eq", "field": "users.name", "value": "alice"}]}`,
+		},
+		{
+			note:  "compound or",
+			input: `{"or": [{"users.age": {"gt": 20}}, {"users.name": "alice"}]}`,
+			expected: `{"type": "compound", "operator": "or", "value": [
+						{"type": "field", "operator": "gt", "field": "users.age", "value": 20},
+						{"type": "field", "operator": "eq", "field": "users.name", "value": "alice"}]}`,
+		},
+		{
+			// NOTE(sr): this would happen for multi-value rules when
+			// none of the "or contains ..." rules yield anything.
+			note:     "compound or, empty set",
+			input:    `{"or": set()}`,
+			expected: `{}`,
+		},
+		{
+			note:  "compound or, bad value type",
+			input: `{"or": {"users.age": {"gt": 20}}}`,
+			err:   errBadOrValue,
+		},
+		{
+			note:  "compound or, with nested and",
+			input: `{"or": [{"users.age": {"gt": 20}, "users.name": "bob"}, {"users.name": "alice"}]}`,
+			expected: `{"type": "compound", "operator": "or", "value": [
+						{"operator": "and", "type": "compound", "value": [
+							{"field": "users.age", "operator": "gt", "type": "field", "value": 20},
+							{"field": "users.name", "operator": "eq", "type": "field", "value": "bob"}]},
+						{"field": "users.name", "operator": "eq", "type": "field", "value": "alice"}]}`,
+		},
+	} {
+		t.Run(tc.note, func(t *testing.T) {
+			t.Parallel()
+			inp := ast.MustParseTerm(tc.input)
+			if tc.err == nil {
+				exp := ast.MustParseTerm(tc.expected)
+				result, _ := expand(inp)
+				if !result.Equal(exp) {
+					t.Fatalf("Expected %v but got %v", tc.expected, result)
+				}
+			} else {
+				_, err := expand(inp)
+				if !errors.Is(err, tc.err) {
+					t.Fatalf("expected error %v, got %v", tc.err, err)
+				}
+			}
+		})
 	}
 }

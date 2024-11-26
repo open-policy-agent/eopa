@@ -1,6 +1,7 @@
 package builtins
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -13,7 +14,8 @@ import (
 )
 
 const (
-	ucastAsSQLName = "ucast.as_sql"
+	ucastAsSQLName  = "ucast.as_sql"
+	ucastExpandName = "ucast.expand"
 )
 
 var (
@@ -31,6 +33,18 @@ var (
 				types.Named("translations", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("table and column name translations"),
 			),
 			types.Named("result", types.NewString()).Description("generated sql"),
+		),
+		// Categories: docs("https://docs.styra.com/enterprise-opa/reference/built-in-functions/ucast"),
+	}
+
+	ucastExpand = &ast.Builtin{
+		Name:        ucastExpandName,
+		Description: "Expands the concise UCAST AST into its normalized form.",
+		Decl: types.NewFunction(
+			types.Args(
+				types.Named("conditions", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("ucast conditions object"),
+			),
+			types.Named("result", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("expanded"),
 		),
 		// Categories: docs("https://docs.styra.com/enterprise-opa/reference/built-in-functions/ucast"),
 	}
@@ -291,6 +305,130 @@ func builtinUcastAsSQL(_ topdown.BuiltinContext, operands []*ast.Term, iter func
 	return iter(ast.StringTerm(interpolatedQuery))
 }
 
+func builtinUcastExpand(_ topdown.BuiltinContext, operands []*ast.Term, iter func(*ast.Term) error) error {
+	obj := operands[0]
+	exp, err := expand(obj)
+	if err != nil {
+		return err
+	}
+	return iter(exp)
+}
+
 func init() {
 	RegisterBuiltinFunc(ucastAsSQLName, builtinUcastAsSQL)
+	RegisterBuiltinFunc(ucastExpandName, builtinUcastExpand)
 }
+
+var errBadInput = errors.New("malformed conditions object")
+var errBadOrValue = fmt.Errorf("%w: 'or' value must be an array/set", errBadInput)
+var errMultipleFieldConditions = fmt.Errorf("%w: multiple field conditions", errBadInput)
+
+func expand(in *ast.Term) (*ast.Term, error) {
+	if o, ok := in.Value.(ast.Object); ok {
+		return expandObject(o)
+	}
+	return nil, errBadInput
+}
+
+func expandObject(in ast.Object) (*ast.Term, error) {
+	switch in.Len() {
+	case 0:
+		return nil, nil // TODO(sr): think about this
+	case 1:
+		k := in.Keys()[0]
+		switch k.Value.(ast.String) {
+		case "or":
+			return compoundOr(in.Get(k))
+		default:
+			return fieldOpFromVal(k, in.Get(k).Value)
+		}
+	default:
+		return compoundAnd(in)
+	}
+}
+
+func compoundOr(in *ast.Term) (*ast.Term, error) {
+	if in, ok := in.Value.(interface { // ast.Set or *ast.Array
+		Iter(func(*ast.Term) error) error
+		Len() int
+	}); ok {
+		if in.Len() == 0 { // no "or" conditions, drop the entire condition
+			return ast.ObjectTerm(), nil
+		}
+		vals := make([]*ast.Term, 0, in.Len())
+		if err := in.Iter(func(val *ast.Term) error {
+			if t, err := expandObject(val.Value.(ast.Object)); err != nil {
+				return err
+			} else {
+				vals = append(vals, t)
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+		return ast.ObjectTerm(
+			[2]*ast.Term{opTerm, orTerm},
+			[2]*ast.Term{typeTerm, compoundType},
+			[2]*ast.Term{valueTerm, ast.ArrayTerm(vals...)},
+		), nil
+	}
+
+	return nil, errBadOrValue
+}
+
+func compoundAnd(in ast.Object) (*ast.Term, error) {
+	vals := make([]*ast.Term, 0, in.Len())
+	if err := in.Iter(func(key, val *ast.Term) error {
+		if t, err := fieldOpFromVal(key, val.Value); err != nil {
+			return err
+		} else {
+			vals = append(vals, t)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return ast.ObjectTerm(
+		[2]*ast.Term{opTerm, andTerm},
+		[2]*ast.Term{typeTerm, compoundType},
+		[2]*ast.Term{valueTerm, ast.ArrayTerm(vals...)},
+	), nil
+}
+
+func fieldOpFromVal(field *ast.Term, value ast.Value) (*ast.Term, error) {
+	switch value := value.(type) {
+	case ast.Object:
+		switch value.Len() {
+		case 1:
+			op := value.Keys()[0]
+			return fieldOp(string(op.Value.(ast.String)), field, value.Get(op).Value)
+		default:
+			return nil, errMultipleFieldConditions
+		}
+	default: // "eq"
+		return fieldOp("eq", field, value)
+	}
+}
+
+func fieldOp(op string, field *ast.Term, value ast.Value) (*ast.Term, error) {
+	return ast.ObjectTerm(
+		[2]*ast.Term{opTerm, ast.StringTerm(op)},
+		[2]*ast.Term{typeTerm, fieldType},
+		[2]*ast.Term{fieldTerm, field},
+		[2]*ast.Term{valueTerm, ast.NewTerm(value)},
+	), nil
+}
+
+var (
+	opTerm    = ast.StringTerm("operator")
+	typeTerm  = ast.StringTerm("type")
+	fieldTerm = ast.StringTerm("field")
+	valueTerm = ast.StringTerm("value")
+	andTerm   = ast.StringTerm("and")
+	orTerm    = ast.StringTerm("or")
+)
+
+var (
+	fieldType    = ast.StringTerm("field")
+	compoundType = ast.StringTerm("compound")
+)
