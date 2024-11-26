@@ -11,6 +11,8 @@ rules:
           - library/utils/
           - e2e/cli/
   idiomatic:
+    directory-package-mismatch:
+      level: ignore
     no-defined-entrypoint:
       level: ignore
   imports:
