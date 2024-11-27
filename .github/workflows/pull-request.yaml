@@ -498,6 +498,7 @@ jobs:
   performance-related:
     name: Performance
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
