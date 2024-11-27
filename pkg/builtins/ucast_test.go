@@ -279,6 +279,13 @@ func TestExpand(t *testing.T) {
 						{"type": "field", "operator": "eq", "field": "users.name", "value": "alice"}]}`,
 		},
 		{
+			note:  "compound or, one disjunct expanded already",
+			input: `{"or": [{"users.age": {"gt": 20}}, {"type": "field", "operator": "eq", "field": "users.name", "value": "alice"}]}`,
+			expected: `{"type": "compound", "operator": "or", "value": [
+						{"type": "field", "operator": "gt", "field": "users.age", "value": 20},
+						{"type": "field", "operator": "eq", "field": "users.name", "value": "alice"}]}`,
+		},
+		{
 			// NOTE(sr): this would happen for multi-value rules when
 			// none of the "or contains ..." rules yield anything.
 			note:     "compound or, empty set",
@@ -299,6 +306,18 @@ func TestExpand(t *testing.T) {
 							{"field": "users.name", "operator": "eq", "type": "field", "value": "bob"}]},
 						{"field": "users.name", "operator": "eq", "type": "field", "value": "alice"}]}`,
 		},
+		{
+			note: "compound or, with nested and, already-expanded",
+			input: `{"or": [{"operator": "and", "type": "compound", "value": [
+							  {"field": "users.age", "operator": "gt", "type": "field", "value": 20},
+							  {"field": "users.name", "operator": "eq", "type": "field", "value": "bob"}]},
+							{"users.name": "alice"}]}`,
+			expected: `{"type": "compound", "operator": "or", "value": [
+						{"operator": "and", "type": "compound", "value": [
+							{"field": "users.age", "operator": "gt", "type": "field", "value": 20},
+							{"field": "users.name", "operator": "eq", "type": "field", "value": "bob"}]},
+						{"field": "users.name", "operator": "eq", "type": "field", "value": "alice"}]}`,
+		},
 	} {
 		t.Run(tc.note, func(t *testing.T) {
 			t.Parallel()
@@ -309,6 +328,12 @@ func TestExpand(t *testing.T) {
 				if !result.Equal(exp) {
 					t.Fatalf("Expected %v but got %v", tc.expected, result)
 				}
+				t.Run("second", func(t *testing.T) { // check idempotency
+					result2, _ := expand(result)
+					if !result2.Equal(exp) {
+						t.Fatalf("Second run: expected %v but got %v", tc.expected, result2)
+					}
+				})
 			} else {
 				_, err := expand(inp)
 				if !errors.Is(err, tc.err) {

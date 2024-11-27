@@ -333,7 +333,7 @@ func expand(in *ast.Term) (*ast.Term, error) {
 func expandObject(in ast.Object) (*ast.Term, error) {
 	switch in.Len() {
 	case 0:
-		return nil, nil // TODO(sr): think about this
+		return ast.ObjectTerm(), nil
 	case 1:
 		k := in.Keys()[0]
 		switch k.Value.(ast.String) {
@@ -343,8 +343,18 @@ func expandObject(in ast.Object) (*ast.Term, error) {
 			return fieldOpFromVal(k, in.Get(k).Value)
 		}
 	default:
+		if expandedAlready(in) {
+			return ast.NewTerm(in), nil
+		}
 		return compoundAnd(in)
 	}
+}
+
+// expandedAlready checks if the object  we're given already has the
+// expanded format. Since 'and' is missing 'field', we're only checking
+// for 'op', 'value' and 'type'.
+func expandedAlready(obj ast.Object) bool {
+	return obj.Get(opTerm) != nil && obj.Get(typeTerm) != nil && obj.Get(valueTerm) != nil
 }
 
 func compoundOr(in *ast.Term) (*ast.Term, error) {
