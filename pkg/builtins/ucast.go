@@ -281,7 +281,11 @@ func builtinUcastAsSQL(_ topdown.BuiltinContext, operands []*ast.Term, iter func
 	}
 
 	// Round-trip through JSON to extract something we can interpret over.
-	conds, err := regoObjectToUCASTNode(obj, translations)
+	expanded, err := expand(obj)
+	if err != nil {
+		return err
+	}
+	conds, err := regoObjectToUCASTNode(expanded, translations)
 	if err != nil {
 		return err
 	}
