@@ -359,7 +359,7 @@ func testRedPanda(t *testing.T, ctx context.Context, cs ...testcontainers.Contai
 	opts := []testcontainers.ContainerCustomizer{
 		redpanda.WithAutoCreateTopics(),
 	}
-	tc, err := redpanda.Run(ctx, "docker.redpanda.com/redpandadata/redpanda:v23.3.18", append(opts, cs...)...)
+	tc, err := redpanda.Run(ctx, "redpandadata/redpanda:v24.2.12", append(opts, cs...)...)
 	if err != nil {
 		t.Fatalf("could not start kafka: %s", err)
 	}
