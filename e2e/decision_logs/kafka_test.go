@@ -225,7 +225,7 @@ plugins:
 }
 
 func testRedPanda(t *testing.T, ctx context.Context, cs ...testcontainers.ContainerCustomizer) (string, testcontainers.Container) {
-	tc, err := redpanda.RunContainer(ctx, append(cs, redpanda.WithAutoCreateTopics())...)
+	tc, err := redpanda.Run(ctx, "redpandadata/redpanda:v24.2.12", append(cs, redpanda.WithAutoCreateTopics())...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +237,7 @@ func testRedPanda(t *testing.T, ctx context.Context, cs ...testcontainers.Contai
 }
 
 func testKafka(t *testing.T, ctx context.Context, cs ...testcontainers.ContainerCustomizer) (string, testcontainers.Container) {
-	tc, err := kafka.RunContainer(ctx, cs...)
+	tc, err := kafka.Run(ctx, "confluentinc/confluent-local:7.7.2", cs...)
 	if err != nil {
 		t.Fatalf("could not start kafka: %s", err)
 	}

@@ -255,7 +255,7 @@ func kafkaClient(broker string) (*kgo.Client, error) {
 }
 
 func testKafka(t *testing.T, ctx context.Context, cs ...testcontainers.ContainerCustomizer) (string, testcontainers.Container) {
-	tc, err := kafka.RunContainer(ctx, cs...)
+	tc, err := kafka.Run(ctx, "confluentinc/confluent-local:7.7.2", cs...)
 	if err != nil {
 		t.Fatalf("could not start kafka: %s", err)
 	}
@@ -273,7 +273,7 @@ func testRedPanda(t *testing.T, ctx context.Context, cs ...testcontainers.Contai
 	opts := []testcontainers.ContainerCustomizer{
 		redpanda.WithAutoCreateTopics(),
 	}
-	tc, err := redpanda.RunContainer(ctx, append(opts, cs...)...)
+	tc, err := redpanda.Run(ctx, "redpandadata/redpanda:v24.2.12", append(opts, cs...)...)
 	if err != nil {
 		t.Fatalf("could not start kafka: %s", err)
 	}
