@@ -498,7 +498,6 @@ jobs:
   performance-related:
     name: Performance
     runs-on: ubuntu-22.04
-    timeout-minutes: 20
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@v1
@@ -561,6 +560,7 @@ jobs:
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
           INPUT_GO_TEST_FLAGS: -tags use_opa_fork -timeout=10m
+          INPUT_GO_TEST_PKGS: ./pkg/...
           INPUT_SUBDIRECTORY: enterprise-opa
           INPUT_CHECKS: true
           INPUT_CHECKS_CONFIG: enterprise-opa/gobenchdata-checks.yml

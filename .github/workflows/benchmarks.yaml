@@ -40,6 +40,7 @@ jobs:
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
           INPUT_GO_TEST_FLAGS: -tags use_opa_fork -timeout=120m -run=-
+          INPUT_GO_TEST_PKGS: ./pkg/...
           INPUT_SUBDIRECTORY: eopa
           INPUT_PUBLISH: true
           INPUT_PUBLISH_BRANCH: benchmarks
