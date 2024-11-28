@@ -82,12 +82,11 @@ var ekmTestSrv = srv(func(w http.ResponseWriter, r *http.Request) error {
 
 func startVaultServer(ctx context.Context) *testcontainervault.VaultContainer {
 	opts := []testcontainers.ContainerCustomizer{
-		testcontainers.WithImage("hashicorp/vault:1.15.4"),
 		testcontainervault.WithToken(token),
 		testcontainervault.WithInitCommand("secrets enable -version=2 -path=kv kv"),
 	}
 
-	vault, err := testcontainervault.RunContainer(context.Background(), opts...)
+	vault, err := testcontainervault.Run(ctx, "hashicorp/vault:1.18", opts...)
 	if err != nil {
 		panic(err)
 	}
