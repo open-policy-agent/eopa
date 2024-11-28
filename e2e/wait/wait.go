@@ -7,17 +7,23 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"testing"
 	"time"
 )
 
 func ForResult(t *testing.T, act func(), assert func() error, tries int, dur time.Duration) {
+	factor := 1
+	if os.Getenv("CI") != "" { // wait longer in Github runners
+		factor = 5
+	}
 	t.Helper()
 	if act != nil {
 		act()
 	}
 	var err error
 	for i := 0; i <= tries; i++ {
+		dur = time.Duration(factor * int(dur))
 		if err = assert(); err == nil {
 			return
 		}
