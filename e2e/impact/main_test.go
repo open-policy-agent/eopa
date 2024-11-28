@@ -511,7 +511,7 @@ p := rand.intn("test", 2)
 			format: "csv",
 			assert: func(t *testing.T, buf *bytes.Buffer) {
 				if exp, act := count+1, bytes.Count(buf.Bytes(), []byte("\n")); exp != act {
-					t.Errorf("expected %d lines, got %d", exp, act)
+					t.Fatalf("expected %d lines, got %d", exp, act)
 				}
 				exp := `node_id,req_id,value_a,value_b,input,path,eval_ns_a,eval_ns_b`
 				i := strings.Index(buf.String(), "\n")
@@ -526,7 +526,7 @@ p := rand.intn("test", 2)
 			group:  true,
 			assert: func(t *testing.T, buf *bytes.Buffer) {
 				if exp, act := 2, bytes.Count(buf.Bytes(), []byte("\n")); exp != act {
-					t.Errorf("expected %d lines, got %d", exp, act)
+					t.Fatalf("expected %d lines, got %d", exp, act)
 				}
 				exp := `path,input,n,mean_primary_ns,median_primary_ns,min_primary_ns,max_primary_ns,stddev_primary_ns,var_primary_ns,mean_secondary_ns,median_secondary_ns,min_secondary_ns,max_secondary_ns,stddev_secondary_ns,var_secondary_ns`
 				i := strings.Index(buf.String(), "\n")
