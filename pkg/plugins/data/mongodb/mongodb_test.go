@@ -223,7 +223,7 @@ func startMongoDB(t *testing.T, username, password string) (testcontainers.Conta
 	ctx := context.Background()
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "mongo:6",
+			Image:        "mongo:8",
 			ExposedPorts: []string{"27017/tcp"},
 			Env: map[string]string{
 				"MONGO_INITDB_ROOT_USERNAME": username,
