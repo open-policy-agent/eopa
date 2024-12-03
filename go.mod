@@ -110,7 +110,7 @@ require (
 	google.golang.org/grpc v1.68.0
 	google.golang.org/protobuf v1.35.2
 	gopkg.in/h2non/gock.v1 v1.1.2
-	modernc.org/sqlite v1.34.1
+	modernc.org/sqlite v1.34.2
 	sigs.k8s.io/yaml v1.4.0
 )
 
