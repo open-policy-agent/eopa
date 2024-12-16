@@ -13,7 +13,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hashicorp/vault/api v1.15.0
-	github.com/minio/minio-go/v7 v7.0.80
+	github.com/minio/minio-go/v7 v7.0.82
 	github.com/open-policy-agent/opa v0.70.0
 	github.com/redpanda-data/benthos/v4 v4.42.0
 	github.com/redpanda-data/connect/v4 v4.43.1
