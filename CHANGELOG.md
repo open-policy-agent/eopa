@@ -12,6 +12,23 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.30.1
+
+[![OPA v0.70.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.70.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.70.0)
+[![Regal v0.29.2](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.29.2&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.29.2)
+
+This release further includes various dependency bumps and updates the embedded Regal version to [v0.29.2](https://github.com/StyraInc/regal/releases/tag/v0.29.2).
+
+
+### `golang.org/x/crypto` 0.31.0
+
+This release also bumps the `golang.org/x/crypto` dependency to version 0.31.0.
+In that version, **CVE-2024-45337 is fixed**.
+Please note that the vulnerable code has **not been used** in Enterprise OPA (or OPA), but some automated security scanners don't account for that.
+
+For further information, see https://github.com/advisories/GHSA-v778-237x-gjrc.
+
+
 ## v1.30.0
 
 [![OPA v0.70.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.70.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.70.0)
