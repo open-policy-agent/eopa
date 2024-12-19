@@ -147,6 +147,20 @@ include if user == input.fruits.user`,
 			},
 		},
 		{
+			note: "not a call/term, using with",
+			rego: `include if {
+	foo with input.fruits.colour as "red"
+}
+foo if input.fruits.colour`,
+			errors: []Error{
+				{
+					Code:     "pe_fragment_error",
+					Location: ast.NewLocation(nil, "filters.rego", 4, 2),
+					Message:  "\"with\" not permitted",
+				},
+			},
+		},
+		{
 			note: "not a call/every",
 			rego: `include if every x in input.fruits.xs { x != "y" }`,
 			errors: []Error{

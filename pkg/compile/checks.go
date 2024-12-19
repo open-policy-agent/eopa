@@ -58,6 +58,8 @@ func checkCall(e *ast.Expr, sup []*ast.Module) *ast.Error {
 	case e.IsCall(): // OK
 	case e.IsEvery():
 		return err(e.Loc(), "\"every\" not permitted")
+	case len(e.With) > 0:
+		return err(e.Loc(), "\"with\" not permitted")
 	default:
 		if t, ok := e.Terms.(*ast.Term); ok {
 			if ref, ok := t.Value.(ast.Ref); ok && ref.HasPrefix(partialPrefix) {
@@ -80,6 +82,9 @@ func checkCall(e *ast.Expr, sup []*ast.Module) *ast.Error {
 }
 
 func checkBuiltins(e *ast.Expr, _ []*ast.Module) *ast.Error {
+	if len(e.With) > 0 { // Ignore expression, we'll already have recorded errors through checkCalls.
+		return nil
+	}
 	op := e.OperatorTerm()
 	if op == nil {
 		return nil
