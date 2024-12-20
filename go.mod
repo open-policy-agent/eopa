@@ -106,7 +106,7 @@ require (
 	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
 	golang.org/x/sync v0.10.0
 	golang.org/x/term v0.27.0
-	google.golang.org/api v0.213.0
+	google.golang.org/api v0.214.0
 	google.golang.org/grpc v1.69.2
 	google.golang.org/protobuf v1.36.0
 	gopkg.in/h2non/gock.v1 v1.1.2
