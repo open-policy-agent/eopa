@@ -108,7 +108,7 @@ func checkBuiltins(e *ast.Expr, _ []*ast.Module) *ast.Error {
 		)
 
 	default:
-		return err(loc, "invalid operator %v", op)
+		return err(loc, "invalid builtin %v", op)
 	}
 
 	// all our allowed builtins have two operands

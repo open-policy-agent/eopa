@@ -63,7 +63,7 @@ func TestPostPartialChecks(t *testing.T) {
 				{
 					Code:     "pe_fragment_error",
 					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
-					Message:  "invalid operator object.get",
+					Message:  "invalid builtin object.get",
 				},
 			},
 		},
