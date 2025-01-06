@@ -124,7 +124,7 @@ game := "over"
 
 func testServer(ctx context.Context, t *testing.T) (string, testcontainers.Container) {
 	req := testcontainers.ContainerRequest{
-		Image:        "lldap/lldap:latest",
+		Image:        "lldap/lldap:v0.6.0",
 		ExposedPorts: []string{"3890/tcp", "17170/tcp"},
 		WaitingFor:   tc_wait.ForLog("DB Cleanup Cron started"),
 		Env: map[string]string{
