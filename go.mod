@@ -106,7 +106,7 @@ require (
 	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
 	golang.org/x/sync v0.10.0
 	golang.org/x/term v0.28.0
-	google.golang.org/api v0.214.0
+	google.golang.org/api v0.215.0
 	google.golang.org/grpc v1.69.2
 	google.golang.org/protobuf v1.36.2
 	gopkg.in/h2non/gock.v1 v1.1.2
@@ -232,7 +232,7 @@ require (
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
-	github.com/googleapis/gax-go/v2 v2.14.0 // indirect
+	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/govalues/decimal v0.1.29 // indirect
@@ -387,7 +387,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241209162323-e6fa225c2576 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241223144023-3abc09e42ca8 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
