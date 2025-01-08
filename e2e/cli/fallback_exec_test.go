@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	sdk_test "github.com/open-policy-agent/opa/sdk/test"
+	sdk_test "github.com/open-policy-agent/opa/v1/sdk/test"
 )
 
 var _exec = []string{"exec", "--log-level", "debug", "--decision", "/test/p", "/dev/null"} // don't need input

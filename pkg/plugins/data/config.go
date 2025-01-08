@@ -1,7 +1,7 @@
 package data
 
 import (
-	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/v1/plugins"
 )
 
 // Config represents the configuration for the data feature.

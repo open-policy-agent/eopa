@@ -16,12 +16,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/plugins/discovery"
-	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/topdown"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/plugins"
+	"github.com/open-policy-agent/opa/v1/plugins/discovery"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/topdown"
+	"github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
@@ -146,7 +146,6 @@ plugins:
 	auth := fmt.Sprintf(`{"username": "%s", "password": "%s"}`, username, password)
 
 	transform := `package e2e
-import future.keywords
 transform[key] := blob.bar if some key, blob in input.incoming
 `
 

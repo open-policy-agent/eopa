@@ -80,7 +80,7 @@ func TestBulkRW(t *testing.T) {
 			note: "single policy create",
 			request: &bulkv1.BulkRWRequest{
 				WritesPolicy: []*bulkv1.BulkRWRequest_WritePolicyRequest{
-					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/a", Text: "package a\n\nx { true }\ny { false }\n"}}}},
+					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/a", Text: "package a\n\nx if { true }\ny if { false }\n"}}}},
 				},
 			},
 			expResponse: &bulkv1.BulkRWResponse{
@@ -92,11 +92,11 @@ func TestBulkRW(t *testing.T) {
 		{
 			note: "single policy update",
 			storePolicy: map[string]string{
-				"/a": "package a\n\nx { false }\ny { false }\n",
+				"/a": "package a\n\nx if { false }\ny if { false }\n",
 			},
 			request: &bulkv1.BulkRWRequest{
 				WritesPolicy: []*bulkv1.BulkRWRequest_WritePolicyRequest{
-					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/a", Text: "package a\n\nx { true }\ny { false }\n"}}}},
+					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/a", Text: "package a\n\nx if { true }\ny if { false }\n"}}}},
 				},
 			},
 			expResponse: &bulkv1.BulkRWResponse{
@@ -108,11 +108,11 @@ func TestBulkRW(t *testing.T) {
 		{
 			note: "single policy delete",
 			storePolicy: map[string]string{
-				"/a": "package a\n\nx { true }\ny { false }\n",
+				"/a": "package a\n\nx if { true }\ny if { false }\n",
 			},
 			request: &bulkv1.BulkRWRequest{
 				WritesPolicy: []*bulkv1.BulkRWRequest_WritePolicyRequest{
-					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/a", Text: "package a\n\nx { true }\ny { false }\n"}}}},
+					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/a", Text: "package a\n\nx if { true }\ny if { false }\n"}}}},
 				},
 			},
 			expResponse: &bulkv1.BulkRWResponse{
@@ -140,7 +140,7 @@ func TestBulkRW(t *testing.T) {
 		{
 			note: "single policy read",
 			storePolicy: map[string]string{
-				"/a": "package a\n\nx { true }\ny { false }\n",
+				"/a": "package a\n\nx if { true }\ny if { false }\n",
 			},
 			request: &bulkv1.BulkRWRequest{
 				ReadsPolicy: []*bulkv1.BulkRWRequest_ReadPolicyRequest{
@@ -149,7 +149,7 @@ func TestBulkRW(t *testing.T) {
 			},
 			expResponse: &bulkv1.BulkRWResponse{
 				ReadsPolicy: []*bulkv1.BulkRWResponse_ReadPolicyResponse{
-					{Resp: &policyv1.GetPolicyResponse{Result: &policyv1.Policy{Path: "/a", Text: "package a\n\nx { true }\ny { false }\n"}}},
+					{Resp: &policyv1.GetPolicyResponse{Result: &policyv1.Policy{Path: "/a", Text: "package a\n\nx if { true }\ny if { false }\n"}}},
 				},
 			},
 		},
@@ -163,7 +163,7 @@ func TestBulkRW(t *testing.T) {
 					{Req: &bulkv1.BulkRWRequest_WriteDataRequest_Update{Update: &datav1.UpdateDataRequest{Data: &datav1.DataDocument{Path: "/b/d", Document: structpb.NewNumberValue(10)}}}},
 				},
 				WritesPolicy: []*bulkv1.BulkRWRequest_WritePolicyRequest{
-					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/test", Text: "package test\n\nx { true }\ny = false\nz = data.a + data.b.c + data.b.d\n"}}}},
+					{Req: &bulkv1.BulkRWRequest_WritePolicyRequest_Create{Create: &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/test", Text: "package test\n\nx if { true }\ny = false\nz = data.a + data.b.c + data.b.d\n"}}}},
 				},
 				ReadsData: []*bulkv1.BulkRWRequest_ReadDataRequest{
 					{Req: &datav1.GetDataRequest{Path: "/test/x"}},
@@ -189,7 +189,7 @@ func TestBulkRW(t *testing.T) {
 					{Resp: &datav1.GetDataResponse{Result: &datav1.DataDocument{Path: "/test/z", Document: structpb.NewNumberValue(38)}}},
 				},
 				ReadsPolicy: []*bulkv1.BulkRWResponse_ReadPolicyResponse{
-					{Resp: &policyv1.GetPolicyResponse{Result: &policyv1.Policy{Path: "/test", Text: "package test\n\nx { true }\ny = false\nz = data.a + data.b.c + data.b.d\n"}}},
+					{Resp: &policyv1.GetPolicyResponse{Result: &policyv1.Policy{Path: "/test", Text: "package test\n\nx if { true }\ny = false\nz = data.a + data.b.c + data.b.d\n"}}},
 				},
 			},
 		},

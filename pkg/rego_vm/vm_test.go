@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/compile"
-	"github.com/open-policy-agent/opa/ir"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/compile"
+	"github.com/open-policy-agent/opa/v1/ir"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/iropt"
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
@@ -49,7 +49,7 @@ func createBundle(_ testing.TB, rego string) *bundle.Bundle {
 }
 
 func loadBundle(tb testing.TB, buffer []byte) *bundle.Bundle {
-	reader := bundle.NewCustomReader(bundle.NewTarballLoader(bytes.NewReader(buffer)))
+	reader := bundle.NewCustomReader(bundle.NewTarballLoader(bytes.NewReader(buffer))).WithRegoVersion(ast.RegoV0)
 	b, err := reader.Read()
 	if err != nil {
 		tb.Fatal("bundle failed", err)
@@ -100,7 +100,7 @@ func matchResult(tb testing.TB, result string, v vm.Value) {
 	}
 }
 
-const simpleRego = "package test\nallow := x {\nx := true}"
+const simpleRego = "package test\nallow := x if {\nx := true}"
 const simpleInput = "{}"
 const simpleQuery = "test/allow"
 const simpleResult = `{{"result": true}}`

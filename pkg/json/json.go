@@ -15,7 +15,7 @@ import (
 	internal "github.com/styrainc/enterprise-opa-private/pkg/json/internal/json"
 	"github.com/styrainc/enterprise-opa-private/pkg/json/internal/utils"
 
-	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/v1/ast"
 )
 
 // Json is the interface every element within the document implements.

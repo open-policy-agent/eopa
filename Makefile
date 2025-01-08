@@ -1,4 +1,6 @@
 export GOPRIVATE=github.com/StyraInc/opa
+FORK_BRANCH := eopa-1.0.0
+
 BUILD_ARGS := --tags=use_opa_fork
 ifdef AUTH_RELEASE
 NEWEST := $(shell git tag -l --sort -version:refname | head -n 1)
@@ -164,12 +166,12 @@ fuzz:
 	go test $(BUILD_ARGS)  ./pkg/json -fuzz FuzzDecode -fuzztime ${FUZZ_TIME} -v -run '^$$'
 
 update:
-	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.70.0
+	go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@${FORK_BRANCH}
 	go mod tidy
 
 update-e2e:
 	cd e2e \
-		&& go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@eopa-0.70.0 \
+		&& go mod edit -replace github.com/open-policy-agent/opa=github.com/StyraInc/opa@${FORK_BRANCH} \
 		&& go mod tidy
 
 update-examples:

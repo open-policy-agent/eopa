@@ -5,7 +5,7 @@ package vm
 import (
 	"context"
 
-	"github.com/open-policy-agent/opa/server"
+	"github.com/open-policy-agent/opa/v1/server"
 )
 
 // TODO: Move more of the intermediate results machinery here.

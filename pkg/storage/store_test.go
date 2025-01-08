@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/open-policy-agent/opa/config"
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/config"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/util"
 	"github.com/prometheus/client_golang/prometheus"
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"

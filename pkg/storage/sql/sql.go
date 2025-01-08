@@ -13,9 +13,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	_ "modernc.org/sqlite" // Include the SQLite3 driver to the binary.
 
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/util"
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )

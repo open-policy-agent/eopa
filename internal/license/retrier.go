@@ -9,7 +9,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 
-	"github.com/open-policy-agent/opa/logging"
+	"github.com/open-policy-agent/opa/v1/logging"
 )
 
 var retryParams = atomic.Pointer[LicenseParams]{}

@@ -13,7 +13,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	tc_wait "github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
@@ -47,7 +47,6 @@ plugins:
 `
 
 	transform := `package e2e
-import future.keywords
 transform.users[id] := y if {
 	some entry in input.incoming
 	"inetOrgPerson" in entry.objectclass
@@ -74,7 +73,6 @@ member_ids(uids) := { id |
 `
 
 	transform1 := `package e2e.transform
-import future.keywords
 game := "over"
 `
 

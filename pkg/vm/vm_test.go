@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/compile"
-	"github.com/open-policy-agent/opa/ir"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/compile"
+	"github.com/open-policy-agent/opa/v1/ir"
 )
 
 func setup(tb testing.TB) ir.Policy {
@@ -17,8 +17,8 @@ func setup(tb testing.TB) ir.Policy {
 			{
 				URL:    "/url",
 				Path:   "/foo.rego",
-				Raw:    []byte("package test\nallow := x {\nx := true}"),
-				Parsed: ast.MustParseModule("package test\nallow := x {\nx := true}"),
+				Raw:    []byte("package test\nallow := x if {\nx := true}"),
+				Parsed: ast.MustParseModule("package test\nallow := x if {\nx := true}"),
 			},
 		},
 	}

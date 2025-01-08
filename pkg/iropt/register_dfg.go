@@ -1,6 +1,6 @@
 package iropt
 
-import "github.com/open-policy-agent/opa/ir"
+import "github.com/open-policy-agent/opa/v1/ir"
 
 // Returns a Local, true if retrieval succeeded.
 // Else, returns 0, false.

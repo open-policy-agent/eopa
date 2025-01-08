@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/okta/okta-sdk-golang/v3/okta"
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 )
 
 // Config represents the configuration of the okta data plugin

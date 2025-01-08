@@ -6,9 +6,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/server/types"
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/server/types"
+	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/prometheus/client_golang/prometheus"
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"

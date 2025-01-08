@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/storage"
 )
 
 func AddDataPrefixAndParsePath(path string) (storage.Path, error) {

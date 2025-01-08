@@ -23,8 +23,8 @@ func TestListPolicies(t *testing.T) {
 	policies := map[string]string{
 		"/a": `package a
 
-x { true }
-y { false }
+x if { true }
+y if { false }
 `,
 		"/b": `package b
 z := 2
@@ -49,7 +49,7 @@ d := 27
 	}
 	// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST.
 	expectedPolicies := map[string]string{
-		"/a": "package a\n\nx { true }\ny { false }\n",
+		"/a": "package a\n\nx if { true }\ny if { false }\n",
 		"/b": "package b\nz := 2\n",
 		"/c": "package c\nd := 27\n",
 	}
@@ -89,8 +89,8 @@ func TestCreatePolicy(t *testing.T) {
 	{
 		_, err := client.CreatePolicy(ctx, &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/a", Text: `package a
 
-x { true }
-y { false }
+x if { true }
+y if { false }
 `}})
 		if err != nil {
 			t.Fatalf("CreatePolicy failed: %v", err)
@@ -108,7 +108,7 @@ y { false }
 			t.Fatalf("Expected /a, got: %v", path)
 		}
 		// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST.
-		const expectedPolicy = "package a\n\nx { true }\ny { false }\n"
+		const expectedPolicy = "package a\n\nx if { true }\ny if { false }\n"
 		result := policy.GetText()
 		if expectedPolicy != string(result) {
 			t.Fatalf("Expected %v\n\ngot:\n%v", expectedPolicy, string(result))
@@ -134,8 +134,8 @@ func TestCreateAndOverwritePolicy(t *testing.T) {
 	{
 		_, err := clientPolicy.CreatePolicy(ctx, &policyv1.CreatePolicyRequest{Policy: &policyv1.Policy{Path: "/aaa", Text: `package a
 
-x { true }
-y { false }
+x if { true }
+y if { false }
 `}})
 		if err != nil {
 			t.Fatalf("CreatePolicy failed: %v", err)
@@ -190,8 +190,8 @@ func TestGetPolicy(t *testing.T) {
 	policies := map[string]string{
 		"/a": `package a
 
-x { true }
-y { false }
+x if { true }
+y if { false }
 `,
 	}
 	listener := setupTest(t, defaultGRPCConfig, `{}`, policies)
@@ -209,7 +209,7 @@ y { false }
 		t.Fatalf("GetPolicy failed: %v", err)
 	}
 	// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST.
-	const expectedPolicy = "package a\n\nx { true }\ny { false }\n"
+	const expectedPolicy = "package a\n\nx if { true }\ny if { false }\n"
 	policy := resp.GetResult()
 	result := policy.GetText()
 	if expectedPolicy != string(result) {
@@ -223,8 +223,8 @@ func TestUpdatePolicy(t *testing.T) {
 	policies := map[string]string{
 		"/a": `package a
 
-x { true }
-y { false }
+x if { true }
+y if { false }
 `,
 	}
 	listener := setupTest(t, defaultGRPCConfig, `{}`, policies)
@@ -242,8 +242,8 @@ y { false }
 			Policy: &policyv1.Policy{
 				Path: "/a", Text: `package a
 
-r { true }
-s { false }
+r if { true }
+s if { false }
 `,
 			},
 		})
@@ -263,7 +263,7 @@ s { false }
 			t.Fatalf("Expected /a, got: %v", path)
 		}
 		// NOTE(philip): When the compiler state issue is resolved in grpc_policy, we can add back the AST.
-		const expectedPolicy = "package a\n\nr { true }\ns { false }\n"
+		const expectedPolicy = "package a\n\nr if { true }\ns if { false }\n"
 		result := policy.GetText()
 		if expectedPolicy != string(result) {
 			t.Fatalf("Expected %v\n\ngot:\n%v", expectedPolicy, string(result))
@@ -276,8 +276,8 @@ func TestDeletePolicy(t *testing.T) {
 	policies := map[string]string{
 		"/a": `package a
 
-x { true }
-y { false }
+x if { true }
+y if { false }
 `,
 	}
 	listener := setupTest(t, defaultGRPCConfig, `{}`, policies)

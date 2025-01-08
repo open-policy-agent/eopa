@@ -15,7 +15,7 @@ import (
 	"github.com/keygen-sh/keygen-go/v2"
 	"github.com/sirupsen/logrus"
 
-	"github.com/open-policy-agent/opa/logging"
+	"github.com/open-policy-agent/opa/v1/logging"
 )
 
 const eopaLicenseToken = "EOPA_LICENSE_TOKEN"

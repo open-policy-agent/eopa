@@ -6,10 +6,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/plugins/logs"
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/plugins"
+	"github.com/open-policy-agent/opa/v1/plugins/logs"
+	"github.com/open-policy-agent/opa/v1/storage"
 )
 
 const DLPluginName = "eopa_dl" // OPA DL plugin

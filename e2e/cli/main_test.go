@@ -57,7 +57,7 @@ func TestRunInstructionLimit(t *testing.T) {
 	data := largeJSON()
 	config := ``
 	policy := `package test
-p { data.xs[_] }`
+p if { data.xs[_] }`
 	ctx := context.Background()
 
 	t.Run("limit=1", func(t *testing.T) {

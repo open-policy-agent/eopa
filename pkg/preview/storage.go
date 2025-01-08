@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync/atomic"
 
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/json"
 	eopaStorage "github.com/styrainc/enterprise-opa-private/pkg/storage"

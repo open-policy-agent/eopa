@@ -12,13 +12,13 @@ import (
 
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/rego"
-	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/test/cases"
-	"github.com/open-policy-agent/opa/topdown"
-	"github.com/open-policy-agent/opa/types"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/rego"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/test/cases"
+	"github.com/open-policy-agent/opa/v1/topdown"
+	"github.com/open-policy-agent/opa/v1/types"
+	"github.com/open-policy-agent/opa/v1/util"
 )
 
 // topdown -> vm
@@ -45,7 +45,7 @@ func readCases(t testing.TB, version string) ([]cases.TestCase, map[string]strin
 		t.Skip("OPA_ROOT not set, skipping Rego E2E test/benchmarks")
 	}
 	opaRootDir = filepath.Clean(opaRootDir)
-	caseDir := filepath.Join(opaRootDir, "test/cases/testdata", version)
+	caseDir := filepath.Join(opaRootDir, "v1/test/cases/testdata", version)
 	const exceptionsFile = "./exceptions.yaml"
 	exceptions := map[string]string{}
 

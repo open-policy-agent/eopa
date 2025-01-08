@@ -11,13 +11,13 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	testcontainersvault "github.com/testcontainers/testcontainers-go/modules/vault"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/compile"
-	"github.com/open-policy-agent/opa/ir"
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/topdown/builtins"
-	"github.com/open-policy-agent/opa/topdown/cache"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/compile"
+	"github.com/open-policy-agent/opa/v1/ir"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/topdown/builtins"
+	"github.com/open-policy-agent/opa/v1/topdown/cache"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
@@ -48,7 +48,7 @@ func TestVaultSend(t *testing.T) {
 		},
 		{
 			note: "intra-query cache",
-			query: `p = [ resp1, resp2 ] {
+			query: `p = [ resp1, resp2 ] if {
 				vault.send({"address": "%s", "token": "%s", "kv2_get": {"mount_path": "kv2", "path": "test"}}, resp1)
 				vault.send({"address": "%s", "token": "%s", "kv2_get": {"mount_path": "kv2", "path": "test"}}, resp2) # cached
 				}`,

@@ -99,7 +99,6 @@ plugins:
       rego_transform: "data.e2e.transform"
 `, broker, tc.consumerGroup)
 			policy := `package e2e
-import future.keywords
 transform[key] := val if {
 	some msg in input.incoming
 	payload := json.unmarshal(base64.decode(msg.value))

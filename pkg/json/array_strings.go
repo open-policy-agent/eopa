@@ -3,7 +3,7 @@ package json
 import (
 	"io"
 
-	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/v1/ast"
 )
 
 // ArraySliceCompactStrings is a compact implementation of the string

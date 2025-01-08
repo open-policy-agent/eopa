@@ -3,7 +3,7 @@
 package bundle
 
 import (
-	bundleApi "github.com/open-policy-agent/opa/bundle"
+	bundleApi "github.com/open-policy-agent/opa/v1/bundle"
 )
 
 func RegisterActivator() {

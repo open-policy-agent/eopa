@@ -15,12 +15,12 @@ import (
 	tc_pulsar "github.com/testcontainers/testcontainers-go/modules/pulsar"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/plugins/discovery"
-	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/topdown"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/plugins"
+	"github.com/open-policy-agent/opa/v1/plugins/discovery"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/topdown"
+	"github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm" // important! use VM for rego.Eval below
@@ -62,8 +62,6 @@ plugins:
 `
 
 	transform := `package e2e
-import rego.v1
-
 _payload(msg) := json.unmarshal(base64.decode(msg.value))
 batch_ids contains _payload(msg).id if some msg in input.incoming
 
@@ -222,7 +220,6 @@ plugins:
 `
 
 	transform := `package e2e
-import rego.v1
 transform[msg.key] := msg if some msg in input.incoming
 `
 	broker, tx := testPulsar(t, ctx)

@@ -13,7 +13,7 @@ package example
 # custom:
 #   test-bootstrap-name:
 #     key: value
-allow {
+allow if {
 	input.servers[_].names[_]
 	input.clients[_]
 }

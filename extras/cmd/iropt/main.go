@@ -8,7 +8,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/open-policy-agent/opa/ir"
+	"github.com/open-policy-agent/opa/v1/ir"
 	"github.com/spf13/cobra"
 	"github.com/styrainc/enterprise-opa-private/pkg/iropt"
 )

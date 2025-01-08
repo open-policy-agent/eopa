@@ -9,9 +9,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/open-policy-agent/opa/config"
-	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/config"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/util"
 )
 
 var (

@@ -12,8 +12,8 @@ import (
 
 	rhttp "github.com/hashicorp/go-retryablehttp"
 
-	"github.com/open-policy-agent/opa/logging"
-	logging_test "github.com/open-policy-agent/opa/logging/test"
+	"github.com/open-policy-agent/opa/v1/logging"
+	logging_test "github.com/open-policy-agent/opa/v1/logging/test"
 	"github.com/styrainc/enterprise-opa-private/pkg/login"
 )
 

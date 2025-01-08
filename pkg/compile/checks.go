@@ -3,8 +3,8 @@ package compile
 import (
 	"fmt"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/rego"
 )
 
 const code = "pe_fragment_error" // TODO(sr): this is preliminary

@@ -10,12 +10,12 @@ cmp example_test.rego exp/example_test.rego
 -- example.rego --
 package example
 
-allow {
+allow if {
 	input.servers[_].names[_]
 	input.clients[_]
 }
 
-allow {
+allow if {
 	input.servers[_].name == "admin"
 }
 -- exp/example_test.rego --

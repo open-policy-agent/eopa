@@ -1,6 +1,6 @@
 package iropt
 
-import "github.com/open-policy-agent/opa/ir"
+import "github.com/open-policy-agent/opa/v1/ir"
 
 // Encodes the state of preamble, postamble, and loop body instructions for the loop.
 type LoopTransformState struct {

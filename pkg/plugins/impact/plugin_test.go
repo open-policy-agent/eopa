@@ -7,11 +7,11 @@ import (
 
 	"go.uber.org/goleak"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/loader"
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/topdown/builtins"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/loader"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 
 	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
@@ -35,6 +35,7 @@ plugins:
 	path := "testdata/eopa-bundle.tar.gz"
 	bndl, err := loader.NewFileLoader().
 		WithSkipBundleVerification(true).
+		WithRegoVersion(ast.RegoV0).
 		AsBundle(path)
 	if err != nil {
 		t.Fatalf("eopa bundle: %v", err)

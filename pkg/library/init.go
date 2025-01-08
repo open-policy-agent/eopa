@@ -8,7 +8,7 @@ import (
 
 	embedded "github.com/styrainc/enterprise-opa-private/library"
 
-	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/v1/ast"
 )
 
 var modules map[string]*ast.Module

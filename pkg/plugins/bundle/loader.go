@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/open-policy-agent/opa/loader/extension"
+	"github.com/open-policy-agent/opa/v1/loader/extension"
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )

@@ -3,7 +3,7 @@ package benthos
 import (
 	"slices"
 
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 )
 
 type Config struct {

@@ -14,7 +14,7 @@ import (
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 )
 
 func Example_read() {

@@ -11,7 +11,7 @@ import (
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/testcontainers/testcontainers-go"
 	tc_minio "github.com/testcontainers/testcontainers-go/modules/minio"
 
@@ -38,8 +38,6 @@ plugins:
 
 	transform := `
 package e2e
-import future.keywords
-
 transform[k] := v if {
 	some k, v in input.incoming
 	is_array(v)

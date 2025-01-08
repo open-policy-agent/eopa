@@ -12,7 +12,7 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/storage/errors"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage/ptr"
 
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 )
 
 // transaction implements the low-level read/write operations on the in-memory

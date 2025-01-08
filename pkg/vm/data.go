@@ -10,7 +10,7 @@ import (
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 
-	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/v1/ast"
 )
 
 var (

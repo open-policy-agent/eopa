@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"net/http"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/rego"
-	"github.com/open-policy-agent/opa/runtime"
-	"github.com/open-policy-agent/opa/server/types"
-	"github.com/open-policy-agent/opa/server/writer"
-	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/topdown"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/rego"
+	"github.com/open-policy-agent/opa/v1/runtime"
+	"github.com/open-policy-agent/opa/v1/server/types"
+	"github.com/open-policy-agent/opa/v1/server/writer"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/topdown"
+	"github.com/open-policy-agent/opa/v1/util"
 )
 
 type CompileHandler interface {

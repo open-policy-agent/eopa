@@ -13,7 +13,7 @@ package example
 # METADATA
 # custom:
 #   test-bootstrap-name: allow_idx
-allow[0] {
+allow[0] if {
 	input.servers[0].names[_]
 	input.servers[3].zones
 	input.servers[2.45].x
@@ -28,17 +28,17 @@ import rego.v1
 # Success case: All inputs defined.
 test_success_allow_idx if {
 	test_input = {"input": {"clients": "EXAMPLE", "servers": {0: {"names": "EXAMPLE"}, 2.45: {"x": "EXAMPLE"}, 3: {"zones": "EXAMPLE"}}}}
-	data.example.allow with input as test_input
+	data.example.allow[0] with input as test_input
 }
 # Failure case: No inputs defined.
 test_fail_allow_idx_no_input if {
 	test_input = {}
-	not data.example.allow with input as test_input
+	not data.example.allow[0] with input as test_input
 }
 # Failure case: Inputs defined, but wrong values.
 test_fail_allow_idx_bad_input if {
 	test_input = {"input": {"clients": "EXAMPLE", "servers": {0: {"names": "EXAMPLE"}, 2.45: {"x": "EXAMPLE"}, 3: {"zones": "EXAMPLE"}}}}
-	not data.example.allow with input as test_input
+	not data.example.allow[0] with input as test_input
 }
 
 -- exp/stderr --

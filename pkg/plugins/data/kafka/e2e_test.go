@@ -14,8 +14,8 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/plugin/kslog"
 
-	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/util"
 
 	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm" // important! use VM for rego.Eval below
 )
@@ -37,7 +37,6 @@ plugins:
 `
 
 	transform := `package e2e
-import future.keywords
 transform[key] := val if {
 	some msg in input.incoming # incoming is a batch
 	print(msg)
@@ -129,7 +128,6 @@ plugins:
 `
 
 	transform := `package e2e
-import future.keywords
 transform[key] := val if {
 	some msg in input.incoming # incoming is a batch
 	payload := json.unmarshal(base64.decode(msg.value))
@@ -183,7 +181,6 @@ plugins:
 `
 
 	transform := `package e2e
-import future.keywords
 transform[key] := val if {
 	some msg in input.incoming
 	print("new", msg)

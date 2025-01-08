@@ -10,8 +10,8 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	testcontainervault "github.com/testcontainers/testcontainers-go/modules/vault"
 
-	"github.com/open-policy-agent/opa/config"
-	"github.com/open-policy-agent/opa/logging"
+	"github.com/open-policy-agent/opa/v1/config"
+	"github.com/open-policy-agent/opa/v1/logging"
 )
 
 func createVaultTestRoleCluster(t *testing.T) (*testcontainervault.VaultContainer, *hcvault.Client, string, string) {

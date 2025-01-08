@@ -28,7 +28,7 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage/merge"
 
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 )
 
 // New returns an empty in-memory store.

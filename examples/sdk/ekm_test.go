@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/open-policy-agent/opa/sdk"
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/sdk"
+	"github.com/open-policy-agent/opa/v1/storage"
 
 	load_sdk "github.com/styrainc/enterprise-opa-private/pkg/sdk"
 

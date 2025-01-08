@@ -1,11 +1,24 @@
 # This test ensures that the `eopa run` command respects the --v1-compatible parameter.
 
-# running without it, or with --v0-compatible, it'll fail
-! exec eopa run --log-level error --addr 127.0.0.1:61599 --server p.rego
-cmp stdout exp/v0_stdout
+# running rego v1 code without --v1-compatible, it no longer fails
+# we expect a nonzero exit code on windows
+[windows] ! exec eopa run --log-level error --addr 127.0.0.1:61599 --server p.rego &eopa&
+[!windows]  exec eopa run --log-level error --addr 127.0.0.1:61599 --server p.rego &eopa&
+! stdout .
+! stderr .
+
+# block until the server reports health OK
+httpwait 'http://localhost:61599/health' '{}'
+
+stop eopa
+! stdout .
+! stderr .
+
+# running with --v0-compatible, it'll fail
 ! exec eopa run --log-level error --addr 127.0.0.1:61599 --server --v0-compatible p.rego
 cmp stdout exp/v0_stdout
 
+# --v1-compatible can be provided, but it'll be a no-op:
 # we expect a nonzero exit code on windows
 [windows] ! exec eopa run --log-level error --addr 127.0.0.1:61599 --server --v1-compatible p.rego &eopa&
 [!windows]  exec eopa run --log-level error --addr 127.0.0.1:61599 --server --v1-compatible p.rego &eopa&

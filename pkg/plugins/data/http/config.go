@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 	"golang.org/x/exp/slices"
 )
 

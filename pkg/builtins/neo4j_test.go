@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/compile"
-	"github.com/open-policy-agent/opa/ir"
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/topdown/builtins"
-	"github.com/open-policy-agent/opa/topdown/cache"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/compile"
+	"github.com/open-policy-agent/opa/v1/ir"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/topdown/builtins"
+	"github.com/open-policy-agent/opa/v1/topdown/cache"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
@@ -192,7 +192,7 @@ func TestNeo4jQuery(t *testing.T) {
 			Note: "test vault helper auth()",
 			Source: fmt.Sprintf(`import data.system.eopa.utils.neo4j.v1.vault as n4jvault
 import data.system.eopa.utils.vault.v1.env as vault
-out = y {
+out = y if {
 	x := n4jvault.auth(vault.secret("secret/neo4j")) with vault.override.address as "%s" with vault.override.token as "%s"
 	y := x.auth
 }
@@ -206,7 +206,7 @@ out = y {
 			Note: "test vault helper query()",
 			Source: fmt.Sprintf(`import data.system.eopa.utils.neo4j.v1.vault as n4jvault
 import data.system.eopa.utils.vault.v1.env as vault
-out = y {
+out = y if {
 	y := n4jvault.query({"query": "MATCH (n:Pet) WHERE n.age > 3 RETURN n.name"}) with vault.override.address as "%s" with vault.override.token as "%s"
 }
 `, vaultURI, vaultToken),

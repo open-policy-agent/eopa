@@ -9,11 +9,11 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/metrics"
-	opaTypes "github.com/open-policy-agent/opa/server/types"
-	"github.com/open-policy-agent/opa/server/writer"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	opaTypes "github.com/open-policy-agent/opa/v1/server/types"
+	"github.com/open-policy-agent/opa/v1/server/writer"
+	"github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/preview/types"
 )

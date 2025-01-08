@@ -11,7 +11,7 @@ import (
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage/errors"
 
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 )
 
 func Ptr(data interface{}, path storage.Path) (interface{}, error) {

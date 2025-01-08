@@ -1,6 +1,6 @@
 package iropt
 
-import "github.com/open-policy-agent/opa/ir"
+import "github.com/open-policy-agent/opa/v1/ir"
 
 // ---------------------------------------------------------------------------
 // Code Motion helpers

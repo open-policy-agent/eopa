@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 

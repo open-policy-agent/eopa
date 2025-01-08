@@ -21,18 +21,18 @@ default allow := false
 # entry: true
 # custom:
 #   test-bootstrap-name: allow
-allow {
+allow if {
     allow_openapi
     not data.extended.deny
 }
-allow {
+allow if {
     allow_openapi
     data.extended.deny
     data.extended.allow
 }
 
 # look up this api entry; should be partially evaluated to make it O(1)
-apientry = entry {
+apientry = entry if {
     some openapiPath, openapiMethod
     entry := data.openapi[openapiPath][openapiMethod]
     lower(input.method) == lower(openapiMethod)
@@ -41,14 +41,14 @@ apientry = entry {
 
 # granted to everyone (needs to be really fast)
 # test-bootstrap-name: allow_open_with_all_roles
-allow_openapi {
+allow_openapi if {
     apientry.userFeatures[_] in data.libraries.banking_lib.roles["all"]
 
 }
 
 # granted because of role
 # test-bootstrap-name: allow_open_with_role
-allow_openapi {
+allow_openapi if {
     feature := apientry.userFeatures[_]  # usually just the one
     some possible_role in feature_roles[feature]
     possible_role in data.user.roles[input.username]
@@ -56,7 +56,7 @@ allow_openapi {
 
 # Just the inversion of the roles to features map
 # Is this leveraging the optimization correctly?
-feature_roles[feature] = roles {
+feature_roles[feature] = roles if {
     feature :=  data.libraries.banking_lib.roles[_][_]
     roles := {r | some r;  data.libraries.banking_lib.roles[r][_] == feature}
 }
@@ -67,7 +67,7 @@ user_features_object.features = user_features | { x | some x in  data.libraries.
 
 # METADATA
 # entry: true
-user_features[feature] {
+user_features contains feature if {
     some role in data.user.roles[input.username]
     some feature in  data.libraries.banking_lib.roles[role]
 }
@@ -77,7 +77,7 @@ user_features[feature] {
 #   An abomination; need a builtin for this
 ###########################################
 
-url_match(concrete, abstract) = bindinglist {
+url_match(concrete, abstract) = bindinglist if {
     concrete2 := trim(concrete, "/")
     abstract2 := trim(abstract, "/")
     concretearr := split(concrete2, "/")
@@ -87,28 +87,28 @@ url_match(concrete, abstract) = bindinglist {
     # glob.match(abstract2, ["/"], concrete2)
 }
 
-arr_match(concrete, abstract) {
+arr_match(concrete, abstract) if {
     count(concrete) == count(abstract)
     every i, entry in concrete {
         entry_match(entry, abstract[i])
     }
 }
 
-entry_match(concrete, abstract) {
+entry_match(concrete, abstract) if {
     startswith(abstract, "{")
     endswith(abstract, "}")
 }
-entry_match(concrete, abstract) {
+entry_match(concrete, abstract) if {
     concrete == abstract
 }
-bind(concrete, abstract) = bl {
+bind(concrete, abstract) = bl if {
     bl := [concrete[i] | some i, entry in abstract
                   startswith(entry, "{")
                   endswith(entry, "}")]
 }
 
 # ideally this would output into the decision log somehow as well
-explain(role) {
+explain(role) if {
     print(role)
 }
 -- exp/main_test.rego --

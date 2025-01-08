@@ -756,8 +756,6 @@ plugins:
 `
 	policy := `
 package test
-import future.keywords
-
 q := true
 `
 	eopa, _ := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, true, errorLogging{})

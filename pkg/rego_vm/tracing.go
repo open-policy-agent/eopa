@@ -3,8 +3,8 @@
 package rego_vm
 
 import (
-	"github.com/open-policy-agent/opa/rego"
-	"github.com/open-policy-agent/opa/tracing"
+	"github.com/open-policy-agent/opa/v1/rego"
+	"github.com/open-policy-agent/opa/v1/tracing"
 )
 
 func tracingOpts(*rego.EvalContext) tracing.Options {

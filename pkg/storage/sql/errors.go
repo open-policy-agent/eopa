@@ -3,7 +3,7 @@ package sql
 import (
 	"fmt"
 
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 )
 
 const ArrayIndexTypeMsg = "array index must be integer"

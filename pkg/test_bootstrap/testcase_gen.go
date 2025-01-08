@@ -9,8 +9,8 @@ import (
 	"text/template"
 
 	"github.com/agnivade/levenshtein"
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/dependencies"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/dependencies"
 	"github.com/styrainc/enterprise-opa-private/pkg/internal/edittree"
 )
 

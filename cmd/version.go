@@ -7,7 +7,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	opa_version "github.com/open-policy-agent/opa/version"
+	opa_version "github.com/open-policy-agent/opa/v1/version"
 	"github.com/spf13/cobra"
 
 	"github.com/styrainc/enterprise-opa-private/internal/version"

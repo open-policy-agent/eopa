@@ -40,6 +40,7 @@ issues:
     - "var-naming: type (.*Json.*) should be "
     - "unexported-return: exported method (.*) returns unexported type"
     - "exported: type name will be used (.*) by other packages, and that stutters"
+    #- 'SA1019: "github.com/open-policy-agent/opa/.*" is deprecated'
   exclude-dirs:
     - pkg/json/internal # copied from stdlib
     - internal/benthos # internalized benthos code

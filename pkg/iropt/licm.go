@@ -1,7 +1,7 @@
 package iropt
 
 import (
-	"github.com/open-policy-agent/opa/ir"
+	"github.com/open-policy-agent/opa/v1/ir"
 )
 
 // The pass design allows us to wire this into the global pass structure.

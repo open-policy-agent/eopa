@@ -20,7 +20,7 @@ package example
 # METADATA
 # custom:
 #   test-bootstrap-name: allow
-allow {
+allow if {
 	input.servers[_].names[_]
 	input.clients[_]
 }

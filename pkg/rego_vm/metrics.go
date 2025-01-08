@@ -3,7 +3,7 @@ package rego_vm
 import (
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 
-	"github.com/open-policy-agent/opa/metrics"
+	"github.com/open-policy-agent/opa/v1/metrics"
 )
 
 const prefix = "regovm_"

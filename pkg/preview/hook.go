@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/open-policy-agent/opa/config"
-	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/v1/config"
+	"github.com/open-policy-agent/opa/v1/plugins"
 )
 
 // PreviewConfig is the shape of the configuration object the plugin expects

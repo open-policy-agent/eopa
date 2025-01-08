@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/viper"
 	yaml "sigs.k8s.io/yaml/goyaml.v2"
 
-	"github.com/open-policy-agent/opa/logging"
+	"github.com/open-policy-agent/opa/v1/logging"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/login"
 )

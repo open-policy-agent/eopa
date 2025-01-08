@@ -152,7 +152,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/styrainc/enterprise-opa-private/pkg/internal/edittree/bitvector"
 )
 

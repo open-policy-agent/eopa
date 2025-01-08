@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
@@ -19,13 +19,13 @@ var testPolicy = map[string]string{
 	"test/test.rego": `package test
 
 	direct := true
-	existingData = result {
+	existingData = result if {
 		result := data.loaded.test
 	}
-	previewData = result {
+	previewData = result if {
 		result := data.preview.test
 	}
-	inputData = result {
+	inputData = result if {
 		print("testing123")
 		result := input.test
 	}`,
@@ -162,7 +162,7 @@ func TestHttpIO(t *testing.T) {
 			name: "nd builtin cache",
 			body: []byte(`{
 				"rego_modules": {
-					"test/test.rego": "package test\ndirect:= result {\nrequest = http.send({\"method\":\"GET\", \"url\": \"https://example.com/todos/1\"})\nresult:=request.body\n}"
+					"test/test.rego": "package test\ndirect:= result if {\nrequest = http.send({\"method\":\"GET\", \"url\": \"https://example.com/todos/1\"})\nresult:=request.body\n}"
 				},
 				"nd_builtin_cache": {
 					"http.send": {
@@ -475,7 +475,7 @@ func TestStrictBuiltinErrors(t *testing.T) {
 
 	body := `{
 		"rego_modules": {
-			"test/test.rego": "package test\ndirect= result {\nrequest := http.send({})\nresult:=request.body\n}"
+			"test/test.rego": "package test\ndirect = result if {\nrequest := http.send({})\nresult:=request.body\n}"
 		}
 	}`
 
@@ -541,36 +541,6 @@ func TestPrettyReturn(t *testing.T) {
 	expectedWithPretty := []byte("{\n  \"result\": {\n    \"direct\": true,\n    \"existingData\": \"preloaded data\"\n  }\n}\n")
 	if !bytes.Equal(body, expectedWithPretty) {
 		t.Errorf("Unexpected output with the pretty argument:\nexpected: %q\nreceived: %q", string(expectedWithPretty), string(body))
-	}
-}
-
-func TestStrictCompile(t *testing.T) {
-	ctx := context.Background()
-	manager := pluginMgr(ctx, t, testPolicy, testData)
-	manager.Start(ctx)
-	router := manager.GetRouter()
-	NewHook().Init(manager)
-
-	body := `{
-		"rego_modules": {
-			"test/test.rego": "package test\nimport future.keywords\nimport future.keywords\nadditional := true"
-		}
-	}`
-
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodPost, "/v0/preview/test", bytes.NewBufferString(body))
-	router.ServeHTTP(w, r)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("Expected http status %d but received %d", http.StatusOK, w.Code)
-	}
-
-	w = httptest.NewRecorder()
-	r = httptest.NewRequest(http.MethodPost, "/v0/preview/test?strict", bytes.NewBufferString(body))
-	router.ServeHTTP(w, r)
-
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("Expected http status %d but received %d", http.StatusInternalServerError, w.Code)
 	}
 }
 

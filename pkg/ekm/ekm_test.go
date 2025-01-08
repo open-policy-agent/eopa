@@ -16,14 +16,14 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	testcontainervault "github.com/testcontainers/testcontainers-go/modules/vault"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/compile"
-	"github.com/open-policy-agent/opa/config"
-	"github.com/open-policy-agent/opa/ir"
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/topdown/builtins"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/compile"
+	"github.com/open-policy-agent/opa/v1/config"
+	"github.com/open-policy-agent/opa/v1/ir"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
@@ -362,7 +362,7 @@ func TestEKM(t *testing.T) {
 
 		const simpleRego = `package test
 default allow := false
-allow {
+allow if {
   resp = http.send({"headers": {"Content-Type": "application/text"}, "method": "get", "url": "https://www.acmecorp.com", "raise_error": true})
   resp.raw_body == "Success"
 }`

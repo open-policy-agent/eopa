@@ -3,7 +3,7 @@ package kafka
 import (
 	"crypto/tls"
 
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/twmb/franz-go/pkg/sasl"
 	"golang.org/x/exp/slices"
 )

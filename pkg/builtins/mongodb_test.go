@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/compile"
-	"github.com/open-policy-agent/opa/ir"
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/topdown/builtins"
-	"github.com/open-policy-agent/opa/topdown/cache"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/compile"
+	"github.com/open-policy-agent/opa/v1/ir"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/topdown/builtins"
+	"github.com/open-policy-agent/opa/v1/topdown/cache"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -82,7 +82,7 @@ func TestMongoDBFind(t *testing.T) {
 		},
 		{
 			Note: "intra-query query cache",
-			Source: fmt.Sprintf(`p = [ resp1, resp2 ] {
+			Source: fmt.Sprintf(`p = [ resp1, resp2 ] if {
                                 mongodb.find({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}, resp1)
                                 mongodb.find({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}, resp2) # cached
 				}`, uri, auth, uri, auth),
@@ -236,7 +236,7 @@ func TestMongoDBFindOne(t *testing.T) {
 		},
 		{
 			Note: "intra-query query cache",
-			Source: fmt.Sprintf(`p = [ resp1, resp2 ] {
+			Source: fmt.Sprintf(`p = [ resp1, resp2 ] if {
                                 mongodb.find_one({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}, resp1)
                                 mongodb.find_one({"uri": "%s", "auth": %s, "database": "database", "collection": "collection", "filter": {"foo": "x"}, "options": {"projection": {"_id": false}}}, resp2) # cached
 				}`, uri, auth, uri, auth),

@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/compile"
-	"github.com/open-policy-agent/opa/ir"
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/topdown/builtins"
-	"github.com/open-policy-agent/opa/topdown/cache"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/compile"
+	"github.com/open-policy-agent/opa/v1/ir"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/topdown/builtins"
+	"github.com/open-policy-agent/opa/v1/topdown/cache"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 
 	"github.com/redis/go-redis/v9"
@@ -307,7 +307,7 @@ func TestRedisQuery(t *testing.T) {
 			Note: "test vault helper auth()",
 			Source: fmt.Sprintf(`import data.system.eopa.utils.redis.v1.vault as redisvault
 import data.system.eopa.utils.vault.v1.env as vault
-out = y {
+out = y if {
 	y := redisvault.auth(vault.secret("secret/redis")) with vault.override.address as "%s" with vault.override.token as "%s"
 }
 `, vaultURI, vaultToken),
@@ -321,7 +321,7 @@ out = y {
 			Note: "test vault helper query()",
 			Source: fmt.Sprintf(`import data.system.eopa.utils.redis.v1.vault as redisvault
 import data.system.eopa.utils.vault.v1.env as vault
-out = y {
+out = y if {
 	y := redisvault.query({"addr": "%s", "command": "GET", "args": ["baz"]}) with vault.override.address as "%s" with vault.override.token as "%s"
 }
 `, addr, vaultURI, vaultToken),

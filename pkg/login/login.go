@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/open-policy-agent/opa/logging"
+	"github.com/open-policy-agent/opa/v1/logging"
 )
 
 // timeout determines how long the CLI command will wait for

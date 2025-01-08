@@ -11,9 +11,9 @@ import (
 	"github.com/spf13/viper"
 
 	opa_cmd "github.com/open-policy-agent/opa/cmd"
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/util"
-	opa_version "github.com/open-policy-agent/opa/version"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/util"
+	opa_version "github.com/open-policy-agent/opa/v1/version"
 
 	"github.com/styrainc/enterprise-opa-private/internal/license"
 	keygen "github.com/styrainc/enterprise-opa-private/internal/license"

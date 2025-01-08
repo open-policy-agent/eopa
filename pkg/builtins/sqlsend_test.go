@@ -15,13 +15,13 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/compile"
-	"github.com/open-policy-agent/opa/ir"
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/topdown/builtins"
-	"github.com/open-policy-agent/opa/topdown/cache"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/compile"
+	"github.com/open-policy-agent/opa/v1/ir"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/topdown/builtins"
+	"github.com/open-policy-agent/opa/v1/topdown/cache"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
@@ -74,40 +74,40 @@ func TestSQLSend(t *testing.T) {
 		{
 			note:    "missing parameter(s)",
 			backend: none,
-			query:   `p = resp { sql.send({}, resp)}`,
+			query:   `p = resp if { sql.send({}, resp)}`,
 			error:   `eval_type_error: sql.send: operand 1 missing required request parameter(s): {"data_source_name", "driver", "query"}`,
 		},
 		{
 			note:    "unknown driver",
 			backend: none,
-			query:   `p = resp { sql.send({"driver": "pg", "data_source_name": "", "query": ""}, resp)}`,
+			query:   `p = resp if { sql.send({"driver": "pg", "data_source_name": "", "query": ""}, resp)}`,
 			error:   `eval_type_error: sql.send: operand 1 unknown driver pg, must be one of {"mysql", "oracle", "postgres", "snowflake", "sqlite", "sqlserver"}`,
 		},
 		{
 			note:            "a single row query",
 			backend:         sqlite,
-			query:           `p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
+			query:           `p = resp if { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
 			result:          `{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
 			preparedQueries: 1,
 		},
 		{
 			note:            "a multi-row query",
 			backend:         sqlite,
-			query:           `p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T2"}, resp)}`,
+			query:           `p = resp if { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T2"}, resp)}`,
 			result:          `{{"result": {"p": {"rows": [["A1", "B1"], ["A2", "B2"]]}}}}`,
 			preparedQueries: 1,
 		},
 		{
 			note:            "query with args",
 			backend:         sqlite,
-			query:           `p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1 WHERE ID = $1", "args": ["A"]}, resp)}`,
+			query:           `p = resp if { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1 WHERE ID = $1", "args": ["A"]}, resp)}`,
 			result:          `{{"result": {"p": {"rows": [["B"]]}}}}`,
 			preparedQueries: 1,
 		},
 		{
 			note:    "intra-query query cache",
 			backend: sqlite,
-			query: `p = [ resp1, resp2 ] {
+			query: `p = [ resp1, resp2 ] if {
 sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALUE FROM T1"}, resp1)
 sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALUE FROM T1"}, resp2) # cached
 }`,
@@ -117,13 +117,13 @@ sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALU
 		{
 			note:    "inter-query query cache warmup (default duration)",
 			backend: sqlite,
-			query:   `p = resp { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
+			query:   `p = resp if { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
 			result:  `{{"result": {"p": {"rows": [["B"]]}}}}`,
 		},
 		{
 			note:                "inter-query query cache check (default duration, valid)",
 			backend:             sqlite,
-			query:               `p = resp { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
+			query:               `p = resp if { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
 			result:              `{{"result": {"p": {"rows": [["B"]]}}}}`,
 			doNotResetCache:     true, // keep the warmup results
 			time:                now.Add(interQueryCacheDurationDefault - 1),
@@ -132,7 +132,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALU
 		{
 			note:            "inter-query query cache check (default duration, expired)",
 			backend:         sqlite,
-			query:           `p = resp { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
+			query:           `p = resp if { sql.send({"cache": true, "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
 			result:          `{{"result": {"p": {"rows": [["B"]]}}}}`,
 			doNotResetCache: true, // keep the warmup results
 			time:            now.Add(interQueryCacheDurationDefault),
@@ -140,13 +140,13 @@ sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALU
 		{
 			note:    "inter-query query cache warmup (explicit duration)",
 			backend: sqlite,
-			query:   `p = resp { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
+			query:   `p = resp if { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
 			result:  `{{"result": {"p": {"rows": [["B"]]}}}}`,
 		},
 		{
 			note:                "inter-query query cache check (explicit duration, valid)",
 			backend:             sqlite,
-			query:               `p = resp { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
+			query:               `p = resp if { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
 			result:              `{{"result": {"p": {"rows": [["B"]]}}}}`,
 			doNotResetCache:     true, // keep the warmup results
 			time:                now.Add(10*time.Second - 1),
@@ -155,7 +155,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALU
 		{
 			note:            "inter-query query cache check (explicit duration, expired)",
 			backend:         sqlite,
-			query:           `p = resp { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
+			query:           `p = resp if { sql.send({"cache": true, "cache_duration": "10s", "driver": "sqlite", "data_source_name": "%s", "query": "SELECT VALUE FROM T1"}, resp)}`,
 			result:          `{{"result": {"p": {"rows": [["B"]]}}}}`,
 			doNotResetCache: true, // keep the warmup results
 			time:            now.Add(10 * time.Second),
@@ -163,47 +163,47 @@ sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALU
 		{
 			note:            "rows as objects",
 			backend:         sqlite,
-			query:           `p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T1", "row_object": true}, resp)}`,
+			query:           `p = resp if { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM T1", "row_object": true}, resp)}`,
 			result:          `{{"result": {"p": {"rows": [{"ID": "A", "VALUE": "B"}]}}}}`,
 			preparedQueries: 0, // single row query already prepared the query
 		},
 		{
 			note:    "error w/o raise",
 			backend: sqlite,
-			query:   `p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM NON_EXISTING"}, resp)}`,
+			query:   `p = resp if { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM NON_EXISTING"}, resp)}`,
 			error:   "eval_builtin_error: sql.send: SQL logic error: no such table: NON_EXISTING (1)",
 		},
 		{
 			note:    "error with raise",
 			backend: sqlite,
-			query:   `p = resp { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM NON_EXISTING", "raise_error": false}, resp)}`,
+			query:   `p = resp if { sql.send({"driver": "sqlite", "data_source_name": "%s", "query": "SELECT * FROM NON_EXISTING", "raise_error": false}, resp)}`,
 			result:  `{{"result": {"p": {"rows": [], "error": {"code": 1, "message": "SQL logic error: no such table: NON_EXISTING (1)"}}}}}`,
 		},
 		{
 			note:            "mysql: a single row query",
 			backend:         mysql,
-			query:           `p = resp { sql.send({"driver": "mysql", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
+			query:           `p = resp if { sql.send({"driver": "mysql", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
 			result:          `{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
 			preparedQueries: 1,
 		},
 		{
 			note:            "postgresql: a single row query",
 			backend:         postgres,
-			query:           `p = resp { sql.send({"driver": "postgres", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
+			query:           `p = resp if { sql.send({"driver": "postgres", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
 			result:          `{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
 			preparedQueries: 1,
 		},
 		{
 			note:            "oracle: a single row query",
 			backend:         oracle,
-			query:           `p = resp { sql.send({"driver": "oracle", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
+			query:           `p = resp if { sql.send({"driver": "oracle", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
 			result:          `{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
 			preparedQueries: 1,
 		},
 		{
 			note:            "sqlserver: a single row query",
 			backend:         sqlserver,
-			query:           `p = resp { sql.send({"driver": "sqlserver", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
+			query:           `p = resp if { sql.send({"driver": "sqlserver", "data_source_name": "%s", "query": "SELECT * FROM T1"}, resp)}`,
 			result:          `{{"result": {"p": {"rows": [["A", "B"]]}}}}`,
 			preparedQueries: 1,
 		},
@@ -215,7 +215,7 @@ sql.send({"driver": "sqlite", "data_source_name": "%[1]s", "query": "SELECT VALU
 			// a problem with our schema designed to be usable across database types: in MS SQL Server, the text column type can't be compared
 			// directly against varchar type. The text type is deprecated in MS SQL Server and any practical database schema would most likely
 			// use varchar and no casting would be required for a simple equal test.
-			query:           `p = resp { sql.send({"driver": "sqlserver", "data_source_name": "%s", "query": "SELECT VALUE FROM T1 WHERE CAST(ID AS VARCHAR) = @p1", "args": ["A"]}, resp)}`,
+			query:           `p = resp if { sql.send({"driver": "sqlserver", "data_source_name": "%s", "query": "SELECT VALUE FROM T1 WHERE CAST(ID AS VARCHAR) = @p1", "args": ["A"]}, resp)}`,
 			result:          `{{"result": {"p": {"rows": [["B"]]}}}}`,
 			preparedQueries: 1,
 		},
@@ -281,17 +281,15 @@ func TestRegoZanzibar(t *testing.T) {
 
 	### Entrypoints
 
-	is_owner { owner(input.resource, input.user) }
-	is_editor { editor(input.resource, input.user) }
-	is_viewer { viewer(input.resource, input.user) }
+	is_owner if owner(input.resource, input.user)
+	is_editor if editor(input.resource, input.user)
+	is_viewer if viewer(input.resource, input.user)
 
 	### Owner
 	#
 	# relation { name: "owner" }
 
-	owner(resource, user) {
-	    query("owner", resource, user)
-	}
+	owner(resource, user) if query("owner", resource, user)
 
 	### Editor
 	#
@@ -306,13 +304,9 @@ func TestRegoZanzibar(t *testing.T) {
 	#   }
 	# }
 
-	editor(resource, user) {
-	    query("editor", resource, user)
-	}
+	editor(resource, user) if query("editor", resource, user)
 
-	editor(resource, user) {
-	    owner(resource, user)
-	}
+	editor(resource, user) if owner(resource, user)
 
 	### Viewer
 	#
@@ -333,76 +327,58 @@ func TestRegoZanzibar(t *testing.T) {
 	#   }
 	# }
 
-	viewer(resource, user) {
-	    query("viewer", resource, user)
-	}
+	viewer(resource, user) if query("viewer", resource, user)
 
-	viewer(resource, user) {
-	    editor(resource, user)
-	}
+	viewer(resource, user) if editor(resource, user)
 
-	viewer(resource, user) {
+	viewer(resource, user) if {
 	     p := parent(resource)
 	     viewer1(p, user) # recurse
 	}
 
 	## SQL helpers
 
-	query(table, resource, user) {
-	    sql_send(table, resource)[_].user = user
-	}
+	query(table, resource, user) if sql_send(table, resource)[_].user = user
 
-	query(table, resource, user) {
+	query(table, resource, user) if {
 	    row := sql_send(table, resource)[_]
 	    row.userset_relation != ""
 	    query1(row.userset_relation, row.userset_object, user) # recurse
 	}
 
-	parent(resource) := folder {
+	parent(resource) := folder if {
 	    row := sql_send("parent", resource)[0]
 	    row.userset_relation = "..."
 	    folder := row.userset_object
 	}
 
-	sql_send(table, resource) := rows {
+	sql_send(table, resource) := rows if {
 	      result := sql.send({"driver": "sqlite", "data_source_name": "%s", "query": concat("", ["SELECT OBJECT, USER, USERSET_OBJECT, USERSET_RELATION FROM ", table, " WHERE OBJECT = $1"]), "args": [ resource ]})
 	      rows := [ { "object": row[0], "user": row[1], "userset_object": row[2], "userset_relation": row[3] } | row := result.rows[_] ]
 	}
 
 	### fake viewer recursion (2 levels)
 
-	viewer1(resource, user) {
-	    query("viewer", resource, user)
-	}
+	viewer1(resource, user) if query("viewer", resource, user)
 
-	viewer2(resource, user) {
-	    query("viewer", resource, user)
-	}
+	viewer2(resource, user) if query("viewer", resource, user)
 
-	viewer1(resource, user) {
-	    editor(resource, user)
-	}
+	viewer1(resource, user) if editor(resource, user)
 
-	viewer2(resource, user) {
-	    editor(resource, user)
-	}
+	viewer2(resource, user) if editor(resource, user)
 
-	viewer1(resource, user) {
+	viewer1(resource, user) if {
 	     p := parent(resource)
 	     viewer2(p, user) # recurse
 	}
 
 	# fake query recursion (2 levels)
 
-	query1(table, resource, user) {
-	    sql_send(table, resource)[_].user = user
-	}
+	query1(table, resource, user) if sql_send(table, resource)[_].user = user
 
-	query2(table, resource, user) {
-	    sql_send(table, resource)[_].user = user
-	}
+	query2(table, resource, user) if sql_send(table, resource)[_].user = user
 
-	query1(table, resource, user) {
+	query1(table, resource, user) if {
 	    row := sql_send(table, resource)[_]
 	    row.userset_relation != ""
 	    query2(row.userset_relation, row.userset_object, user) # recurse

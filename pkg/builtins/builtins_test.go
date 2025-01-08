@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/open-policy-agent/opa/types"
+	"github.com/open-policy-agent/opa/v1/types"
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
 	"github.com/styrainc/enterprise-opa-private/pkg/library"
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"

@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/rego"
-	opaTypes "github.com/open-policy-agent/opa/server/types"
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/rego"
+	opaTypes "github.com/open-policy-agent/opa/v1/server/types"
+	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/styrainc/enterprise-opa-private/pkg/preview/types"
 )
 

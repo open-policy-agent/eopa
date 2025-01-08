@@ -1,7 +1,5 @@
 package e2e
 
-import rego.v1
-
 _payload(msg) := json.unmarshal(base64.decode(msg.value))
 _key(msg) := json.unmarshal(base64.decode(msg.key))
 

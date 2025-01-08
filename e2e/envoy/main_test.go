@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/util"
 	"github.com/testcontainers/testcontainers-go"
 	tc_wait "github.com/testcontainers/testcontainers-go/wait"
 

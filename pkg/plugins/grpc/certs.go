@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/v1/plugins"
 	ftime "github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc/utils"
 )
 

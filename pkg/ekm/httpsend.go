@@ -6,10 +6,10 @@ import (
 
 	vault "github.com/hashicorp/vault/api"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/topdown"
-	"github.com/open-policy-agent/opa/topdown/builtins"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/topdown"
+	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 )
 
 type (

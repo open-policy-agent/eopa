@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"runtime"
 
-	opa_version "github.com/open-policy-agent/opa/version"
+	opa_version "github.com/open-policy-agent/opa/v1/version"
 )
 
 // EOPA version (e.g. "1.16.0"), injected via LDFLAGS

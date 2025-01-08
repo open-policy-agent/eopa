@@ -6,7 +6,7 @@ exec eopa test ./test1.rego ./dummy1.rego
 cmp stdout exp/stdout
 -- test1.rego --
 package testpkg
-test_data_access {
+test_data_access if {
 	"abc" == data.foo.bar
 }
 -- dummy1.rego --

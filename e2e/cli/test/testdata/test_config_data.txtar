@@ -9,10 +9,10 @@ exec eopa test ./test1.rego
 cmp stdout exp/stdout
 -- test1.rego --
 package testpkg
-test_data_access_1 {
+test_data_access_1 if {
 	"abc" == data.foo.bar
 }
-test_data_access_2 {
+test_data_access_2 if {
 	"quux" == data.coolstuff.foobar
 }
 -- dummy1.rego --

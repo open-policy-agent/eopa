@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/open-policy-agent/opa/config"
-	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/v1/config"
+	"github.com/open-policy-agent/opa/v1/plugins"
 )
 
 // When OPA creates a *plugins.Manager with plugins.New(), it iterates over any

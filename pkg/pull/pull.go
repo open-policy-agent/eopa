@@ -15,7 +15,7 @@ import (
 
 	"github.com/liamg/memoryfs"
 
-	"github.com/open-policy-agent/opa/logging"
+	"github.com/open-policy-agent/opa/v1/logging"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/dasapi"
 )

@@ -12,12 +12,12 @@ import (
 	"github.com/jarcoal/httpmock"
 	"go.uber.org/goleak"
 
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/plugins/discovery"
-	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/topdown"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/plugins"
+	"github.com/open-policy-agent/opa/v1/plugins/discovery"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/topdown"
+	"github.com/open-policy-agent/opa/v1/util"
 
 	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
@@ -591,8 +591,7 @@ func JSONResponder(data []byte) httpmock.Responder {
 
 func TestOKTAData(t *testing.T) {
 	const transform = `package e2e
-import future.keywords
-transform.users[id] := d {
+transform.users[id] := d if {
 	some entry in input.incoming.users
 	id := entry.id
 	d := object.filter(entry.profile, {"firstName", "email"})

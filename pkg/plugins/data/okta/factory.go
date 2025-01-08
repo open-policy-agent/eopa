@@ -12,8 +12,8 @@ import (
 	"github.com/go-jose/go-jose/v3"
 	"github.com/okta/okta-sdk-golang/v3/okta"
 
-	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/plugins"
+	"github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/styrainc/enterprise-opa-private/internal/version"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"

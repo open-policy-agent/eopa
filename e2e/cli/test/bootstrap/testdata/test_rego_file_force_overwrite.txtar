@@ -17,14 +17,14 @@ cmp example_test.rego exp/step2/example_test.rego
 -- step1/example.rego --
 package example
 
-allow {
+allow if {
 	input.servers[_].names[_]
 	input.clients[_]
 }
 -- step2/example.rego --
 package example
 
-allow {
+allow if {
 	input.protocols[_]
 }
 -- exp/step1/example_test.rego --

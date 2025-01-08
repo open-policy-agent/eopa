@@ -3,7 +3,7 @@ package types
 import (
 	"encoding/json"
 
-	opaTypes "github.com/open-policy-agent/opa/server/types"
+	opaTypes "github.com/open-policy-agent/opa/v1/server/types"
 )
 
 const (

@@ -12,14 +12,14 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/rego"
-	opa_storage "github.com/open-policy-agent/opa/storage"
-	opa_inmem "github.com/open-policy-agent/opa/storage/inmem"
-	"github.com/open-policy-agent/opa/topdown"
-	"github.com/open-policy-agent/opa/types"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/rego"
+	opa_storage "github.com/open-policy-agent/opa/v1/storage"
+	opa_inmem "github.com/open-policy-agent/opa/v1/storage/inmem"
+	"github.com/open-policy-agent/opa/v1/topdown"
+	"github.com/open-policy-agent/opa/v1/types"
+	"github.com/open-policy-agent/opa/v1/util"
 )
 
 func ExampleRego_Eval_simple_default() { // Start with the default rego package
@@ -283,7 +283,7 @@ func ExampleRego_print_statements() {
 		rego.Module("example.rego", `
 			package example
 
-			rule_containing_print_call {
+			rule_containing_print_call if {
 				print("input.foo is:", input.foo, "and input.bar is:", input.bar)
 			}
 		`),

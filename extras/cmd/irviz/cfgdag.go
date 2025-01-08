@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"git.sr.ht/~charles/graph"
-	"github.com/open-policy-agent/opa/ir"
+	"github.com/open-policy-agent/opa/v1/ir"
 )
 
 // ---------------------------------------------------------------------------

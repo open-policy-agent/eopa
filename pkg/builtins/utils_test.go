@@ -10,9 +10,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/rego"
-	"github.com/open-policy-agent/opa/topdown/cache"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/rego"
+	"github.com/open-policy-agent/opa/v1/topdown/cache"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 )
@@ -149,7 +149,7 @@ p := count(postgres.send("SELECT 1 FROM T1 WHERE $1", [input.x]).rows)
 			query: "x := data.example.p",
 			module: `
 import data.system.eopa.utils.vault.v1.env as vault
-postgres_send(query, args) := result {
+postgres_send(query, args) := result if {
 	result := postgres.send(query, args) with postgres.override.secret_path as "secret/overridepostgres"
 		with vault.override.address as opa.runtime().env.OTHER_ENV_ADDRESS
 		with vault.override.token as opa.runtime().env.OTHER_ENV_TOKEN
@@ -254,7 +254,7 @@ p := count(mysql.send("SELECT 1 FROM T1 WHERE ?", [input.x]).rows)
 			query: "x := data.example.p",
 			module: `
 import data.system.eopa.utils.vault.v1.env as vault
-mysql_send(query, args) := result {
+mysql_send(query, args) := result if {
 	result := mysql.send(query, args) with mysql.override.secret_path as "secret/overridemysql"
 		with vault.override.address as opa.runtime().env.OTHER_ENV_ADDRESS
 		with vault.override.token as opa.runtime().env.OTHER_ENV_TOKEN
@@ -334,7 +334,7 @@ p := vault.secret("a/b/c/d")
 			note:  "secret with overrides",
 			query: "x := data.example.p",
 			module: `
-vault_secret(path) := result {
+vault_secret(path) := result if {
 	result := vault.secret(path)
 		with vault.override.address as opa.runtime().env.OTHER_ENV_ADDRESS
 		with vault.override.token as opa.runtime().env.OTHER_ENV_TOKEN
@@ -445,7 +445,7 @@ p := mongodb.find({"database": "database", "collection": "collection", "filter":
 			note:  "find with filter and overrides",
 			query: "x := data.example.p.results[0]",
 			module: `
-mongodb_find(req) := result {
+mongodb_find(req) := result if {
 	result := mongodb.find(req)
 		with mongodb.override.secret_path as "secret/overridemongodb"
 }
@@ -621,7 +621,7 @@ p := dynamodb.get({"table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}})
 			note:  "send/get with override",
 			query: "x := data.example.p.row",
 			module: `
-dynamodb_get(req) := result {
+dynamodb_get(req) := result if {
 	result := dynamodb.get(req)
 		with dynamodb.override.secret_path as "secret/overridedynamodb"
 }

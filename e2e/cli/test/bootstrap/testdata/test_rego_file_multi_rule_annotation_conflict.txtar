@@ -22,7 +22,7 @@ default allow := false
 # METADATA
 # custom:
 #   test-bootstrap-name: allow
-allow {
+allow if {
 	input.servers[_].names[_]
 	input.clients[_]
 }
@@ -30,7 +30,7 @@ allow {
 # METADATA
 # custom:
 #   test-bootstrap-name: allow
-allow {
+allow if {
 	input.servers[_].name == "admin"
 }
 -- example2.rego --
@@ -38,19 +38,19 @@ package example
 
 default allow := false
 
-allow {
+allow if {
 	input.servers[_].names[_]
 	input.clients[_]
 }
 
-allow {
+allow if {
 	input.servers[_].name == "admin"
 }
 
 # METADATA
 # custom:
 #   test-bootstrap-name: example_allow_0
-evil {
+evil if {
 	input.servers[_]
 }
 

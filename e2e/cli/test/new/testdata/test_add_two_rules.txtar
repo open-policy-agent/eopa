@@ -20,7 +20,7 @@ package example
 # METADATA
 # custom:
 #   test-bootstrap-name: A
-allow {
+allow if {
 	input.servers[_].names[_]
 	input.clients[_]
 }
@@ -28,7 +28,7 @@ allow {
 # METADATA
 # custom:
 #   test-bootstrap-name: B
-allow {
+allow if {
 	input.servers[_].name == "admin"
 }
 -- exp/example_test-A.rego --

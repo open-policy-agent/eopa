@@ -3,7 +3,7 @@ package s3
 import (
 	"testing"
 
-	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/v1/plugins"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 

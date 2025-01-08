@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-policy-agent/opa/logging"
-	logging_test "github.com/open-policy-agent/opa/logging/test"
+	"github.com/open-policy-agent/opa/v1/logging"
+	logging_test "github.com/open-policy-agent/opa/v1/logging/test"
 )
 
 // TestRetrier asserts certain behaviors on the retrier logic that underpins our license

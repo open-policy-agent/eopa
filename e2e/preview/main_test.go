@@ -91,7 +91,6 @@ hello := "world"
 rego_modules:
   hello.rego: |
     package x.y
-    import future.keywords.if
     z := input if input.z
 `
 	req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/v0/preview/x/y/z", eopaHTTPPort), strings.NewReader(body))
@@ -141,7 +140,7 @@ rego_modules:
   hello.rego: |
     package x.y
     import data.system.eopa.utils.vault.v1.env as vault
-    vault_secret(path) := res {
+    vault_secret(path) := res if {
       res := vault.secret(path)
         with vault.override.address as "http://127.0.0.1:8200"
         with vault.override.token as "toktok"

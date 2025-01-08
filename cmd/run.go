@@ -15,14 +15,14 @@ import (
 	"github.com/spf13/pflag"
 	"go.opentelemetry.io/otel"
 
-	bundleApi "github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/hooks"
-	"github.com/open-policy-agent/opa/keys"
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/plugins/discovery"
-	"github.com/open-policy-agent/opa/runtime"
-	"github.com/open-policy-agent/opa/server"
+	bundleApi "github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/hooks"
+	"github.com/open-policy-agent/opa/v1/keys"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/plugins"
+	"github.com/open-policy-agent/opa/v1/plugins/discovery"
+	"github.com/open-policy-agent/opa/v1/runtime"
+	"github.com/open-policy-agent/opa/v1/server"
 
 	opa_envoy "github.com/open-policy-agent/opa-envoy-plugin/plugin"
 

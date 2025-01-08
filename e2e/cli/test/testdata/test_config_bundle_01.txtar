@@ -9,10 +9,10 @@ stderr '.*additional data paths picked up from config file, this is likely to ca
 
 -- test1.rego --
 package testpkg
-test_data_access_1 {
+test_data_access_1 if {
 	"abc" == data.foo.bar
 }
-test_data_access_2 {
+test_data_access_2 if {
 	"quux" == data.coolstuff.foobar
 }
 -- niftydir/dummy1.rego --

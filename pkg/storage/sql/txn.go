@@ -9,9 +9,9 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/util"
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )

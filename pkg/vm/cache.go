@@ -9,10 +9,10 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/config"
-	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/topdown/cache"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/config"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/topdown/cache"
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage/ptr"

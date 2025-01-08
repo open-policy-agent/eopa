@@ -1,7 +1,7 @@
 package iropt
 
 import (
-	"github.com/open-policy-agent/opa/ir"
+	"github.com/open-policy-agent/opa/v1/ir"
 )
 
 // Cleanup pass types.

@@ -12,28 +12,28 @@ package example
 # METADATA
 # custom:
 #   test-bootstrap-name: allow_x
-allow {
+allow if {
 	input.x
 }
 
 # METADATA
 # custom:
 #   test-bootstrap-name: allow_y
-allow {
+allow if {
 	input.x
 }
 
 # METADATA
 # custom:
 #   test-bootstrap-name: b
-allow {
+allow if {
 	input.x
 }
 
 # METADATA
 # custom:
 #   test-bootstrap-name: all
-allow {
+allow if {
 	input.x
 }
 -- exp/stderr --

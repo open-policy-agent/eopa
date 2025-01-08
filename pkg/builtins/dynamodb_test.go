@@ -15,13 +15,13 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/localstack"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/compile"
-	"github.com/open-policy-agent/opa/ir"
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/topdown/builtins"
-	"github.com/open-policy-agent/opa/topdown/cache"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/compile"
+	"github.com/open-policy-agent/opa/v1/ir"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/topdown/builtins"
+	"github.com/open-policy-agent/opa/v1/topdown/cache"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
@@ -45,7 +45,7 @@ func TestDynamoDBGet(t *testing.T) {
 	}{
 		{
 			note:                "missing parameter(s)",
-			source:              `p = resp { dynamodb.get({}, resp)}`,
+			source:              `p = resp if { dynamodb.get({}, resp)}`,
 			result:              "",
 			error:               `eval_type_error: dynamodb.get: operand 1 missing required request parameter(s): {"key", "region", "table"}`,
 			doNotResetCache:     false,
@@ -72,7 +72,7 @@ func TestDynamoDBGet(t *testing.T) {
 		},
 		{
 			note: "intra-query query cache",
-			source: fmt.Sprintf(`p = [ resp1, resp2 ] {
+			source: fmt.Sprintf(`p = [ resp1, resp2 ] if {
 								                                dynamodb.get({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}, resp1)
 								                                dynamodb.get({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key": {"p": {"S": "x"}, "s": {"N": "1"}}}, resp2) # cached
 												}`, endpoint, endpoint),
@@ -188,7 +188,7 @@ func TestDynamoDBQuery(t *testing.T) {
 	}{
 		{
 			note:                "missing parameter(s)",
-			source:              `p = resp { dynamodb.query({}, resp)}`,
+			source:              `p = resp if { dynamodb.query({}, resp)}`,
 			result:              "",
 			error:               `eval_type_error: dynamodb.query: operand 1 missing required request parameter(s): {"key_condition_expression", "region", "table"}`,
 			doNotResetCache:     false,
@@ -206,7 +206,7 @@ func TestDynamoDBQuery(t *testing.T) {
 		},
 		{
 			note: "intra-query query cache",
-			source: fmt.Sprintf(`p = [ resp1, resp2 ] {
+			source: fmt.Sprintf(`p = [ resp1, resp2 ] if {
 								                                dynamodb.query({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}}, resp1)
 								                                dynamodb.query({"credentials": {"access_key": "key", "secret_key": "key"}, "endpoint": "%s", "region": "us-west-2", "table": "foo", "key_condition_expression": "#p = :value", "expression_attribute_values": {":value": {"S": "x"}}, "expression_attribute_names": {"#p": "p"}}, resp2) # cached
 												}`, endpoint, endpoint),

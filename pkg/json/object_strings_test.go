@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/util"
 )
 
 func TestObjectStringsSizes(t *testing.T) {

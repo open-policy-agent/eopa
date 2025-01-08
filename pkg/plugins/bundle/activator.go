@@ -16,11 +16,11 @@ import (
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	"github.com/styrainc/enterprise-opa-private/pkg/telemetry"
 
-	"github.com/open-policy-agent/opa/ast"
-	bundleApi "github.com/open-policy-agent/opa/bundle"
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/ast"
+	bundleApi "github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/util"
 	"github.com/styrainc/enterprise-opa-private/pkg/internal/json/patch"
 )
 

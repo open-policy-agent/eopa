@@ -1,9 +1,9 @@
 package sdk
 
 import (
-	"github.com/open-policy-agent/opa/hooks"
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/sdk"
+	"github.com/open-policy-agent/opa/v1/hooks"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/sdk"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
 	"github.com/styrainc/enterprise-opa-private/pkg/ekm"

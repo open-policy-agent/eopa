@@ -3,7 +3,7 @@ go.work.sum
 /bin/
 /dist/
 /.idea/
-capabilities.json
+/capabilities.json
 tmp-docs/
 
 /local.tar

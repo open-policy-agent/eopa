@@ -9,9 +9,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/mux"
-	"github.com/open-policy-agent/opa/config"
-	"github.com/open-policy-agent/opa/plugins"
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/config"
+	"github.com/open-policy-agent/opa/v1/plugins"
+	"github.com/open-policy-agent/opa/v1/storage"
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	eopaStorage "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )

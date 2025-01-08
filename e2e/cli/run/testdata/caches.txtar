@@ -97,6 +97,5 @@ caching:
     max_num_entries: 1
 -- pol.rego --
 package foo
-import rego.v1
 g := glob.match(input.p, ["/"], input.s)
 r := regex.match(input.p, input.s)

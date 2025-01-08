@@ -53,7 +53,6 @@ func TestMain(m *testing.M) {
 func TestGRPCSmokeTest(t *testing.T) {
 	data := `{}`
 	policy := `package test
-import future.keywords
 p if rand.intn("coin", 2) == 0
 `
 	eopa, eopaOut := eopaRun(t, policy, data, "", eopaHTTPPort, "--set", fmt.Sprintf("plugins.grpc.addr=localhost:%d", eopaGRPCPort))
@@ -73,7 +72,7 @@ p if rand.intn("coin", 2) == 0
 	}
 
 	{
-		out := grpcurl(t, "-d", `{"policy": {"path": "/test", "text": "package foo allow := x {x = true}"}}`, "-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "eopa.policy.v1.PolicyService/CreatePolicy")
+		out := grpcurl(t, "-d", `{"policy": {"path": "/test", "text": "package foo allow := x if {x = true}"}}`, "-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "eopa.policy.v1.PolicyService/CreatePolicy")
 		var m map[string]any
 		if err := json.NewDecoder(out).Decode(&m); err != nil {
 			t.Fatal(err)
@@ -107,7 +106,7 @@ main["allowed"] := allow
 
 default allow := false
 
-allow {
+allow if {
 	input.user == "kurt"
 }
 `
@@ -158,7 +157,6 @@ allow {
 func TestGRPCDecisionLogs(t *testing.T) {
 	data := `{}`
 	policy := `package test
-import future.keywords
 p if rand.intn("coin", 2) == 0
 `
 	config := `
@@ -194,7 +192,7 @@ plugins:
 
 	{
 		expectedReqID := messageCount + 2
-		_ = grpcurl(t, "-d", `{"policy": {"path": "/test", "text": "package bar allow := x {x = true}"}}`, "-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "eopa.policy.v1.PolicyService/CreatePolicy")
+		_ = grpcurl(t, "-d", `{"policy": {"path": "/test", "text": "package bar allow := x if {x = true}"}}`, "-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "eopa.policy.v1.PolicyService/CreatePolicy")
 		// "msg":"Received request.", "req_id":5, "req_method":"/eopa.policy.v1.PolicyService/CreatePolicy"
 		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
 			return fieldContainsString(m, "msg", "Received request.") &&
@@ -238,7 +236,6 @@ plugins:
 func TestGRPCDecisionLogsStreamingRW(t *testing.T) {
 	data := `{}`
 	policy := `package test
-import future.keywords
 p if rand.intn("coin", 2) == 0
 `
 	config := `
@@ -274,7 +271,7 @@ plugins:
 
 	{
 		expectedReqID := messageCount + 2
-		_ = grpcurl(t, "-d", `{"policy": {"path": "/test_streaming", "text": "package bar\nmain[\"allowed\"] := allow\ndefault allow := false\nallow {input.user == \"bob\"}"}}`, "-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "eopa.policy.v1.PolicyService/CreatePolicy")
+		_ = grpcurl(t, "-d", `{"policy": {"path": "/test_streaming", "text": "package bar\nmain[\"allowed\"] := allow\ndefault allow := false\nallow if {input.user == \"bob\"}"}}`, "-plaintext", fmt.Sprintf("localhost:%d", eopaGRPCPort), "eopa.policy.v1.PolicyService/CreatePolicy")
 		// "msg":"Received request.", "req_id":5, "req_method":"/eopa.policy.v1.PolicyService/CreatePolicy"
 		wait.ForLogFields(t, eopaOut, func(m map[string]any) bool {
 			return fieldContainsString(m, "msg", "Received request.") &&

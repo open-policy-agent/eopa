@@ -3,7 +3,7 @@ package cmd
 import (
 	_ "unsafe" // go:linkname
 
-	"github.com/open-policy-agent/opa/plugins"
+	"github.com/open-policy-agent/opa/v1/plugins"
 )
 
 func signalTelemetry(m *plugins.Manager) {

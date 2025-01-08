@@ -10,7 +10,7 @@ package capabilities
 import (
 	"embed"
 
-	"github.com/open-policy-agent/opa/capabilities"
+	"github.com/open-policy-agent/opa/v1/capabilities"
 )
 
 // FS contains the embedded capabilities/ directory of the built version,

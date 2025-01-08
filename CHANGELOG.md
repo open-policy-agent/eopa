@@ -12,6 +12,18 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.31.0
+
+[![OPA v1.0.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.0.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.0.0)
+[![Regal v0.29.2](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.29.2&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.29.2)
+
+This release includes the OPA v1.0 code changes.
+Please see the [OPA v1 Release Notes](https://github.com/open-policy-agent/opa/releases/tag/v1.0.0) for more details.
+Read more about [the OPA 1.0 announcement here on our blog](https://blog.openpolicyagent.org/announcing-opa-1-0-a-new-standard-for-policy-as-code-a6d8427ee828).
+
+Everything you need to know about compatibility for v0 Rego code that hasn't been migrated yet can be found in [these docs](https://www.openpolicyagent.org/docs/latest/v0-compatibility/).
+
+
 ## v1.30.1
 
 [![OPA v0.70.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v0.70.0)](https://github.com/open-policy-agent/opa/releases/tag/v0.70.0)

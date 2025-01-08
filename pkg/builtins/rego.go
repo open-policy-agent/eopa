@@ -1,8 +1,8 @@
 package builtins
 
 import (
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/types"
+	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/types"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins/rego"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"

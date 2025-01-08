@@ -1,5 +1,4 @@
 package test
-import rego.v1
 
 test_result if {
     result with input as {"yay":"bar"}
