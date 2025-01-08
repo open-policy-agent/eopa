@@ -108,7 +108,7 @@ require (
 	golang.org/x/term v0.28.0
 	google.golang.org/api v0.214.0
 	google.golang.org/grpc v1.69.2
-	google.golang.org/protobuf v1.36.1
+	google.golang.org/protobuf v1.36.2
 	gopkg.in/h2non/gock.v1 v1.1.2
 	modernc.org/sqlite v1.34.4
 	sigs.k8s.io/yaml v1.4.0
