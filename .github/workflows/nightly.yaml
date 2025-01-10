@@ -77,7 +77,7 @@ jobs:
           token: ${{ steps.generate_token.outputs.token }}
           persist-credentials: false
       - name: run "opa-testing-e2e"
-        run: make test || exit 0
+        run: make test
         working-directory: _e2e
         env:
           EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
@@ -95,7 +95,7 @@ jobs:
           persist-credentials: false
       - name: Run enterprise-opa-test (fetchdb)
         run: |
-          sed -i 's#ghcr.io/styrainc/.*:latest#${{ steps.enterprise-opa.outputs.image  }}#' ${{ steps.paths.outputs.fetchdb}}/Makefile
+          sed -i 's#ghcr.io/styrainc/.*:latest test -v#${{ steps.enterprise-opa.outputs.image }} test --v0-compatible -v#' ${{ steps.paths.outputs.fetchdb}}/Makefile
           cd enterprise-opa/e2e && go test -tags e2e_fetchdb ./fetchdb
         env:
           FETCHDB_DIRECTORY: ${{ steps.paths.outputs.fetchdb }}

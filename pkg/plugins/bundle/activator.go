@@ -361,7 +361,7 @@ func activateBundles(opts *bundleApi.ActivateOpts) error {
 
 	// Erase data and policies at new + old roots, and remove the old
 	// manifests before activating a new snapshot bundle.
-	remaining, err := eraseBundles(opts.Ctx, opts.Store, opts.Txn, names, erase)
+	remaining, err := eraseBundles(opts.Ctx, opts.Store, opts.Txn, opts.ParserOptions, names, erase)
 	if err != nil {
 		return err
 	}
@@ -582,13 +582,13 @@ func activateDeltaBundles(opts *bundleApi.ActivateOpts, bundles map[string]*bund
 
 // erase bundles by name and roots. This will clear all policies and data at its roots and remove its
 // manifest from storage.
-func eraseBundles(ctx context.Context, store storage.Store, txn storage.Transaction, names map[string]struct{}, roots map[string]struct{}) (map[string]*ast.Module, error) {
+func eraseBundles(ctx context.Context, store storage.Store, txn storage.Transaction, parserOpts ast.ParserOptions, names map[string]struct{}, roots map[string]struct{}) (map[string]*ast.Module, error) {
 
 	if err := eraseData(ctx, store, txn, roots); err != nil {
 		return nil, err
 	}
 
-	remaining, err := erasePolicies(ctx, store, txn, roots)
+	remaining, err := erasePolicies(ctx, store, txn, parserOpts, roots)
 	if err != nil {
 		return nil, err
 	}
@@ -630,7 +630,7 @@ func eraseData(ctx context.Context, store storage.Store, txn storage.Transaction
 	return nil
 }
 
-func erasePolicies(ctx context.Context, store storage.Store, txn storage.Transaction, roots map[string]struct{}) (map[string]*ast.Module, error) {
+func erasePolicies(ctx context.Context, store storage.Store, txn storage.Transaction, parserOpts ast.ParserOptions, roots map[string]struct{}) (map[string]*ast.Module, error) {
 
 	ids, err := store.ListPolicies(ctx, txn)
 	if err != nil {
@@ -644,7 +644,7 @@ func erasePolicies(ctx context.Context, store storage.Store, txn storage.Transac
 		if err != nil {
 			return nil, err
 		}
-		module, err := ast.ParseModule(id, string(bs))
+		module, err := ast.ParseModuleWithOpts(id, string(bs), parserOpts)
 		if err != nil {
 			return nil, err
 		}

@@ -407,4 +407,4 @@ require (
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v1.0.1-0.20250106142623-79e4a0e3d4ae
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v1.0.1-0.20250110163058-139735cdcd34
