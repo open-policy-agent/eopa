@@ -8,7 +8,7 @@ replace github.com/styrainc/enterprise-opa-private => ../
 
 require (
 	github.com/docker/go-connections v0.5.0
-	github.com/fsouza/fake-gcs-server v1.52.0
+	github.com/fsouza/fake-gcs-server v1.52.1
 	github.com/go-git/go-git/v5 v5.13.1
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.7
