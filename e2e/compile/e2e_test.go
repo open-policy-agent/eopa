@@ -327,6 +327,11 @@ func TestCompileHappyPathE2E(t *testing.T) {
 			expRows: []fruitRow{apple},
 		},
 		{
+			name:    "internal.member_2",
+			policy:  `include if input.fruits.name in {"apple", "cherry", "pineapple"}`,
+			expRows: []fruitRow{apple, cherry},
+		},
+		{
 			name: "conjunct query, inequality",
 			policy: `include if {
 				input.fruits.name != "apple"

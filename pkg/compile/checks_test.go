@@ -142,6 +142,11 @@ func TestPostPartialChecks(t *testing.T) {
 			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "contains", "value": "ppl"},
 		},
 		{
+			note:   "happy path, internal.member_2",
+			rego:   `include if input.fruits.name in {"apple", "pear"}`,
+			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "in", "value": []any{"apple", "pear"}},
+		},
+		{
 			note: "invalid builtin",
 			rego: `include if object.get(input, ["fruits", "colour"], "grey") == "orange"`,
 			errors: []Error{
@@ -149,17 +154,6 @@ func TestPostPartialChecks(t *testing.T) {
 					Code:     "pe_fragment_error",
 					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
 					Message:  "invalid builtin object.get",
-				},
-			},
-		},
-		{
-			note: "invalid use of 'v in...'",
-			rego: `include if input.fruits.colour in {"grey", "orange"}`,
-			errors: []Error{
-				{
-					Code:     "pe_fragment_error",
-					Location: ast.NewLocation(nil, "filters.rego", 3, 32),
-					Message:  "invalid use of \"... in ...\"",
 				},
 			},
 		},
@@ -215,7 +209,7 @@ include if user == input.fruits.user`,
 				{
 					Code:     "pe_fragment_error",
 					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
-					Message:  "rhs of contains must be scalar",
+					Message:  "rhs of contains must be known",
 				},
 			},
 		},
@@ -226,7 +220,7 @@ include if user == input.fruits.user`,
 				{
 					Code:     "pe_fragment_error",
 					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
-					Message:  "rhs of startswith must be scalar",
+					Message:  "rhs of startswith must be known",
 				},
 			},
 		},
@@ -237,7 +231,7 @@ include if user == input.fruits.user`,
 				{
 					Code:     "pe_fragment_error",
 					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
-					Message:  "rhs of endswith must be scalar",
+					Message:  "rhs of endswith must be known",
 				},
 			},
 		},

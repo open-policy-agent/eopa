@@ -21,7 +21,7 @@ const (
 var (
 	compoundOps = []string{"and", "or", "not"}
 	documentOps = []string{"exists"}
-	fieldOps    = []string{"eq", "ne", "gt", "lt", "ge", "le", "gte", "lte"} //"in", "nin"
+	fieldOps    = []string{"eq", "ne", "gt", "lt", "ge", "le", "gte", "lte", "in"} //, "nin"
 
 	ucastAsSQL = &ast.Builtin{
 		Name:        ucastAsSQLName,
@@ -139,6 +139,11 @@ func (u *UCASTNode) AsSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 			return cond.GreaterEqualThan(field, *value), nil
 		case "le", "lte":
 			return cond.LessEqualThan(field, *value), nil
+		case "in":
+			if arr, ok := (*value).([]any); ok {
+				return cond.In(field, arr...), nil
+			}
+			return "", fmt.Errorf("field operator 'in' requires collection argument")
 		case "startswith":
 			pattern, err := prefix(*value)
 			if err != nil {
@@ -231,8 +236,10 @@ func regoObjectToUCASTNode(obj *ast.Term, translations *ast.Term) (*UCASTNode, e
 	out.Type = string(ty.Value.(ast.String))
 	out.Op = string(op.Value.(ast.String))
 
+	hasField := false
 	if field != nil {
 		out.Field = translateField(string(field.Value.(ast.String)), translations)
+		hasField = true
 	}
 
 	// Change handling, based on type. If we get an array, recurse.
@@ -243,6 +250,9 @@ func regoObjectToUCASTNode(obj *ast.Term, translations *ast.Term) (*UCASTNode, e
 			Iter(func(*ast.Term) error) error
 			Len() int
 		}:
+			if hasField {
+				break
+			}
 			nodes := make([]UCASTNode, 0, x.Len())
 			if err := x.Iter(func(elem *ast.Term) error {
 				node, err := regoObjectToUCASTNode(elem, translations)
@@ -255,6 +265,7 @@ func regoObjectToUCASTNode(obj *ast.Term, translations *ast.Term) (*UCASTNode, e
 				return nil, err
 			}
 			out.Value = launderType(nodes)
+			return out, nil
 		case ast.Number:
 			if intNum, ok := x.Int64(); ok {
 				out.Value = launderType(intNum)
@@ -263,15 +274,14 @@ func regoObjectToUCASTNode(obj *ast.Term, translations *ast.Term) (*UCASTNode, e
 			} else {
 				out.Value = launderType(x)
 			}
-		default:
-			valueIf, err := ast.JSON(value.Value)
-			if err != nil {
-				return nil, err
-			}
-			out.Value = launderType(valueIf)
+			return out, nil
 		}
+		valueIf, err := ast.JSON(value.Value)
+		if err != nil {
+			return nil, err
+		}
+		out.Value = launderType(valueIf)
 	}
-
 	return out, nil
 }
 

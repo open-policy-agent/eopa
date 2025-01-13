@@ -101,18 +101,18 @@ func checkBuiltins(e *ast.Expr, _ []*ast.Module) *ast.Error {
 	case ref.Equal(ast.LessThanEq.Ref()):
 	case ref.Equal(ast.GreaterThan.Ref()):
 	case ref.Equal(ast.GreaterThanEq.Ref()):
-	case ref.Equal(ast.Member.Ref()) || ref.Equal(ast.MemberWithKey.Ref()):
+	case ref.Equal(ast.MemberWithKey.Ref()):
 		return err(loc, "invalid use of \"... in ...\"")
 	case ref.HasPrefix(ast.DefaultRootRef):
 		// TODO(sr): point to function with else -- but we don't have the full rego yet
 		return withDetails(err(e.Loc(), "invalid data reference \"%v\"", e),
 			fmt.Sprintf("has function \"%v(...)\" an `else`?", ref),
 		)
-	case ref.Equal(ast.StartsWith.Ref()):
-		unknownMustBeFirst = true
-	case ref.Equal(ast.EndsWith.Ref()):
-		unknownMustBeFirst = true
-	case ref.Equal(ast.Contains.Ref()):
+
+	case ref.Equal(ast.StartsWith.Ref()) ||
+		ref.Equal(ast.EndsWith.Ref()) ||
+		ref.Equal(ast.Contains.Ref()) ||
+		ref.Equal(ast.Member.Ref()):
 		unknownMustBeFirst = true
 	default:
 		return err(loc, "invalid builtin %v", op)
@@ -126,11 +126,11 @@ func checkBuiltins(e *ast.Expr, _ []*ast.Module) *ast.Error {
 	}
 
 	if unknownMustBeFirst {
-		if !ast.IsScalar(e.Operand(1).Value) {
+		if _, ok := e.Operand(0).Value.(ast.Ref); !ok {
 			if loc == nil {
 				loc = e.Loc()
 			}
-			return err(loc, "rhs of %v must be scalar", op)
+			return err(loc, "rhs of %v must be known", op)
 		}
 	} else { // lhs or rhs needs to be ground scalar
 		// TODO(sr): collections might work, too, let's fix this later

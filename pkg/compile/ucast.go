@@ -134,6 +134,8 @@ func callToNode(e *ast.Expr, f ast.Ref, flip bool, opts *Opts) *ucast.UCASTNode 
 	case ref.Equal(ast.StartsWith.Ref()):
 	case ref.Equal(ast.EndsWith.Ref()):
 	case ref.Equal(ast.Contains.Ref()):
+	case ref.Equal(ast.Member.Ref()):
+		op = "in"
 	default:
 		return nil
 	}
