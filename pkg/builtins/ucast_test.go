@@ -56,6 +56,24 @@ func TestUCASTNodeAsSQL(t *testing.T) {
 			Result:  "WHERE (name = E'bob' AND salary > 50000)",
 		},
 		{
+			Note:    "startswith + pattern",
+			Source:  UCASTNode{Type: "field", Field: "name", Op: "startswith", Value: LaunderType(`f\oo_b%ar`)},
+			Dialect: "postgres",
+			Result:  `WHERE name LIKE E'f\\\\oo\\_b\\%ar%'`,
+		},
+		{
+			Note:    "endswith + pattern",
+			Source:  UCASTNode{Type: "field", Field: "name", Op: "endswith", Value: LaunderType(`f\oo_b%ar`)},
+			Dialect: "postgres",
+			Result:  `WHERE name LIKE E'%f\\\\oo\\_b\\%ar'`,
+		},
+		{
+			Note:    "contains + pattern",
+			Source:  UCASTNode{Type: "field", Field: "name", Op: "contains", Value: LaunderType(`f\oo_b%ar`)},
+			Dialect: "postgres",
+			Result:  `WHERE name LIKE E'%f\\\\oo\\_b\\%ar%'`,
+		},
+		{
 			Note: "Basic nested compound expression",
 			Source: UCASTNode{Type: "compound", Op: "and", Value: LaunderType([]UCASTNode{
 				{Type: "field", Op: "eq", Field: "name", Value: LaunderType("bob")},

@@ -124,6 +124,39 @@ include if user == input.fruits.user`,
 			},
 		},
 		{
+			note: "contains: rhs unknown",
+			rego: `include if contains("foobar", input.fruits.colour)`,
+			errors: []Error{
+				{
+					Code:     "pe_fragment_error",
+					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
+					Message:  "rhs of contains must be scalar",
+				},
+			},
+		},
+		{
+			note: "startswith: rhs unknown",
+			rego: `include if startswith("foobar", input.fruits.colour)`,
+			errors: []Error{
+				{
+					Code:     "pe_fragment_error",
+					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
+					Message:  "rhs of startswith must be scalar",
+				},
+			},
+		},
+		{
+			note: "endswith: rhs unknown",
+			rego: `include if endswith("foobar", input.fruits.colour)`,
+			errors: []Error{
+				{
+					Code:     "pe_fragment_error",
+					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
+					Message:  "rhs of endswith must be scalar",
+				},
+			},
+		},
+		{
 			note: "non-scalar comparison",
 			rego: `include if input.fruits.colour <= {"green", "blue"}`, // nonsense, but still
 			errors: []Error{

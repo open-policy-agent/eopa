@@ -18,11 +18,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/google/go-cmp/cmp"
 	_ "github.com/lib/pq"
 	_ "github.com/microsoft/go-mssqldb"
+
+	"github.com/docker/go-connections/nat"
+	"github.com/google/go-cmp/cmp"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -259,6 +260,11 @@ type fruitRow struct {
 	Price  int
 }
 
+// In these test, we test the compile API end-to-end. We start an instance of
+// Enterprise OPA, load a policy, and then run a series of tests that compile
+// a query and then execute it against a database. The query is a simple
+// "include" query that filters rows from a table based on some conditions.
+// The conditions are defined in the data policy.
 func TestCompileHappyPathE2E(t *testing.T) {
 	dbTypes := []DBType{Postgres, MySQL, MSSQL}
 
@@ -270,62 +276,89 @@ func TestCompileHappyPathE2E(t *testing.T) {
 	our_wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 	eopaURL := fmt.Sprintf("http://localhost:%d", eopaHTTPPort)
 
+	unknowns := []string{"input.fruits"}
+	var input any = map[string]any{"fav_colour": "yellow"}
+	query := `data.filters%d.include`
+	selectQuery := "SELECT * FROM fruit"
+
+	apple := fruitRow{ID: 1, Name: "apple", Colour: "green", Price: 10}
+	banana := fruitRow{ID: 2, Name: "banana", Colour: "yellow", Price: 20}
+	cherry := fruitRow{ID: 3, Name: "cherry", Colour: "red", Price: 11}
+
+	tests := []struct {
+		name    string
+		policy  string
+		expRows []fruitRow
+	}{
+		{
+			name:    "no conditions",
+			policy:  `include if true`,
+			expRows: []fruitRow{apple, banana, cherry},
+		},
+		{
+			name:    "simple equality",
+			policy:  `include if input.fruits.colour == input.fav_colour`,
+			expRows: []fruitRow{banana},
+		},
+		{
+			name:    "simple comparison",
+			policy:  `include if input.fruits.price < 11`,
+			expRows: []fruitRow{apple},
+		},
+		{
+			name:    "simple startswith",
+			policy:  `include if startswith(input.fruits.name, "app")`,
+			expRows: []fruitRow{apple},
+		},
+		{
+			name:    "simple contains",
+			policy:  `include if contains(input.fruits.name, "a")`,
+			expRows: []fruitRow{apple, banana},
+		},
+		{
+			name:    "startswith + escaping '_'",
+			policy:  `include if startswith(input.fruits.name, "ap_")`, // if "_" wasn't escaped properly, it would match "apple"
+			expRows: nil,
+		},
+		{
+			name:    "startswith + escaping '%'",
+			policy:  `include if startswith(input.fruits.name, "%ppl")`, // if "%" wasn't escaped properly, it would match "apple"
+			expRows: nil,
+		},
+		{
+			name:    "endswith",
+			policy:  `include if endswith(input.fruits.name, "le")`,
+			expRows: []fruitRow{apple},
+		},
+		{
+			name: "conjunct query, inequality",
+			policy: `include if {
+				input.fruits.name != "apple"
+				input.fruits.name != "banana"
+				}`,
+			expRows: []fruitRow{cherry},
+		},
+		{
+			name: "disjunct query, equality",
+			policy: `include if input.fruits.name == "apple"
+				include if input.fruits.name == "banana"`,
+			expRows: []fruitRow{apple, banana},
+		},
+	}
+
 	for _, dbType := range dbTypes {
 		t.Run(string(dbType), func(t *testing.T) {
+			t.Parallel()
 			config, cleanup := setupDB(t, dbType)
 			defer t.Cleanup(cleanup)
 
-			unknowns := []string{"input.fruits"}
-			var input any = map[string]any{"fav_colour": "yellow"}
-			query := `data.filters.include`
-			selectQuery := "SELECT * FROM fruit"
-
-			apple := fruitRow{ID: 1, Name: "apple", Colour: "green", Price: 10}
-			banana := fruitRow{ID: 2, Name: "banana", Colour: "yellow", Price: 20}
-			cherry := fruitRow{ID: 3, Name: "cherry", Colour: "red", Price: 11}
-
-			tests := []struct {
-				name    string
-				policy  string
-				dbType  DBType
-				expRows []fruitRow
-			}{
-				{
-					name:    "simple equality",
-					policy:  `include if input.fruits.colour == input.fav_colour`,
-					dbType:  dbType,
-					expRows: []fruitRow{banana},
-				},
-				{
-					name:    "simple comparison",
-					policy:  `include if input.fruits.price < 11`,
-					dbType:  dbType,
-					expRows: []fruitRow{apple},
-				},
-				{
-					name: "conjunct query, inequality",
-					policy: `include if {
-						input.fruits.name != "apple"
-						input.fruits.name != "banana"
-						}`,
-					dbType:  dbType,
-					expRows: []fruitRow{cherry},
-				},
-				{
-					name: "disjunct query, equality",
-					policy: `include if input.fruits.name == "apple"
-						include if input.fruits.name == "banana"`,
-					dbType:  dbType,
-					expRows: []fruitRow{apple, banana},
-				},
-			}
-
-			for _, tt := range tests {
+			for i, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
+					t.Parallel()
 					{
 						// first, we override the policy with the current test case
-						policy := fmt.Sprintf("package filters\n%s", tt.policy)
-						req, err := http.NewRequest("PUT", fmt.Sprintf("%s/v1/policies/policy.rego", eopaURL), strings.NewReader(policy))
+						policy := fmt.Sprintf("package filters%d\n%s", i, tt.policy)
+						req, err := http.NewRequest("PUT", fmt.Sprintf("%s/v1/policies/policy%d.rego", eopaURL, i), strings.NewReader(policy))
 						if err != nil {
 							t.Fatalf("failed to create request: %v", err)
 						}
@@ -339,7 +372,7 @@ func TestCompileHappyPathE2E(t *testing.T) {
 						// second, query the compile API
 						payload := types.CompileRequestV1{
 							Input:    &input,
-							Query:    query,
+							Query:    fmt.Sprintf(query, i),
 							Unknowns: &unknowns,
 						}
 
@@ -377,7 +410,7 @@ func TestCompileHappyPathE2E(t *testing.T) {
 						convertPayload, err := json.Marshal(map[string]any{
 							"input": map[string]any{
 								"compile":      respPayload,
-								"dialect":      string(tt.dbType),
+								"dialect":      string(dbType),
 								"replacements": map[string]any{"fruits": map[string]any{"$self": "fruit"}}},
 						})
 						if err != nil {
@@ -398,6 +431,9 @@ func TestCompileHappyPathE2E(t *testing.T) {
 							t.Fatalf("unmarshal response: %v", err)
 						}
 						t.Logf("converted: %v", respM)
+						if v, ok := respM["result"]; !ok || v == nil {
+							t.Fatalf("no result: %v", respM)
+						}
 						whereClauses = respM["result"].(string)
 					}
 

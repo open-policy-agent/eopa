@@ -19,7 +19,7 @@ op(e) := r if {
 }
 
 is_valid(o) := u if {
-	o in {"eq", "lt", "gt", "neq"}
+	o in {"eq", "lt", "gt", "neq", "startswith", "endswith", "contains"}
 	u := _replace(o)
 }
 

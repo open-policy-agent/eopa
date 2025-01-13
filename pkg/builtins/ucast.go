@@ -146,6 +146,25 @@ func (u *UCASTNode) AsSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 			return cond.GreaterEqualThan(field, *value), nil
 		case "le", "lte":
 			return cond.LessEqualThan(field, *value), nil
+		case "startswith":
+			pattern, err := prefix(*value)
+			if err != nil {
+				return "", err
+			}
+			return cond.Like(field, pattern), nil
+		case "endswith":
+			pattern, err := suffix(*value)
+			if err != nil {
+				return "", err
+			}
+			return cond.Like(field, pattern), nil
+		case "contains":
+			pattern, err := infix(*value)
+			if err != nil {
+				return "", err
+			}
+			return cond.Like(field, pattern), nil
+
 		default:
 			return "", fmt.Errorf("unrecognized operator: %s", operator)
 		}
@@ -214,7 +233,7 @@ func regoObjectToUCASTNode(obj *ast.Term, translations *ast.Term) (*UCASTNode, e
 	value := obj.Get(ast.StringTerm("value"))
 
 	if ty == nil || op == nil {
-		return nil, builtins.NewOperandErr(1, "ucast.as_sql", "type and operator fields are required")
+		return nil, builtins.NewOperandErr(1, "ucast.as_sql: type and operator fields are required")
 	}
 	out.Type = string(ty.Value.(ast.String))
 	out.Op = string(op.Value.(ast.String))
@@ -446,3 +465,34 @@ var (
 	fieldType    = ast.StringTerm("field")
 	compoundType = ast.StringTerm("compound")
 )
+
+func prefix(p any) (string, error) {
+	p0, ok := p.(string)
+	if !ok {
+		return "", fmt.Errorf("'startswith' pattern requires string argument, got %v %[1]T", p)
+	}
+	return escaped(p0) + "%", nil
+}
+
+func suffix(p any) (string, error) {
+	p0, ok := p.(string)
+	if !ok {
+		return "", fmt.Errorf("'endswith' pattern requires string argument, got %v %[1]T", p)
+	}
+	return "%" + escaped(p0), nil
+}
+
+func infix(p any) (string, error) {
+	p0, ok := p.(string)
+	if !ok {
+		return "", fmt.Errorf("'contains' pattern requires string argument, got %v %[1]T", p)
+	}
+	return "%" + escaped(p0) + "%", nil
+}
+
+func escaped(p0 string) string {
+	p0 = strings.ReplaceAll(p0, `\`, `\\`)
+	p0 = strings.ReplaceAll(p0, "_", `\_`)
+	p0 = strings.ReplaceAll(p0, "%", `\%`)
+	return p0
+}

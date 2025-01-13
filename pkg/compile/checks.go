@@ -92,6 +92,8 @@ func checkBuiltins(e *ast.Expr, _ []*ast.Module) *ast.Error {
 	loc := op.Loc()
 	ref := op.Value.(ast.Ref)
 
+	unknownMustBeFirst := false
+
 	switch {
 	case ref.Equal(ast.Equality.Ref()):
 	case ref.Equal(ast.NotEqual.Ref()):
@@ -106,7 +108,14 @@ func checkBuiltins(e *ast.Expr, _ []*ast.Module) *ast.Error {
 		return withDetails(err(e.Loc(), "invalid data reference \"%v\"", e),
 			fmt.Sprintf("has function \"%v(...)\" an `else`?", ref),
 		)
+	case ref.Equal(ast.Lower.Ref()): // OK now
 
+	case ref.Equal(ast.StartsWith.Ref()):
+		unknownMustBeFirst = true
+	case ref.Equal(ast.EndsWith.Ref()):
+		unknownMustBeFirst = true
+	case ref.Equal(ast.Contains.Ref()):
+		unknownMustBeFirst = true
 	default:
 		return err(loc, "invalid builtin %v", op)
 	}
@@ -118,19 +127,27 @@ func checkBuiltins(e *ast.Expr, _ []*ast.Module) *ast.Error {
 		}
 	}
 
-	// lhs or rhs needs to be ground scalar
-	// TODO(sr): collections might work, too, let's fix this later
-	found := false
-	for i := range 2 {
-		if ast.IsScalar(e.Operand(i).Value) {
-			found = true
+	if unknownMustBeFirst {
+		if !ast.IsScalar(e.Operand(1).Value) {
+			if loc == nil {
+				loc = e.Loc()
+			}
+			return err(loc, "rhs of %v must be scalar", op)
 		}
-	}
-	if !found {
-		if loc == nil {
-			loc = e.Loc()
+	} else { // lhs or rhs needs to be ground scalar
+		// TODO(sr): collections might work, too, let's fix this later
+		found := false
+		for i := range 2 {
+			if ast.IsScalar(e.Operand(i).Value) {
+				found = true
+			}
 		}
-		return err(loc, "both rhs and lhs non-scalar/non-ground")
+		if !found {
+			if loc == nil {
+				loc = e.Loc()
+			}
+			return err(loc, "both rhs and lhs non-scalar/non-ground")
+		}
 	}
 	return nil
 }
