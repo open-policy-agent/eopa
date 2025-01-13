@@ -78,16 +78,16 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.10.0
 	github.com/styrainc/regal v0.29.2
-	github.com/testcontainers/testcontainers-go v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/localstack v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/minio v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/mssql v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/mysql v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/pulsar v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.34.0
+	github.com/testcontainers/testcontainers-go v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/localstack v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/minio v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/mssql v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/mysql v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/pulsar v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.35.0
 	github.com/twmb/franz-go v1.18.0
 	github.com/twmb/franz-go/plugin/kprom v1.1.0
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
