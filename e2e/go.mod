@@ -4,15 +4,20 @@ go 1.23
 
 toolchain go1.23.1
 
+godebug x509negativeserial=1 // mssql docker container: https://github.com/microsoft/mssql-docker/issues/895
+
 replace github.com/styrainc/enterprise-opa-private => ../
 
 require (
 	github.com/docker/go-connections v0.5.0
 	github.com/fsouza/fake-gcs-server v1.52.1
 	github.com/go-git/go-git/v5 v5.13.1
+	github.com/go-sql-driver/mysql v1.8.1
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hashicorp/vault/api v1.15.0
+	github.com/lib/pq v1.10.9
+	github.com/microsoft/go-mssqldb v1.8.0
 	github.com/minio/minio-go/v7 v7.0.83
 	github.com/open-policy-agent/opa v1.0.0
 	github.com/redpanda-data/benthos/v4 v4.42.0
@@ -130,7 +135,6 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-json v0.10.4 // indirect
@@ -197,7 +201,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
-	github.com/microsoft/go-mssqldb v1.8.0 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
