@@ -19,10 +19,10 @@ require (
 	github.com/redpanda-data/connect/v4 v4.44.0
 	github.com/rogpeppe/go-internal v1.13.1
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
-	github.com/testcontainers/testcontainers-go v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.34.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.34.0
+	github.com/testcontainers/testcontainers-go v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.35.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.35.0
 	github.com/twmb/franz-go v1.18.0
 	github.com/twmb/franz-go/pkg/kadm v1.14.0
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
