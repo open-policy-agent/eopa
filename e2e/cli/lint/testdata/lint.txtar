@@ -12,10 +12,9 @@ exec eopa lint policies_pass
 ! stderr .
 stdout '1 file linted\. No violations found\.'
 
-! exec eopa lint policies_sql
+exec eopa lint policies_sql
 ! stderr .
-stdout 'Rule:\s+function-arg-return'
-stdout '1 file linted\. 2 violations found\.'
+stdout '1 file linted\. No violations found\.'
 
 -- policies/test.rego --
 package policies.test
@@ -27,8 +26,8 @@ package policies_pass
 import rego.v1
 
 allow := true
--- policies_sql/p.rego --
-package policies.test
+-- policies_sql/policies/sql/sql.rego --
+package policies.sql
 
 import rego.v1
 

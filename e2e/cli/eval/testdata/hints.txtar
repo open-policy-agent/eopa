@@ -259,6 +259,4 @@ default q := true
 -- exp/parse-multi-default/stdout --
 1 error occurred: parse-multi-default.rego:1: rego_type_error: multiple default rules data.p.q found at parse-multi-default.rego:2, parse-multi-default.rego:3
 -- exp/parse-multi-default/stderr --
--- NOTE --
-# https://github.com/StyraInc/regal/pull/1314
 For more information, see: https://docs.styra.com/opa/errors/rego-type-error/multiple-default-rules-name-found
