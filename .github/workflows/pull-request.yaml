@@ -530,30 +530,6 @@ jobs:
         run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
         working-directory: enterprise-opa
 
-        # diffheap
-      - uses: actions/checkout@v4
-        with:
-          path: main
-          ref: ${{ github.event.pull_request.base.ref }}
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ steps.go_version.outputs.go_version }}
-          cache-dependency-path: main/go.sum
-      - name: Set up diffheap util
-        run: go install github.com/srenatus/diffheap@latest
-      - run: diffheap ./pkg/vm > ../branch.out
-        working-directory: enterprise-opa
-      - run: diffheap ./pkg/vm > ../main.out
-        working-directory: main
-      - uses: int128/diff-action@v1
-        if: ${{ github.ref != 'refs/heads/main' && github.actor != 'dependabot[bot]' }}
-        with:
-          base: main.out
-          head: branch.out
-          comment-header: "escape analysis differences"
-          comment-footer: "This is informational. It does not indicate a problem with the code change."
-          token: ${{ github.token }}
-
         # benchmark, gobenchdata
       - run: make benchmark
         working-directory: enterprise-opa
