@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 
+	"github.com/huandu/go-sqlbuilder"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/metrics"
@@ -15,6 +16,17 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/util"
 )
+
+type CompileRequestV1 struct {
+	Input    *interface{} `json:"input"`
+	Query    string       `json:"query"`
+	Unknowns *[]string    `json:"unknowns"`
+	Options  struct {
+		DisableInlining []string       `json:"disableInlining,omitempty"`
+		Dialect         string         `json:"dialect,omitempty"`
+		Mappings        map[string]any `json:"targetSQLTableMappings,omitempty"`
+	} `json:"options,omitempty"`
+}
 
 type CompileHandler interface {
 	http.Handler
@@ -123,7 +135,60 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result.Result = &i
+	switch r.Header.Get("Accept") {
+	case "application/vnd.styra.ucast+json":
+		opts := &Opts{
+			Translations: request.Options.Mappings,
+		}
+		a := any(BodiesToUCAST(pq.Queries, opts))
+		result.Result = &a
+	case "application/vnd.styra.sql+json":
+		opts := &Opts{
+			Translations: request.Options.Mappings,
+		}
+		ucast := BodiesToUCAST(pq.Queries, opts)
+		if ucast == nil {
+			s := any("")
+			result.Result = &s
+			break
+		}
+		// TODO(sr): Hide away the sqlbuilder calls
+		var fl sqlbuilder.Flavor
+		switch request.Options.Dialect {
+		case "mysql":
+			fl = sqlbuilder.MySQL
+		case "sqlite":
+			fl = sqlbuilder.SQLite
+		case "postgres":
+			fl = sqlbuilder.PostgreSQL
+		case "sqlserver":
+			fl = sqlbuilder.SQLServer
+		default:
+			writer.Error(w, http.StatusBadRequest,
+				types.NewErrorV1(types.CodeInvalidParameter, "unsupported dialect: %s", request.Options.Dialect))
+			return
+		}
+
+		cond := sqlbuilder.NewCond()
+		where := sqlbuilder.NewWhereClause()
+		clauses, err := ucast.AsSQL(cond, request.Options.Dialect)
+		if err != nil {
+			writer.ErrorAuto(w, err)
+			return
+		}
+		where.AddWhereExpr(cond.Args, clauses)
+		s, args := where.BuildWithFlavor(fl)
+		sql, err := fl.Interpolate(s, args)
+		if err != nil {
+			writer.ErrorAuto(w, err)
+			return
+		}
+		r := any(sql)
+		result.Result = &r
+
+	default:
+		result.Result = &i
+	}
 
 	writer.JSONOK(w, result, true)
 }
@@ -137,10 +202,12 @@ type compileRequest struct {
 
 type compileRequestOptions struct {
 	DisableInlining []string
+	Dialect         string
+	Mappings        map[string]any
 }
 
 func readInputCompilePostV1(reqBytes []byte) (*compileRequest, *types.ErrorV1) {
-	var request types.CompileRequestV1
+	var request CompileRequestV1
 
 	err := util.NewJSONDecoder(bytes.NewBuffer(reqBytes)).Decode(&request)
 	if err != nil {
@@ -184,6 +251,8 @@ func readInputCompilePostV1(reqBytes []byte) (*compileRequest, *types.ErrorV1) {
 		Unknowns: unknowns,
 		Options: compileRequestOptions{
 			DisableInlining: request.Options.DisableInlining,
+			Mappings:        request.Options.Mappings,
+			Dialect:         request.Options.Dialect,
 		},
 	}
 

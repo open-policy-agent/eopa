@@ -108,8 +108,6 @@ func checkBuiltins(e *ast.Expr, _ []*ast.Module) *ast.Error {
 		return withDetails(err(e.Loc(), "invalid data reference \"%v\"", e),
 			fmt.Sprintf("has function \"%v(...)\" an `else`?", ref),
 		)
-	case ref.Equal(ast.Lower.Ref()): // OK now
-
 	case ref.Equal(ast.StartsWith.Ref()):
 		unknownMustBeFirst = true
 	case ref.Equal(ast.EndsWith.Ref()):

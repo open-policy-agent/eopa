@@ -70,22 +70,15 @@ func dialectToFlavor(dialect string) sqlbuilder.Flavor {
 		return sqlbuilder.SQLite
 	case "postgres":
 		return sqlbuilder.PostgreSQL
+	case "sqlserver":
+		return sqlbuilder.SQLServer
 	default:
 		return sqlbuilder.SQLite
 	}
 }
 
 func interpolateByDialect(dialect string, s string, args []interface{}) (string, error) {
-	switch dialect {
-	case "mysql":
-		return sqlbuilder.MySQL.Interpolate(s, args)
-	case "sqlite":
-		return sqlbuilder.SQLite.Interpolate(s, args)
-	case "postgres":
-		return sqlbuilder.PostgreSQL.Interpolate(s, args)
-	default:
-		return sqlbuilder.SQLite.Interpolate(s, args)
-	}
+	return dialectToFlavor(dialect).Interpolate(s, args)
 }
 
 // Handles splitting an SQL table/column field name into its component pieces,

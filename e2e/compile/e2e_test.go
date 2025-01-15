@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -26,8 +25,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-
-	"github.com/open-policy-agent/opa/v1/server/types"
 
 	"github.com/styrainc/enterprise-opa-private/e2e/utils"
 	our_wait "github.com/styrainc/enterprise-opa-private/e2e/wait"
@@ -47,12 +44,6 @@ func TestMain(m *testing.M) {
 
 	os.Exit(m.Run())
 }
-
-// This is temporary! The conversion logic is going to become part of the
-// extended compile handler.
-//
-//go:embed convert.rego
-var convertRego string
 
 type DBType string
 
@@ -268,8 +259,7 @@ type fruitRow struct {
 func TestCompileHappyPathE2E(t *testing.T) {
 	dbTypes := []DBType{Postgres, MySQL, MSSQL}
 
-	policy := convertRego
-	eopa, _, eopaErr := loadEnterpriseOPA(t, policy, eopaHTTPPort)
+	eopa, _, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -280,6 +270,12 @@ func TestCompileHappyPathE2E(t *testing.T) {
 	var input any = map[string]any{"fav_colour": "yellow"}
 	query := `data.filters%d.include`
 	selectQuery := "SELECT * FROM fruit"
+
+	mapping := map[string]any{
+		"fruits": map[string]any{
+			"$self": "fruit",
+		},
+	}
 
 	apple := fruitRow{ID: 1, Name: "apple", Colour: "green", Price: 10}
 	banana := fruitRow{ID: 2, Name: "banana", Colour: "yellow", Price: 20}
@@ -370,10 +366,14 @@ func TestCompileHappyPathE2E(t *testing.T) {
 					var respPayload map[string]any
 					{
 						// second, query the compile API
-						payload := types.CompileRequestV1{
-							Input:    &input,
-							Query:    fmt.Sprintf(query, i),
-							Unknowns: &unknowns,
+						payload := map[string]any{
+							"input":    input,
+							"query":    fmt.Sprintf(query, i),
+							"unknowns": unknowns,
+							"options": map[string]any{
+								"dialect":                string(dbType),
+								"targetSQLTableMappings": mapping,
+							},
 						}
 
 						queryBytes, err := json.Marshal(payload)
@@ -388,6 +388,7 @@ func TestCompileHappyPathE2E(t *testing.T) {
 							t.Fatalf("failed to create request: %v", err)
 						}
 						req.Header.Set("Content-Type", "application/json")
+						req.Header.Set("Accept", "application/vnd.styra.sql+json")
 
 						resp, err := http.DefaultClient.Do(req)
 						if err != nil {
@@ -404,38 +405,8 @@ func TestCompileHappyPathE2E(t *testing.T) {
 						}
 					}
 
-					var whereClauses string
-					{
-						// use the convert.rego policy to convert the Compile API resonse to WHERE clauses via UCAST
-						convertPayload, err := json.Marshal(map[string]any{
-							"input": map[string]any{
-								"compile":      respPayload,
-								"dialect":      string(dbType),
-								"replacements": map[string]any{"fruits": map[string]any{"$self": "fruit"}}},
-						})
-						if err != nil {
-							t.Fatalf("failed to marshal convert payload: %v", err)
-						}
-						resp, err := http.Post(fmt.Sprintf("%s/v1/data/convert/converted", eopaURL), "application/json", bytes.NewReader(convertPayload))
-						if err != nil {
-							t.Fatalf("failed to convert: %v", err)
-						}
-						defer resp.Body.Close()
-
-						if status := resp.StatusCode; status != http.StatusOK {
-							t.Fatalf("expected status %v, got %v", http.StatusOK, status)
-						}
-
-						var respM map[string]any
-						if err := json.NewDecoder(resp.Body).Decode(&respM); err != nil {
-							t.Fatalf("unmarshal response: %v", err)
-						}
-						t.Logf("converted: %v", respM)
-						if v, ok := respM["result"]; !ok || v == nil {
-							t.Fatalf("no result: %v", respM)
-						}
-						whereClauses = respM["result"].(string)
-					}
+					t.Log(respPayload)
+					whereClauses := respPayload["result"].(string)
 
 					var rowsData []fruitRow
 					{
@@ -468,14 +439,8 @@ func TestCompileHappyPathE2E(t *testing.T) {
 	}
 }
 
-func loadEnterpriseOPA(t *testing.T, policy string, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
+func loadEnterpriseOPA(t *testing.T, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}
-	dir := t.TempDir()
-	policyPath := filepath.Join(dir, "eval.rego")
-	if err := os.WriteFile(policyPath, []byte(policy), 0x777); err != nil {
-		t.Fatalf("write policy: %v", err)
-	}
-
 	args := []string{
 		"run",
 		"--server",
@@ -487,7 +452,7 @@ func loadEnterpriseOPA(t *testing.T, policy string, httpPort int) (*exec.Cmd, *b
 	if bin == "" {
 		bin = "eopa"
 	}
-	eopa := exec.Command(bin, append(args, policyPath)...)
+	eopa := exec.Command(bin, args...)
 	eopa.Stderr = &stderr
 	eopa.Stdout = &stdout
 	eopa.Env = append(eopa.Environ(),

@@ -20,6 +20,8 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/compile"
 )
 
+const ucastAcceptHeader = "application/vnd.styra.ucast+json"
+
 // Error is needed here because the ast.Error type cannot be
 // unmarshalled from JSON: it contains an interface value.
 type Error struct {
@@ -47,14 +49,97 @@ func TestPostPartialChecks(t *testing.T) {
 		query    string
 		errors   []Error
 		skip     string
+		result   map[string]any
 	}{
 		{
-			note: "happy path",
-			rego: `include if input.fruits.colour == "orange"`,
+			note:   "happy path",
+			rego:   `include if input.fruits.colour == "orange"`,
+			result: map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
 		},
 		{
-			note: "happy path, reversed",
-			rego: `include if "orange" == input.fruits.colour`,
+			note: "happy path, compound 'and'",
+			rego: `include if { input.fruits.colour == "orange"; input.fruits.name == "clementine" }`,
+			result: map[string]any{
+				"type":     "compound",
+				"operator": "and",
+				"value": []any{
+					map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
+					map[string]any{"type": "field", "field": "fruits.name", "operator": "eq", "value": "clementine"},
+				},
+			},
+		},
+		{
+			note: "happy path, compound 'or'",
+			rego: `include if input.fruits.colour == "orange"
+				include if input.fruits.name == "clementine"`,
+			result: map[string]any{
+				"type":     "compound",
+				"operator": "or",
+				"value": []any{
+					map[string]any{"type": "field", "field": "fruits.name", "operator": "eq", "value": "clementine"},
+					map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
+				},
+			},
+		},
+		{
+			note: "happy path, compound mixed",
+			rego: `include if input.fruits.colour == "orange"
+				include if { input.fruits.name == "clementine"; input.fruits.price > 10 }`,
+			result: map[string]any{
+				"type":     "compound",
+				"operator": "or",
+				"value": []any{
+					map[string]any{
+						"type":     "compound",
+						"operator": "and",
+						"value": []any{
+							map[string]any{"type": "field", "field": "fruits.name", "operator": "eq", "value": "clementine"},
+							map[string]any{"type": "field", "field": "fruits.price", "operator": "gt", "value": float64(10)},
+						},
+					},
+					map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
+				},
+			},
+		},
+		{
+			note:   "happy path, reversed",
+			rego:   `include if "orange" == input.fruits.colour`,
+			result: map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
+		},
+		{
+			note:   "happy path, comparison",
+			rego:   `include if input.fruits.price > 10`,
+			result: map[string]any{"type": "field", "field": "fruits.price", "operator": "gt", "value": float64(10)},
+		},
+		{
+			note:   "happy path, comparison, reversed",
+			rego:   `include if 10 <= input.fruits.price`,
+			result: map[string]any{"type": "field", "field": "fruits.price", "operator": "gt", "value": float64(10)},
+		},
+		{
+			note:   "happy path, not-equal",
+			rego:   `include if input.fruits.name != "apple"`,
+			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "ne", "value": "apple"},
+		},
+		{
+			note:   "happy path, not-equal, reversed",
+			rego:   `include if "apple" != input.fruits.name`,
+			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "ne", "value": "apple"},
+		},
+		{
+			note:   "happy path, startswith",
+			rego:   `include if startswith(input.fruits.name, "app")`,
+			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "startswith", "value": "app"},
+		},
+		{
+			note:   "happy path, endswith",
+			rego:   `include if endswith(input.fruits.name, "le")`,
+			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "endswith", "value": "le"},
+		},
+		{
+			note:   "happy path, contains",
+			rego:   `include if contains(input.fruits.name, "ppl")`,
+			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "contains", "value": "ppl"},
 		},
 		{
 			note: "invalid builtin",
@@ -327,12 +412,13 @@ other if input.fruits.price > 100
 				cmp.Or(tc.input, any(defaultInput)),
 				unk,
 				tc.errors,
+				tc.result,
 			)
 		})
 	}
 }
 
-func runHandler(t *testing.T, rego, query string, input any, unknowns []string, errs []Error) {
+func runHandler(t *testing.T, rego, query string, input any, unknowns []string, errs []Error, result map[string]any) {
 	ctx := context.Background()
 	payload := types.CompileRequestV1{
 		Input:    &input,
@@ -370,6 +456,7 @@ func runHandler(t *testing.T, rego, query string, input any, unknowns []string, 
 		t.Fatalf("Failed to create request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", ucastAcceptHeader)
 
 	rr := httptest.NewRecorder()
 	chnd.ServeHTTP(rr, req)
@@ -399,6 +486,21 @@ func runHandler(t *testing.T, rego, query string, input any, unknowns []string, 
 		// response.
 		// --> cmpopts.IgnoreFields(Error{}, "Location") <--
 		if diff := go_cmp.Diff(exp, act); diff != "" {
+			t.Errorf("response unexpected (-want, +got):\n%s", diff)
+		}
+	}
+
+	{
+		// compare results
+		var resp struct {
+			Result map[string]any `json:"result"`
+		}
+		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal response: %v", err)
+		}
+
+		act := resp.Result
+		if diff := go_cmp.Diff(result, act); diff != "" {
 			t.Errorf("response unexpected (-want, +got):\n%s", diff)
 		}
 	}
