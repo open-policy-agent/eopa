@@ -123,18 +123,18 @@ func callToNode(e *ast.Expr, f ast.Ref, flip bool, opts *Opts) *ucast.UCASTNode 
 	ref := e.OperatorTerm().Value.(ast.Ref)
 	op := ref.String()
 
-	switch {
-	case ref.Equal(ast.Equality.Ref()):
-	case ref.Equal(ast.NotEqual.Ref()):
+	switch op {
+	case ast.Equality.Name:
+	case ast.NotEqual.Name:
 		op = "ne"
-	case ref.Equal(ast.LessThan.Ref()):
-	case ref.Equal(ast.LessThanEq.Ref()):
-	case ref.Equal(ast.GreaterThan.Ref()):
-	case ref.Equal(ast.GreaterThanEq.Ref()):
-	case ref.Equal(ast.StartsWith.Ref()):
-	case ref.Equal(ast.EndsWith.Ref()):
-	case ref.Equal(ast.Contains.Ref()):
-	case ref.Equal(ast.Member.Ref()):
+	case ast.LessThan.Name:
+	case ast.LessThanEq.Name:
+	case ast.GreaterThan.Name:
+	case ast.GreaterThanEq.Name:
+	case ast.StartsWith.Name:
+	case ast.EndsWith.Name:
+	case ast.Contains.Name:
+	case ast.Member.Name:
 		op = "in"
 	default:
 		return nil

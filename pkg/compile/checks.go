@@ -1,6 +1,7 @@
 package compile
 
 import (
+	"cmp"
 	"fmt"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -20,10 +21,22 @@ func (r *Results) ASTErrors() []*ast.Error {
 	return r.errs
 }
 
-func Check(pq *rego.PartialQueries) *Results {
-	res := Results{}
+type checker struct {
+	constraints *Constraint
+	res         *Results
+}
+
+func (c *checker) Results() *Results {
+	return c.res
+}
+
+func Check(pq *rego.PartialQueries, constraints *Constraint) *Results {
+	check := checker{
+		constraints: constraints,
+		res:         &Results{},
+	}
 	for i := range pq.Queries {
-		checkQuery(pq.Queries[i], pq.Support, &res)
+		check.Query(pq.Queries[i], pq.Support)
 	}
 	// NOTE(sr): So far, we've gotten better error locations from the refs into
 	// support modules. The support modules themselves are surprisingly useless
@@ -31,27 +44,27 @@ func Check(pq *rego.PartialQueries) *Results {
 	// for i := range pq.Support {
 	// 	checkSupport(pq.Support[i], &res)
 	// }
-	return &res
+	return check.Results()
 }
 
-func checkQuery(q ast.Body, sup []*ast.Module, res *Results) {
+func (c *checker) Query(q ast.Body, sup []*ast.Module) {
 	for j := range q {
 		for i := range queryChecks {
-			if err := queryChecks[i](q[j], sup); err != nil {
-				res.errs = append(res.errs, err)
+			if err := queryChecks[i](c, q[j], sup); err != nil {
+				c.res.errs = append(c.res.errs, err)
 			}
 		}
 	}
 }
 
-var queryChecks = [...]func(*ast.Expr, []*ast.Module) *ast.Error{
+var queryChecks = [...]func(*checker, *ast.Expr, []*ast.Module) *ast.Error{
 	checkCall,
 	checkBuiltins,
 }
 
 var partialPrefix = ast.MustParseRef("data.partial")
 
-func checkCall(e *ast.Expr, sup []*ast.Module) *ast.Error {
+func checkCall(_ *checker, e *ast.Expr, sup []*ast.Module) *ast.Error {
 	switch {
 	case e.Negated:
 		return err(e.Loc(), "\"not\" not permitted")
@@ -81,7 +94,12 @@ func checkCall(e *ast.Expr, sup []*ast.Module) *ast.Error {
 	return nil
 }
 
-func checkBuiltins(e *ast.Expr, _ []*ast.Module) *ast.Error {
+// some builtins need their names replaced for nicer errors
+var replacements = map[string]string{
+	"internal.member_2": "in",
+}
+
+func checkBuiltins(c *checker, e *ast.Expr, _ []*ast.Module) *ast.Error {
 	if len(e.With) > 0 { // Ignore expression, we'll already have recorded errors through checkCalls.
 		return nil
 	}
@@ -91,31 +109,40 @@ func checkBuiltins(e *ast.Expr, _ []*ast.Module) *ast.Error {
 	}
 	loc := op.Loc()
 	ref := op.Value.(ast.Ref)
+	op0 := ref.String()
 
 	unknownMustBeFirst := false
 
 	switch {
-	case ref.Equal(ast.Equality.Ref()):
-	case ref.Equal(ast.NotEqual.Ref()):
-	case ref.Equal(ast.LessThan.Ref()):
-	case ref.Equal(ast.LessThanEq.Ref()):
-	case ref.Equal(ast.GreaterThan.Ref()):
-	case ref.Equal(ast.GreaterThanEq.Ref()):
-	case ref.Equal(ast.MemberWithKey.Ref()):
+	case op0 == ast.Equality.Name:
+	case op0 == ast.NotEqual.Name:
+	case op0 == ast.LessThan.Name:
+	case op0 == ast.LessThanEq.Name:
+	case op0 == ast.GreaterThan.Name:
+	case op0 == ast.GreaterThanEq.Name:
+	case op0 == ast.StartsWith.Name ||
+		op0 == ast.EndsWith.Name ||
+		op0 == ast.Contains.Name ||
+		op0 == ast.Member.Name:
+		unknownMustBeFirst = true
+
+		// Below there are only error cases
+	case op0 == ast.MemberWithKey.Name:
 		return err(loc, "invalid use of \"... in ...\"")
 	case ref.HasPrefix(ast.DefaultRootRef):
 		// TODO(sr): point to function with else -- but we don't have the full rego yet
 		return withDetails(err(e.Loc(), "invalid data reference \"%v\"", e),
 			fmt.Sprintf("has function \"%v(...)\" an `else`?", ref),
 		)
-
-	case ref.Equal(ast.StartsWith.Ref()) ||
-		ref.Equal(ast.EndsWith.Ref()) ||
-		ref.Equal(ast.Contains.Ref()) ||
-		ref.Equal(ast.Member.Ref()):
-		unknownMustBeFirst = true
 	default:
-		return err(loc, "invalid builtin %v", op)
+		return err(loc, "invalid builtin `%v`", op)
+	}
+
+	// Also check that our target+variant allows this builtin
+	if !c.constraints.Builtins.Contains(op0) {
+		return err(loc, "invalid builtin `%v` for %v",
+			cmp.Or(replacements[op0], op0),
+			c.constraints)
 	}
 
 	// all our allowed builtins have two operands

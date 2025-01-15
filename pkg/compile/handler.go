@@ -126,9 +126,16 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Support: pq.Support,
 	}
 
+	var constr *Constraint
+	switch r.Header.Get("Accept") {
+	case "application/vnd.styra.ucast+json":
+		constr = NewConstraints("ucast", request.Options.Dialect)
+	case "application/vnd.styra.sql+json":
+		constr = NewConstraints("sql", request.Options.Dialect)
+	}
 	h.Logger.Debug("queries %v", pq.Queries)
 	h.Logger.Debug("support %v", pq.Support)
-	if errs := Check(pq).ASTErrors(); errs != nil {
+	if errs := Check(pq, constr).ASTErrors(); errs != nil {
 		writer.Error(w, http.StatusBadRequest,
 			types.NewErrorV1(types.CodeEvaluation, types.MsgEvaluationError).
 				WithASTErrors(errs))

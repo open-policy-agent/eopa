@@ -14,13 +14,15 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/logging/test"
-	"github.com/open-policy-agent/opa/v1/server/types"
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/test/e2e"
 	"github.com/styrainc/enterprise-opa-private/pkg/compile"
 )
 
-const ucastAcceptHeader = "application/vnd.styra.ucast+json"
+const (
+	ucastAcceptHeader = "application/vnd.styra.ucast+json"
+	sqlAcceptHeader   = "application/vnd.styra.sql+json"
+)
 
 // Error is needed here because the ast.Error type cannot be
 // unmarshalled from JSON: it contains an interface value.
@@ -34,6 +36,9 @@ type Error struct {
 // NOTE(sr): The important thing about these tests is that we don't mock
 // the partially-evaluated Rego. Instead, we store the data filter policy,
 // run the PE-post-analysing handler, and have assertions on its response.
+// The happy-path assertions all request a UCAST response, with the "all"
+// variant, which includes all the builtins. For error cases, we check
+// both constrained UCAST, and SQL.
 func TestPostPartialChecks(t *testing.T) {
 	const defaultQuery = "data.filters.include"
 	defaultInput := map[string]any{
@@ -42,14 +47,15 @@ func TestPostPartialChecks(t *testing.T) {
 	}
 	defaultUnknowns := []string{"input.fruits", "input.baskets"}
 	for _, tc := range []struct {
-		note     string
-		rego     string
-		unknowns []string
-		input    any
-		query    string
-		errors   []Error
-		skip     string
-		result   map[string]any
+		note            string
+		target, dialect string
+		rego            string
+		unknowns        []string
+		input           any
+		query           string
+		errors          []Error
+		skip            string
+		result          map[string]any
 	}{
 		{
 			note:   "happy path",
@@ -142,9 +148,46 @@ func TestPostPartialChecks(t *testing.T) {
 			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "contains", "value": "ppl"},
 		},
 		{
-			note:   "happy path, internal.member_2",
-			rego:   `include if input.fruits.name in {"apple", "pear"}`,
-			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "in", "value": []any{"apple", "pear"}},
+			note:    "happy path, internal.member_2 (ucast/linq)",
+			rego:    `include if input.fruits.name in {"apple", "pear"}`,
+			dialect: "linq",
+			result:  map[string]any{"type": "field", "field": "fruits.name", "operator": "in", "value": []any{"apple", "pear"}},
+		},
+		{
+			note:    "invalid builtin: internal.member_2 (ucast/minimal)",
+			rego:    `include if input.fruits.name in {"apple", "pear"}`,
+			dialect: "not-all", // currently, only "linq" and "all" affect the constraints, all else gets a minimal set
+			errors: []Error{
+				{
+					Code:     "pe_fragment_error",
+					Location: ast.NewLocation(nil, "filters.rego", 3, 30),
+					Message:  "invalid builtin `in` for UCAST",
+				},
+			},
+		},
+		{
+			note:    "invalid builtin: startswith (ucast/linq)",
+			rego:    `include if startswith(input.fruits.name, "app")`,
+			dialect: "linq",
+			errors: []Error{
+				{
+					Code:     "pe_fragment_error",
+					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
+					Message:  "invalid builtin `startswith` for UCAST (LINQ)",
+				},
+			},
+		},
+		{
+			note:    "invalid builtin: startswith (ucast)",
+			rego:    `include if startswith(input.fruits.name, "app")`,
+			dialect: "not-all", // currently, only "linq" and "all" affect the constraints, all else gets a minimal set
+			errors: []Error{
+				{
+					Code:     "pe_fragment_error",
+					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
+					Message:  "invalid builtin `startswith` for UCAST",
+				},
+			},
 		},
 		{
 			note: "invalid builtin",
@@ -153,13 +196,25 @@ func TestPostPartialChecks(t *testing.T) {
 				{
 					Code:     "pe_fragment_error",
 					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
-					Message:  "invalid builtin object.get",
+					Message:  "invalid builtin `object.get`",
 				},
 			},
 		},
 		{
 			note: "invalid use of 'k, v in...'",
 			rego: `include if "k", input.fruits.colour in {"k": "grey", "k2": "orange"}`,
+			errors: []Error{
+				{
+					Code:     "pe_fragment_error",
+					Location: ast.NewLocation(nil, "filters.rego", 3, 37),
+					Message:  "invalid use of \"... in ...\"",
+				},
+			},
+		},
+		{
+			note:    "invalid use of '...in...' (ucast)",
+			rego:    `include if "k", input.fruits.colour in {"k": "grey", "k2": "orange"}`,
+			dialect: "linq",
 			errors: []Error{
 				{
 					Code:     "pe_fragment_error",
@@ -392,110 +447,108 @@ other if input.fruits.price > 100
 		},
 	} {
 		t.Run(tc.note, func(t *testing.T) {
+			ctx := context.Background()
 			if tc.skip != "" {
 				t.Skip(tc.skip)
 			}
-			unk := tc.unknowns
-			if len(unk) == 0 {
-				unk = defaultUnknowns
+			unknowns := tc.unknowns
+			if len(unknowns) == 0 {
+				unknowns = defaultUnknowns
 			}
 			rego := "package filters\nimport rego.v1\n" + tc.rego
-			runHandler(t,
-				rego,
-				cmp.Or(tc.query, defaultQuery),
-				cmp.Or(tc.input, any(defaultInput)),
-				unk,
-				tc.errors,
-				tc.result,
-			)
+			query := cmp.Or(tc.query, defaultQuery)
+			input := cmp.Or(tc.input, any(defaultInput))
+			target := cmp.Or(tc.target, ucastAcceptHeader)
+			dialect := cmp.Or(tc.dialect, "all")
+
+			// second, query the compile API
+			payload := map[string]any{
+				"input":    input,
+				"query":    query,
+				"unknowns": unknowns,
+				"options": map[string]any{
+					"dialect": dialect,
+				},
+			}
+
+			jsonData, err := json.Marshal(payload)
+			if err != nil {
+				t.Fatalf("Failed to marshal JSON: %v", err)
+			}
+
+			l := test.New()
+			l.SetLevel(logging.Debug)
+			chnd := compile.Handler(l)
+			params := e2e.NewAPIServerTestParams()
+			params.Logger = l
+			trt, err := e2e.NewTestRuntime(params)
+			if err != nil {
+				t.Fatalf("test runtime: %v", err)
+			}
+			t.Cleanup(trt.Cancel)
+
+			txn := storage.NewTransactionOrDie(ctx, trt.Runtime.Store, storage.WriteParams)
+			if err := trt.Runtime.Store.UpsertPolicy(ctx, txn, "filters.rego", []byte(rego)); err != nil {
+				t.Fatalf("upsert policy: %v", err)
+			}
+			if err := trt.Runtime.Store.Commit(ctx, txn); err != nil {
+				t.Fatalf("store policy: %v", err)
+			}
+			chnd.SetRuntime(trt.Runtime)
+
+			req, err := http.NewRequest("POST", "/exp/compile", bytes.NewBuffer(jsonData))
+			if err != nil {
+				t.Fatalf("Failed to create request: %v", err)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", target)
+
+			rr := httptest.NewRecorder()
+			chnd.ServeHTTP(rr, req)
+
+			{
+				exp := http.StatusOK
+				if len(tc.errors) > 0 {
+					exp = http.StatusBadRequest
+				}
+				if act := rr.Code; exp != act {
+					t.Fatalf("status code: expected %d, got %d", exp, act)
+				}
+			}
+
+			{
+				exp := tc.errors
+				var resp struct {
+					Errors []Error `json:"errors"`
+				}
+				if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+					t.Fatalf("unmarshal response: %v", err)
+				}
+				act := resp.Errors
+
+				// NOTE(sr): If the test run gives a nil-pointer exception panic, pass this as third
+				// argument to `go_cmp.Diff` -- it's probably that Location is empty for the actual
+				// response.
+				// --> cmpopts.IgnoreFields(Error{}, "Location") <--
+				if diff := go_cmp.Diff(exp, act); diff != "" {
+					t.Errorf("response unexpected (-want, +got):\n%s", diff)
+				}
+			}
+
+			{
+				// compare results
+				var resp struct {
+					Result map[string]any `json:"result"`
+				}
+				if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+					t.Fatalf("unmarshal response: %v", err)
+				}
+
+				act := resp.Result
+				if diff := go_cmp.Diff(tc.result, act); diff != "" {
+					t.Errorf("response unexpected (-want, +got):\n%s", diff)
+				}
+			}
 		})
-	}
-}
-
-func runHandler(t *testing.T, rego, query string, input any, unknowns []string, errs []Error, result map[string]any) {
-	ctx := context.Background()
-	payload := types.CompileRequestV1{
-		Input:    &input,
-		Query:    query,
-		Unknowns: &unknowns,
-	}
-
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatalf("Failed to marshal JSON: %v", err)
-	}
-
-	l := test.New()
-	l.SetLevel(logging.Debug)
-	chnd := compile.Handler(l)
-	params := e2e.NewAPIServerTestParams()
-	params.Logger = l
-	trt, err := e2e.NewTestRuntime(params)
-	if err != nil {
-		t.Fatalf("test runtime: %v", err)
-	}
-	t.Cleanup(trt.Cancel)
-
-	txn := storage.NewTransactionOrDie(ctx, trt.Runtime.Store, storage.WriteParams)
-	if err := trt.Runtime.Store.UpsertPolicy(ctx, txn, "filters.rego", []byte(rego)); err != nil {
-		t.Fatalf("upsert policy: %v", err)
-	}
-	if err := trt.Runtime.Store.Commit(ctx, txn); err != nil {
-		t.Fatalf("store policy: %v", err)
-	}
-	chnd.SetRuntime(trt.Runtime)
-
-	req, err := http.NewRequest("POST", "/exp/compile", bytes.NewBuffer(jsonData))
-	if err != nil {
-		t.Fatalf("Failed to create request: %v", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", ucastAcceptHeader)
-
-	rr := httptest.NewRecorder()
-	chnd.ServeHTTP(rr, req)
-
-	{
-		exp := http.StatusOK
-		if len(errs) > 0 {
-			exp = http.StatusBadRequest
-		}
-		if act := rr.Code; exp != act {
-			t.Fatalf("status code: expected %d, got %d", exp, act)
-		}
-	}
-
-	{
-		exp := errs
-		var resp struct {
-			Errors []Error `json:"errors"`
-		}
-		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
-			t.Fatalf("unmarshal response: %v", err)
-		}
-		act := resp.Errors
-
-		// NOTE(sr): If the test run gives a nil-pointer exception panic, pass this as third
-		// argument to `go_cmp.Diff` -- it's probably that Location is empty for the actual
-		// response.
-		// --> cmpopts.IgnoreFields(Error{}, "Location") <--
-		if diff := go_cmp.Diff(exp, act); diff != "" {
-			t.Errorf("response unexpected (-want, +got):\n%s", diff)
-		}
-	}
-
-	{
-		// compare results
-		var resp struct {
-			Result map[string]any `json:"result"`
-		}
-		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
-			t.Fatalf("unmarshal response: %v", err)
-		}
-
-		act := resp.Result
-		if diff := go_cmp.Diff(result, act); diff != "" {
-			t.Errorf("response unexpected (-want, +got):\n%s", diff)
-		}
 	}
 }

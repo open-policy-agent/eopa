@@ -351,7 +351,7 @@ func TestCompileHappyPathE2E(t *testing.T) {
 		t.Run(string(dbType), func(t *testing.T) {
 			t.Parallel()
 			config, cleanup := setupDB(t, dbType)
-			defer t.Cleanup(cleanup)
+			t.Cleanup(cleanup)
 
 			for i, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
