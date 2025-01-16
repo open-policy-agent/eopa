@@ -86,6 +86,20 @@ func TestUCASTNodeAsSQL(t *testing.T) {
 			Dialect: "postgres",
 			Result:  "WHERE (name = E'bob' AND salary > 50000 AND (role = E'admin' OR salary >= 100000))",
 		},
+		{
+			Note:    "'in' expression",
+			Source:  UCASTNode{Type: "field", Field: "f", Op: "in", Value: LaunderType([]any{"foo", "bar"})},
+			Dialect: "postgres",
+			Result:  "WHERE f IN (E'foo', E'bar')",
+		},
+		{
+			Note: "'not' compound expression",
+			Source: UCASTNode{Type: "compound", Op: "not", Value: LaunderType(UCASTNode{
+				Type: "field", Op: "eq", Field: "name", Value: LaunderType("bob"),
+			})},
+			Dialect: "postgres",
+			Result:  "WHERE NOT name = E'bob'",
+		},
 	}
 
 	for _, tc := range tests {

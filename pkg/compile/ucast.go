@@ -146,7 +146,16 @@ func callToNode(e *ast.Expr, f ast.Ref, flip bool, opts *Opts) *ucast.UCASTNode 
 		op = cmp.Or(reversed[op], op) // optionally replace operator
 	}
 
-	return toFieldNode(op, f, e.Operand(i).Value, opts)
+	fn := toFieldNode(op, f, e.Operand(i).Value, opts)
+	if !e.Negated {
+		return fn
+	}
+	a := any(*fn)
+	return &ucast.UCASTNode{
+		Type:  "compound",
+		Op:    "not",
+		Value: &a,
+	}
 }
 
 func refFromCall(e *ast.Expr) (ast.Ref, bool) {

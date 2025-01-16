@@ -128,6 +128,14 @@ func TestPostPartialChecks(t *testing.T) {
 			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "ne", "value": "apple"},
 		},
 		{
+			note: "happy path, not+equal",
+			rego: `include if not input.fruits.name == "apple"`,
+			result: map[string]any{
+				"type":     "compound",
+				"operator": "not",
+				"value":    map[string]any{"type": "field", "field": "fruits.name", "operator": "eq", "value": "apple"}},
+		},
+		{
 			note:   "happy path, not-equal, reversed",
 			rego:   `include if "apple" != input.fruits.name`,
 			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "ne", "value": "apple"},
@@ -152,6 +160,18 @@ func TestPostPartialChecks(t *testing.T) {
 			rego:    `include if input.fruits.name in {"apple", "pear"}`,
 			dialect: "linq",
 			result:  map[string]any{"type": "field", "field": "fruits.name", "operator": "in", "value": []any{"apple", "pear"}},
+		},
+		{
+			note:    "invalid expression: not+equal (ucast/linq)",
+			dialect: "linq",
+			rego:    `include if not input.fruits.name == "apple"`,
+			errors: []Error{
+				{
+					Code:     "pe_fragment_error",
+					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
+					Message:  "\"not\" not permitted",
+				},
+			},
 		},
 		{
 			note:    "invalid builtin: internal.member_2 (ucast/minimal)",
@@ -512,7 +532,7 @@ other if input.fruits.price > 100
 					exp = http.StatusBadRequest
 				}
 				if act := rr.Code; exp != act {
-					t.Fatalf("status code: expected %d, got %d", exp, act)
+					t.Errorf("status code: expected %d, got %d", exp, act)
 				}
 			}
 

@@ -345,6 +345,16 @@ func TestCompileHappyPathE2E(t *testing.T) {
 				include if input.fruits.name == "banana"`,
 			expRows: []fruitRow{apple, banana},
 		},
+		{
+			name:    "not+internal.member_2",
+			policy:  `include if not input.fruits.name in {"apple", "cherry", "pineapple"}`,
+			expRows: []fruitRow{banana},
+		},
+		{
+			name:    "not+lt",
+			policy:  `include if not input.fruits.price < 12`,
+			expRows: []fruitRow{banana},
+		},
 	}
 
 	for _, dbType := range dbTypes {

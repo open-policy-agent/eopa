@@ -209,6 +209,19 @@ func (u *UCASTNode) AsSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 				return cond.Or(conds...), nil
 			}
 			return "", fmt.Errorf("value must be an array")
+		case "not":
+			if value == nil {
+				return "", fmt.Errorf("compound expression 'not' requires exactly one value")
+			}
+			node, ok := (*value).(UCASTNode)
+			if ok {
+				condition, err := node.AsSQL(cond, dialect)
+				if err != nil {
+					return "", err
+				}
+				return cond.Not(condition), nil
+			}
+			return "", fmt.Errorf("value must be a ucast node, got %T: %[1]v", *value)
 		}
 		return "", fmt.Errorf("unrecognized operator: %s", operator)
 	default:
@@ -275,6 +288,15 @@ func regoObjectToUCASTNode(obj *ast.Term, translations *ast.Term) (*UCASTNode, e
 				out.Value = launderType(x)
 			}
 			return out, nil
+		case ast.Object:
+			node, err := regoObjectToUCASTNode(value, translations)
+			if err != nil {
+				return nil, err
+			}
+			if node.Type != "" && node.Op != "" {
+				out.Value = launderType(*node)
+				return out, nil
+			}
 		}
 		valueIf, err := ast.JSON(value.Value)
 		if err != nil {

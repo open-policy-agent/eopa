@@ -64,9 +64,12 @@ var queryChecks = [...]func(*checker, *ast.Expr, []*ast.Module) *ast.Error{
 
 var partialPrefix = ast.MustParseRef("data.partial")
 
-func checkCall(_ *checker, e *ast.Expr, sup []*ast.Module) *ast.Error {
+func checkCall(c *checker, e *ast.Expr, sup []*ast.Module) *ast.Error {
 	switch {
 	case e.Negated:
+		if c.constraints.Supports("not") && e.IsCall() { // IsCall gives us comparisons etc, and rules out naked data refs
+			break // OK
+		}
 		return err(e.Loc(), "\"not\" not permitted")
 	case e.IsCall(): // OK
 	case e.IsEvery():

@@ -78,6 +78,17 @@ func NewConstraints(typ, variant string) *Constraint {
 	return &c
 }
 
+// Supports allows us to encode more fluent constraints, like support for "not"
+func (c *Constraint) Supports(x string) bool {
+	switch x {
+	case "not":
+		// only SQL and ucast/all support general `NOT (...)` negation
+		return c.Target != "UCAST" || c.Variant == "all"
+	}
+
+	return false
+}
+
 func (c *Constraint) String() string {
 	if c.Variant == "" {
 		return c.Target
