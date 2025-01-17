@@ -109,8 +109,8 @@ github.com/agnivade/levenshtein v1.2.0/go.mod h1:QVVI16kDrtSuwcpd0p1+xMC6Z/VfhtC
 github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
 github.com/alexbrainman/sspi v0.0.0-20231016080023-1a75b4708caa h1:LHTHcTQiSGT7VVbI0o4wBRNQIgn917usHWOd6VAffYI=
 github.com/alexbrainman/sspi v0.0.0-20231016080023-1a75b4708caa/go.mod h1:cEWa1LVoE5KvSD9ONXsZrj0z6KqySlCCNKHlLzbqAt4=
-github.com/anderseknert/roast v0.5.0 h1:2TJ3kX+OCeesArnK3ieRmMFf9nLrWYfVeIR0Ol9mon0=
-github.com/anderseknert/roast v0.5.0/go.mod h1:9RXWYE5aTdo1Ro1FZzf26shaPUMm2fH0ibKrY9DH224=
+github.com/anderseknert/roast v0.6.0 h1:/CltHr28Jv1piPw6599OOP4I7K1sHtfUCeCoNYCLvXA=
+github.com/anderseknert/roast v0.6.0/go.mod h1:nUxsa/73myaxBe4xSx1LgTIsR/bGbwlxCZ0ADyocpV4=
 github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be h1:9AeTilPcZAjCFIImctFaOjnTIavg87rW78vTPkQqLI8=
 github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be/go.mod h1:ySMOLuWl6zY27l47sB3qLNK6tF2fkHG55UZxx8oIVo4=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
@@ -911,8 +911,8 @@ github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/styrainc/regal v0.30.0 h1:6CcAi99ISrbEW5syQkvK/f0I6sTcUX5kZjmgKXmlSSw=
-github.com/styrainc/regal v0.30.0/go.mod h1:kJQCs9oWoITquyi1VMplCVgMfBtSUIr7CPCSS+mmEDs=
+github.com/styrainc/regal v0.30.2 h1:QbfUZO2PkN7D6iCoAnLqrjm+vOn7PXTwzcMtfRVWHVQ=
+github.com/styrainc/regal v0.30.2/go.mod h1:INQlgTXyMHQ//T2eSxTjE/r7ITxfy7netLudg+vCMtY=
 github.com/subosito/gotenv v1.6.0 h1:9NlTDc1FTs4qu0DDq7AEtTPNw6SVm7uBMsUCUjABIf8=
 github.com/subosito/gotenv v1.6.0/go.mod h1:Dk4QP5c2W3ibzajGcXpNraDfq2IrhjMIvMSWPKKo0FU=
 github.com/tchap/go-patricia/v2 v2.3.1 h1:6rQp39lgIYZ+MHmdEq4xzuk1t7OdC35z/xm0BGhTkes=
