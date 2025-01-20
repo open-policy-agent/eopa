@@ -748,8 +748,8 @@ github.com/redis/go-redis/v9 v9.7.0 h1:HhLSs+B6O021gwzl+locl0zEDnyNkxMtf/Z3NNBMa
 github.com/redis/go-redis/v9 v9.7.0/go.mod h1:f6zhXITC7JUJIlPEiBOTXxJgPLdZcA93GewI7inzyWw=
 github.com/redpanda-data/benthos/v4 v4.43.0 h1:DO/LsiBmbb/fykI8RtPhmFz1TsGKUWDnr/ImOTSiuHs=
 github.com/redpanda-data/benthos/v4 v4.43.0/go.mod h1:2dUKS2373CZQ5lzp1qm6XflDhlm1mbhMGXBVoEuZMFQ=
-github.com/redpanda-data/connect/v4 v4.45.0 h1:IqPjdT6gRYXgpvv2n5WAiXHjkzXLFETFHf8oYqVQ0dQ=
-github.com/redpanda-data/connect/v4 v4.45.0/go.mod h1:QlJsSAYDltaTMCluTO95tfs9fHSMOL3+hQRCnFRC7o8=
+github.com/redpanda-data/connect/v4 v4.45.1 h1:44bUWzJ4jY7ly+pnRsCs+8iTW++1HkF9LGP08Y5v7Rc=
+github.com/redpanda-data/connect/v4 v4.45.1/go.mod h1:QlJsSAYDltaTMCluTO95tfs9fHSMOL3+hQRCnFRC7o8=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94icq4NjY3clb7Lk8O1qJ8BdBEF8z0ibU0rE=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
 github.com/rickb777/period v1.0.7 h1:IERfp7bk5a1w8rZ6A98CLScQbRQX+p/O5x3HwytKBwI=
