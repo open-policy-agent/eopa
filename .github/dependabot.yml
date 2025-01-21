@@ -47,6 +47,14 @@ updates:
       franz-go:
         patterns:
           - "github.com/twmb/*"
+  - package-ecosystem: npm
+    directory: /e2e/prisma
+    schedule:
+      interval: daily
+    groups: # group all deps
+      dev:
+        patterns:
+          - "*"
   - package-ecosystem: github-actions
     directory: /
     schedule:

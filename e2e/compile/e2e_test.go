@@ -55,10 +55,10 @@ const (
 
 // TestConfig holds test configuration
 type TestConfig struct {
-	db      *sql.DB
-	dbName  string
-	dbType  DBType
-	baseURL string
+	db     *sql.DB
+	dbName string
+	dbType DBType
+	dbURL  string
 }
 
 // containerConfig holds database-specific container configuration
@@ -241,6 +241,7 @@ func setupDB(t *testing.T, dbType DBType) (*TestConfig, func()) {
 		db:     db,
 		dbName: "testdb",
 		dbType: dbType,
+		dbURL:  dbURL,
 	}, cleanup
 }
 
@@ -269,7 +270,6 @@ func TestCompileHappyPathE2E(t *testing.T) {
 	unknowns := []string{"input.fruits"}
 	var input any = map[string]any{"fav_colour": "yellow"}
 	query := `data.filters%d.include`
-	selectQuery := "SELECT * FROM fruit"
 
 	mapping := map[string]any{
 		"fruits": map[string]any{
@@ -281,10 +281,15 @@ func TestCompileHappyPathE2E(t *testing.T) {
 	banana := fruitRow{ID: 2, Name: "banana", Colour: "yellow", Price: 20}
 	cherry := fruitRow{ID: 3, Name: "cherry", Colour: "red", Price: 11}
 
+	type extra struct {
+		prisma bool
+	}
+
 	tests := []struct {
 		name    string
 		policy  string
 		expRows []fruitRow
+		prisma  bool
 	}{
 		{
 			name:    "no conditions",
@@ -295,11 +300,13 @@ func TestCompileHappyPathE2E(t *testing.T) {
 			name:    "simple equality",
 			policy:  `include if input.fruits.colour == input.fav_colour`,
 			expRows: []fruitRow{banana},
+			prisma:  true,
 		},
 		{
 			name:    "simple comparison",
 			policy:  `include if input.fruits.price < 11`,
 			expRows: []fruitRow{apple},
+			prisma:  true,
 		},
 		{
 			name:    "simple startswith",
@@ -338,12 +345,14 @@ func TestCompileHappyPathE2E(t *testing.T) {
 				input.fruits.name != "banana"
 				}`,
 			expRows: []fruitRow{cherry},
+			prisma:  true,
 		},
 		{
 			name: "disjunct query, equality",
 			policy: `include if input.fruits.name == "apple"
 				include if input.fruits.name == "banana"`,
 			expRows: []fruitRow{apple, banana},
+			prisma:  true,
 		},
 		{
 			name:    "not+internal.member_2",
@@ -364,94 +373,181 @@ func TestCompileHappyPathE2E(t *testing.T) {
 			t.Cleanup(cleanup)
 
 			for i, tt := range tests {
-				t.Run(tt.name, func(t *testing.T) {
-					t.Parallel()
-					{
-						// first, we override the policy with the current test case
-						policy := fmt.Sprintf("package filters%d\n%s", i, tt.policy)
-						req, err := http.NewRequest("PUT", fmt.Sprintf("%s/v1/policies/policy%d.rego", eopaURL, i), strings.NewReader(policy))
-						if err != nil {
-							t.Fatalf("failed to create request: %v", err)
-						}
-						if _, err := http.DefaultClient.Do(req); err != nil {
-							t.Fatalf("post policy: %v", err)
-						}
-					}
+				// first, we override the policy with the current test case
+				policy := fmt.Sprintf("package filters%d\n%s", i, tt.policy)
+				req, err := http.NewRequest("PUT", fmt.Sprintf("%s/v1/policies/policy%d.rego", eopaURL, i), strings.NewReader(policy))
+				if err != nil {
+					t.Fatalf("failed to create request: %v", err)
+				}
+				if _, err := http.DefaultClient.Do(req); err != nil {
+					t.Fatalf("post policy: %v", err)
+				}
 
-					var respPayload map[string]any
-					{
-						// second, query the compile API
-						payload := map[string]any{
-							"input":    input,
-							"query":    fmt.Sprintf(query, i),
-							"unknowns": unknowns,
-							"options": map[string]any{
-								"dialect":                string(dbType),
-								"targetSQLTableMappings": mapping,
-							},
-						}
+				// second, query the compile API
+				payload := map[string]any{
+					"input":    input,
+					"query":    fmt.Sprintf(query, i),
+					"unknowns": unknowns,
+					"options": map[string]any{
+						"dialect":                string(dbType),
+						"targetSQLTableMappings": mapping,
+					},
+				}
 
-						queryBytes, err := json.Marshal(payload)
-						if err != nil {
-							t.Fatalf("Failed to marshal JSON: %v", err)
-						}
+				if tt.prisma && dbType == Postgres {
+					t.Run("prisma/"+tt.name, func(t *testing.T) { // also run via our prisma contraption
+						t.Parallel()
+						// get the UCAST IR, process with @styra/ucast-prisma, and run a findMany query
+						// with that against the DB, return rows
+						rowsData := getUCASTAndRunPrisma(t, payload, config, eopaURL)
 
-						req, err := http.NewRequest("POST",
-							fmt.Sprintf("%s/exp/compile", eopaURL),
-							strings.NewReader(string(queryBytes)))
-						if err != nil {
-							t.Fatalf("failed to create request: %v", err)
-						}
-						req.Header.Set("Content-Type", "application/json")
-						req.Header.Set("Accept", "application/vnd.styra.sql+json")
-
-						resp, err := http.DefaultClient.Do(req)
-						if err != nil {
-							t.Fatalf("failed to execute request: %v", err)
-						}
-						defer resp.Body.Close()
-
-						if status := resp.StatusCode; status != http.StatusOK {
-							t.Errorf("expected status %v, got %v", http.StatusOK, status)
-						}
-
-						if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
-							t.Fatalf("failed to decode response: %v", err)
-						}
-					}
-
-					t.Log(respPayload)
-					whereClauses := respPayload["result"].(string)
-
-					var rowsData []fruitRow
-					{
-						// finally, query the database with the resulting WHERE clauses
-						stmt := selectQuery + " " + whereClauses
-						rows, err := config.db.Query(stmt)
-						if err != nil {
-							t.Fatalf("%s: error: %v", stmt, err)
-						}
-						// collect rows into rowsData
-						for rows.Next() {
-							var fruit fruitRow
-							// scan row into fruit, ignoring created_at
-							if err := rows.Scan(&fruit.ID, &fruit.Name, &fruit.Colour, &fruit.Price); err != nil {
-								t.Fatalf("failed to scan row: %v", err)
-							}
-							rowsData = append(rowsData, fruit)
-						}
-					}
-
-					{
-						// finally, compare with expected!
 						if diff := cmp.Diff(tt.expRows, rowsData); diff != "" {
 							t.Errorf("unexpected result (-want +got):\n%s", diff)
 						}
+					})
+				}
+				t.Run("db/"+tt.name, func(t *testing.T) {
+					t.Parallel()
+					// get the SQL where clauses, and run the concatenated query against db,
+					// return rows
+					rowsData := getSQLAndRunQuery(t, payload, config, eopaURL)
+
+					// finally, compare with expected!
+					if diff := cmp.Diff(tt.expRows, rowsData); diff != "" {
+						t.Errorf("unexpected result (-want +got):\n%s", diff)
 					}
 				})
 			}
 		})
 	}
+}
+
+func getSQLAndRunQuery(t *testing.T, payload map[string]any, config *TestConfig, eopaURL string) []fruitRow {
+	t.Helper()
+	queryBytes, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("Failed to marshal JSON: %v", err)
+	}
+
+	req, err := http.NewRequest("POST",
+		fmt.Sprintf("%s/exp/compile", eopaURL),
+		strings.NewReader(string(queryBytes)))
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/vnd.styra.sql+json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("failed to execute request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if status := resp.StatusCode; status != http.StatusOK {
+		t.Errorf("expected status %v, got %v", http.StatusOK, status)
+	}
+
+	var respPayload map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	t.Log(respPayload)
+	whereClauses := respPayload["result"].(string)
+
+	var rowsData []fruitRow
+
+	// finally, query the database with the resulting WHERE clauses
+	stmt := "SELECT * FROM fruit " + whereClauses
+	rows, err := config.db.Query(stmt)
+	if err != nil {
+		t.Fatalf("%s: error: %v", stmt, err)
+	}
+	// collect rows into rowsData
+	for rows.Next() {
+		var fruit fruitRow
+		// scan row into fruit, ignoring created_at
+		if err := rows.Scan(&fruit.ID, &fruit.Name, &fruit.Colour, &fruit.Price); err != nil {
+			t.Fatalf("failed to scan row: %v", err)
+		}
+		rowsData = append(rowsData, fruit)
+	}
+	return rowsData
+}
+
+func getUCASTAndRunPrisma(t *testing.T, payload map[string]any, config *TestConfig, eopaURL string) []fruitRow {
+	t.Helper()
+	queryBytes, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("Failed to marshal JSON: %v", err)
+	}
+
+	// Query EOPA for UCAST IR
+	req, err := http.NewRequest("POST",
+		fmt.Sprintf("%s/exp/compile", eopaURL),
+		strings.NewReader(string(queryBytes)))
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/vnd.styra.ucast+json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("failed to execute request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if status := resp.StatusCode; status != http.StatusOK {
+		t.Errorf("expected status %v, got %v", http.StatusOK, status)
+	}
+
+	var respPayload map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if _, ok := respPayload["result"]; !ok {
+		t.Fatalf("unexpected empty response: %v", respPayload)
+	}
+	t.Log("ucast IR:", respPayload["result"])
+
+	// Execute prisma script with UCAST IR as input
+	cmd := exec.Command("node", "index.js")
+	cmd.Dir = "../prisma"
+	cmd.Env = append(cmd.Env, "DATABASE_URL="+config.dbURL)
+
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatalf("failed to get stdin pipe: %v", err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("failed to start prisma script: %v", err)
+	}
+
+	// Write UCAST IR to stdin
+	if err := json.NewEncoder(stdin).Encode(respPayload["result"]); err != nil {
+		t.Fatalf("failed to write to stdin: %v", err)
+	}
+	stdin.Close()
+
+	if err := cmd.Wait(); err != nil {
+		t.Fatalf("prisma script failed: %v\nstderr: %s", err, stderr.String())
+	}
+	t.Log("prisma query:", stderr.String())
+
+	// Parse the output into []fruitRow
+	var rowsData []fruitRow
+	if err := json.NewDecoder(&stdout).Decode(&rowsData); err != nil {
+		t.Fatalf("failed to decode prisma output: %v\noutput was: %s", err, stdout.String())
+	}
+
+	return rowsData
 }
 
 func loadEnterpriseOPA(t *testing.T, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {

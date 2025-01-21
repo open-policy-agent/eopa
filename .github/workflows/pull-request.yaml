@@ -199,6 +199,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: binary
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Enterprise OPA image and binary, syncmock
         id: enterprise-opa
         run: |
@@ -207,6 +210,9 @@ jobs:
           echo "binary=$(pwd)/eopa" >> $GITHUB_OUTPUT
           pwd >> $GITHUB_PATH
           chmod +x eopa
+      - name: Prep e2e prisma tests
+        run: npm ci
+        working-directory: e2e/prisma
       - run: make e2e
         env:
           BINARY: ${{ steps.enterprise-opa.outputs.binary }}
@@ -451,7 +457,7 @@ jobs:
           name: binary
       - uses: open-policy-agent/setup-opa@v2 # version doesn't matter, latest is fine
         with:
-          version: '1.0.0'
+          version: "1.0.0"
       - name: build bundle with OPA
         run: |
           chmod +x ./eopa
