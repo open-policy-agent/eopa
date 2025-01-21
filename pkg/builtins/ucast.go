@@ -213,9 +213,12 @@ func (u *UCASTNode) AsSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 			if value == nil {
 				return "", fmt.Errorf("compound expression 'not' requires exactly one value")
 			}
-			node, ok := (*value).(UCASTNode)
+			node, ok := (*value).([]UCASTNode)
 			if ok {
-				condition, err := node.AsSQL(cond, dialect)
+				if len(node) != 1 {
+					return "", fmt.Errorf("compound expression 'not' requires exactly one value")
+				}
+				condition, err := node[0].AsSQL(cond, dialect)
 				if err != nil {
 					return "", err
 				}

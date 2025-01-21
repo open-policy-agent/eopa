@@ -62,7 +62,11 @@ func NewConstraints(typ, variant string) *Constraint {
 		c.Builtins = sqlBuiltins
 	case "ucast":
 		switch strings.ToLower(variant) {
+		case "prisma":
+			c.Variant = "prisma"
+			c.Builtins = prismaBuiltins
 		case "all":
+			c.Variant = "all"
 			c.Builtins = allBuiltins
 		case "linq":
 			c.Variant = "LINQ" // normalize spelling
@@ -82,8 +86,8 @@ func NewConstraints(typ, variant string) *Constraint {
 func (c *Constraint) Supports(x string) bool {
 	switch x {
 	case "not":
-		// only SQL and ucast/all support general `NOT (...)` negation
-		return c.Target != "UCAST" || c.Variant == "all"
+		// only SQL and ucast/all and ucast/prisma support general `NOT (...)` negation
+		return c.Target != "UCAST" || c.Variant == "prisma" || c.Variant == "all"
 	}
 
 	return false
@@ -109,8 +113,8 @@ var (
 		"gt",
 		"gte",
 	)
-
-	allBuiltins = ucastBuiltins.Clone().Add(
+	prismaBuiltins = allBuiltins
+	allBuiltins    = ucastBuiltins.Clone().Add(
 		"internal.member_2",
 		// "nin", // TODO: deal with NOT IN
 		"startswith",

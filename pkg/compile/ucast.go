@@ -150,7 +150,10 @@ func callToNode(e *ast.Expr, f ast.Ref, flip bool, opts *Opts) *ucast.UCASTNode 
 	if !e.Negated {
 		return fn
 	}
-	a := any(*fn)
+
+	value := make([]ucast.UCASTNode, 1)
+	value[0] = *fn
+	a := any(value)
 	return &ucast.UCASTNode{
 		Type:  "compound",
 		Op:    "not",

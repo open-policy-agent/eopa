@@ -312,11 +312,13 @@ func TestCompileHappyPathE2E(t *testing.T) {
 			name:    "simple startswith",
 			policy:  `include if startswith(input.fruits.name, "app")`,
 			expRows: []fruitRow{apple},
+			prisma:  true,
 		},
 		{
 			name:    "simple contains",
 			policy:  `include if contains(input.fruits.name, "a")`,
 			expRows: []fruitRow{apple, banana},
+			prisma:  true,
 		},
 		{
 			name:    "startswith + escaping '_'",
@@ -329,14 +331,16 @@ func TestCompileHappyPathE2E(t *testing.T) {
 			expRows: nil,
 		},
 		{
-			name:    "endswith",
+			name:    "simple endswith",
 			policy:  `include if endswith(input.fruits.name, "le")`,
 			expRows: []fruitRow{apple},
+			prisma:  true,
 		},
 		{
 			name:    "internal.member_2",
 			policy:  `include if input.fruits.name in {"apple", "cherry", "pineapple"}`,
 			expRows: []fruitRow{apple, cherry},
+			prisma:  true,
 		},
 		{
 			name: "conjunct query, inequality",
@@ -358,11 +362,13 @@ func TestCompileHappyPathE2E(t *testing.T) {
 			name:    "not+internal.member_2",
 			policy:  `include if not input.fruits.name in {"apple", "cherry", "pineapple"}`,
 			expRows: []fruitRow{banana},
+			prisma:  true,
 		},
 		{
 			name:    "not+lt",
 			policy:  `include if not input.fruits.price < 12`,
 			expRows: []fruitRow{banana},
+			prisma:  true,
 		},
 	}
 
@@ -383,20 +389,20 @@ func TestCompileHappyPathE2E(t *testing.T) {
 					t.Fatalf("post policy: %v", err)
 				}
 
-				// second, query the compile API
-				payload := map[string]any{
-					"input":    input,
-					"query":    fmt.Sprintf(query, i),
-					"unknowns": unknowns,
-					"options": map[string]any{
-						"dialect":                string(dbType),
-						"targetSQLTableMappings": mapping,
-					},
-				}
-
 				if tt.prisma && dbType == Postgres {
 					t.Run("prisma/"+tt.name, func(t *testing.T) { // also run via our prisma contraption
 						t.Parallel()
+
+						// second, query the compile API
+						payload := map[string]any{
+							"input":    input,
+							"query":    fmt.Sprintf(query, i),
+							"unknowns": unknowns,
+							"options": map[string]any{
+								"dialect":                "prisma",
+								"targetSQLTableMappings": mapping,
+							},
+						}
 						// get the UCAST IR, process with @styra/ucast-prisma, and run a findMany query
 						// with that against the DB, return rows
 						rowsData := getUCASTAndRunPrisma(t, payload, config, eopaURL)
@@ -408,6 +414,18 @@ func TestCompileHappyPathE2E(t *testing.T) {
 				}
 				t.Run("db/"+tt.name, func(t *testing.T) {
 					t.Parallel()
+
+					// second, query the compile API
+					payload := map[string]any{
+						"input":    input,
+						"query":    fmt.Sprintf(query, i),
+						"unknowns": unknowns,
+						"options": map[string]any{
+							"dialect":                string(dbType),
+							"targetSQLTableMappings": mapping,
+						},
+					}
+
 					// get the SQL where clauses, and run the concatenated query against db,
 					// return rows
 					rowsData := getSQLAndRunQuery(t, payload, config, eopaURL)

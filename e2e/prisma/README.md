@@ -18,6 +18,7 @@ In `package.json`, replace the line with "@styra/ucast-prisma" with the followin
 "@styra/ucast-prisma": "file:../../../opa-typescript/packages/ucast-prisma"
 ```
 
+Also run `npm run build` in "opa-typescript/packages/ucast-prisma" to make sure the changes are built.
 Run `npm i` in `e2e/prisma`, and then run the E2E tests for the prisma-enabled subset:
 
 ```

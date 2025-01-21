@@ -133,7 +133,9 @@ func TestPostPartialChecks(t *testing.T) {
 			result: map[string]any{
 				"type":     "compound",
 				"operator": "not",
-				"value":    map[string]any{"type": "field", "field": "fruits.name", "operator": "eq", "value": "apple"}},
+				"value": []any{
+					map[string]any{"type": "field", "field": "fruits.name", "operator": "eq", "value": "apple"}},
+			},
 		},
 		{
 			note:   "happy path, not-equal, reversed",

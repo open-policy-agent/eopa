@@ -94,8 +94,8 @@ func TestUCASTNodeAsSQL(t *testing.T) {
 		},
 		{
 			Note: "'not' compound expression",
-			Source: UCASTNode{Type: "compound", Op: "not", Value: LaunderType(UCASTNode{
-				Type: "field", Op: "eq", Field: "name", Value: LaunderType("bob"),
+			Source: UCASTNode{Type: "compound", Op: "not", Value: LaunderType([]UCASTNode{
+				{Type: "field", Op: "eq", Field: "name", Value: LaunderType("bob")},
 			})},
 			Dialect: "postgres",
 			Result:  "WHERE NOT name = E'bob'",
