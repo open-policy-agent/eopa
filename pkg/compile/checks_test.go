@@ -42,15 +42,17 @@ type Error struct {
 func TestPostPartialChecks(t *testing.T) {
 	const defaultQuery = "data.filters.include"
 	defaultInput := map[string]any{
-		"a": true,
-		"b": false,
+		"a":      true,
+		"b":      false,
+		"colour": "orange",
 	}
 	defaultUnknowns := []string{"input.fruits", "input.baskets"}
 	for _, tc := range []struct {
 		note            string
 		target, dialect string
 		rego            string
-		unknowns        []string
+		regoVerbatim    bool
+		omitUnknowns    bool
 		input           any
 		query           string
 		errors          []Error
@@ -59,12 +61,43 @@ func TestPostPartialChecks(t *testing.T) {
 	}{
 		{
 			note:   "happy path",
-			rego:   `include if input.fruits.colour == "orange"`,
+			rego:   `include if input.fruits.colour == input.colour`,
+			result: map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
+		},
+		{
+			note:         "happy path, reading unknowns from metadata (document scope)",
+			omitUnknowns: true,
+			rego: `
+# METADATA
+# scope: document
+# custom:
+#  unknowns:
+#   - input.fruits
+include if input.fruits.colour == input.colour
+
+_use_metadata := rego.metadata.chain()`,
+			result: map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
+		},
+		{
+			note:         "happy path, reading unknowns from metadata (package scope)",
+			omitUnknowns: true,
+			regoVerbatim: true,
+			rego: `
+# METADATA
+# scope: package
+# custom:
+#  unknowns:
+#   - input.fruits
+package filters
+
+include if input.fruits.colour == input.colour
+
+_use_metadata := rego.metadata.chain()`,
 			result: map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
 		},
 		{
 			note: "happy path, compound 'and'",
-			rego: `include if { input.fruits.colour == "orange"; input.fruits.name == "clementine" }`,
+			rego: `include if { input.fruits.colour == input.colour; input.fruits.name == "clementine" }`,
 			result: map[string]any{
 				"type":     "compound",
 				"operator": "and",
@@ -76,25 +109,26 @@ func TestPostPartialChecks(t *testing.T) {
 		},
 		{
 			note: "happy path, compound 'or'",
-			rego: `include if input.fruits.colour == "orange"
+			rego: `include if input.fruits.colour == input.colour
 				include if input.fruits.name == "clementine"`,
 			result: map[string]any{
 				"type":     "compound",
 				"operator": "or",
 				"value": []any{
-					map[string]any{"type": "field", "field": "fruits.name", "operator": "eq", "value": "clementine"},
 					map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
+					map[string]any{"type": "field", "field": "fruits.name", "operator": "eq", "value": "clementine"},
 				},
 			},
 		},
 		{
 			note: "happy path, compound mixed",
-			rego: `include if input.fruits.colour == "orange"
+			rego: `include if input.fruits.colour == input.colour
 				include if { input.fruits.name == "clementine"; input.fruits.price > 10 }`,
 			result: map[string]any{
 				"type":     "compound",
 				"operator": "or",
 				"value": []any{
+					map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
 					map[string]any{
 						"type":     "compound",
 						"operator": "and",
@@ -103,13 +137,12 @@ func TestPostPartialChecks(t *testing.T) {
 							map[string]any{"type": "field", "field": "fruits.price", "operator": "gt", "value": float64(10)},
 						},
 					},
-					map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
 				},
 			},
 		},
 		{
 			note:   "happy path, reversed",
-			rego:   `include if "orange" == input.fruits.colour`,
+			rego:   `include if input.colour == input.fruits.colour`,
 			result: map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
 		},
 		{
@@ -213,7 +246,7 @@ func TestPostPartialChecks(t *testing.T) {
 		},
 		{
 			note: "invalid builtin",
-			rego: `include if object.get(input, ["fruits", "colour"], "grey") == "orange"`,
+			rego: `include if object.get(input, ["fruits", "colour"], "grey") == input.colour`,
 			errors: []Error{
 				{
 					Code:     "pe_fragment_error",
@@ -224,7 +257,7 @@ func TestPostPartialChecks(t *testing.T) {
 		},
 		{
 			note: "invalid use of 'k, v in...'",
-			rego: `include if "k", input.fruits.colour in {"k": "grey", "k2": "orange"}`,
+			rego: `include if "k", input.fruits.colour in {"k": "grey", "k2": input.colour}`,
 			errors: []Error{
 				{
 					Code:     "pe_fragment_error",
@@ -467,17 +500,46 @@ other if input.fruits.price > 100
 				},
 			},
 		},
+		{
+			note:         "bad metadata unknowns",
+			omitUnknowns: true,
+			rego: `
+# METADATA
+# custom:
+#  unknowns:
+#   - inpu.fruits
+#   - data.whatever
+#   - future.keywrds
+include if input.fruits.colour == input.colour
+
+_use_metadata := rego.metadata.chain()`,
+			errors: []Error{
+				{
+					Code:     "invalid_unknown",
+					Location: ast.NewLocation(nil, "filters.rego", 4, 1),
+					Message:  "unknowns must be prefixed with `input` or `data`: inpu.fruits",
+				},
+				{
+					Code:     "invalid_unknown",
+					Location: ast.NewLocation(nil, "filters.rego", 4, 1),
+					Message:  "unknowns must be prefixed with `input` or `data`: future.keywrds",
+				},
+			},
+		},
 	} {
 		t.Run(tc.note, func(t *testing.T) {
 			ctx := context.Background()
 			if tc.skip != "" {
 				t.Skip(tc.skip)
 			}
-			unknowns := tc.unknowns
-			if len(unknowns) == 0 {
+			var unknowns []string
+			if !tc.omitUnknowns {
 				unknowns = defaultUnknowns
 			}
 			rego := "package filters\nimport rego.v1\n" + tc.rego
+			if tc.regoVerbatim {
+				rego = tc.rego
+			}
 			query := cmp.Or(tc.query, defaultQuery)
 			input := cmp.Or(tc.input, any(defaultInput))
 			target := cmp.Or(tc.target, ucastAcceptHeader)

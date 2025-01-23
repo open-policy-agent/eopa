@@ -17,6 +17,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/util"
 )
 
+const invalidUnknownCode = "invalid_unknown"
+
 type CompileRequestV1 struct {
 	Input    *interface{} `json:"input"`
 	Query    string       `json:"query"`
@@ -62,7 +64,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	request, reqErr := readInputCompilePostV1(body)
+	request, reqErr := readInputCompilePostV1(body, h.rt.Manager.ParserOptions())
 	if reqErr != nil {
 		writer.Error(w, http.StatusBadRequest, reqErr)
 		return
@@ -84,13 +86,24 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		buf = topdown.NewBufferTracer()
 	}
 
+	comp := h.rt.Manager.GetCompiler()
+	unknowns := request.Unknowns
+	if len(unknowns) == 0 { // Read unknowns from metadata
+		parsedUnknowns, errs := parseUnknownsFromAnnotations(comp)
+		if errs != nil {
+			writer.Error(w, http.StatusBadRequest,
+				types.NewErrorV1(types.CodeEvaluation, types.MsgEvaluationError).
+					WithASTErrors(errs))
+			return
+		}
+		unknowns = parsedUnknowns
+	}
+
 	eval := rego.New(
-		rego.Compiler(h.rt.Manager.GetCompiler()),
+		rego.Compiler(comp),
 		rego.Store(h.rt.Store),
 		rego.Transaction(txn),
 		rego.ParsedQuery(request.Query),
-		rego.ParsedInput(request.Input),
-		rego.ParsedUnknowns(request.Unknowns),
 		rego.DisableInlining(request.Options.DisableInlining),
 		rego.QueryTracer(buf),
 		rego.Instrument(includeInstrumentation),
@@ -102,7 +115,22 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rego.PrintHook(h.rt.Manager.PrintHook()),
 	)
 
-	pq, err := eval.Partial(ctx)
+	prep, err := eval.PrepareForPartial(ctx)
+	if err != nil {
+		switch err := err.(type) {
+		case ast.Errors:
+			writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, types.MsgCompileModuleError).WithASTErrors(err))
+		default:
+			writer.ErrorAuto(w, err)
+		}
+		return
+	}
+
+	pq, err := prep.Partial(ctx,
+		rego.EvalParsedInput(request.Input),
+		rego.EvalParsedUnknowns(unknowns),
+		rego.EvalPrintHook(h.rt.Manager.PrintHook()),
+	)
 	if err != nil {
 		switch err := err.(type) {
 		case ast.Errors:
@@ -213,7 +241,7 @@ type compileRequestOptions struct {
 	Mappings        map[string]any
 }
 
-func readInputCompilePostV1(reqBytes []byte) (*compileRequest, *types.ErrorV1) {
+func readInputCompilePostV1(reqBytes []byte, queryParserOptions ast.ParserOptions) (*compileRequest, *types.ErrorV1) {
 	var request CompileRequestV1
 
 	err := util.NewJSONDecoder(bytes.NewBuffer(reqBytes)).Decode(&request)
@@ -221,7 +249,7 @@ func readInputCompilePostV1(reqBytes []byte) (*compileRequest, *types.ErrorV1) {
 		return nil, types.NewErrorV1(types.CodeInvalidParameter, "error(s) occurred while decoding request: %v", err.Error())
 	}
 
-	query, err := ast.ParseBody(request.Query)
+	query, err := ast.ParseBodyWithOpts(request.Query, queryParserOptions)
 	if err != nil {
 		switch err := err.(type) {
 		case ast.Errors:
@@ -264,4 +292,39 @@ func readInputCompilePostV1(reqBytes []byte) (*compileRequest, *types.ErrorV1) {
 	}
 
 	return result, nil
+}
+
+func parseUnknownsFromAnnotations(comp *ast.Compiler) ([]*ast.Term, []*ast.Error) {
+	var unknowns []*ast.Term
+	var errs []*ast.Error
+
+	if as := comp.GetAnnotationSet(); as != nil {
+		for _, ar := range as.Flatten() {
+			ann := ar.Annotations
+			unk, ok := ann.Custom["unknowns"]
+			if !ok {
+				continue
+			}
+			unkArray, ok := unk.([]any)
+			if !ok {
+				continue
+			}
+			for _, u := range unkArray {
+				s, ok := u.(string)
+				if !ok {
+					continue
+				}
+				ref, err := ast.ParseRef(s)
+				if err != nil {
+					errs = append(errs, ast.NewError(invalidUnknownCode, ann.Loc(), "unknowns must be valid refs: %s", s))
+				} else if ref.HasPrefix(ast.DefaultRootRef) || ref.HasPrefix(ast.InputRootRef) {
+					unknowns = append(unknowns, ast.NewTerm(ref))
+				} else {
+					errs = append(errs, ast.NewError(invalidUnknownCode, ann.Loc(), "unknowns must be prefixed with `input` or `data`: %v", ref))
+				}
+			}
+		}
+	}
+
+	return unknowns, errs
 }
