@@ -396,7 +396,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	if err != nil {
 		return nil, err
 	}
-	compileHndlr.SetRuntime(rt)
+	compileHndlr.SetStore(rt.Store)
+	compileHndlr.SetManager(rt.Manager)
 
 	plugins.InitBundles(nil)(rt.Manager) // To release memory holding the init bundles.
 

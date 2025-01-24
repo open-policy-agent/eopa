@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"net/http"
 
-	"github.com/huandu/go-sqlbuilder"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/plugins"
 	"github.com/open-policy-agent/opa/v1/rego"
-	"github.com/open-policy-agent/opa/v1/runtime"
 	"github.com/open-policy-agent/opa/v1/server/types"
 	"github.com/open-policy-agent/opa/v1/server/writer"
 	"github.com/open-policy-agent/opa/v1/storage"
@@ -32,7 +31,8 @@ type CompileRequestV1 struct {
 
 type CompileHandler interface {
 	http.Handler
-	SetRuntime(*runtime.Runtime)
+	SetStore(storage.Store)
+	SetManager(*plugins.Manager)
 }
 
 func Handler(l logging.Logger) CompileHandler {
@@ -41,11 +41,16 @@ func Handler(l logging.Logger) CompileHandler {
 
 type hndl struct {
 	logging.Logger
-	rt *runtime.Runtime
+	store   storage.Store
+	manager *plugins.Manager
 }
 
-func (h *hndl) SetRuntime(rt *runtime.Runtime) {
-	h.rt = rt
+func (h *hndl) SetStore(s storage.Store) {
+	h.store = s
+}
+
+func (h *hndl) SetManager(m *plugins.Manager) {
+	h.manager = m
 }
 
 func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +69,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	request, reqErr := readInputCompilePostV1(body, h.rt.Manager.ParserOptions())
+	request, reqErr := readInputCompilePostV1(body, h.manager.ParserOptions())
 	if reqErr != nil {
 		writer.Error(w, http.StatusBadRequest, reqErr)
 		return
@@ -73,20 +78,20 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m.Timer(metrics.RegoQueryParse).Stop()
 
 	c := storage.NewContext().WithMetrics(m)
-	txn, err := h.rt.Store.NewTransaction(ctx, storage.TransactionParams{Context: c})
+	txn, err := h.store.NewTransaction(ctx, storage.TransactionParams{Context: c})
 	if err != nil {
 		writer.ErrorAuto(w, err)
 		return
 	}
 
-	defer h.rt.Store.Abort(ctx, txn)
+	defer h.store.Abort(ctx, txn)
 
 	var buf *topdown.BufferTracer
 	if explainMode != types.ExplainOffV1 {
 		buf = topdown.NewBufferTracer()
 	}
 
-	comp := h.rt.Manager.GetCompiler()
+	comp := h.manager.GetCompiler()
 	unknowns := request.Unknowns
 	if len(unknowns) == 0 { // Read unknowns from metadata
 		parsedUnknowns, errs := parseUnknownsFromAnnotations(comp)
@@ -101,7 +106,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	eval := rego.New(
 		rego.Compiler(comp),
-		rego.Store(h.rt.Store),
+		rego.Store(h.store),
 		rego.Transaction(txn),
 		rego.ParsedQuery(request.Query),
 		rego.DisableInlining(request.Options.DisableInlining),
@@ -112,7 +117,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// rego.UnsafeBuiltins(unsafeBuiltinsMap),
 		// rego.InterQueryBuiltinCache(s.interQueryBuiltinCache),
 		// rego.InterQueryBuiltinValueCache(s.interQueryBuiltinValueCache),
-		rego.PrintHook(h.rt.Manager.PrintHook()),
+		rego.PrintHook(h.manager.PrintHook()),
 	)
 
 	prep, err := eval.PrepareForPartial(ctx)
@@ -129,7 +134,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	pq, err := prep.Partial(ctx,
 		rego.EvalParsedInput(request.Input),
 		rego.EvalParsedUnknowns(unknowns),
-		rego.EvalPrintHook(h.rt.Manager.PrintHook()),
+		rego.EvalPrintHook(h.manager.PrintHook()),
 	)
 	if err != nil {
 		switch err := err.(type) {
@@ -195,33 +200,15 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				result.Result = &s
 				break
 			}
-			// TODO(sr): Hide away the sqlbuilder calls
-			var fl sqlbuilder.Flavor
 			switch request.Options.Dialect {
-			case "mysql":
-				fl = sqlbuilder.MySQL
-			case "sqlite":
-				fl = sqlbuilder.SQLite
-			case "postgres":
-				fl = sqlbuilder.PostgreSQL
-			case "sqlserver":
-				fl = sqlbuilder.SQLServer
+			case "mysql", "sqlite", "postgres", "sqlserver": // OK
 			default:
 				writer.Error(w, http.StatusBadRequest,
 					types.NewErrorV1(types.CodeInvalidParameter, "unsupported dialect: %s", request.Options.Dialect))
 				return
 			}
 
-			cond := sqlbuilder.NewCond()
-			where := sqlbuilder.NewWhereClause()
-			clauses, err := ucast.AsSQL(cond, request.Options.Dialect)
-			if err != nil {
-				writer.ErrorAuto(w, err)
-				return
-			}
-			where.AddWhereExpr(cond.Args, clauses)
-			s, args := where.BuildWithFlavor(fl)
-			sql, err := fl.Interpolate(s, args)
+			sql, err := ucast.AsSQL(request.Options.Dialect)
 			if err != nil {
 				writer.ErrorAuto(w, err)
 				return

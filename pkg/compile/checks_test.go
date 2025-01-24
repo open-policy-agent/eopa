@@ -59,7 +59,8 @@ func TestPostPartialChecks(t *testing.T) {
 	t.Cleanup(trt.Cancel)
 
 	chnd := compile.Handler(l)
-	chnd.SetRuntime(trt.Runtime)
+	chnd.SetStore(trt.Runtime.Store)
+	chnd.SetManager(trt.Runtime.Manager)
 
 	for _, tc := range []struct {
 		note            string

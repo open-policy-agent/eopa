@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	ucast "github.com/styrainc/enterprise-opa-private/pkg/builtins"
+	"github.com/styrainc/enterprise-opa-private/pkg/ucast"
 )
 
 type Opts struct {
