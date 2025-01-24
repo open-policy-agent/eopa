@@ -107,7 +107,7 @@ require (
 	golang.org/x/sync v0.10.0
 	golang.org/x/term v0.28.0
 	google.golang.org/api v0.218.0
-	google.golang.org/grpc v1.69.4
+	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.3
 	gopkg.in/h2non/gock.v1 v1.1.2
 	modernc.org/sqlite v1.34.5
@@ -115,7 +115,7 @@ require (
 )
 
 require (
-	cel.dev/expr v0.16.2 // indirect
+	cel.dev/expr v0.19.0 // indirect
 	cloud.google.com/go v0.116.0 // indirect
 	cloud.google.com/go/auth v0.14.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.7 // indirect
