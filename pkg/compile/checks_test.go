@@ -47,6 +47,20 @@ func TestPostPartialChecks(t *testing.T) {
 		"colour": "orange",
 	}
 	defaultUnknowns := []string{"input.fruits", "input.baskets"}
+
+	l := test.New()
+	l.SetLevel(logging.Debug)
+	params := e2e.NewAPIServerTestParams()
+	params.Logger = l
+	trt, err := e2e.NewTestRuntime(params)
+	if err != nil {
+		t.Fatalf("test runtime: %v", err)
+	}
+	t.Cleanup(trt.Cancel)
+
+	chnd := compile.Handler(l)
+	chnd.SetRuntime(trt.Runtime)
+
 	for _, tc := range []struct {
 		note            string
 		target, dialect string
@@ -63,6 +77,16 @@ func TestPostPartialChecks(t *testing.T) {
 			note:   "happy path",
 			rego:   `include if input.fruits.colour == input.colour`,
 			result: map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
+		},
+		{
+			note:   "unconditional NO",
+			rego:   `include if false`,
+			result: nil,
+		},
+		{
+			note:   "unconditional YES",
+			rego:   `include if true`,
+			result: map[string]any{},
 		},
 		{
 			note:         "happy path, reading unknowns from metadata (document scope)",
@@ -560,17 +584,6 @@ _use_metadata := rego.metadata.chain()`,
 				t.Fatalf("Failed to marshal JSON: %v", err)
 			}
 
-			l := test.New()
-			l.SetLevel(logging.Debug)
-			chnd := compile.Handler(l)
-			params := e2e.NewAPIServerTestParams()
-			params.Logger = l
-			trt, err := e2e.NewTestRuntime(params)
-			if err != nil {
-				t.Fatalf("test runtime: %v", err)
-			}
-			t.Cleanup(trt.Cancel)
-
 			txn := storage.NewTransactionOrDie(ctx, trt.Runtime.Store, storage.WriteParams)
 			if err := trt.Runtime.Store.UpsertPolicy(ctx, txn, "filters.rego", []byte(rego)); err != nil {
 				t.Fatalf("upsert policy: %v", err)
@@ -578,7 +591,6 @@ _use_metadata := rego.metadata.chain()`,
 			if err := trt.Runtime.Store.Commit(ctx, txn); err != nil {
 				t.Fatalf("store policy: %v", err)
 			}
-			chnd.SetRuntime(trt.Runtime)
 
 			req, err := http.NewRequest("POST", "/exp/compile", bytes.NewBuffer(jsonData))
 			if err != nil {

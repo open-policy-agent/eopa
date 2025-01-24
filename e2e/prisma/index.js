@@ -20,6 +20,8 @@ async function getStdinJson() {
 async function main() {
   try {
     const filters = await getStdinJson();
+    if (filters === null) return;
+
     const where = ucastToPrisma(filters, "fruit", {
       fruits: { $self: "fruit" },
     });

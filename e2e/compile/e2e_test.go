@@ -295,6 +295,12 @@ func TestCompileHappyPathE2E(t *testing.T) {
 			name:    "no conditions",
 			policy:  `include if true`,
 			expRows: []fruitRow{apple, banana, cherry},
+			prisma:  true,
+		},
+		{
+			name:   "unconditional NO",
+			policy: `include if false`,
+			prisma: true,
 		},
 		{
 			name:    "simple equality",
@@ -472,9 +478,14 @@ func getSQLAndRunQuery(t *testing.T, payload map[string]any, config *TestConfig,
 	}
 
 	t.Log(respPayload)
-	whereClauses := respPayload["result"].(string)
-
 	var rowsData []fruitRow
+	var whereClauses string
+	switch w := respPayload["result"].(type) {
+	case nil: // unconditional NO
+		return rowsData // empty
+	case string:
+		whereClauses = w
+	}
 
 	// finally, query the database with the resulting WHERE clauses
 	stmt := "SELECT * FROM fruit " + whereClauses
@@ -525,9 +536,6 @@ func getUCASTAndRunPrisma(t *testing.T, payload map[string]any, config *TestConf
 	if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	if _, ok := respPayload["result"]; !ok {
-		t.Fatalf("unexpected empty response: %v", respPayload)
-	}
 	t.Log("ucast IR:", respPayload["result"])
 
 	// Execute prisma script with UCAST IR as input
@@ -560,6 +568,9 @@ func getUCASTAndRunPrisma(t *testing.T, payload map[string]any, config *TestConf
 	t.Log("prisma query:", stderr.String())
 
 	// Parse the output into []fruitRow
+	if stdout.Len() == 0 {
+		return nil
+	}
 	var rowsData []fruitRow
 	if err := json.NewDecoder(&stdout).Decode(&rowsData); err != nil {
 		t.Fatalf("failed to decode prisma output: %v\noutput was: %s", err, stdout.String())

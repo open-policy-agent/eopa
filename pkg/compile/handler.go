@@ -170,59 +170,68 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch r.Header.Get("Accept") {
-	case "application/vnd.styra.ucast+json":
-		opts := &Opts{
-			Translations: request.Options.Mappings,
-		}
-		a := any(BodiesToUCAST(pq.Queries, opts))
-		result.Result = &a
-	case "application/vnd.styra.sql+json":
-		opts := &Opts{
-			Translations: request.Options.Mappings,
-		}
-		ucast := BodiesToUCAST(pq.Queries, opts)
-		if ucast == nil {
-			s := any("")
-			result.Result = &s
-			break
-		}
-		// TODO(sr): Hide away the sqlbuilder calls
-		var fl sqlbuilder.Flavor
-		switch request.Options.Dialect {
-		case "mysql":
-			fl = sqlbuilder.MySQL
-		case "sqlite":
-			fl = sqlbuilder.SQLite
-		case "postgres":
-			fl = sqlbuilder.PostgreSQL
-		case "sqlserver":
-			fl = sqlbuilder.SQLServer
+	if pq.Queries != nil { // not unconditional NO
+		switch r.Header.Get("Accept") {
+		case "application/vnd.styra.ucast+json":
+			opts := &Opts{
+				Translations: request.Options.Mappings,
+			}
+			var a any
+			ucast := BodiesToUCAST(pq.Queries, opts)
+			if ucast == nil { // unconditional YES
+				// NOTE(sr): we cannot encode "no conditions" in ucast.UCASTNode{}, so we return an empty map
+				a = struct{}{}
+			} else {
+				a = any(ucast)
+			}
+			result.Result = &a
+		case "application/vnd.styra.sql+json":
+			opts := &Opts{
+				Translations: request.Options.Mappings,
+			}
+			ucast := BodiesToUCAST(pq.Queries, opts)
+			if ucast == nil { // unconditional YES
+				s := any("")
+				result.Result = &s
+				break
+			}
+			// TODO(sr): Hide away the sqlbuilder calls
+			var fl sqlbuilder.Flavor
+			switch request.Options.Dialect {
+			case "mysql":
+				fl = sqlbuilder.MySQL
+			case "sqlite":
+				fl = sqlbuilder.SQLite
+			case "postgres":
+				fl = sqlbuilder.PostgreSQL
+			case "sqlserver":
+				fl = sqlbuilder.SQLServer
+			default:
+				writer.Error(w, http.StatusBadRequest,
+					types.NewErrorV1(types.CodeInvalidParameter, "unsupported dialect: %s", request.Options.Dialect))
+				return
+			}
+
+			cond := sqlbuilder.NewCond()
+			where := sqlbuilder.NewWhereClause()
+			clauses, err := ucast.AsSQL(cond, request.Options.Dialect)
+			if err != nil {
+				writer.ErrorAuto(w, err)
+				return
+			}
+			where.AddWhereExpr(cond.Args, clauses)
+			s, args := where.BuildWithFlavor(fl)
+			sql, err := fl.Interpolate(s, args)
+			if err != nil {
+				writer.ErrorAuto(w, err)
+				return
+			}
+			r := any(sql)
+			result.Result = &r
+
 		default:
-			writer.Error(w, http.StatusBadRequest,
-				types.NewErrorV1(types.CodeInvalidParameter, "unsupported dialect: %s", request.Options.Dialect))
-			return
+			result.Result = &i
 		}
-
-		cond := sqlbuilder.NewCond()
-		where := sqlbuilder.NewWhereClause()
-		clauses, err := ucast.AsSQL(cond, request.Options.Dialect)
-		if err != nil {
-			writer.ErrorAuto(w, err)
-			return
-		}
-		where.AddWhereExpr(cond.Args, clauses)
-		s, args := where.BuildWithFlavor(fl)
-		sql, err := fl.Interpolate(s, args)
-		if err != nil {
-			writer.ErrorAuto(w, err)
-			return
-		}
-		r := any(sql)
-		result.Result = &r
-
-	default:
-		result.Result = &i
 	}
 
 	writer.JSONOK(w, result, true)
