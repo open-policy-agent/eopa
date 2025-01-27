@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -58,6 +59,7 @@ func TestPostPartialChecks(t *testing.T) {
 	}
 	t.Cleanup(trt.Cancel)
 
+	trt.Runtime.Manager.Info = ast.MustParseTerm(`{"foo": "bar", "fox": 100}`)
 	chnd := compile.Handler(l)
 	chnd.SetStore(trt.Runtime.Store)
 	chnd.SetManager(trt.Runtime.Manager)
@@ -551,6 +553,42 @@ _use_metadata := rego.metadata.chain()`,
 				},
 			},
 		},
+		{
+			note:   "non-det builtin with known args: http.send",
+			rego:   fmt.Sprintf(`include if input.fruits.yummy == http.send({"method": "POST", "url": "%s"}).body.p`, testserver.URL),
+			result: map[string]any{"type": "field", "field": "fruits.yummy", "operator": "eq", "value": true},
+		},
+		{
+			note: "non-det builtin with unknown args: http.send",
+			rego: fmt.Sprintf(`include if input.fruits.yummy == http.send({"method": "POST", "url": "%s", "body": input.fruits.taste}).body.p`, testserver.URL),
+			errors: []Error{
+				{
+					Code:     "pe_fragment_error",
+					Message:  "invalid builtin `http.send`",
+					Location: ast.NewLocation(nil, "filters.rego", 3, 34),
+				},
+				{
+					Code:     "pe_fragment_error",
+					Message:  "both rhs and lhs non-scalar/non-ground",
+					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
+				},
+			},
+		},
+		{
+			note: "non-determistic builtin (arity 0): opa.runtime()",
+			rego: `include if {
+		 		some k, v in opa.runtime()
+				input.fruits[k] == v
+			}`,
+			result: map[string]any{
+				"type":     "compound",
+				"operator": "or",
+				"value": []any{
+					map[string]any{"type": "field", "field": "fruits.foo", "operator": "eq", "value": "bar"},
+					map[string]any{"type": "field", "field": "fruits.fox", "operator": "eq", "value": float64(100)},
+				},
+			},
+		},
 	} {
 		t.Run(tc.note, func(t *testing.T) {
 			ctx := context.Background()
@@ -648,4 +686,20 @@ _use_metadata := rego.metadata.chain()`,
 			}
 		})
 	}
+}
+
+var testserver = srv(func(w http.ResponseWriter, _ *http.Request) error {
+	w.Header().Set("Content-Type", "application/json")
+	return json.NewEncoder(w).Encode(map[string]any{
+		"p": true,
+	})
+})
+
+func srv(f func(http.ResponseWriter, *http.Request) error) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := f(w, r); err != nil {
+			w.WriteHeader(500)
+			fmt.Fprintln(w, err.Error())
+		}
+	}))
 }

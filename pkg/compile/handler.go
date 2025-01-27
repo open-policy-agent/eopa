@@ -16,16 +16,21 @@ import (
 	"github.com/open-policy-agent/opa/v1/util"
 )
 
-const invalidUnknownCode = "invalid_unknown"
+const (
+	invalidUnknownCode = "invalid_unknown"
+	ucastJSON          = "application/vnd.styra.ucast+json"
+	sqlJSON            = "application/vnd.styra.sql+json"
+)
 
 type CompileRequestV1 struct {
 	Input    *interface{} `json:"input"`
 	Query    string       `json:"query"`
 	Unknowns *[]string    `json:"unknowns"`
 	Options  struct {
-		DisableInlining []string       `json:"disableInlining,omitempty"`
-		Dialect         string         `json:"dialect,omitempty"`
-		Mappings        map[string]any `json:"targetSQLTableMappings,omitempty"`
+		DisableInlining          []string       `json:"disableInlining,omitempty"`
+		NondeterministicBuiltins bool           `json:"nondeterministicBuiltins"`
+		Dialect                  string         `json:"dialect,omitempty"`
+		Mappings                 map[string]any `json:"targetSQLTableMappings,omitempty"`
 	} `json:"options,omitempty"`
 }
 
@@ -52,6 +57,8 @@ func (h *hndl) SetStore(s storage.Store) {
 func (h *hndl) SetManager(m *plugins.Manager) {
 	h.manager = m
 }
+
+var unsafeBuiltinsMap = map[string]struct{}{ast.HTTPSend.Name: {}}
 
 func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -85,7 +92,6 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer h.store.Abort(ctx, txn)
-
 	var buf *topdown.BufferTracer
 	if explainMode != types.ExplainOffV1 {
 		buf = topdown.NewBufferTracer()
@@ -104,7 +110,16 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		unknowns = parsedUnknowns
 	}
 
-	eval := rego.New(
+	accept := r.Header.Get("Accept")
+
+	// We require evaluating non-det builtins for the translated targets:
+	// We're not able to meaningfully tanslate things like http.send, sql.send, or
+	// io.jwt.decode_verify into SQL or UCAST, so we try to eval them out where possible.
+	evalNonDet := accept == ucastJSON ||
+		accept == sqlJSON ||
+		request.Options.NondeterministicBuiltins
+
+	opts := []func(*rego.Rego){
 		rego.Compiler(comp),
 		rego.Store(h.store),
 		rego.Transaction(txn),
@@ -113,14 +128,15 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rego.QueryTracer(buf),
 		rego.Instrument(includeInstrumentation),
 		rego.Metrics(m),
-		// rego.Runtime(s.runtime),
-		// rego.UnsafeBuiltins(unsafeBuiltinsMap),
+		rego.NondeterministicBuiltins(evalNonDet),
+		rego.Runtime(h.manager.Info),
+		rego.UnsafeBuiltins(unsafeBuiltinsMap),
 		// rego.InterQueryBuiltinCache(s.interQueryBuiltinCache),
 		// rego.InterQueryBuiltinValueCache(s.interQueryBuiltinValueCache),
 		rego.PrintHook(h.manager.PrintHook()),
-	)
+	}
 
-	prep, err := eval.PrepareForPartial(ctx)
+	prep, err := rego.New(opts...).PrepareForPartial(ctx)
 	if err != nil {
 		switch err := err.(type) {
 		case ast.Errors:
@@ -135,6 +151,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rego.EvalParsedInput(request.Input),
 		rego.EvalParsedUnknowns(unknowns),
 		rego.EvalPrintHook(h.manager.PrintHook()),
+		rego.EvalNondeterministicBuiltins(evalNonDet),
 	)
 	if err != nil {
 		switch err := err.(type) {
@@ -160,10 +177,10 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var constr *Constraint
-	switch r.Header.Get("Accept") {
-	case "application/vnd.styra.ucast+json":
+	switch accept {
+	case ucastJSON:
 		constr = NewConstraints("ucast", request.Options.Dialect)
-	case "application/vnd.styra.sql+json":
+	case sqlJSON:
 		constr = NewConstraints("sql", request.Options.Dialect)
 	}
 	h.Logger.Debug("queries %v", pq.Queries)
@@ -176,8 +193,8 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if pq.Queries != nil { // not unconditional NO
-		switch r.Header.Get("Accept") {
-		case "application/vnd.styra.ucast+json":
+		switch accept {
+		case ucastJSON:
 			opts := &Opts{
 				Translations: request.Options.Mappings,
 			}
@@ -190,7 +207,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				a = any(ucast)
 			}
 			result.Result = &a
-		case "application/vnd.styra.sql+json":
+		case sqlJSON:
 			opts := &Opts{
 				Translations: request.Options.Mappings,
 			}
@@ -232,9 +249,10 @@ type compileRequest struct {
 }
 
 type compileRequestOptions struct {
-	DisableInlining []string
-	Dialect         string
-	Mappings        map[string]any
+	DisableInlining          []string
+	NondeterministicBuiltins bool
+	Dialect                  string
+	Mappings                 map[string]any
 }
 
 func readInputCompilePostV1(reqBytes []byte, queryParserOptions ast.ParserOptions) (*compileRequest, *types.ErrorV1) {
