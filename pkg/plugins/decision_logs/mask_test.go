@@ -37,6 +37,30 @@ func TestMaskRule(t *testing.T) {
 			mask:  `{"op":"upsert","path":"/result","value":"upserted"}`,
 		},
 		{
+			note:  `upsert: array: object value by index`,
+			event: `{"input": {"foo": [{"x": "y"}, {"baz": 1}]}}`,
+			exp:   `{"input": {"foo": [{"x": "y"}, {"baz": 2}]}, "masked":["/input/foo/1/baz"]}`,
+			mask:  `{"op":"upsert","path":"/input/foo/1/baz","value":2}`,
+		},
+		{
+			note:  `upsert: array: element by index`,
+			event: `{"input": {"foo": [{"x": "y"}, {"baz": 1}]}}`,
+			exp:   `{"input": {"foo": [{"x": "y"}, {"bar": 3}]}, "masked":["/input/foo/1"]}`,
+			mask:  `{"op":"upsert","path":"/input/foo/1","value": {"bar": 3}}`,
+		},
+		{
+			note:  `erase: array: element by index`,
+			event: `{"input": {"foo": [{"x": "y"}, {"baz": 1}]}}`,
+			exp:   `{"input": {"foo": [null, {"baz": 1}]}, "masked": ["/input/foo/0"]}`,
+			mask:  `{"op":"upsert","path":"/input/foo/0","value":null}`,
+		},
+		{
+			note:  `erase: array: object value by index`,
+			event: `{"input": {"foo": [{"x": "y"}, {"baz": 1}]}}`,
+			exp:   `{"input": {"foo": [{"x": "y"}, {"baz": null}]}, "masked":["/input/foo/1/baz"]}`,
+			mask:  `{"op":"upsert","path":"/input/foo/1/baz","value":null}`,
+		},
+		{
 			note:  `erase undefined input`,
 			event: `{}`,
 			exp:   `{}`,
