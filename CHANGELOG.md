@@ -12,6 +12,17 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.32.0
+
+[![OPA v1.1.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.1.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.1.0)
+[![Regal v0.30.2](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.30.2&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.30.2)
+
+This release brings in the latest OPA version, [v1.1.0](https://github.com/open-policy-agent/opa/releases/tag/v1.1.0),
+and various dependency bumps.
+
+Also, a bug related to the `fmt` subcommand's argument flag parsing was fixed.
+
+
 ## v1.31.3
 
 [![OPA v1.0.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.0.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.0.0)
