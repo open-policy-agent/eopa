@@ -182,7 +182,12 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		constr = NewConstraints("ucast", request.Options.Dialect)
 	case sqlJSON:
 		constr = NewConstraints("sql", request.Options.Dialect)
+	default: // just return, don't run checks
+		result.Result = &i
+		writer.JSONOK(w, result, true)
+		return
 	}
+
 	h.Logger.Debug("queries %v", pq.Queries)
 	h.Logger.Debug("support %v", pq.Support)
 	if errs := Check(pq, constr).ASTErrors(); errs != nil {
