@@ -1,5 +1,5 @@
 # This test ensures that `eopa test` correctly accepts extra data to insert
-# into the `data.` hierarchy from it's arguments. This functionality is part of
+# into the `data.` hierarchy from its arguments. This functionality is part of
 # baseline OPA, but this is a good sanity check.
 exec eopa test ./test1.rego ./dummy1.rego 
 ! stderr .

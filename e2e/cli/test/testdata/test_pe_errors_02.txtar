@@ -1,0 +1,104 @@
+! exec eopa test support/filters.rego
+! stderr .
+cmp stdout exp/support_stdout
+
+! exec eopa test multiple/4/filters.rego
+! stderr .
+cmp stdout exp/multiple_4_stdout
+
+! exec eopa test multiple/5/filters.rego
+! stderr .
+cmp stdout exp/multiple_5_stdout
+
+-- exp/support_stdout --
+PASS: 1/1
+--------------------------------------------------------------------------------
+Data Policy Analysis:
+support/filters.rego:8: pe_fragment_error: use of default rule in data.filters.other
+  test_yellow_fruit (support/filters.rego:13)
+
+-- support/filters.rego --
+package filters
+
+# METADATA
+# custom:
+#   unknowns:
+#     - input.fruits
+
+include if other
+
+default other := false
+other if input.fruits.color == input.favorite
+
+test_yellow_fruit if {
+	include with input.fruits.color as "yellow"
+		with input.favorite as "yellow"
+}
+-- exp/multiple_4_stdout --
+PASS: 4/4
+--------------------------------------------------------------------------------
+Data Policy Analysis:
+multiple/4/filters.rego:8: pe_fragment_error: invalid use of "... in ..."
+  test_a (multiple/4/filters.rego:10)
+  test_b (multiple/4/filters.rego:13)
+  test_c (multiple/4/filters.rego:16)
+  test_d (multiple/4/filters.rego:19)
+
+-- multiple/4/filters.rego --
+package filters
+
+# METADATA
+# custom:
+#   unknowns:
+#     - input.fruits
+
+include if 0, input.fruits.name in ["apple", "banana"]
+
+test_a if {
+	include with input.fruits.name as "apple"
+}
+test_b if {
+	include with input.fruits.name as "apple"
+}
+test_c if {
+	include with input.fruits.name as "apple"
+}
+test_d if {
+	include with input.fruits.name as "apple"
+}
+
+-- exp/multiple_5_stdout --
+PASS: 5/5
+--------------------------------------------------------------------------------
+Data Policy Analysis:
+multiple/5/filters.rego:8: pe_fragment_error: invalid use of "... in ..."
+  test_a (multiple/5/filters.rego:10)
+  test_b (multiple/5/filters.rego:13)
+  test_c (multiple/5/filters.rego:16)
+  and 2 more occurrences
+
+-- multiple/5/filters.rego --
+package filters
+
+# METADATA
+# custom:
+#   unknowns:
+#     - input.fruits
+
+include if 0, input.fruits.name in ["apple", "banana"]
+
+test_a if {
+	include with input.fruits.name as "apple"
+}
+test_b if {
+	include with input.fruits.name as "apple"
+}
+test_c if {
+	include with input.fruits.name as "apple"
+}
+test_d if {
+	include with input.fruits.name as "apple"
+}
+test_e if {
+	include with input.fruits.name as "apple"
+}

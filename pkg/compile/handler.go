@@ -179,12 +179,16 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var constr *Constraint
 	switch accept {
 	case ucastJSON:
-		constr = NewConstraints("ucast", request.Options.Dialect)
+		constr, err = NewConstraints("ucast", request.Options.Dialect)
 	case sqlJSON:
-		constr = NewConstraints("sql", request.Options.Dialect)
+		constr, err = NewConstraints("sql", request.Options.Dialect)
 	default: // just return, don't run checks
 		result.Result = &i
 		writer.JSONOK(w, result, true)
+		return
+	}
+	if err != nil {
+		writer.ErrorAuto(w, types.BadRequestErr(err.Error()))
 		return
 	}
 
@@ -237,9 +241,6 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			r := any(sql)
 			result.Result = &r
-
-		default:
-			result.Result = &i
 		}
 	}
 

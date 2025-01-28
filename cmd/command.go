@@ -12,6 +12,7 @@ import (
 
 	opa_cmd "github.com/open-policy-agent/opa/cmd"
 	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/tester"
 	"github.com/open-policy-agent/opa/v1/util"
 	opa_version "github.com/open-policy-agent/opa/v1/version"
 
@@ -20,6 +21,7 @@ import (
 	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
 	"github.com/styrainc/enterprise-opa-private/internal/version"
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
+	"github.com/styrainc/enterprise-opa-private/pkg/compile"
 	"github.com/styrainc/enterprise-opa-private/pkg/iropt"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
 	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
@@ -351,6 +353,8 @@ func enableEOPAOnly() {
 	builtins.Init()
 	opa_cmd.UserAgent(version.UserAgent())
 	opa_version.Version = version.Version
+	tester.OverrideRunTest(compile.RunDataPolicyTest)
+	opa_cmd.OverridePrettyReporter(compile.WrapPrettyReporter)
 }
 
 func setDefaults(c *cobra.Command) *cobra.Command {

@@ -1,22 +1,23 @@
 package compile
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"strings"
 )
 
-type Builtins map[string]struct{}
+type Set[T comparable] map[T]struct{}
 
-func NewBuiltins(strs ...string) Builtins {
-	return make(Builtins).Add(strs...)
+func NewSet[T comparable](strs ...T) Set[T] {
+	return make(Set[T]).Add(strs...)
 }
 
-func (s Builtins) Clone() Builtins {
+func (s Set[T]) Clone() Set[T] {
 	return maps.Clone(s)
 }
 
-func (s Builtins) Add(strs ...string) Builtins {
+func (s Set[T]) Add(strs ...T) Set[T] {
 	for i := range strs {
 		s[strs[i]] = struct{}{}
 	}
@@ -24,14 +25,14 @@ func (s Builtins) Add(strs ...string) Builtins {
 }
 
 // Contains checks if a string exists in the set
-func (s Builtins) Contains(str string) bool {
+func (s Set[T]) Contains(str T) bool {
 	_, exists := s[str]
 	return exists
 }
 
 // Intersection returns a new set containing elements present in both sets
-func (s Builtins) Intersection(other Builtins) Builtins {
-	result := NewBuiltins()
+func (s Set[T]) Intersection(other Set[T]) Set[T] {
+	result := NewSet[T]()
 	// Iterate through the smaller set for better performance
 	if len(s) > len(other) {
 		s, other = other, s
@@ -44,29 +45,36 @@ func (s Builtins) Intersection(other Builtins) Builtins {
 	return result
 }
 
-// Constraint lets us limit the builtins that are allowed in a translation.
-// There are hardcoded sets of supported builtins. The constraints become
+// Constraint lets us limit the Set that are allowed in a translation.
+// There are hardcoded sets of supported Set. The constraints become
 // effective during the post-PE analysis (compile.Checks()).
 type Constraint struct {
 	Target   string
 	Variant  string
-	Builtins Builtins
+	Builtins Set[string]
+	Features Set[string]
+}
+
+type Constraints interface {
+	Builtin(string) bool
+	AssertBuiltin(string) error
+	Supports(string) bool
+	AssertFeature(string) error
 }
 
 // NewConstraints returns a new Constraint object based on the type
 // requested, ucast or sql.
-func NewConstraints(typ, variant string) *Constraint {
-	c := Constraint{Target: strings.ToUpper(typ), Variant: variant}
+func NewConstraints(typ, variant string) (*Constraint, error) {
+	c := Constraint{Target: strings.ToUpper(typ), Variant: variant, Features: NewSet[string]()}
 	switch typ {
 	case "sql":
 		c.Builtins = sqlBuiltins
+		c.Features.Add("not")
 	case "ucast":
-		switch strings.ToLower(variant) {
-		case "prisma":
-			c.Variant = "prisma"
-			c.Builtins = prismaBuiltins
-		case "all":
-			c.Variant = "all"
+		switch v := strings.ToLower(variant); v {
+		case "prisma", "all":
+			c.Variant = v
+			c.Features.Add("not")
 			c.Builtins = allBuiltins
 		case "linq":
 			c.Variant = "LINQ" // normalize spelling
@@ -76,22 +84,38 @@ func NewConstraints(typ, variant string) *Constraint {
 			c.Builtins = ucastBuiltins
 		}
 	default:
-		c.Builtins = allBuiltins
+		return nil, fmt.Errorf("unknown target/dialect combination: %s/%s", typ, variant)
 	}
 
-	return &c
+	return &c, nil
 }
 
-// Supports allows us to encode more fluent constraints, like support for "not"
+// Builtin returns true if the builtin is supported by the constraint.
+func (c *Constraint) Builtin(x string) bool {
+	return c.Builtins.Contains(x)
+}
+
+func (c *Constraint) AssertBuiltin(x string) error {
+	if !c.Builtin(x) {
+		return fmt.Errorf("unsupported for %s", c)
+	}
+	return nil
+}
+
+// Supports allows us to encode more fluent constraints, like support for "not".
+// It returns an error if the feature is not supported by the constraint.
 func (c *Constraint) Supports(x string) bool {
-	switch x {
-	case "not":
-		// only SQL and ucast/all and ucast/prisma support general `NOT (...)` negation
-		return c.Target != "UCAST" || c.Variant == "prisma" || c.Variant == "all"
-	}
-
-	return false
+	return c.Features.Contains(x)
 }
+
+func (c *Constraint) AssertFeature(x string) error {
+	if !c.Supports(x) {
+		return fmt.Errorf("unsupported feature %q for %s", x, c)
+	}
+	return nil
+}
+
+var _ fmt.Stringer = (*Constraint)(nil)
 
 func (c *Constraint) String() string {
 	if c.Variant == "" {
@@ -100,12 +124,72 @@ func (c *Constraint) String() string {
 	return fmt.Sprintf("%s (%s)", c.Target, c.Variant)
 }
 
+type ConstraintSet struct {
+	Constraints []*Constraint
+}
+
+func NewConstraintSet(cs ...*Constraint) *ConstraintSet {
+	return &ConstraintSet{Constraints: cs}
+}
+
+// Builtin returns true if all the constraints in the set support the builtin.
+func (cs *ConstraintSet) Builtin(x string) bool {
+	for i := range cs.Constraints {
+		if !cs.Constraints[i].Builtin(x) {
+			return false
+		}
+	}
+	return true
+}
+
+func (cs *ConstraintSet) AssertBuiltin(x string) error {
+	var err error
+	for i := range cs.Constraints {
+		if e := cs.Constraints[i].AssertBuiltin(x); e != nil {
+			err = errors.Join(err, e)
+		}
+	}
+	return err
+}
+
+// Supports returns true if the feature is supported by all constraints.
+func (cs *ConstraintSet) Supports(x string) bool {
+	for i := range cs.Constraints {
+		if !cs.Constraints[i].Supports(x) {
+			return false
+		}
+	}
+	return true
+}
+
+// AssertFeature returns an error if the feature is not supported by any
+// of the constraints. The error contains the offending target/dialect pairs.
+func (cs *ConstraintSet) AssertFeature(x string) error {
+	var err error
+	for i := range cs.Constraints {
+		if e := cs.Constraints[i].AssertFeature(x); e != nil {
+			err = errors.Join(err, e)
+		}
+	}
+	return err
+}
+
+var _ fmt.Stringer = (*ConstraintSet)(nil)
+
+func (cs *ConstraintSet) String() string {
+	result := make([]string, 0, len(cs.Constraints)+1)
+	for i := range cs.Constraints {
+		result = append(result, cs.Constraints[i].String())
+	}
+	return "multi-constraint: " + strings.Join(result, ", ")
+}
+
 var (
 	// So far, we don't need to differentiate between the SQL dialects,
-	// they all can do the builtins we currently translate.
+	// they all can do the Set we currently translate.
 	sqlBuiltins = allBuiltins
 
-	ucastBuiltins = NewBuiltins(
+	ucastBuiltins = NewSet(
 		"eq",
 		"neq",
 		"lt",
@@ -113,8 +197,7 @@ var (
 		"gt",
 		"gte",
 	)
-	prismaBuiltins = allBuiltins
-	allBuiltins    = ucastBuiltins.Clone().Add(
+	allBuiltins = ucastBuiltins.Clone().Add(
 		"internal.member_2",
 		// "nin", // TODO: deal with NOT IN
 		"startswith",

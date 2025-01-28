@@ -22,7 +22,7 @@ func (r *Results) ASTErrors() []*ast.Error {
 }
 
 type checker struct {
-	constraints *Constraint
+	constraints Constraints
 	res         *Results
 }
 
@@ -30,7 +30,7 @@ func (c *checker) Results() *Results {
 	return c.res
 }
 
-func Check(pq *rego.PartialQueries, constraints *Constraint) *Results {
+func Check(pq *rego.PartialQueries, constraints Constraints) *Results {
 	check := checker{
 		constraints: constraints,
 		res:         &Results{},
@@ -67,10 +67,14 @@ var partialPrefix = ast.MustParseRef("data.partial")
 func checkCall(c *checker, e *ast.Expr, sup []*ast.Module) *ast.Error {
 	switch {
 	case e.Negated:
-		if c.constraints.Supports("not") && e.IsCall() { // IsCall gives us comparisons etc, and rules out naked data refs
+		if !e.IsCall() { // IsCall gives us comparisons etc, and rules out naked data refs
+			return err(e.Loc(), "\"not\" not permitted")
+		}
+		err0 := c.constraints.AssertFeature("not")
+		if err0 == nil {
 			break // OK
 		}
-		return err(e.Loc(), "\"not\" not permitted")
+		return err(e.Loc(), "\"not\" not permitted: %s", err0.Error())
 	case e.IsCall(): // OK
 	case e.IsEvery():
 		return err(e.Loc(), "\"every\" not permitted")
@@ -142,10 +146,9 @@ func checkBuiltins(c *checker, e *ast.Expr, _ []*ast.Module) *ast.Error {
 	}
 
 	// Also check that our target+variant allows this builtin
-	if !c.constraints.Builtins.Contains(op0) {
-		return err(loc, "invalid builtin `%v` for %v",
-			cmp.Or(replacements[op0], op0),
-			c.constraints)
+	if err0 := c.constraints.AssertBuiltin(op0); err0 != nil {
+		return err(loc, "invalid builtin `%v`: %s",
+			cmp.Or(replacements[op0], op0), err0.Error())
 	}
 
 	// all our allowed builtins have two operands

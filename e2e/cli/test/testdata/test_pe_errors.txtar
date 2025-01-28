@@ -1,0 +1,77 @@
+! exec eopa test in/filters.rego
+! stderr .
+cmp stdout  exp/in_stdout
+
+! exec eopa test naked/filters.rego
+! stderr .
+cmp stdout exp/naked_stdout
+
+! exec eopa test lower/filters.rego
+! stderr .
+cmp stdout exp/lower_stdout
+
+-- in/filters.rego --
+package filters
+
+# METADATA
+# custom:
+#   unknowns:
+#     - input.fruits
+
+include if 1, input.fruits.color in input.favorites
+
+test_yellow_fruit if {
+	include with input.fruits.color as "yellow"
+		with input.favorites as ["red", "yellow"]
+}
+-- exp/in_stdout --
+PASS: 1/1
+--------------------------------------------------------------------------------
+Data Policy Analysis:
+in/filters.rego:8: pe_fragment_error: invalid use of "... in ..."
+  test_yellow_fruit (in/filters.rego:10)
+
+-- naked/filters.rego --
+package filters
+
+# METADATA
+# custom:
+#   unknowns:
+#     - input.fruits
+
+include if input.fruits.color
+
+test_yellow_fruit if {
+	include with input.fruits.color as "yellow"
+}
+-- exp/naked_stdout --
+PASS: 1/1
+--------------------------------------------------------------------------------
+Data Policy Analysis:
+naked/filters.rego:8: pe_fragment_error: invalid statement "input.fruits.color"
+	try `input.fruits.color != false`
+  test_yellow_fruit (naked/filters.rego:10)
+
+-- lower/filters.rego --
+package filters
+
+# METADATA
+# custom:
+#   unknowns:
+#     - input.fruits
+
+include if lower(input.fruits.color) == input.favorite
+
+test_yellow_fruit if {
+	include with input.fruits.color as "Yellow"
+		with input.favorite as "yellow"
+}
+-- exp/lower_stdout --
+PASS: 1/1
+--------------------------------------------------------------------------------
+Data Policy Analysis:
+lower/filters.rego:8: pe_fragment_error: invalid builtin `lower`
+  test_yellow_fruit (lower/filters.rego:10)
+
+-- placeholder --
+# NOTE(sr): this keeps the last newline of the previous output
