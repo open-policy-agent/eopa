@@ -72,7 +72,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// decompress the input if sent as zip
 	body, err := util.ReadMaybeCompressedBody(r)
 	if err != nil {
-		writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, "could not decompress the body"))
+		writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, "could not decompress the body: %v", err))
 		return
 	}
 
