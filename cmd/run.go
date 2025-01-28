@@ -18,7 +18,6 @@ import (
 	bundleApi "github.com/open-policy-agent/opa/v1/bundle"
 	"github.com/open-policy-agent/opa/v1/hooks"
 	"github.com/open-policy-agent/opa/v1/keys"
-	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/plugins"
 	"github.com/open-policy-agent/opa/v1/plugins/discovery"
 	"github.com/open-policy-agent/opa/v1/runtime"
@@ -27,9 +26,9 @@ import (
 	opa_envoy "github.com/open-policy-agent/opa-envoy-plugin/plugin"
 
 	"github.com/styrainc/enterprise-opa-private/internal/license"
-	"github.com/styrainc/enterprise-opa-private/pkg/compile"
 	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/compile"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
 	dl "github.com/styrainc/enterprise-opa-private/pkg/plugins/decision_logs"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
@@ -363,8 +362,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	if err != nil {
 		return nil, err
 	}
-	var compileHndlr compile.CompileHandler
-	params.rt.Router, compileHndlr = loadRouter(logger)
+	params.rt.Router = loadRouter()
 
 	params.rt.Logger = logger
 	lic.SetLogger(logger)
@@ -388,6 +386,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 			grpc.PluginName:      grpc.Factory(),
 			dl.DLPluginName:      dl.Factory(),
 			opa_envoy.PluginName: &opa_envoy.Factory{}, // Hack(philip): This is ugly, but necessary because upstream lacks the Factory() function.
+			compile.PluginName:   compile.Factory(),
 		}),
 		discovery.Hooks(hs),
 	}
@@ -396,8 +395,6 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	if err != nil {
 		return nil, err
 	}
-	compileHndlr.SetStore(rt.Store)
-	compileHndlr.SetManager(rt.Manager)
 
 	plugins.InitBundles(nil)(rt.Manager) // To release memory holding the init bundles.
 
@@ -452,12 +449,10 @@ func loadCertPool(tlsCACertFile string) (*x509.CertPool, error) {
 	return pool, nil
 }
 
-func loadRouter(l logging.Logger) (*mux.Router, compile.CompileHandler) {
-	h := compile.Handler(l)
+func loadRouter() *mux.Router {
 	m := mux.NewRouter()
-	m.Handle("/exp/compile", h)
 	m.Use(impact.HTTPMiddleware)
-	return m, h
+	return m
 }
 
 func buildVerificationConfig(pubKey, pubKeyID, alg, scope string, excludeFiles []string) (*bundleApi.VerificationConfig, error) {

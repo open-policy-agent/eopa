@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -581,12 +582,22 @@ func getUCASTAndRunPrisma(t *testing.T, payload map[string]any, config *TestConf
 
 func loadEnterpriseOPA(t *testing.T, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}
+
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "eopa.yml")
+	configContent := `plugins:
+  exp_compile_api: {}`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
 	args := []string{
 		"run",
 		"--server",
 		"--addr", fmt.Sprintf("localhost:%d", httpPort),
 		"--log-level=debug",
 		"--disable-telemetry",
+		"--config-file", configPath,
 	}
 	bin := os.Getenv("BINARY")
 	if bin == "" {
