@@ -27,6 +27,8 @@ import (
 // BundlesBasePath is the storage path used for storing bundle metadata
 var BundlesBasePath = storage.MustParsePath("/system/bundles")
 
+var ModulesInfoBasePath = storage.MustParsePath("/system/modules")
+
 // Note: As needed these helpers could be memoized.
 
 // ManifestStoragePath is the storage path used for the given named bundle manifest.
@@ -51,10 +53,6 @@ func revisionPath(name string) storage.Path {
 	return append(BundlesBasePath, name, "manifest", "revision")
 }
 
-func regoVersionPath(name string) storage.Path {
-	return append(BundlesBasePath, name, "manifest", "rego_version")
-}
-
 func wasmModulePath(name string) storage.Path {
 	return append(BundlesBasePath, name, "wasm")
 }
@@ -65,6 +63,14 @@ func wasmEntrypointsPath(name string) storage.Path {
 
 func metadataPath(name string) storage.Path {
 	return append(BundlesBasePath, name, "manifest", "metadata")
+}
+
+func moduleRegoVersionPath(id string) storage.Path {
+	return append(ModulesInfoBasePath, strings.Trim(id, "/"), "rego_version")
+}
+
+func moduleInfoPath(id string) storage.Path {
+	return append(ModulesInfoBasePath, strings.Trim(id, "/"))
 }
 
 // ReadBundleNamesFromStore will return a list of bundle names which have had their metadata stored.
@@ -159,6 +165,16 @@ func eraseWasmModulesFromStore(ctx context.Context, store storage.Store, txn sto
 
 	err := store.Write(ctx, txn, storage.RemoveOp, path, bjson.MustNew(nil))
 	return suppressNotFound(err)
+}
+
+func eraseModuleRegoVersionsFromStore(ctx context.Context, store storage.Store, txn storage.Transaction, modules []string) error {
+	for _, module := range modules {
+		err := store.Write(ctx, txn, storage.RemoveOp, moduleInfoPath(module), nil)
+		if err := suppressNotFound(err); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ReadWasmMetadataFromStore will read Wasm module resolver metadata from the store.
@@ -265,32 +281,6 @@ func readRevisionFromStore(ctx context.Context, store storage.Store, txn storage
 	return str, nil
 }
 
-// ReadBundleRegoVersionFromStore returns the rego version of the specified bundle.
-// If the bundle is not activated, this function will return
-// storage NotFound error.
-func ReadBundleRegoVersionFromStore(ctx context.Context, store storage.Store, txn storage.Transaction, name string) (ast.RegoVersion, error) {
-	regoVersion, err := readRegoVersionFromStore(ctx, store, txn, regoVersionPath(name))
-	return regoVersion, suppressNotFound(err)
-}
-
-func readRegoVersionFromStore(ctx context.Context, store storage.Store, txn storage.Transaction, path storage.Path) (ast.RegoVersion, error) {
-	value, err := store.Read(ctx, txn, path)
-	if err != nil {
-		return ast.RegoUndefined, err
-	}
-
-	version, ok := value.(json.Number)
-	if !ok {
-		return ast.RegoUndefined, fmt.Errorf("corrupt manifest rego version")
-	}
-	intVersion, err := version.Int64()
-	if err != nil {
-		return ast.RegoUndefined, fmt.Errorf("corrupt manifest rego version")
-	}
-
-	return ast.RegoVersionFromInt(int(intVersion)), nil
-}
-
 // ReadBundleMetadataFromStore returns the metadata in the specified bundle.
 // If the bundle is not activated, this function will return
 // storage NotFound error.
@@ -348,9 +338,8 @@ func (*CustomActivator) Activate(opts *bundleApi.ActivateOpts) error {
 // prohibitive slowdowns.
 func activateBundles(opts *bundleApi.ActivateOpts) error {
 	// Build collections of bundle names, modules, and roots to erase
-	erase := map[string]ast.RegoVersion{} // map of root to rego version
+	erase := map[string]struct{}{}
 	names := map[string]struct{}{}
-	regoVersions := map[ast.RegoVersion]struct{}{}
 	deltaBundles := map[string]*bundleApi.Bundle{}
 	snapshotBundles := map[string]*bundleApi.Bundle{}
 
@@ -361,22 +350,17 @@ func activateBundles(opts *bundleApi.ActivateOpts) error {
 			snapshotBundles[name] = b
 			names[name] = struct{}{}
 
-			regoVersion, err := ReadBundleRegoVersionFromStore(opts.Ctx, opts.Store, opts.Txn, name)
-			if err != nil {
-				return err
-			}
-			regoVersions[regoVersion] = struct{}{}
 			roots, err := ReadBundleRootsFromStore(opts.Ctx, opts.Store, opts.Txn, name)
 			if suppressNotFound(err) != nil {
 				return err
 			}
 			for _, root := range roots {
-				erase[root] = regoVersion
+				erase[root] = struct{}{}
 			}
 
 			// Erase data at new roots to prepare for writing the new data
 			for _, root := range *b.Manifest.Roots {
-				erase[root] = regoVersion
+				erase[root] = struct{}{}
 			}
 		}
 	}
@@ -397,7 +381,7 @@ func activateBundles(opts *bundleApi.ActivateOpts) error {
 
 	// Erase data and policies at new + old roots, and remove the old
 	// manifests before activating a new snapshot bundle.
-	remaining, err := eraseBundles(opts.Ctx, opts.Store, opts.Txn, opts.ParserOptions, names, erase, regoVersions)
+	remaining, err := eraseBundles(opts.Ctx, opts.Store, opts.Txn, opts.ParserOptions, names, erase)
 	if err != nil {
 		return err
 	}
@@ -485,7 +469,7 @@ func activateBundles(opts *bundleApi.ActivateOpts) error {
 		return err
 	}
 
-	if err := writeDataAndModules(opts.Ctx, opts.Store, opts.Txn, opts.TxnCtx, snapshotBundles, false); err != nil {
+	if err := writeDataAndModules(opts.Ctx, opts.Store, opts.Txn, opts.TxnCtx, snapshotBundles, false, opts.ParserOptions.RegoVersion); err != nil {
 		return err
 	}
 
@@ -618,12 +602,12 @@ func activateDeltaBundles(opts *bundleApi.ActivateOpts, bundles map[string]*bund
 
 // erase bundles by name and roots. This will clear all policies and data at its roots and remove its
 // manifest from storage.
-func eraseBundles(ctx context.Context, store storage.Store, txn storage.Transaction, parserOpts ast.ParserOptions, names map[string]struct{}, roots map[string]ast.RegoVersion, regoVersions map[ast.RegoVersion]struct{}) (map[string]*ast.Module, error) {
+func eraseBundles(ctx context.Context, store storage.Store, txn storage.Transaction, parserOpts ast.ParserOptions, names map[string]struct{}, roots map[string]struct{}) (map[string]*ast.Module, error) {
 	if err := eraseData(ctx, store, txn, roots); err != nil {
 		return nil, err
 	}
 
-	remaining, err := erasePolicies(ctx, store, txn, parserOpts, roots, regoVersions)
+	remaining, removed, err := erasePolicies(ctx, store, txn, parserOpts, roots)
 	if err != nil {
 		return nil, err
 	}
@@ -646,10 +630,15 @@ func eraseBundles(ctx context.Context, store storage.Store, txn storage.Transact
 		}
 	}
 
+	err = eraseModuleRegoVersionsFromStore(ctx, store, txn, removed)
+	if err != nil {
+		return nil, err
+	}
+
 	return remaining, nil
 }
 
-func eraseData(ctx context.Context, store storage.Store, txn storage.Transaction, roots map[string]ast.RegoVersion) error {
+func eraseData(ctx context.Context, store storage.Store, txn storage.Transaction, roots map[string]struct{}) error {
 	for root := range roots {
 		path, ok := storage.ParsePathEscaped("/" + root)
 		if !ok {
@@ -665,72 +654,102 @@ func eraseData(ctx context.Context, store storage.Store, txn storage.Transaction
 	return nil
 }
 
-func erasePolicies(ctx context.Context, store storage.Store, txn storage.Transaction, parserOpts ast.ParserOptions, roots map[string]ast.RegoVersion, regoVersions map[ast.RegoVersion]struct{}) (map[string]*ast.Module, error) {
-	ids, err := store.ListPolicies(ctx, txn)
-	if err != nil {
+type moduleInfo struct {
+	RegoVersion ast.RegoVersion `json:"rego_version"`
+}
+
+func readModuleInfoFromStore(ctx context.Context, store storage.Store, txn storage.Transaction) (map[string]moduleInfo, error) {
+	value, err := store.Read(ctx, txn, ModulesInfoBasePath)
+	if suppressNotFound(err) != nil {
 		return nil, err
 	}
 
-	remaining := map[string]*ast.Module{}
+	if value == nil {
+		return nil, nil
+	}
 
-	// Check if regoV0 compatibility is in the list of Rego versions used by incoming bundles.
-	_, regoV0Needed := regoVersions[ast.RegoV0]
-	var regoVersionUsed ast.RegoVersion
+	if m, ok := value.(map[string]any); ok {
+		versions := make(map[string]moduleInfo, len(m))
+
+		for k, v := range m {
+			if m0, ok := v.(map[string]any); ok {
+				if ver, ok := m0["rego_version"]; ok {
+					if vs, ok := ver.(json.Number); ok {
+						i, err := vs.Int64()
+						if err != nil {
+							return nil, fmt.Errorf("corrupt rego version")
+						}
+						versions[k] = moduleInfo{RegoVersion: ast.RegoVersionFromInt(int(i))}
+					}
+				}
+			}
+		}
+		return versions, nil
+	}
+
+	return nil, fmt.Errorf("corrupt rego version")
+}
+
+func erasePolicies(ctx context.Context, store storage.Store, txn storage.Transaction, parserOpts ast.ParserOptions, roots map[string]struct{}) (map[string]*ast.Module, []string, error) {
+	ids, err := store.ListPolicies(ctx, txn)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	modulesInfo, err := readModuleInfoFromStore(ctx, store, txn)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read module info from store: %w", err)
+	}
+
+	getRegoVersion := func(modId string) (ast.RegoVersion, bool) {
+		info, ok := modulesInfo[modId]
+		if !ok {
+			return ast.RegoUndefined, false
+		}
+		return info.RegoVersion, true
+	}
+
+	remaining := map[string]*ast.Module{}
+	var removed []string
 
 	for _, id := range ids {
 		bs, err := store.GetPolicy(ctx, txn, id)
 		if err != nil {
-			return nil, err
-		}
-		// Note(philip): As far as I can tell, there is no surefire way to
-		// determine which bundle a rego policy came from, if all we have is the
-		// ID. As a result, I'm forced to do this horrific "try it both ways"
-		// approach. We try parsing with whatever the current rego version is,
-		// and if that fails, we then try parsing in v0 mode, and then if either
-		// version succeeded, that's the one we use to finally look up the
-		// rego_version field from the bundle.
-		module, err := ast.ParseModuleWithOpts(id, string(bs), parserOpts)
-		regoVersionUsed = parserOpts.RegoVersion
-		// If we know Rego v0 compatibility is not needed, skip the check.
-		if err != nil {
-			if !regoV0Needed {
-				return nil, err
-			}
-			// Otherwise, we attempt to re-parse the module with v0 compatibility.
-			parserOptsV0 := parserOpts
-			parserOptsV0.RegoVersion = ast.RegoV0
-			module, err = ast.ParseModuleWithOpts(id, string(bs), parserOptsV0)
-			if err != nil {
-				return nil, err
-			}
-			regoVersionUsed = ast.RegoV0
+			return nil, nil, err
 		}
 
+		parserOptsCpy := parserOpts
+		if regoVersion, ok := getRegoVersion(id); ok {
+			parserOptsCpy.RegoVersion = regoVersion
+		}
+
+		module, err := ast.ParseModuleWithOpts(id, string(bs), parserOptsCpy)
+		if err != nil {
+			return nil, nil, err
+		}
 		path, err := module.Package.Path.Ptr()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		deleted := false
 		for root := range roots {
 			if bundleApi.RootPathsContain([]string{root}, path) {
-				// Error if the policy requires Rego v0 compatibility, but its parent bundle does not.
-				// This prevents cases where the fallback parsing may have incorrectly triggered.
-				if roots[root] != ast.RegoV0 && regoVersionUsed == ast.RegoV0 {
-					return nil, fmt.Errorf("policy '%s' requires Rego %s compatibility, but its parent bundle requires Rego %s compatibility", path, regoVersionUsed.String(), roots[root].String())
-				}
 				if err := store.DeletePolicy(ctx, txn, id); err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				deleted = true
 				break
 			}
 		}
-		if !deleted {
+
+		if deleted {
+			removed = append(removed, id)
+		} else {
 			remaining[id] = module
 		}
 	}
 
-	return remaining, nil
+	return remaining, removed, nil
 }
 
 func writeManifestToStore(opts *bundleApi.ActivateOpts, name string, manifest bundleApi.Manifest) error {
@@ -743,7 +762,31 @@ func writeEtagToStore(opts *bundleApi.ActivateOpts, name, etag string) error {
 	return WriteEtagToStore(opts.Ctx, opts.Store, opts.Txn, name, etag)
 }
 
-func writeDataAndModules(ctx context.Context, store storage.Store, txn storage.Transaction, txnCtx *storage.Context, bundles map[string]*bundleApi.Bundle, legacy bool) error {
+func writeModuleRegoVersionToStore(ctx context.Context, store storage.Store, txn storage.Transaction, b *bundleApi.Bundle,
+	mf bundleApi.ModuleFile, storagePath string, runtimeRegoVersion ast.RegoVersion,
+) error {
+	var regoVersion ast.RegoVersion
+	if mf.Parsed != nil {
+		regoVersion = mf.Parsed.RegoVersion()
+	}
+
+	if regoVersion == ast.RegoUndefined {
+		var err error
+		regoVersion, err = b.RegoVersionForFile(mf.Path, ast.RegoUndefined)
+		if err != nil {
+			return fmt.Errorf("failed to get rego version for module '%s' in bundle: %w", mf.Path, err)
+		}
+	}
+
+	if regoVersion != ast.RegoUndefined && regoVersion != runtimeRegoVersion {
+		if err := write(ctx, store, txn, moduleRegoVersionPath(storagePath), bjson.NewFloatInt(int64(regoVersion.Int()))); err != nil {
+			return fmt.Errorf("failed to write rego version for module '%s': %w", storagePath, err)
+		}
+	}
+	return nil
+}
+
+func writeDataAndModules(ctx context.Context, store storage.Store, txn storage.Transaction, txnCtx *storage.Context, bundles map[string]*bundleApi.Bundle, legacy bool, runtimeRegoVersion ast.RegoVersion) error {
 	params := storage.WriteParams
 	params.Context = txnCtx
 
@@ -774,6 +817,10 @@ func writeDataAndModules(ctx context.Context, store storage.Store, txn storage.T
 				if err := store.UpsertPolicy(ctx, txn, path, mf.Raw); err != nil {
 					return err
 				}
+
+				if err := writeModuleRegoVersionToStore(ctx, store, txn, b, mf, path, runtimeRegoVersion); err != nil {
+					return err
+				}
 			}
 		} else {
 			params.BasePaths = *b.Manifest.Roots
@@ -782,10 +829,52 @@ func writeDataAndModules(ctx context.Context, store storage.Store, txn storage.T
 			if err != nil {
 				return fmt.Errorf("store truncate failed for bundle '%s': %v", name, err)
 			}
+
+			for _, f := range b.Raw {
+				if strings.HasSuffix(f.Path, bundleApi.RegoExt) {
+					p, err := getFileStoragePath(f.Path)
+					if err != nil {
+						return fmt.Errorf("failed get storage path for module '%s' in bundle '%s': %w", f.Path, name, err)
+					}
+
+					// HACK(philip): Because the upstream OPA bundle.Raw type
+					// hides the module field from us, we have to synthesize our
+					// own bundle.ModuleFile for each incoming Rego policy. This
+					// works, because the logic that writes the Rego version to
+					// the store will infer the correct Rego version for this
+					// file.
+					m := bundleApi.ModuleFile{Raw: f.Value, Path: f.Path}
+
+					// 'f.module.Path' contains the module's path as it relates to the bundle root, and can be used for looking up the rego-version.
+					// 'f.Path' can differ, based on how the bundle reader was initialized.
+					if err := writeModuleRegoVersionToStore(ctx, store, txn, b, m, p.String(), runtimeRegoVersion); err != nil {
+						return err
+					}
+				}
+			}
 		}
 	}
 
 	return nil
+}
+
+// Taken from OPA's v1/bundle/file.go:
+func getFileStoragePath(path string) (storage.Path, error) {
+	fpath := strings.TrimLeft(normalizePath(filepath.Dir(path)), "/.")
+	if strings.HasSuffix(path, bundleApi.RegoExt) {
+		fpath = strings.Trim(normalizePath(path), "/")
+	}
+
+	p, ok := storage.ParsePathEscaped("/" + fpath)
+	if !ok {
+		return nil, fmt.Errorf("storage path invalid: %v", path)
+	}
+	return p, nil
+}
+
+// Take from OPA's v1/bundle/bundle.go:
+func normalizePath(p string) string {
+	return filepath.ToSlash(p)
 }
 
 func writeData(ctx context.Context, store storage.Store, txn storage.Transaction, roots []string, data bjson.Object) error {
