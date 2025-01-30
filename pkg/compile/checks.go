@@ -114,19 +114,21 @@ func checkBuiltins(c *checker, e *ast.Expr, _ []*ast.Module) *ast.Error {
 	if op == nil {
 		return nil
 	}
-	loc := op.Loc()
+	loc := cmp.Or(op.Loc(), e.Loc())
 	ref := op.Value.(ast.Ref)
 	op0 := ref.String()
 
 	unknownMustBeFirst := false
+	twoRefsOK := false
 
 	switch {
-	case op0 == ast.Equality.Name:
-	case op0 == ast.NotEqual.Name:
-	case op0 == ast.LessThan.Name:
-	case op0 == ast.LessThanEq.Name:
-	case op0 == ast.GreaterThan.Name:
-	case op0 == ast.GreaterThanEq.Name:
+	case op0 == ast.Equality.Name ||
+		op0 == ast.NotEqual.Name ||
+		op0 == ast.LessThan.Name ||
+		op0 == ast.LessThanEq.Name ||
+		op0 == ast.GreaterThan.Name ||
+		op0 == ast.GreaterThanEq.Name:
+		twoRefsOK = true
 	case op0 == ast.StartsWith.Name ||
 		op0 == ast.EndsWith.Name ||
 		op0 == ast.Contains.Name ||
@@ -158,14 +160,25 @@ func checkBuiltins(c *checker, e *ast.Expr, _ []*ast.Module) *ast.Error {
 		}
 	}
 
-	if unknownMustBeFirst {
+	// check that field-ref comparisons are supported by the targets:
+	unknownRefs := 0
+	for i := range 2 {
+		if _, ok := e.Operand(i).Value.(ast.Ref); ok {
+			unknownRefs++
+		}
+	}
+	if unknownRefs == 2 {
+		if err0 := c.constraints.AssertFeature("field-ref"); err0 != nil {
+			return err(loc, "reference to field: %s", err0.Error())
+		}
+	}
+
+	switch {
+	case unknownMustBeFirst:
 		if _, ok := e.Operand(0).Value.(ast.Ref); !ok {
-			if loc == nil {
-				loc = e.Loc()
-			}
 			return err(loc, "rhs of %v must be known", op)
 		}
-	} else { // lhs or rhs needs to be ground scalar
+	default: // lhs or rhs needs to be ground scalar, or, if twoRefsOK is true, unknown input refs
 		// TODO(sr): collections might work, too, let's fix this later
 		found := false
 		for i := range 2 {
@@ -173,10 +186,7 @@ func checkBuiltins(c *checker, e *ast.Expr, _ []*ast.Module) *ast.Error {
 				found = true
 			}
 		}
-		if !found {
-			if loc == nil {
-				loc = e.Loc()
-			}
+		if !found && !(twoRefsOK && unknownRefs == 2) {
 			return err(loc, "both rhs and lhs non-scalar/non-ground")
 		}
 	}
@@ -187,12 +197,20 @@ func checkOperand(op, t *ast.Term) *ast.Error {
 	if t == nil {
 		return err(op.Loc(), "%v: missing operand", op)
 	}
-	if call, ok := t.Value.(ast.Call); ok {
-		loc := op.Loc()
+	loc := op.Loc()
+	switch v := t.Value.(type) {
+	case ast.Call:
 		if loc == nil {
-			loc = call[0].Loc()
+			loc = v[0].Loc()
 		}
-		return err(loc, "%v: nested call operand: %v", op, t)
+		return err(loc, "%v: nested call operand: %v", op, v)
+	case ast.Ref:
+		if !v.HasPrefix(ast.InputRootRef) || len(v) != 3 {
+			if loc == nil {
+				loc = t.Loc()
+			}
+			return err(loc, "%v: invalid ref operand: %v", op, v)
+		}
 	}
 	return nil
 }

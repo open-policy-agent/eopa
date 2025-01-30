@@ -35,6 +35,18 @@ func TestUCASTAsSQLBuiltin(t *testing.T) {
 			Result:  `{{"result": {"p": "WHERE name = NULL"} }}`,
 		},
 		{
+			Note:    "field ref argument",
+			Source:  `p := ucast.as_sql({"type": "field", "operator": "eq", "field": "name", "value": {"field": "x"}}, "postgres", {})`,
+			Dialect: "postgres",
+			Result:  `{{"result": {"p": "WHERE name = x"} }}`,
+		},
+		{
+			Note:    "field ref argument with translations",
+			Source:  `p := ucast.as_sql({"type": "field", "operator": "eq", "field": "tbl.col", "value": {"field": "tbl.col2"}}, "postgres", {"tbl": {"$self": "table", "col": "column", "col2": "column2"}})`,
+			Dialect: "postgres",
+			Result:  `{{"result": {"p": "WHERE table.column = table.column2"} }}`,
+		},
+		{
 			Note: "basic compound expression",
 			Source: `p := ucast.as_sql({"type": "compound", "operator": "and", "value": [
 				{"type": "field", "operator": "eq", "field": "name", "value": "bob"},

@@ -310,6 +310,11 @@ func TestCompileHappyPathE2E(t *testing.T) {
 			prisma:  true,
 		},
 		{
+			name:    "comparison with two unknowns",
+			policy:  `include if input.fruits.price >= input.fruits.id`,
+			expRows: []fruitRow{apple, banana, cherry},
+		},
+		{
 			name:    "simple comparison",
 			policy:  `include if input.fruits.price < 11`,
 			expRows: []fruitRow{apple},

@@ -16,6 +16,11 @@ type UCASTNode struct {
 	Value any    `json:"value,omitempty"`
 }
 
+// FieldRef can be used in UCASTNode.Value to reference another field, i.e. database column.
+type FieldRef struct {
+	Field string `json:"field"`
+}
+
 var (
 	compoundOps = []string{"and", "or", "not"}
 	documentOps = []string{"exists"}
@@ -70,6 +75,10 @@ func (u *UCASTNode) asSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 			return "", nil
 		case struct{}{}:
 			value = nil // `cond.X(field, value)` turns this into `field <X> NULL`
+		default:
+			if fr, ok := value.(FieldRef); ok {
+				value = sqlbuilder.Raw(fr.Field)
+			}
 		}
 		switch operator {
 		case "eq":

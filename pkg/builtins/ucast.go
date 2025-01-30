@@ -132,6 +132,10 @@ func regoObjectToUCASTNode(obj *ast.Term, translations *ast.Term) (*ucast.UCASTN
 		}
 		return out, nil
 	case ast.Object:
+		if fr := regoObjectToFieldRef(value, translations); fr != nil {
+			out.Value = *fr
+			return out, nil
+		}
 		node, err := regoObjectToUCASTNode(value, translations)
 		if err != nil {
 			return nil, err
@@ -150,6 +154,14 @@ func regoObjectToUCASTNode(obj *ast.Term, translations *ast.Term) (*ucast.UCASTN
 	}
 	out.Value = valueIf
 	return out, nil
+}
+
+func regoObjectToFieldRef(obj *ast.Term, translations *ast.Term) *ucast.FieldRef {
+	field := obj.Get(ast.StringTerm("field"))
+	if field == nil {
+		return nil
+	}
+	return &ucast.FieldRef{Field: translateField(string(field.Value.(ast.String)), translations)}
 }
 
 // Renders a ucast conditional tree as SQL for a given SQL dialect.

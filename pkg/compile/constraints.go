@@ -69,10 +69,14 @@ func NewConstraints(typ, variant string) (*Constraint, error) {
 	switch typ {
 	case "sql":
 		c.Builtins = sqlBuiltins
-		c.Features.Add("not")
+		c.Features.Add("not", "field-ref")
 	case "ucast":
 		switch v := strings.ToLower(variant); v {
-		case "prisma", "all":
+		case "all":
+			c.Variant = v
+			c.Features.Add("not", "field-ref")
+			c.Builtins = allBuiltins
+		case "prisma":
 			c.Variant = v
 			c.Features.Add("not")
 			c.Builtins = allBuiltins

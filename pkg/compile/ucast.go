@@ -91,11 +91,27 @@ func refToField(r ast.Ref, opts *Opts) (string, error) {
 	return translateField(strings.Join(parts, "."), opts.Translations), nil
 }
 
-func toFieldNode(op string, r ast.Ref, v ast.Value, opts *Opts) *ucast.UCASTNode {
-	value, err := ast.ValueToInterface(v, nil)
-	if err != nil {
-		return nil
+func toFieldNode(op string, r ast.Ref, v ast.Value, opts *Opts, refOK bool) *ucast.UCASTNode {
+	var value any
+	switch v := v.(type) {
+	case ast.Ref:
+		if refOK {
+			f, err := refToField(v, opts)
+			if err != nil {
+				return nil
+			}
+			value = ucast.FieldRef{
+				Field: f,
+			}
+		}
+	default:
+		var err error
+		value, err = ast.ValueToInterface(v, nil)
+		if err != nil {
+			return nil
+		}
 	}
+
 	f, err := refToField(r, opts)
 	if err != nil {
 		return nil
@@ -121,14 +137,17 @@ func callToNode(e *ast.Expr, f ast.Ref, flip bool, opts *Opts) *ucast.UCASTNode 
 	ref := e.OperatorTerm().Value.(ast.Ref)
 	op := ref.String()
 
+	refOK := false
 	switch op {
-	case ast.Equality.Name:
 	case ast.NotEqual.Name:
+		refOK = true
 		op = "ne"
-	case ast.LessThan.Name:
-	case ast.LessThanEq.Name:
-	case ast.GreaterThan.Name:
-	case ast.GreaterThanEq.Name:
+	case ast.Equality.Name,
+		ast.LessThan.Name,
+		ast.LessThanEq.Name,
+		ast.GreaterThan.Name,
+		ast.GreaterThanEq.Name:
+		refOK = true
 	case ast.StartsWith.Name:
 	case ast.EndsWith.Name:
 	case ast.Contains.Name:
@@ -144,7 +163,7 @@ func callToNode(e *ast.Expr, f ast.Ref, flip bool, opts *Opts) *ucast.UCASTNode 
 		op = cmp.Or(reversed[op], op) // optionally replace operator
 	}
 
-	fn := toFieldNode(op, f, e.Operand(i).Value, opts)
+	fn := toFieldNode(op, f, e.Operand(i).Value, opts, refOK)
 	if !e.Negated {
 		return fn
 	}
