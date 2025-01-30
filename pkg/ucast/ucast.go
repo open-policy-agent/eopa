@@ -10,10 +10,10 @@ import (
 
 // The "union" structure for incoming UCAST trees.
 type UCASTNode struct {
-	Type  string       `json:"type"`
-	Op    string       `json:"operator"`
-	Field string       `json:"field,omitempty"`
-	Value *interface{} `json:"value,omitempty"`
+	Type  string `json:"type"`
+	Op    string `json:"operator"`
+	Field string `json:"field,omitempty"`
+	Value any    `json:"value,omitempty"`
 }
 
 var (
@@ -65,42 +65,44 @@ func (u *UCASTNode) asSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 
 	switch {
 	case slices.Contains(fieldOps, operator) || uType == "field":
-		// Note: We should add unary operations under this case, like NOT.
-		if value == nil {
-			return "", fmt.Errorf("field expression requires a value")
+		switch value {
+		case nil:
+			return "", nil
+		case struct{}{}:
+			value = nil // `cond.X(field, value)` turns this into `field <X> NULL`
 		}
 		switch operator {
 		case "eq":
-			return cond.Equal(field, *value), nil
+			return cond.Equal(field, value), nil
 		case "ne":
-			return cond.NotEqual(field, *value), nil
+			return cond.NotEqual(field, value), nil
 		case "gt":
-			return cond.GreaterThan(field, *value), nil
+			return cond.GreaterThan(field, value), nil
 		case "lt":
-			return cond.LessThan(field, *value), nil
+			return cond.LessThan(field, value), nil
 		case "ge", "gte":
-			return cond.GreaterEqualThan(field, *value), nil
+			return cond.GreaterEqualThan(field, value), nil
 		case "le", "lte":
-			return cond.LessEqualThan(field, *value), nil
+			return cond.LessEqualThan(field, value), nil
 		case "in":
-			if arr, ok := (*value).([]any); ok {
+			if arr, ok := (value).([]any); ok {
 				return cond.In(field, arr...), nil
 			}
 			return "", fmt.Errorf("field operator 'in' requires collection argument")
 		case "startswith":
-			pattern, err := prefix(*value)
+			pattern, err := prefix(value)
 			if err != nil {
 				return "", err
 			}
 			return cond.Like(field, pattern), nil
 		case "endswith":
-			pattern, err := suffix(*value)
+			pattern, err := suffix(value)
 			if err != nil {
 				return "", err
 			}
 			return cond.Like(field, pattern), nil
 		case "contains":
-			pattern, err := infix(*value)
+			pattern, err := infix(value)
 			if err != nil {
 				return "", err
 			}
@@ -115,7 +117,7 @@ func (u *UCASTNode) asSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 			return "", fmt.Errorf("document expression 'exists' requires a value")
 		}
 		if operator == "exists" {
-			return cond.Exists(*value), nil
+			return cond.Exists(value), nil
 		}
 		return "", fmt.Errorf("unrecognized operator: %s", operator)
 	case slices.Contains(compoundOps, operator) || uType == "compound":
@@ -124,7 +126,7 @@ func (u *UCASTNode) asSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 			if value == nil {
 				return "", fmt.Errorf("compound expression 'and' requires a value")
 			}
-			if values, ok := (*value).([]UCASTNode); ok {
+			if values, ok := (value).([]UCASTNode); ok {
 				conds := make([]string, 0, len(values))
 				for _, c := range values {
 					condition, err := c.asSQL(cond, dialect)
@@ -140,7 +142,7 @@ func (u *UCASTNode) asSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 			if value == nil {
 				return "", fmt.Errorf("compound expression 'or' requires a value")
 			}
-			if values, ok := (*value).([]UCASTNode); ok {
+			if values, ok := (value).([]UCASTNode); ok {
 				conds := make([]string, 0, len(values))
 				for _, c := range values {
 					condition, err := c.asSQL(cond, dialect)
@@ -156,7 +158,7 @@ func (u *UCASTNode) asSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 			if value == nil {
 				return "", fmt.Errorf("compound expression 'not' requires exactly one value")
 			}
-			node, ok := (*value).([]UCASTNode)
+			node, ok := (value).([]UCASTNode)
 			if ok {
 				if len(node) != 1 {
 					return "", fmt.Errorf("compound expression 'not' requires exactly one value")
@@ -167,7 +169,7 @@ func (u *UCASTNode) asSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 				}
 				return cond.Not(condition), nil
 			}
-			return "", fmt.Errorf("value must be a ucast node, got %T: %[1]v", *value)
+			return "", fmt.Errorf("value must be a ucast node, got %T: %[1]v", value)
 		}
 		return "", fmt.Errorf("unrecognized operator: %s", operator)
 	default:

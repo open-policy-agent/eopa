@@ -4,10 +4,6 @@ import (
 	"testing"
 )
 
-func LaunderType(x interface{}) *interface{} {
-	return &x
-}
-
 // Note: Currently only implements tests for the Postgres dialect.
 func TestUCASTNodeAsSQL(t *testing.T) {
 	t.Parallel()
@@ -27,62 +23,62 @@ func TestUCASTNodeAsSQL(t *testing.T) {
 			Error:   "field expression requires a value",
 		},
 		{
-			Note:    "Laundered nil argument",
-			Source:  UCASTNode{Type: "field", Op: "eq", Field: "name", Value: LaunderType(nil)},
+			Note:    "empty struct for NULL",
+			Source:  UCASTNode{Type: "field", Op: "eq", Field: "name", Value: struct{}{}},
 			Dialect: "postgres",
 			Result:  "WHERE name = NULL",
 		},
 		{
 			Note: "Basic compound expression",
-			Source: UCASTNode{Type: "compound", Op: "and", Value: LaunderType([]UCASTNode{
-				{Type: "field", Op: "eq", Field: "name", Value: LaunderType("bob")},
-				{Type: "field", Op: "gt", Field: "salary", Value: LaunderType(50000)},
-			})},
+			Source: UCASTNode{Type: "compound", Op: "and", Value: []UCASTNode{
+				{Type: "field", Op: "eq", Field: "name", Value: "bob"},
+				{Type: "field", Op: "gt", Field: "salary", Value: 50000},
+			}},
 			Dialect: "postgres",
 			Result:  "WHERE (name = E'bob' AND salary > 50000)",
 		},
 		{
 			Note:    "startswith + pattern",
-			Source:  UCASTNode{Type: "field", Field: "name", Op: "startswith", Value: LaunderType(`f\oo_b%ar`)},
+			Source:  UCASTNode{Type: "field", Field: "name", Op: "startswith", Value: `f\oo_b%ar`},
 			Dialect: "postgres",
 			Result:  `WHERE name LIKE E'f\\\\oo\\_b\\%ar%'`,
 		},
 		{
 			Note:    "endswith + pattern",
-			Source:  UCASTNode{Type: "field", Field: "name", Op: "endswith", Value: LaunderType(`f\oo_b%ar`)},
+			Source:  UCASTNode{Type: "field", Field: "name", Op: "endswith", Value: `f\oo_b%ar`},
 			Dialect: "postgres",
 			Result:  `WHERE name LIKE E'%f\\\\oo\\_b\\%ar'`,
 		},
 		{
 			Note:    "contains + pattern",
-			Source:  UCASTNode{Type: "field", Field: "name", Op: "contains", Value: LaunderType(`f\oo_b%ar`)},
+			Source:  UCASTNode{Type: "field", Field: "name", Op: "contains", Value: `f\oo_b%ar`},
 			Dialect: "postgres",
 			Result:  `WHERE name LIKE E'%f\\\\oo\\_b\\%ar%'`,
 		},
 		{
 			Note: "Basic nested compound expression",
-			Source: UCASTNode{Type: "compound", Op: "and", Value: LaunderType([]UCASTNode{
-				{Type: "field", Op: "eq", Field: "name", Value: LaunderType("bob")},
-				{Type: "field", Op: "gt", Field: "salary", Value: LaunderType(50000)},
-				{Type: "compound", Op: "or", Value: LaunderType([]UCASTNode{
-					{Type: "field", Op: "eq", Field: "role", Value: LaunderType("admin")},
-					{Type: "field", Op: "ge", Field: "salary", Value: LaunderType(100000)},
-				})},
-			})},
+			Source: UCASTNode{Type: "compound", Op: "and", Value: []UCASTNode{
+				{Type: "field", Op: "eq", Field: "name", Value: "bob"},
+				{Type: "field", Op: "gt", Field: "salary", Value: 50000},
+				{Type: "compound", Op: "or", Value: []UCASTNode{
+					{Type: "field", Op: "eq", Field: "role", Value: "admin"},
+					{Type: "field", Op: "ge", Field: "salary", Value: 100000},
+				}},
+			}},
 			Dialect: "postgres",
 			Result:  "WHERE (name = E'bob' AND salary > 50000 AND (role = E'admin' OR salary >= 100000))",
 		},
 		{
 			Note:    "'in' expression",
-			Source:  UCASTNode{Type: "field", Field: "f", Op: "in", Value: LaunderType([]any{"foo", "bar"})},
+			Source:  UCASTNode{Type: "field", Field: "f", Op: "in", Value: []any{"foo", "bar"}},
 			Dialect: "postgres",
 			Result:  "WHERE f IN (E'foo', E'bar')",
 		},
 		{
 			Note: "'not' compound expression",
-			Source: UCASTNode{Type: "compound", Op: "not", Value: LaunderType([]UCASTNode{
-				{Type: "field", Op: "eq", Field: "name", Value: LaunderType("bob")},
-			})},
+			Source: UCASTNode{Type: "compound", Op: "not", Value: []UCASTNode{
+				{Type: "field", Op: "eq", Field: "name", Value: "bob"},
+			}},
 			Dialect: "postgres",
 			Result:  "WHERE NOT name = E'bob'",
 		},

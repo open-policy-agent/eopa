@@ -33,11 +33,10 @@ func BodiesToUCAST(bs []ast.Body, opts *Opts) *ucast.UCASTNode {
 		}
 		nodes[i] = *u
 	}
-	value := any(nodes)
 	return &ucast.UCASTNode{
 		Type:  "compound",
 		Op:    "or",
-		Value: &value,
+		Value: nodes,
 	}
 }
 
@@ -60,11 +59,10 @@ func bodyToUCAST(body ast.Body, opts *Opts) *ucast.UCASTNode {
 		}
 		nodes[i] = *u
 	}
-	value := any(nodes)
 	return &ucast.UCASTNode{
 		Type:  "compound",
 		Op:    "and",
-		Value: &value,
+		Value: nodes,
 	}
 }
 
@@ -106,7 +104,7 @@ func toFieldNode(op string, r ast.Ref, v ast.Value, opts *Opts) *ucast.UCASTNode
 		Type:  "field",
 		Op:    op,
 		Field: f,
-		Value: &value,
+		Value: value,
 	}
 }
 
@@ -153,11 +151,10 @@ func callToNode(e *ast.Expr, f ast.Ref, flip bool, opts *Opts) *ucast.UCASTNode 
 
 	value := make([]ucast.UCASTNode, 1)
 	value[0] = *fn
-	a := any(value)
 	return &ucast.UCASTNode{
 		Type:  "compound",
 		Op:    "not",
-		Value: &a,
+		Value: value,
 	}
 }
 

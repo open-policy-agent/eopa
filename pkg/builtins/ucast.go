@@ -77,10 +77,6 @@ func translateField(field string, translations *ast.Term) string {
 	return outTable
 }
 
-func launderType(x interface{}) *interface{} {
-	return &x
-}
-
 // This method recursively traverses the object provided, and attempts to
 // construct a UCASTNode tree from it.
 func regoObjectToUCASTNode(obj *ast.Term, translations *ast.Term) (*ucast.UCASTNode, error) {
@@ -105,53 +101,54 @@ func regoObjectToUCASTNode(obj *ast.Term, translations *ast.Term) (*ucast.UCASTN
 
 	// Change handling, based on type. If we get an array, recurse.
 	// Numeric types also have to be converted from json.Number to int/float.
-	if value != nil {
-		switch x := value.Value.(type) {
-		case interface {
-			Iter(func(*ast.Term) error) error
-			Len() int
-		}:
-			if hasField {
-				break
-			}
-			nodes := make([]ucast.UCASTNode, 0, x.Len())
-			if err := x.Iter(func(elem *ast.Term) error {
-				node, err := regoObjectToUCASTNode(elem, translations)
-				if err != nil {
-					return err
-				}
-				nodes = append(nodes, *node)
-				return nil
-			}); err != nil {
-				return nil, err
-			}
-			out.Value = launderType(nodes)
-			return out, nil
-		case ast.Number:
-			if intNum, ok := x.Int64(); ok {
-				out.Value = launderType(intNum)
-			} else if floatNum, ok := x.Float64(); ok {
-				out.Value = launderType(floatNum)
-			} else {
-				out.Value = launderType(x)
-			}
-			return out, nil
-		case ast.Object:
-			node, err := regoObjectToUCASTNode(value, translations)
-			if err != nil {
-				return nil, err
-			}
-			if node.Type != "" && node.Op != "" {
-				out.Value = launderType(*node)
-				return out, nil
-			}
+	switch x := value.Value.(type) {
+	case interface {
+		Iter(func(*ast.Term) error) error
+		Len() int
+	}:
+		if hasField {
+			break
 		}
-		valueIf, err := ast.JSON(value.Value)
+		nodes := make([]ucast.UCASTNode, 0, x.Len())
+		if err := x.Iter(func(elem *ast.Term) error {
+			node, err := regoObjectToUCASTNode(elem, translations)
+			if err != nil {
+				return err
+			}
+			nodes = append(nodes, *node)
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+		out.Value = nodes
+		return out, nil
+	case ast.Number:
+		if intNum, ok := x.Int64(); ok {
+			out.Value = intNum
+		} else if floatNum, ok := x.Float64(); ok {
+			out.Value = floatNum
+		} else {
+			out.Value = x
+		}
+		return out, nil
+	case ast.Object:
+		node, err := regoObjectToUCASTNode(value, translations)
 		if err != nil {
 			return nil, err
 		}
-		out.Value = launderType(valueIf)
+		if node.Type != "" && node.Op != "" {
+			out.Value = *node
+			return out, nil
+		}
+	case ast.Null:
+		out.Value = struct{}{}
+		return out, nil
 	}
+	valueIf, err := ast.JSON(value.Value)
+	if err != nil {
+		return nil, err
+	}
+	out.Value = valueIf
 	return out, nil
 }
 
