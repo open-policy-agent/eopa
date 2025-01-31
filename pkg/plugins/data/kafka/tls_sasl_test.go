@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/redpanda"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/scram"
@@ -46,6 +47,7 @@ transform[key] := val if {
 `
 
 func TestTLS(t *testing.T) {
+	t.Skip("testcontainers-go redpanda module TLS support is broken")
 	t.Parallel()
 
 	ctx := context.Background()
@@ -269,7 +271,6 @@ plugins:
 func TestTLSAndSASL(t *testing.T) {
 	t.Parallel()
 
-	t.Skip("testcontainer module redpanda can't deal with sasl and tls at the same time")
 	ctx := context.Background()
 	topic := "cipot"
 	config := `
@@ -397,4 +398,22 @@ func pluginMgr(_ context.Context, t *testing.T, store storage.Store, config stri
 	}
 	mgr.Register(discovery.Name, disco)
 	return mgr
+}
+
+// NOTE(sr): TLS setup is much simpler with RedPanda -- so we're using this to verify
+// the plugin's TLS/SASL functionality.
+// CAVEAT: RP only support SCRAM-SHA-256, no other variant (SCRAM-SHA-512, PLAIN).
+func testRedPanda(t *testing.T, ctx context.Context, cs ...testcontainers.ContainerCustomizer) (string, testcontainers.Container) {
+	opts := []testcontainers.ContainerCustomizer{
+		redpanda.WithAutoCreateTopics(),
+	}
+	tc, err := redpanda.Run(ctx, "redpandadata/redpanda:v24.3.4", append(opts, cs...)...)
+	if err != nil {
+		t.Fatalf("could not start redpanda: %s", err)
+	}
+	broker, err := tc.KafkaSeedBroker(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return broker, tc
 }
