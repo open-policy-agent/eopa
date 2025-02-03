@@ -21,7 +21,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.84
 	github.com/open-policy-agent/opa v1.1.0
 	github.com/redpanda-data/benthos/v4 v4.43.0
-	github.com/redpanda-data/connect/v4 v4.45.1
+	github.com/redpanda-data/connect/v4 v4.46.0
 	github.com/rogpeppe/go-internal v1.13.1
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
 	github.com/testcontainers/testcontainers-go v0.35.0
@@ -75,18 +75,18 @@ require (
 	github.com/apache/arrow/go/v16 v16.0.0 // indirect
 	github.com/apache/thrift v0.21.0 // indirect
 	github.com/aws/aws-sdk-go v1.55.6 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.34.0 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.35.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.8 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.55 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.54 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.29 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.29 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.29 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.56 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.56 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.30 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.30 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.30 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.5.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.10 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.10 // indirect
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.74.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.5.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.11 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.11 // indirect
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.75.1 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/benhoyt/goawk v1.27.0 // indirect
@@ -303,10 +303,10 @@ require (
 	golang.org/x/time v0.9.0 // indirect
 	golang.org/x/tools v0.29.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
-	google.golang.org/api v0.218.0 // indirect
+	google.golang.org/api v0.219.0 // indirect
 	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250115164207-1a7da9e5054f // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250124145028-65684f501c47 // indirect
 	google.golang.org/grpc v1.70.0 // indirect
 	google.golang.org/protobuf v1.36.4 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
