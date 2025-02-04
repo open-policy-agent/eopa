@@ -21,7 +21,9 @@ import (
 )
 
 type Response struct {
-	Query   any                `json:"result"`
+	Result struct {
+		Query any `json:"query"`
+	} `json:"result"`
 	Metrics map[string]float64 `json:"metrics"`
 }
 
@@ -40,23 +42,21 @@ func TestCompileHandlerMetrics(t *testing.T) {
 		},
 	}
 	query := "data.filters.include"
-	targets := map[string]string{
-		"application/vnd.styra.sql+json":   "postgres",
-		"application/vnd.styra.ucast+json": "prisma",
+	targets := []string{
+		"application/vnd.styra.sql.postgres+json",
+		"application/vnd.styra.ucast.prisma+json",
 	}
 
-	for target, dialect := range targets {
+	for _, target := range targets {
 		t.Run(strings.Split(target, "/")[1], func(t *testing.T) {
 			payload := map[string]any{ // NB(sr): unknowns are taken from metadata
 				"input": input,
 				"query": query,
-				"options": map[string]any{
-					"dialect": dialect,
-				},
 			}
 			resp := evalReq(t, chnd, payload, target)
 			if exp, act := map[string]float64{
 				"timer_eval_constraints_ns":      0,
+				"timer_extract_annotations_ns":   0,
 				"timer_prep_partial_ns":          0,
 				"timer_rego_external_resolve_ns": 0,
 				"timer_rego_partial_eval_ns":     0,
@@ -142,7 +142,7 @@ _use_md := rego.metadata.rule()
 	iqvc := cache.NewInterQueryValueCache(ctx, config)
 	mgr.SetCaches(iqc, iqvc)
 
-	query, target, dialect := "data.filters.include", "application/vnd.styra.sql+json", "postgres"
+	query, target := "data.filters.include", "application/vnd.styra.sql.postgres+json"
 
 	req := map[string]any{
 		"method":                       "GET",
@@ -184,12 +184,9 @@ _use_md := rego.metadata.rule()
 			payload := map[string]any{ // NB(sr): unknowns are taken from metadata
 				"input": tc.input,
 				"query": query,
-				"options": map[string]any{
-					"dialect": dialect,
-				},
 			}
 			resp := evalReq(t, chnd, payload, target)
-			if exp, act := "WHERE foo.col = TRUE", resp.Query; exp != act {
+			if exp, act := "WHERE foo.col = TRUE", resp.Result.Query; exp != act {
 				t.Errorf("response: expected %v, got %v", exp, act)
 			}
 
@@ -238,7 +235,7 @@ func evalReq(t testing.TB, h http.Handler, payload map[string]any, target string
 		t.Fatalf("Failed to marshal JSON: %v", err)
 	}
 
-	req := httptest.NewRequest("POST", "/exp/compile?metrics=true", bytes.NewBuffer(jsonData))
+	req := httptest.NewRequest("POST", "/v1/compile?metrics=true", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", target)
 	rr := httptest.NewRecorder()

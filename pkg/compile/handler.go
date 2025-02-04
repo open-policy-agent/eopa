@@ -2,6 +2,8 @@ package compile
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -20,14 +22,28 @@ import (
 
 const (
 	invalidUnknownCode = "invalid_unknown"
-	ucastJSON          = "application/vnd.styra.ucast+json"
-	sqlJSON            = "application/vnd.styra.sql+json"
+
+	multiJSON        = "application/vnd.styra.multitarget+json"
+	ucastAllJSON     = "application/vnd.styra.ucast.all+json"
+	ucastMinimalJSON = "application/vnd.styra.ucast.minimal+json"
+	ucastPrismaJSON  = "application/vnd.styra.ucast.prisma+json"
+	ucastLINQJSON    = "application/vnd.styra.ucast.linq+json"
+	sqlPostgresJSON  = "application/vnd.styra.sql.postgres+json"
+	sqlMySQLJSON     = "application/vnd.styra.sql.mysql+json"
+	sqlSQLServerJSON = "application/vnd.styra.sql.sqlserver+json"
+
+	prometheusHandle = "v1/compile"
 
 	// Timer names
-	timerPrepPartial      = "prep_partial"
-	timerEvalConstraints  = "eval_constraints"
-	timerTranslateQueries = "translate_queries"
+	timerPrepPartial        = "prep_partial"
+	timerEvalConstraints    = "eval_constraints"
+	timerTranslateQueries   = "translate_queries"
+	timerExtractAnnotations = "extract_annotations"
 )
+
+type CompileResult struct {
+	Query any `json:"query"`
+}
 
 type CompileRequestV1 struct {
 	Input    *interface{} `json:"input"`
@@ -36,7 +52,6 @@ type CompileRequestV1 struct {
 	Options  struct {
 		DisableInlining          []string       `json:"disableInlining,omitempty"`
 		NondeterministicBuiltins bool           `json:"nondeterministicBuiltins"`
-		Dialect                  string         `json:"dialect,omitempty"`
 		Mappings                 map[string]any `json:"targetSQLTableMappings,omitempty"`
 	} `json:"options,omitempty"`
 }
@@ -56,6 +71,7 @@ type hndl struct {
 }
 
 func (h *hndl) SetManager(m *plugins.Manager) {
+	m.ExtraRoute("/v1/compile", prometheusHandle, h.ServeHTTP)
 	h.manager = m
 }
 
@@ -101,6 +117,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	comp := h.manager.GetCompiler()
 	unknowns := request.Unknowns
 	if len(unknowns) == 0 { // Read unknowns from metadata
+		m.Timer(timerExtractAnnotations).Start()
 		parsedUnknowns, errs := parseUnknownsFromAnnotations(comp)
 		if errs != nil {
 			writer.Error(w, http.StatusBadRequest,
@@ -109,15 +126,26 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		unknowns = parsedUnknowns
+		m.Timer(timerExtractAnnotations).Stop()
 	}
 
-	accept := r.Header.Get("Accept")
+	target, dialect, err := parseHeader(r.Header.Get("Accept"))
+	if err != nil {
+		writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, "Accept header: %s", err.Error()))
+		return
+	}
+
+	mappings, err := lookupMappings(request.Options.Mappings, dialect, target)
+	if err != nil {
+		writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, "invalid mappings"))
+		return
+	}
 
 	// We require evaluating non-det builtins for the translated targets:
 	// We're not able to meaningfully tanslate things like http.send, sql.send, or
 	// io.jwt.decode_verify into SQL or UCAST, so we try to eval them out where possible.
-	evalNonDet := accept == ucastJSON ||
-		accept == sqlJSON ||
+	evalNonDet := target == "ucast" ||
+		target == "sql" ||
 		request.Options.NondeterministicBuiltins
 
 	iqc, iqvc := h.manager.GetCaches()
@@ -174,23 +202,19 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := types.CompileResponseV1{}
-	var i any = types.PartialEvaluationResultV1{
-		Queries: pq.Queries,
-		Support: pq.Support,
-	}
 
-	m.Timer(timerEvalConstraints).Start()
-	var constr *Constraint
-	switch accept {
-	case ucastJSON:
-		constr, err = NewConstraints("ucast", request.Options.Dialect)
-	case sqlJSON:
-		constr, err = NewConstraints("sql", request.Options.Dialect)
-	default: // just return, don't run checks
+	if target == "" { // "legacy" PE request
+		var i any = types.PartialEvaluationResultV1{
+			Queries: pq.Queries,
+			Support: pq.Support,
+		}
 		result.Result = &i
 		fin(w, result, m, includeMetrics(r), includeInstrumentation)
 		return
 	}
+
+	m.Timer(timerEvalConstraints).Start()
+	constr, err := NewConstraints(target, dialect)
 	if err != nil {
 		writer.ErrorAuto(w, types.BadRequestErr(err.Error()))
 		return
@@ -209,45 +233,35 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m.Timer(timerTranslateQueries).Start()
 
 	if pq.Queries != nil { // not unconditional NO
-		switch accept {
-		case ucastJSON:
+		switch target {
+		case "ucast":
 			opts := &Opts{
-				Translations: request.Options.Mappings,
+				Translations: mappings,
 			}
-			var a any
 			ucast := BodiesToUCAST(pq.Queries, opts)
+			r := any(ucast)
 			if ucast == nil { // unconditional YES
 				// NOTE(sr): we cannot encode "no conditions" in ucast.UCASTNode{}, so we return an empty map
-				a = struct{}{}
-			} else {
-				a = any(ucast)
+				r = struct{}{}
 			}
-			result.Result = &a
-		case sqlJSON:
+			r0 := any(CompileResult{Query: r})
+			result.Result = &r0
+		case "sql":
 			opts := &Opts{
-				Translations: request.Options.Mappings,
+				Translations: mappings,
 			}
+			sql := ""
 			ucast := BodiesToUCAST(pq.Queries, opts)
-			if ucast == nil { // unconditional YES
-				s := any("")
-				result.Result = &s
-				break
+			if ucast != nil { // ucast == nil means unconditional YES, for which we'll keep `sql = ""`
+				sql0, err := ucast.AsSQL(dialect)
+				if err != nil {
+					writer.ErrorAuto(w, err)
+					return
+				}
+				sql = sql0
 			}
-			switch request.Options.Dialect {
-			case "mysql", "sqlite", "postgres", "sqlserver": // OK
-			default:
-				writer.Error(w, http.StatusBadRequest,
-					types.NewErrorV1(types.CodeInvalidParameter, "unsupported dialect: %s", request.Options.Dialect))
-				return
-			}
-
-			sql, err := ucast.AsSQL(request.Options.Dialect)
-			if err != nil {
-				writer.ErrorAuto(w, err)
-				return
-			}
-			r := any(sql)
-			result.Result = &r
+			s0 := any(CompileResult{Query: sql})
+			result.Result = &s0
 		}
 	}
 
@@ -266,7 +280,6 @@ type compileRequest struct {
 type compileRequestOptions struct {
 	DisableInlining          []string
 	NondeterministicBuiltins bool
-	Dialect                  string
 	Mappings                 map[string]any
 }
 
@@ -309,18 +322,31 @@ func readInputCompilePostV1(reqBytes []byte, queryParserOptions ast.ParserOption
 		}
 	}
 
-	result := &compileRequest{
+	return &compileRequest{
 		Query:    query,
 		Input:    input,
 		Unknowns: unknowns,
 		Options: compileRequestOptions{
 			DisableInlining: request.Options.DisableInlining,
 			Mappings:        request.Options.Mappings,
-			Dialect:         request.Options.Dialect,
 		},
+	}, nil
+}
+
+func lookupMappings(mappings map[string]any, dialect, target string) (map[string]any, error) {
+	if mappings == nil {
+		return nil, nil
 	}
 
-	return result, nil
+	if m, ok := mappings[dialect].(map[string]any); ok && m != nil {
+		return m, nil
+	}
+
+	if m, ok := mappings[target].(map[string]any); ok {
+		return m, nil
+	}
+
+	return nil, fmt.Errorf("invalid mappings for dialect %s or target %s", dialect, target)
 }
 
 func parseUnknownsFromAnnotations(comp *ast.Compiler) ([]*ast.Term, []*ast.Error) {
@@ -365,6 +391,38 @@ func fin(w http.ResponseWriter, result types.CompileResponseV1,
 		result.Metrics = metrics.All()
 	}
 	writer.JSONOK(w, result, true)
+}
+
+func parseHeader(accept string) (string, string, error) {
+	if accept == "" {
+		return "", "", errors.New("missing required header")
+	}
+
+	accepts := strings.Split(accept, ",")
+	if len(accepts) != 1 {
+		return "", "", errors.New("multiple headers not supported")
+	}
+
+	switch accepts[0] {
+	case "application/json":
+		return "", "", nil
+	case ucastAllJSON:
+		return "ucast", "all", nil
+	case ucastMinimalJSON:
+		return "ucast", "minimal", nil
+	case ucastPrismaJSON:
+		return "ucast", "prisma", nil
+	case ucastLINQJSON:
+		return "ucast", "linq", nil
+	case sqlPostgresJSON:
+		return "sql", "postgres", nil
+	case sqlMySQLJSON:
+		return "sql", "mysql", nil
+	case sqlSQLServerJSON:
+		return "sql", "sqlserver", nil
+	}
+
+	return "", "", fmt.Errorf("unsupported header: %s", accepts[0])
 }
 
 // taken from v1/server/server.go

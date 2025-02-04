@@ -411,8 +411,9 @@ func TestCompileHappyPathE2E(t *testing.T) {
 							"query":    fmt.Sprintf(query, i),
 							"unknowns": unknowns,
 							"options": map[string]any{
-								"dialect":                "prisma",
-								"targetSQLTableMappings": mapping,
+								"targetSQLTableMappings": map[string]any{
+									"ucast": mapping,
+								},
 							},
 						}
 						// get the UCAST IR, process with @styra/ucast-prisma, and run a findMany query
@@ -428,13 +429,14 @@ func TestCompileHappyPathE2E(t *testing.T) {
 					t.Parallel()
 
 					// second, query the compile API
+					mappings := make(map[string]any, 1)
+					mappings[string(config.dbType)] = mapping
 					payload := map[string]any{
 						"input":    input,
 						"query":    fmt.Sprintf(query, i),
 						"unknowns": unknowns,
 						"options": map[string]any{
-							"dialect":                string(dbType),
-							"targetSQLTableMappings": mapping,
+							"targetSQLTableMappings": mappings,
 						},
 					}
 
@@ -481,9 +483,6 @@ func TestPrometheusMetrics(t *testing.T) {
 			"input":    input,
 			"query":    query,
 			"unknowns": unknowns,
-			"options": map[string]any{
-				"dialect": "postgres",
-			},
 		}
 
 		queryBytes, err := json.Marshal(payload)
@@ -493,34 +492,38 @@ func TestPrometheusMetrics(t *testing.T) {
 
 		// POST to Compile API
 		req, err = http.NewRequest("POST",
-			fmt.Sprintf("%s/exp/compile", eopaURL),
+			fmt.Sprintf("%s/v1/compile", eopaURL),
 			strings.NewReader(string(queryBytes)))
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Accept", "application/vnd.styra.sql+json")
+		req.Header.Set("Accept", "application/vnd.styra.sql.postgres+json")
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			t.Fatalf("failed to execute request: %v", err)
 		}
 		defer resp.Body.Close()
-		var respPayload map[string]any
+		var respPayload struct {
+			Result struct {
+				Query any `json:"query"`
+			} `json:"result"`
+		}
 		if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
 			t.Fatalf("failed to decode response: %v", err)
 		}
-		if exp, act := "WHERE fruits.name = E'banana'", respPayload["result"]; exp != act {
+		if exp, act := "WHERE fruits.name = E'banana'", respPayload.Result.Query; exp != act {
 			t.Errorf("response: expected %v, got %v (response: %v)", exp, act, respPayload)
 		}
 	}
 
 	{ // check the /v1/metrics endpoint for the right line
-		needle := `http_request_duration_seconds_bucket{code="200",handler="exp/compile",method="post",`
+		needle := `http_request_duration_seconds_bucket{code="200",handler="v1/compile",method="post",`
 		resp, err := http.Get(fmt.Sprintf("%s/metrics", eopaURL))
 		if err != nil {
 			t.Fatalf("failed to send request: %v", err)
 		}
-		// search for line containing exp/compile
+		// search for line containing v1/compile
 		found := false
 		scanner := bufio.NewScanner(resp.Body)
 		for scanner.Scan() {
@@ -534,7 +537,7 @@ func TestPrometheusMetrics(t *testing.T) {
 			t.Fatalf("failed to scan response: %v", err)
 		}
 		if !found {
-			t.Errorf("expected exp/compile line in metrics, got none")
+			t.Errorf("expected v1/compile line in metrics, got none")
 		}
 
 	}
@@ -548,13 +551,13 @@ func getSQLAndRunQuery(t *testing.T, payload map[string]any, config *TestConfig,
 	}
 
 	req, err := http.NewRequest("POST",
-		fmt.Sprintf("%s/exp/compile", eopaURL),
+		fmt.Sprintf("%s/v1/compile", eopaURL),
 		strings.NewReader(string(queryBytes)))
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/vnd.styra.sql+json")
+	req.Header.Set("Accept", fmt.Sprintf("application/vnd.styra.sql.%s+json", config.dbType))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -566,7 +569,11 @@ func getSQLAndRunQuery(t *testing.T, payload map[string]any, config *TestConfig,
 		t.Errorf("expected status %v, got %v", http.StatusOK, status)
 	}
 
-	var respPayload map[string]any
+	var respPayload struct {
+		Result struct {
+			Query any `json:"query"`
+		} `json:"result"`
+	}
 	if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
@@ -574,7 +581,7 @@ func getSQLAndRunQuery(t *testing.T, payload map[string]any, config *TestConfig,
 	t.Log(respPayload)
 	var rowsData []fruitRow
 	var whereClauses string
-	switch w := respPayload["result"].(type) {
+	switch w := respPayload.Result.Query.(type) {
 	case nil: // unconditional NO
 		return rowsData // empty
 	case string:
@@ -608,13 +615,13 @@ func getUCASTAndRunPrisma(t *testing.T, payload map[string]any, config *TestConf
 
 	// Query EOPA for UCAST IR
 	req, err := http.NewRequest("POST",
-		fmt.Sprintf("%s/exp/compile", eopaURL),
+		fmt.Sprintf("%s/v1/compile", eopaURL),
 		strings.NewReader(string(queryBytes)))
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/vnd.styra.ucast+json")
+	req.Header.Set("Accept", "application/vnd.styra.ucast.prisma+json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -626,11 +633,15 @@ func getUCASTAndRunPrisma(t *testing.T, payload map[string]any, config *TestConf
 		t.Errorf("expected status %v, got %v", http.StatusOK, status)
 	}
 
-	var respPayload map[string]any
+	var respPayload struct {
+		Result struct {
+			Query map[string]any `json:"query"`
+		} `json:"result"`
+	}
 	if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	t.Log("ucast IR:", respPayload["result"])
+	t.Log("ucast IR:", respPayload.Result.Query)
 
 	// Execute prisma script with UCAST IR as input
 	cmd := exec.Command("node", "index.js")
@@ -651,7 +662,7 @@ func getUCASTAndRunPrisma(t *testing.T, payload map[string]any, config *TestConf
 	}
 
 	// Write UCAST IR to stdin
-	if err := json.NewEncoder(stdin).Encode(respPayload["result"]); err != nil {
+	if err := json.NewEncoder(stdin).Encode(respPayload.Result.Query); err != nil {
 		t.Fatalf("failed to write to stdin: %v", err)
 	}
 	stdin.Close()
@@ -682,7 +693,6 @@ func loadEnterpriseOPA(t *testing.T, httpPort int) (*exec.Cmd, *bytes.Buffer, *b
 		"--addr", fmt.Sprintf("localhost:%d", httpPort),
 		"--log-level=debug",
 		"--disable-telemetry",
-		"--set=plugins.exp_compile_api={}",
 	}
 	bin := os.Getenv("BINARY")
 	if bin == "" {

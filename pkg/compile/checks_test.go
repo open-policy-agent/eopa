@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	ucastAcceptHeader = "application/vnd.styra.ucast+json"
-	sqlAcceptHeader   = "application/vnd.styra.sql+json"
+	ucastAcceptHeader = "application/vnd.styra.ucast.prisma+json"
+	sqlAcceptHeader   = "application/vnd.styra.sql.postgres+json"
 )
 
 // Error is needed here because the ast.Error type cannot be
@@ -64,16 +64,16 @@ func TestPostPartialChecks(t *testing.T) {
 	chnd.SetManager(trt.Runtime.Manager)
 
 	for _, tc := range []struct {
-		note            string
-		target, dialect string
-		rego            string
-		regoVerbatim    bool
-		omitUnknowns    bool
-		input           any
-		query           string
-		errors          []Error
-		skip            string
-		result          map[string]any
+		note         string
+		target       string
+		rego         string
+		regoVerbatim bool
+		omitUnknowns bool
+		input        any
+		query        string
+		errors       []Error
+		skip         string
+		result       map[string]any
 	}{
 		{
 			note:   "happy path",
@@ -177,10 +177,10 @@ _use_metadata := rego.metadata.chain()`,
 			result: map[string]any{"type": "field", "field": "fruits.price", "operator": "gt", "value": float64(10)},
 		},
 		{
-			note:    "happy path, comparison with two unknowns",
-			dialect: "all",
-			rego:    `include if input.fruits.price < input.fruits.max_price`,
-			result:  map[string]any{"type": "field", "field": "fruits.price", "operator": "lt", "value": map[string]any{"field": "fruits.max_price"}},
+			note:   "happy path, comparison with two unknowns",
+			target: "application/vnd.styra.ucast.all+json",
+			rego:   `include if input.fruits.price < input.fruits.max_price`,
+			result: map[string]any{"type": "field", "field": "fruits.price", "operator": "lt", "value": map[string]any{"field": "fruits.max_price"}},
 		},
 		{
 			note:   "happy path, comparison, reversed",
@@ -223,15 +223,15 @@ _use_metadata := rego.metadata.chain()`,
 			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "contains", "value": "ppl"},
 		},
 		{
-			note:    "happy path, internal.member_2 (ucast/linq)",
-			rego:    `include if input.fruits.name in {"apple", "pear"}`,
-			dialect: "linq",
-			result:  map[string]any{"type": "field", "field": "fruits.name", "operator": "in", "value": []any{"apple", "pear"}},
+			note:   "happy path, internal.member_2 (ucast/linq)",
+			rego:   `include if input.fruits.name in {"apple", "pear"}`,
+			target: "application/vnd.styra.ucast.linq+json",
+			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "in", "value": []any{"apple", "pear"}},
 		},
 		{
-			note:    "invalid expression: not+equal (ucast/linq)",
-			dialect: "linq",
-			rego:    `include if not input.fruits.name == "apple"`,
+			note:   "invalid expression: not+equal (ucast/linq)",
+			target: "application/vnd.styra.ucast.linq+json",
+			rego:   `include if not input.fruits.name == "apple"`,
 			errors: []Error{
 				{
 					Code:     "pe_fragment_error",
@@ -241,9 +241,9 @@ _use_metadata := rego.metadata.chain()`,
 			},
 		},
 		{
-			note:    "invalid builtin: internal.member_2 (ucast/minimal)",
-			rego:    `include if input.fruits.name in {"apple", "pear"}`,
-			dialect: "not-all", // currently, only "linq" and "all" affect the constraints, all else gets a minimal set
+			note:   "invalid builtin: internal.member_2 (ucast/minimal)",
+			rego:   `include if input.fruits.name in {"apple", "pear"}`,
+			target: "application/vnd.styra.ucast.minimal+json",
 			errors: []Error{
 				{
 					Code:     "pe_fragment_error",
@@ -253,9 +253,9 @@ _use_metadata := rego.metadata.chain()`,
 			},
 		},
 		{
-			note:    "invalid builtin: startswith (ucast/linq)",
-			rego:    `include if startswith(input.fruits.name, "app")`,
-			dialect: "linq",
+			note:   "invalid builtin: startswith (ucast/linq)",
+			rego:   `include if startswith(input.fruits.name, "app")`,
+			target: "application/vnd.styra.ucast.linq+json",
 			errors: []Error{
 				{
 					Code:     "pe_fragment_error",
@@ -265,9 +265,9 @@ _use_metadata := rego.metadata.chain()`,
 			},
 		},
 		{
-			note:    "invalid builtin: startswith (ucast)",
-			rego:    `include if startswith(input.fruits.name, "app")`,
-			dialect: "not-all", // currently, only "linq" and "all" affect the constraints, all else gets a minimal set
+			note:   "invalid builtin: startswith (ucast)",
+			rego:   `include if startswith(input.fruits.name, "app")`,
+			target: "application/vnd.styra.ucast.minimal+json",
 			errors: []Error{
 				{
 					Code:     "pe_fragment_error",
@@ -299,9 +299,9 @@ _use_metadata := rego.metadata.chain()`,
 			},
 		},
 		{
-			note:    "invalid use of '...in...' (ucast)",
-			rego:    `include if "k", input.fruits.colour in {"k": "grey", "k2": "orange"}`,
-			dialect: "linq",
+			note:   "invalid use of '...in...' (ucast)",
+			rego:   `include if "k", input.fruits.colour in {"k": "grey", "k2": "orange"}`,
+			target: "application/vnd.styra.ucast.linq+json",
 			errors: []Error{
 				{
 					Code:     "pe_fragment_error",
@@ -334,9 +334,9 @@ include if user == input.fruits.user`,
 			},
 		},
 		{
-			note:    "rhs+lhs both unknown",
-			rego:    `include if input.fruits.colour == input.baskets.colour`,
-			dialect: "all",
+			note:   "rhs+lhs both unknown",
+			rego:   `include if input.fruits.colour == input.baskets.colour`,
+			target: "application/vnd.styra.ucast.all+json",
 			result: map[string]any{
 				"type":     "field",
 				"field":    "fruits.colour",
@@ -345,9 +345,9 @@ include if user == input.fruits.user`,
 			},
 		},
 		{ // TODO(sr): ucast-prisma doesn't support this yet
-			note:    "rhs+lhs both unknown, unsupported",
-			rego:    `include if input.fruits.colour == input.baskets.colour`,
-			dialect: "prisma",
+			note:   "rhs+lhs both unknown, unsupported",
+			rego:   `include if input.fruits.colour == input.baskets.colour`,
+			target: "application/vnd.styra.ucast.prisma+json",
 			errors: []Error{
 				{
 					Code:     "pe_fragment_error",
@@ -623,16 +623,12 @@ _use_metadata := rego.metadata.chain()`,
 			query := cmp.Or(tc.query, defaultQuery)
 			input := cmp.Or(tc.input, any(defaultInput))
 			target := cmp.Or(tc.target, ucastAcceptHeader)
-			dialect := cmp.Or(tc.dialect, "all")
 
 			// second, query the compile API
 			payload := map[string]any{
 				"input":    input,
 				"query":    query,
 				"unknowns": unknowns,
-				"options": map[string]any{
-					"dialect": dialect,
-				},
 			}
 
 			jsonData, err := json.Marshal(payload)
@@ -690,13 +686,15 @@ _use_metadata := rego.metadata.chain()`,
 			{
 				// compare results
 				var resp struct {
-					Result map[string]any `json:"result"`
+					Result struct {
+						Query map[string]any `json:"query"`
+					} `json:"result"`
 				}
 				if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
 					t.Fatalf("unmarshal response: %v", err)
 				}
 
-				act := resp.Result
+				act := resp.Result.Query
 				if diff := go_cmp.Diff(tc.result, act); diff != "" {
 					t.Errorf("response unexpected (-want, +got):\n%s", diff)
 				}

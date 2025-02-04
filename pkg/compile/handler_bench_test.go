@@ -64,19 +64,16 @@ func BenchmarkCompileHandler(b *testing.B) {
 		},
 	}
 	query := "data.filters.include"
-	targets := map[string]string{
-		"application/vnd.styra.sql+json":   "postgres",
-		"application/vnd.styra.ucast+json": "prisma",
+	targets := []string{
+		"application/vnd.styra.sql.postgres+json",
+		"application/vnd.styra.ucast.prisma+json",
 	}
 
-	for target, dialect := range targets {
+	for _, target := range targets {
 		b.Run(strings.Split(target, "/")[1], func(b *testing.B) {
 			payload := map[string]any{ // NB(sr): unknowns are taken from metadata
 				"input": input,
 				"query": query,
-				"options": map[string]any{
-					"dialect": dialect,
-				},
 			}
 			jsonData, err := json.Marshal(payload)
 			if err != nil {

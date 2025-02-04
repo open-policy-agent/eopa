@@ -26,9 +26,9 @@ import (
 	opa_envoy "github.com/open-policy-agent/opa-envoy-plugin/plugin"
 
 	"github.com/styrainc/enterprise-opa-private/internal/license"
+	"github.com/styrainc/enterprise-opa-private/pkg/compile"
 	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/compile"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
 	dl "github.com/styrainc/enterprise-opa-private/pkg/plugins/decision_logs"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
@@ -386,7 +386,6 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 			grpc.PluginName:      grpc.Factory(),
 			dl.DLPluginName:      dl.Factory(),
 			opa_envoy.PluginName: &opa_envoy.Factory{}, // Hack(philip): This is ugly, but necessary because upstream lacks the Factory() function.
-			compile.PluginName:   compile.Factory(),
 		}),
 		discovery.Hooks(hs),
 	}
@@ -395,6 +394,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	if err != nil {
 		return nil, err
 	}
+	compileHndlr := compile.Handler(rt.Manager.Logger())
+	compileHndlr.SetManager(rt.Manager)
 
 	plugins.InitBundles(nil)(rt.Manager) // To release memory holding the init bundles.
 
