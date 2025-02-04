@@ -61,7 +61,6 @@ func TestPostPartialChecks(t *testing.T) {
 
 	trt.Runtime.Manager.Info = ast.MustParseTerm(`{"foo": "bar", "fox": 100}`)
 	chnd := compile.Handler(l)
-	chnd.SetStore(trt.Runtime.Store)
 	chnd.SetManager(trt.Runtime.Manager)
 
 	for _, tc := range []struct {

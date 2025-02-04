@@ -3,6 +3,8 @@ package compile
 import (
 	"bytes"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/logging"
@@ -20,6 +22,11 @@ const (
 	invalidUnknownCode = "invalid_unknown"
 	ucastJSON          = "application/vnd.styra.ucast+json"
 	sqlJSON            = "application/vnd.styra.sql+json"
+
+	// Timer names
+	timerPrepPartial      = "prep_partial"
+	timerEvalConstraints  = "eval_constraints"
+	timerTranslateQueries = "translate_queries"
 )
 
 type CompileRequestV1 struct {
@@ -36,7 +43,6 @@ type CompileRequestV1 struct {
 
 type CompileHandler interface {
 	http.Handler
-	SetStore(storage.Store)
 	SetManager(*plugins.Manager)
 }
 
@@ -46,12 +52,7 @@ func Handler(l logging.Logger) CompileHandler {
 
 type hndl struct {
 	logging.Logger
-	store   storage.Store
 	manager *plugins.Manager
-}
-
-func (h *hndl) SetStore(s storage.Store) {
-	h.store = s
 }
 
 func (h *hndl) SetManager(m *plugins.Manager) {
@@ -62,8 +63,8 @@ var unsafeBuiltinsMap = map[string]struct{}{ast.HTTPSend.Name: {}}
 
 func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	explainMode := types.ExplainOffV1
-	includeInstrumentation := false
+	explainMode := getExplain(r.URL.Query()[types.ParamExplainV1], types.ExplainOffV1)
+	includeInstrumentation := getBoolParam(r.URL, types.ParamInstrumentV1, true)
 
 	m := metrics.New()
 	m.Timer(metrics.ServerHandler).Start()
@@ -85,13 +86,13 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m.Timer(metrics.RegoQueryParse).Stop()
 
 	c := storage.NewContext().WithMetrics(m)
-	txn, err := h.store.NewTransaction(ctx, storage.TransactionParams{Context: c})
+	txn, err := h.manager.Store.NewTransaction(ctx, storage.TransactionParams{Context: c})
 	if err != nil {
 		writer.ErrorAuto(w, err)
 		return
 	}
 
-	defer h.store.Abort(ctx, txn)
+	defer h.manager.Store.Abort(ctx, txn)
 	var buf *topdown.BufferTracer
 	if explainMode != types.ExplainOffV1 {
 		buf = topdown.NewBufferTracer()
@@ -119,9 +120,11 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		accept == sqlJSON ||
 		request.Options.NondeterministicBuiltins
 
+	iqc, iqvc := h.manager.GetCaches()
+
 	opts := []func(*rego.Rego){
 		rego.Compiler(comp),
-		rego.Store(h.store),
+		rego.Store(h.manager.Store),
 		rego.Transaction(txn),
 		rego.ParsedQuery(request.Query),
 		rego.DisableInlining(request.Options.DisableInlining),
@@ -131,10 +134,12 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rego.NondeterministicBuiltins(evalNonDet),
 		rego.Runtime(h.manager.Info),
 		rego.UnsafeBuiltins(unsafeBuiltinsMap),
-		// rego.InterQueryBuiltinCache(s.interQueryBuiltinCache),
-		// rego.InterQueryBuiltinValueCache(s.interQueryBuiltinValueCache),
+		rego.InterQueryBuiltinCache(iqc),
+		rego.InterQueryBuiltinValueCache(iqvc),
 		rego.PrintHook(h.manager.PrintHook()),
 	}
+
+	m.Timer(timerPrepPartial).Start()
 
 	prep, err := rego.New(opts...).PrepareForPartial(ctx)
 	if err != nil {
@@ -147,11 +152,16 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	m.Timer(timerPrepPartial).Stop()
+
 	pq, err := prep.Partial(ctx,
+		rego.EvalMetrics(m),
 		rego.EvalParsedInput(request.Input),
 		rego.EvalParsedUnknowns(unknowns),
 		rego.EvalPrintHook(h.manager.PrintHook()),
 		rego.EvalNondeterministicBuiltins(evalNonDet),
+		rego.EvalInterQueryBuiltinCache(iqc),
+		rego.EvalInterQueryBuiltinValueCache(iqvc),
 	)
 	if err != nil {
 		switch err := err.(type) {
@@ -163,19 +173,13 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m.Timer(metrics.ServerHandler).Stop()
-
 	result := types.CompileResponseV1{}
-
-	if includeInstrumentation {
-		result.Metrics = m.All()
-	}
-
 	var i any = types.PartialEvaluationResultV1{
 		Queries: pq.Queries,
 		Support: pq.Support,
 	}
 
+	m.Timer(timerEvalConstraints).Start()
 	var constr *Constraint
 	switch accept {
 	case ucastJSON:
@@ -184,7 +188,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		constr, err = NewConstraints("sql", request.Options.Dialect)
 	default: // just return, don't run checks
 		result.Result = &i
-		writer.JSONOK(w, result, true)
+		fin(w, result, m, includeMetrics(r), includeInstrumentation)
 		return
 	}
 	if err != nil {
@@ -200,6 +204,9 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				WithASTErrors(errs))
 		return
 	}
+	m.Timer(timerEvalConstraints).Stop()
+
+	m.Timer(timerTranslateQueries).Start()
 
 	if pq.Queries != nil { // not unconditional NO
 		switch accept {
@@ -244,7 +251,9 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writer.JSONOK(w, result, true)
+	m.Timer(timerTranslateQueries).Stop()
+	m.Timer(metrics.ServerHandler).Stop()
+	fin(w, result, m, includeMetrics(r), includeInstrumentation)
 }
 
 type compileRequest struct {
@@ -347,4 +356,56 @@ func parseUnknownsFromAnnotations(comp *ast.Compiler) ([]*ast.Term, []*ast.Error
 	}
 
 	return unknowns, errs
+}
+
+func fin(w http.ResponseWriter, result types.CompileResponseV1,
+	metrics metrics.Metrics,
+	includeMetrics, includeInstrumentation bool) {
+	if includeMetrics || includeInstrumentation {
+		result.Metrics = metrics.All()
+	}
+	writer.JSONOK(w, result, true)
+}
+
+// taken from v1/server/server.go
+func includeMetrics(r *http.Request) bool {
+	return getBoolParam(r.URL, types.ParamMetricsV1, true)
+}
+
+func getBoolParam(url *url.URL, name string, ifEmpty bool) bool {
+
+	p, ok := url.Query()[name]
+	if !ok {
+		return false
+	}
+
+	// Query params w/o values are represented as slice (of len 1) with an
+	// empty string.
+	if len(p) == 1 && p[0] == "" {
+		return ifEmpty
+	}
+
+	for _, x := range p {
+		if strings.ToLower(x) == "true" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func getExplain(p []string, zero types.ExplainModeV1) types.ExplainModeV1 {
+	for _, x := range p {
+		switch x {
+		case string(types.ExplainNotesV1):
+			return types.ExplainNotesV1
+		case string(types.ExplainFailsV1):
+			return types.ExplainFailsV1
+		case string(types.ExplainFullV1):
+			return types.ExplainFullV1
+		case string(types.ExplainDebugV1):
+			return types.ExplainDebugV1
+		}
+	}
+	return zero
 }

@@ -26,8 +26,7 @@ type cp struct{ manager *plugins.Manager }
 func (p *cp) Start(context.Context) error {
 	hdlr := exp_compile.Handler(p.manager.Logger())
 	hdlr.SetManager(p.manager)
-	hdlr.SetStore(p.manager.Store)
-	p.manager.GetRouter().Handle("/exp/compile", hdlr)
+	p.manager.ExtraRoute("/exp/compile", "exp/compile", hdlr.ServeHTTP)
 	p.manager.UpdatePluginStatus(PluginName, &plugins.Status{State: plugins.StateOK})
 	return nil
 }

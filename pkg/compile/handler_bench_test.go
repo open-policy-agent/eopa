@@ -54,7 +54,6 @@ func BenchmarkCompileHandler(b *testing.B) {
 
 	trt.Runtime.Manager.Info = ast.MustParseTerm(`{"foo": "bar", "fox": 100}`)
 	chnd := compile.Handler(l)
-	chnd.SetStore(trt.Runtime.Store)
 	chnd.SetManager(trt.Runtime.Manager)
 
 	input := map[string]any{

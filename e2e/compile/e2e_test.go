@@ -3,6 +3,7 @@
 package tests
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"database/sql"
@@ -13,7 +14,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -452,6 +452,94 @@ func TestCompileHappyPathE2E(t *testing.T) {
 	}
 }
 
+// This test runs a single Compile API query, and asserts that the handler
+// execution added something to the exposed prometheus metrics at /v1/metrics.
+func TestPrometheusMetrics(t *testing.T) {
+	eopa, _, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort)
+	if err := eopa.Start(); err != nil {
+		t.Fatal(err)
+	}
+	our_wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+	eopaURL := fmt.Sprintf("http://localhost:%d", eopaHTTPPort)
+
+	unknowns := []string{"input.fruits"}
+	input := map[string]any{"fav_colour": "yellow"}
+	query := `data.filters.include`
+	policy := "package filters\ninclude if input.fruits.name == \"banana\""
+
+	{ // exercise the Compile API
+		req, err := http.NewRequest("PUT", fmt.Sprintf("%s/v1/policies/policy.rego", eopaURL), strings.NewReader(policy))
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
+		}
+		if _, err := http.DefaultClient.Do(req); err != nil {
+			t.Fatalf("post policy: %v", err)
+		}
+
+		// query the compile API
+		payload := map[string]any{
+			"input":    input,
+			"query":    query,
+			"unknowns": unknowns,
+			"options": map[string]any{
+				"dialect": "postgres",
+			},
+		}
+
+		queryBytes, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatalf("Failed to marshal JSON: %v", err)
+		}
+
+		// POST to Compile API
+		req, err = http.NewRequest("POST",
+			fmt.Sprintf("%s/exp/compile", eopaURL),
+			strings.NewReader(string(queryBytes)))
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/vnd.styra.sql+json")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("failed to execute request: %v", err)
+		}
+		defer resp.Body.Close()
+		var respPayload map[string]any
+		if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if exp, act := "WHERE fruits.name = E'banana'", respPayload["result"]; exp != act {
+			t.Errorf("response: expected %v, got %v (response: %v)", exp, act, respPayload)
+		}
+	}
+
+	{ // check the /v1/metrics endpoint for the right line
+		needle := `http_request_duration_seconds_bucket{code="200",handler="exp/compile",method="post",`
+		resp, err := http.Get(fmt.Sprintf("%s/metrics", eopaURL))
+		if err != nil {
+			t.Fatalf("failed to send request: %v", err)
+		}
+		// search for line containing exp/compile
+		found := false
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			t.Log(scanner.Text()) // only output if test fails or '-v' is passed
+			if strings.HasPrefix(scanner.Text(), needle) {
+				found = true
+				break
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			t.Fatalf("failed to scan response: %v", err)
+		}
+		if !found {
+			t.Errorf("expected exp/compile line in metrics, got none")
+		}
+
+	}
+}
+
 func getSQLAndRunQuery(t *testing.T, payload map[string]any, config *TestConfig, eopaURL string) []fruitRow {
 	t.Helper()
 	queryBytes, err := json.Marshal(payload)
@@ -588,21 +676,13 @@ func getUCASTAndRunPrisma(t *testing.T, payload map[string]any, config *TestConf
 func loadEnterpriseOPA(t *testing.T, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}
 
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "eopa.yml")
-	configContent := `plugins:
-  exp_compile_api: {}`
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatal(err)
-	}
-
 	args := []string{
 		"run",
 		"--server",
 		"--addr", fmt.Sprintf("localhost:%d", httpPort),
 		"--log-level=debug",
 		"--disable-telemetry",
-		"--config-file", configPath,
+		"--set=plugins.exp_compile_api={}",
 	}
 	bin := os.Getenv("BINARY")
 	if bin == "" {
