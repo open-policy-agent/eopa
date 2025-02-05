@@ -21,6 +21,14 @@ type FieldRef struct {
 	Field string `json:"field"`
 }
 
+// Null represents a NULL value in a SQL query. We need our own type
+// to control both the JSON marshalling and the SQL generation.
+type Null struct{}
+
+func (Null) MarshalJSON() ([]byte, error) {
+	return []byte("null"), nil
+}
+
 var (
 	compoundOps = []string{"and", "or", "not"}
 	documentOps = []string{"exists"}
@@ -73,8 +81,15 @@ func (u *UCASTNode) asSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 		switch value {
 		case nil:
 			return "", nil
-		case struct{}{}:
-			value = nil // `cond.X(field, value)` turns this into `field <X> NULL`
+		case Null{}:
+			switch operator {
+			case "eq":
+				return cond.IsNull(field), nil
+			case "ne":
+				return cond.IsNotNull(field), nil
+			default:
+				return "", fmt.Errorf("null value can only be used with 'eq' or 'ne' operators")
+			}
 		default:
 			if fr, ok := value.(FieldRef); ok {
 				value = sqlbuilder.Raw(fr.Field)

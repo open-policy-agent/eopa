@@ -145,7 +145,7 @@ func regoObjectToUCASTNode(obj *ast.Term, translations *ast.Term) (*ucast.UCASTN
 			return out, nil
 		}
 	case ast.Null:
-		out.Value = struct{}{}
+		out.Value = ucast.Null{}
 		return out, nil
 	}
 	valueIf, err := ast.JSON(value.Value)

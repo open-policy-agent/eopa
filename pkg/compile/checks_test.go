@@ -122,6 +122,11 @@ _use_metadata := rego.metadata.chain()`,
 			result: map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
 		},
 		{
+			note:   "undefined field value",
+			rego:   `include if input.fruits.colour == null`,
+			result: map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": nil},
+		},
+		{
 			note: "happy path, compound 'and'",
 			rego: `include if { input.fruits.colour == input.colour; input.fruits.name == "clementine" }`,
 			result: map[string]any{

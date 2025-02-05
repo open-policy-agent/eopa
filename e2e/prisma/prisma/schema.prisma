@@ -14,5 +14,5 @@ model fruit {
   id     Int    @id @default(autoincrement())
   name   String @db.VarChar(100)
   colour String @db.VarChar(100)
-  price  Int
+  price  Int?
 }

@@ -116,6 +116,9 @@ func toFieldNode(op string, r ast.Ref, v ast.Value, opts *Opts, refOK bool) *uca
 	if err != nil {
 		return nil
 	}
+	if value == nil {
+		value = ucast.Null{}
+	}
 	return &ucast.UCASTNode{
 		Type:  "field",
 		Op:    op,

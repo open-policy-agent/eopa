@@ -29,10 +29,16 @@ func TestUCASTAsSQLBuiltin(t *testing.T) {
 		Query   string
 	}{
 		{
-			Note:    "null argument",
+			Note:    "null argument, eq",
 			Source:  `p := ucast.as_sql({"type": "field", "operator": "eq", "field": "name", "value": null}, "postgres", {})`,
 			Dialect: "postgres",
-			Result:  `{{"result": {"p": "WHERE name = NULL"} }}`,
+			Result:  `{{"result": {"p": "WHERE name IS NULL"} }}`,
+		},
+		{
+			Note:    "null argument, ne",
+			Source:  `p := ucast.as_sql({"type": "field", "operator": "ne", "field": "name", "value": null}, "postgres", {})`,
+			Dialect: "postgres",
+			Result:  `{{"result": {"p": "WHERE name IS NOT NULL"} }}`,
 		},
 		{
 			Note:    "field ref argument",

@@ -152,7 +152,7 @@ func getCreateTableSQL(dbType DBType) string {
             id SERIAL PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
             colour VARCHAR(100) NOT NULL,
-            price INT NOT NULL
+            price INT
         )`
 	case MySQL:
 		return `
@@ -160,7 +160,7 @@ func getCreateTableSQL(dbType DBType) string {
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
             colour VARCHAR(100) NOT NULL,
-            price INT NOT NULL
+            price INT
         )`
 	case MSSQL:
 		return `
@@ -169,7 +169,7 @@ func getCreateTableSQL(dbType DBType) string {
             id INT IDENTITY(1,1) PRIMARY KEY,
             name NVARCHAR(100) NOT NULL,
             colour NVARCHAR(100) NOT NULL,
-            price INT NOT NULL
+            price INT
         )`
 	}
 	panic("unknown db type")
@@ -205,6 +205,9 @@ func initializeTestData(db *sql.DB, dbType DBType) error {
 		if _, err := db.Exec(insertDataSQL, f.name, f.colour, f.price); err != nil {
 			return fmt.Errorf("failed to insert test data: %v", err)
 		}
+	}
+	if _, err := db.Exec(insertDataSQL, "orange", "orange", nil); err != nil {
+		return fmt.Errorf("failed to insert test data: %v", err)
 	}
 
 	return nil
@@ -250,7 +253,29 @@ type fruitRow struct {
 	ID     int
 	Name   string
 	Colour string
-	Price  int
+	Price  sql.NullInt64
+}
+
+type fruitJSON struct {
+	ID     int
+	Name   string
+	Colour string
+	Price  *int
+}
+
+func toFruitRows(xs []fruitJSON) []fruitRow {
+	rows := make([]fruitRow, len(xs))
+	for i, x := range xs {
+		rows[i] = fruitRow{
+			ID:     x.ID,
+			Name:   x.Name,
+			Colour: x.Colour,
+		}
+		if x.Price != nil {
+			rows[i].Price = sql.NullInt64{Int64: int64(*x.Price), Valid: true}
+		}
+	}
+	return rows
 }
 
 // In these test, we test the compile API end-to-end. We start an instance of
@@ -278,9 +303,11 @@ func TestCompileHappyPathE2E(t *testing.T) {
 		},
 	}
 
-	apple := fruitRow{ID: 1, Name: "apple", Colour: "green", Price: 10}
-	banana := fruitRow{ID: 2, Name: "banana", Colour: "yellow", Price: 20}
-	cherry := fruitRow{ID: 3, Name: "cherry", Colour: "red", Price: 11}
+	price := func(x int) sql.NullInt64 { return sql.NullInt64{Int64: int64(x), Valid: true} }
+	apple := fruitRow{ID: 1, Name: "apple", Colour: "green", Price: price(10)}
+	banana := fruitRow{ID: 2, Name: "banana", Colour: "yellow", Price: price(20)}
+	cherry := fruitRow{ID: 3, Name: "cherry", Colour: "red", Price: price(11)}
+	orange := fruitRow{ID: 4, Name: "orange", Colour: "orange"}
 
 	type extra struct {
 		prisma bool
@@ -295,7 +322,7 @@ func TestCompileHappyPathE2E(t *testing.T) {
 		{
 			name:    "no conditions",
 			policy:  `include if true`,
-			expRows: []fruitRow{apple, banana, cherry},
+			expRows: []fruitRow{apple, banana, cherry, orange},
 			prisma:  true,
 		},
 		{
@@ -321,6 +348,18 @@ func TestCompileHappyPathE2E(t *testing.T) {
 			prisma:  true,
 		},
 		{
+			name:    "equal null",
+			policy:  `include if input.fruits.price == null`,
+			expRows: []fruitRow{orange},
+			prisma:  true,
+		},
+		{
+			name:    "not equal null",
+			policy:  `include if input.fruits.price != null`,
+			expRows: []fruitRow{apple, banana, cherry},
+			prisma:  true,
+		},
+		{
 			name:    "simple startswith",
 			policy:  `include if startswith(input.fruits.name, "app")`,
 			expRows: []fruitRow{apple},
@@ -329,7 +368,7 @@ func TestCompileHappyPathE2E(t *testing.T) {
 		{
 			name:    "simple contains",
 			policy:  `include if contains(input.fruits.name, "a")`,
-			expRows: []fruitRow{apple, banana},
+			expRows: []fruitRow{apple, banana, orange},
 			prisma:  true,
 		},
 		{
@@ -360,7 +399,7 @@ func TestCompileHappyPathE2E(t *testing.T) {
 				input.fruits.name != "apple"
 				input.fruits.name != "banana"
 				}`,
-			expRows: []fruitRow{cherry},
+			expRows: []fruitRow{cherry, orange},
 			prisma:  true,
 		},
 		{
@@ -372,7 +411,7 @@ func TestCompileHappyPathE2E(t *testing.T) {
 		},
 		{
 			name:    "not+internal.member_2",
-			policy:  `include if not input.fruits.name in {"apple", "cherry", "pineapple"}`,
+			policy:  `include if not input.fruits.name in {"apple", "cherry", "pineapple", "orange"}`,
 			expRows: []fruitRow{banana},
 			prisma:  true,
 		},
@@ -676,12 +715,12 @@ func getUCASTAndRunPrisma(t *testing.T, payload map[string]any, config *TestConf
 	if stdout.Len() == 0 {
 		return nil
 	}
-	var rowsData []fruitRow
+	var rowsData []fruitJSON
 	if err := json.NewDecoder(&stdout).Decode(&rowsData); err != nil {
 		t.Fatalf("failed to decode prisma output: %v\noutput was: %s", err, stdout.String())
 	}
 
-	return rowsData
+	return toFruitRows(rowsData)
 }
 
 func loadEnterpriseOPA(t *testing.T, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
