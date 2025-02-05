@@ -23,10 +23,16 @@ func TestUCASTNodeAsSQL(t *testing.T) {
 			Error:   "field expression requires a value",
 		},
 		{
-			Note:    "empty struct for NULL",
-			Source:  UCASTNode{Type: "field", Op: "eq", Field: "name", Value: struct{}{}},
+			Note:    "special handling for NULL",
+			Source:  UCASTNode{Type: "field", Op: "eq", Field: "name", Value: Null{}},
 			Dialect: "postgres",
-			Result:  "WHERE name = NULL",
+			Result:  "WHERE name IS NULL",
+		},
+		{
+			Note:    "special handling for NOT NULL",
+			Source:  UCASTNode{Type: "field", Op: "ne", Field: "name", Value: Null{}},
+			Dialect: "postgres",
+			Result:  "WHERE name IS NOT NULL",
 		},
 		{
 			Note: "Basic compound expression",
