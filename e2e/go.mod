@@ -20,9 +20,9 @@ require (
 	github.com/microsoft/go-mssqldb v1.8.0
 	github.com/minio/minio-go/v7 v7.0.84
 	github.com/open-policy-agent/opa v1.1.0
-	github.com/redpanda-data/benthos/v4 v4.43.0
+	github.com/redpanda-data/benthos/v4 v4.44.0
 	github.com/redpanda-data/connect/v4 v4.46.0
-	github.com/rogpeppe/go-internal v1.13.1
+	github.com/rogpeppe/go-internal v1.13.2-0.20241226121412-a5dc8ff20d0a
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
 	github.com/testcontainers/testcontainers-go v0.35.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.35.0
@@ -44,7 +44,7 @@ require (
 	cloud.google.com/go/monitoring v1.22.1 // indirect
 	cloud.google.com/go/pubsub v1.45.3 // indirect
 	cloud.google.com/go/storage v1.50.0 // indirect
-	cuelang.org/go v0.11.1 // indirect
+	cuelang.org/go v0.12.0 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
@@ -139,7 +139,7 @@ require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-json v0.10.4 // indirect
 	github.com/godbus/dbus v4.1.0+incompatible // indirect
-	github.com/gofrs/uuid v4.4.0+incompatible // indirect
+	github.com/gofrs/uuid/v5 v5.3.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
@@ -241,7 +241,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/redis/go-redis/v9 v9.7.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/rickb777/period v1.0.7 // indirect
+	github.com/rickb777/period v1.0.8 // indirect
 	github.com/rickb777/plural v1.4.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
