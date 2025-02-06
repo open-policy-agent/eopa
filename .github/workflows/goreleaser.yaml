@@ -62,7 +62,7 @@ jobs:
           VER=${{ inputs.tag }}
           export EOPA_VERSION=${VER:1}
           ./build/latest-release-notes.sh --output="${RELEASE_NOTES}"
-          goreleaser release --clean --skip=publish --release-notes "${RELEASE_NOTES}" --timeout=60m
+          goreleaser release --clean --release-notes "${RELEASE_NOTES}" --timeout=60m
         working-directory: enterprise-opa
         env:
           HOSTNAME: github.actions.local
@@ -70,9 +70,3 @@ jobs:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
           RELEASE_NOTES: ../release-notes.md
           EOPA_TELEMETRY_URL: https://load-telemetry.corp.styra.com
-      - run: enterprise-opa/dist/linux-windows-build_linux_amd64_v1/eopa version
-      - name: Upload binary tarball
-        uses: actions/upload-artifact@v4
-        with:
-          name: binary
-          path: enterprise-opa/dist/linux-windows-build_linux_amd64_v1/eopa
