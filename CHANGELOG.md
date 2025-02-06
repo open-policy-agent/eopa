@@ -12,12 +12,123 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.33.0
+
+[![OPA v1.1.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.1.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.1.0)
+[![Regal v0.30.2](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.30.2&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.30.2)
+
+This release contains an extension to the /v1/compile API for data filtering, and various dependency bumps.
+
+
+### Data Filtering via Compile API
+
+With this release, Enterprise OPA supports generating SQL WHERE clauses and UCAST conditions from _partial evaluation_.
+
+For example, consider the following policy:
+
+```rego
+# METADATA
+# scope: package
+# custom:
+#   unknowns:
+#     - input.tickets
+#     - input.users
+package filters
+
+tenancy if input.tickets.tenant == input.tenant.id # tenancy check
+
+include if {
+	tenancy
+	resolver_include
+}
+
+include if {
+	tenancy
+	not user_is_resolver(input.user, input.tenant.name)
+}
+
+resolver_include if {
+	user_is_resolver(input.user, input.tenant.name)
+
+	input.users.name == input.user # ticket is assigned to user
+}
+
+resolver_include if {
+	user_is_resolver(input.user, input.tenant.name)
+
+	# ticket is unassigned and unresolved
+	input.tickets.assignee == null
+	input.tickets.resolved == false
+}
+
+user_is_resolver(user, tenant) if "resolver" in data.roles[tenant][user]
+
+test_user_is_admin if {
+	include with input.user as "alice"
+		with input.tenant as {"id": 2, "name": "acmecorp"}
+		with input.tickets.tenant as 2
+		with data.roles.acmecorp.alice as ["admin"]
+}
+```
+
+and this `roles.json`:
+
+```json
+{
+  "acmecorp": {
+    "alice": ["admin"],
+    "caesar": ["reader", "resolver"]
+  }
+}
+```
+
+When Enterprise OPA is running with these loaded (e.g. `eopa run -s filters.rego roles:roles.json`), the following request shows you how to generate SQL WHERE clauses for a certain dialect ("postgres", also supports "sqlserver" and "mysql"):
+
+```interactive
+$ curl 127.0.0.1:8181/v1/compile \
+  -d '{"query": "data.filters.include", "input": {"tenant":{"id": 2, "name": "acmecorp"}, "user": "caesar"}, "unknowns": ["input.tickets", "input.users"]}' \
+  -H "Accept: application/vnd.styra.sql.postgres+json"
+{
+  "result": {
+    "query": "WHERE ((tickets.tenant = E'2' AND users.name = E'caesar') OR (tickets.tenant = E'2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))"
+  }
+}
+```
+
+It further supports `application/vnd.styra.ucast.prisma+json` and `application/vnd.styra.ucast.linq+json` for generating UCAST conditions compatible with [`@styra/ucast-prisma`](https://www.npmjs.com/package/@styra/ucast-prisma) and [`Styra.Ucast.Linq`](https://styrainc.github.io/ucast-linq/) respectively.
+
+See the [OpenAPI spec](https://github.com/StyraInc/enterprise-opa/blob/f5924b8/openapi/openapi.yaml#L126-L190) for further details. Comprehensive documentation is going to follow this release; please reach out for support in the meantime.
+
+After partial evaluation, a set of checks is run to ensure that the results can be translated into your target format.
+
+
+#### Data Policy Testing
+
+The same checks can be run in testing using `eopa test`, which is using the metadata and tests to inform the checker about possible inputs and unknowns.
+For example, if your `tenancy` rule was
+
+```rego
+tenancy if object.get(input, ["tickets", "tenant"], "unknown") == input.tenant.id
+```
+
+then `eopa test filters.rego` would flag this:
+
+```interactive
+$ eopa test pkg/compile/bench_filters.rego
+PASS: 1/1
+--------------------------------------------------------------------------------
+Data Policy Analysis:
+pkg/compile/bench_filters.rego:9: pe_fragment_error: invalid builtin `object.get`
+  test_user_is_admin (pkg/compile/bench_filters.rego:40)
+```
+
+
 ## v1.32.1
 
 [![OPA v1.1.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.1.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.1.0)
 [![Regal v0.30.2](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.30.2&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.30.2)
 
-This release includes additonal compatibility bugfixes for Enterprise OPA's [bundle](https://www.openpolicyagent.org/docs/latest/management-bundles/) handling,
+This release includes additional compatibility bugfixes for Enterprise OPA's [bundle](https://www.openpolicyagent.org/docs/latest/management-bundles/) handling,
 and various dependency bumps.
 
 
