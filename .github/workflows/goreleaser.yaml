@@ -70,9 +70,9 @@ jobs:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
           RELEASE_NOTES: ../release-notes.md
           EOPA_TELEMETRY_URL: https://load-telemetry.corp.styra.com
-      - run: dist/linux-windows-build_linux_amd64_v1/eopa version
+      - run: enterprise-opa/dist/linux-windows-build_linux_amd64_v1/eopa version
       - name: Upload binary tarball
         uses: actions/upload-artifact@v4
         with:
           name: binary
-          path: dist/linux-windows-build_linux_amd64_v1/eopa
+          path: enterprise-opa/dist/linux-windows-build_linux_amd64_v1/eopa
