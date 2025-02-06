@@ -121,14 +121,14 @@ auth-deploy-ci-debug:
 # goreleaser uses latest version tag.
 .PHONY: release release-ci release-wasm release-single
 release:
-	HOSTNAME=$(HOSTNAME) goreleaser release --snapshot --skip=publish --clean
+	HOSTNAME=$(HOSTNAME) goreleaser release --snapshot --skip=publish --clean --timeout=60m
 
 release-single:
 	HOSTNAME=$(HOSTNAME) goreleaser build --snapshot --clean --single-target
 
 release-ci:
 	./build/latest-release-notes.sh --output="${RELEASE_NOTES}"
-	HOSTNAME=$(HOSTNAME) goreleaser release --clean --release-notes "${RELEASE_NOTES}"
+	HOSTNAME=$(HOSTNAME) goreleaser release --clean --release-notes "${RELEASE_NOTES}" --timeout=60m
 
 # enterprise OPA docker image ghcr.io/goreleaser/goreleaser-cross:v1.19 and run goreleaser (build eopa and eopa_wasm)
 release-wasm:

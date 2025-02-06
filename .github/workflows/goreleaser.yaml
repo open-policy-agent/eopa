@@ -1,0 +1,62 @@
+name: Manual Goreleaser run
+
+on:
+  workflow_dispatch: {}
+
+env:
+  GOPRIVATE: github.com/StyraInc/opa
+
+jobs:
+  goreleaser:
+    name: GoReleaser
+    runs-on: ubuntu-22.04
+    env:
+      QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }} # base64 encoded contents
+      QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }} # p12 password
+      QUILL_NOTARY_KEY: ${{ secrets.QUILL_NOTARY_KEY }}
+      QUILL_NOTARY_KEY_ID: ${{ secrets.QUILL_NOTARY_KEY_ID }}
+      QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
+    steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@v1
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
+          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
+      - name: Override GH Token Env Var
+        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
+      - uses: open-policy-agent/setup-opa@v2
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: enterprise-opa
+      - id: go_version
+        name: Read go version
+        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
+        working-directory: enterprise-opa
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ steps.go_version.outputs.go_version }}
+          cache-dependency-path: enterprise-opa/go.sum
+      - name: Setup github api token
+        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          install-only: true
+      - name: Install anchore/quill (macos signing)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/quill/main/install.sh |\
+          sh -s -- -b /usr/local/bin
+      - name: Run GoReleaser
+        run: make release-ci
+        working-directory: enterprise-opa
+        env:
+          HOSTNAME: github.actions.local
+          TAP_GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          RELEASE_NOTES: ../release-notes.md
+
