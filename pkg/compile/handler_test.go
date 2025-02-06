@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/logging/test"
@@ -20,11 +21,104 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/compile"
 )
 
+type Query struct {
+	Query any `json:"query,omitempty"`
+}
 type Response struct {
 	Result struct {
-		Query any `json:"query"`
+		Query    any   `json:"query,omitempty"`
+		UCAST    Query `json:"ucast,omitempty"`
+		Postgres Query `json:"postgres,omitempty"`
+		MySQL    Query `json:"mysql,omitempty"`
+		MSSQL    Query `json:"sqlserver,omitempty"`
 	} `json:"result"`
 	Metrics map[string]float64 `json:"metrics"`
+}
+
+func TestCompileHandlerMultiTarget(t *testing.T) {
+	var roles map[string]any
+	if err := json.Unmarshal(rolesJSON, &roles); err != nil {
+		t.Fatalf("unmarshal roles: %v", err)
+	}
+	chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
+
+	input := map[string]any{
+		"user": "caesar",
+		"tenant": map[string]any{
+			"id":   2,
+			"name": "acmecorp",
+		},
+	}
+	query := "data.filters.include"
+	target := "application/vnd.styra.multitarget+json"
+
+	payload := map[string]any{ // NB(sr): unknowns are taken from metadata
+		"input": input,
+		"query": query,
+		"options": map[string]any{
+			"targetDialects": []string{
+				"sql+postgres",
+				"sql+mysql",
+				"sql+sqlserver",
+				"ucast+prisma",
+			},
+		},
+	}
+	resp := evalReq(t, chnd, payload, target)
+
+	{ // check results
+		if exp, act := "WHERE ((tickets.tenant = E'2' AND users.name = E'caesar') OR (tickets.tenant = E'2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))", resp.Result.Postgres.Query; exp != act {
+			t.Errorf("postgres, want %s, got %s", exp, act)
+		}
+		if exp, act := "WHERE ((tickets.tenant = '2' AND users.name = 'caesar') OR (tickets.tenant = '2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))", resp.Result.MySQL.Query; exp != act {
+			t.Errorf("mysql, want %s, got %s", exp, act)
+		}
+		if exp, act := "WHERE ((tickets.tenant = N'2' AND users.name = N'caesar') OR (tickets.tenant = N'2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))", resp.Result.MSSQL.Query; exp != act {
+			t.Errorf("mssql, want %s, got %s", exp, act)
+		}
+
+		exp, act := map[string]any{
+			"operator": "or",
+			"type":     "compound",
+			"value": []any{
+				map[string]any{
+					"operator": "and",
+					"type":     "compound",
+					"value": []any{
+						map[string]any{"field": "tickets.tenant", "operator": "eq", "type": "field", "value": float64(2)},
+						map[string]any{"field": "users.name", "operator": "eq", "type": "field", "value": "caesar"},
+					},
+				},
+				map[string]any{
+					"operator": "and",
+					"type":     "compound",
+					"value": []any{
+						map[string]any{"field": "tickets.tenant", "operator": "eq", "type": "field", "value": float64(2)},
+						map[string]any{"field": "tickets.assignee", "operator": "eq", "type": "field", "value": nil},
+						map[string]any{"field": "tickets.resolved", "operator": "eq", "type": "field", "value": false},
+					},
+				},
+			},
+		}, resp.Result.UCAST.Query
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Errorf("ucast, (-want, +got):\n%s", diff)
+		}
+	}
+	{ // also check for metrics
+		if exp, act := map[string]float64{
+			"timer_eval_constraints_ns":      0,
+			"timer_extract_annotations_ns":   0,
+			"timer_prep_partial_ns":          0,
+			"timer_rego_external_resolve_ns": 0,
+			"timer_rego_partial_eval_ns":     0,
+			"timer_rego_query_compile_ns":    0,
+			"timer_rego_query_parse_ns":      0,
+			"timer_server_handler_ns":        0,
+			"timer_translate_queries_ns":     0,
+		}, resp.Metrics; !compareMetrics(exp, act) {
+			t.Fatalf("unexpected metrics: want %v, got %v", exp, act)
+		}
+	}
 }
 
 func TestCompileHandlerMetrics(t *testing.T) {

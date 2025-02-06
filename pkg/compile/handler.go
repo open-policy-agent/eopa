@@ -23,7 +23,7 @@ import (
 const (
 	invalidUnknownCode = "invalid_unknown"
 
-	multiJSON        = "application/vnd.styra.multitarget+json"
+	multiTargetJSON  = "application/vnd.styra.multitarget+json"
 	ucastAllJSON     = "application/vnd.styra.ucast.all+json"
 	ucastMinimalJSON = "application/vnd.styra.ucast.minimal+json"
 	ucastPrismaJSON  = "application/vnd.styra.ucast.prisma+json"
@@ -53,6 +53,7 @@ type CompileRequestV1 struct {
 		DisableInlining          []string       `json:"disableInlining,omitempty"`
 		NondeterministicBuiltins bool           `json:"nondeterministicBuiltins"`
 		Mappings                 map[string]any `json:"targetSQLTableMappings,omitempty"`
+		TargetDialects           []string       `json:"targetDialects,omitempty"`
 	} `json:"options,omitempty"`
 }
 
@@ -135,17 +136,12 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mappings, err := lookupMappings(request.Options.Mappings, dialect, target)
-	if err != nil {
-		writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, "invalid mappings"))
-		return
-	}
-
 	// We require evaluating non-det builtins for the translated targets:
 	// We're not able to meaningfully tanslate things like http.send, sql.send, or
 	// io.jwt.decode_verify into SQL or UCAST, so we try to eval them out where possible.
 	evalNonDet := target == "ucast" ||
 		target == "sql" ||
+		target == "multi" ||
 		request.Options.NondeterministicBuiltins
 
 	iqc, iqvc := h.manager.GetCaches()
@@ -200,6 +196,8 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	h.Logger.Debug("queries %v", pq.Queries)
+	h.Logger.Debug("support %v", pq.Support)
 
 	result := types.CompileResponseV1{}
 
@@ -213,15 +211,36 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// build ConstraintSet for single- and multi-target requests
 	m.Timer(timerEvalConstraints).Start()
-	constr, err := NewConstraints(target, dialect)
-	if err != nil {
-		writer.ErrorAuto(w, types.BadRequestErr(err.Error()))
-		return
+	multi := make([][2]string, len(request.Options.TargetDialects))
+	var constr *ConstraintSet
+	switch target {
+	case "multi":
+		constrs := make([]*Constraint, len(request.Options.TargetDialects))
+		for i, targetTuple := range request.Options.TargetDialects {
+			s := strings.Split(targetTuple, "+")
+			target, dialect := s[0], s[1]
+			multi[i] = [2]string{target, dialect}
+
+			constrs[i], err = NewConstraints(target, dialect) // NewConstraints validates the tuples
+			if err != nil {
+				writer.Error(w, http.StatusBadRequest,
+					types.NewErrorV1(types.CodeInvalidParameter, "multi-target request: %s", err.Error()))
+				return
+			}
+		}
+		constr = NewConstraintSet(constrs...)
+	default:
+		c, err := NewConstraints(target, dialect)
+		if err != nil {
+			writer.ErrorAuto(w, types.BadRequestErr(err.Error()))
+			return
+		}
+		constr = NewConstraintSet(c)
 	}
 
-	h.Logger.Debug("queries %v", pq.Queries)
-	h.Logger.Debug("support %v", pq.Support)
+	// check PE queries against constraints
 	if errs := Check(pq, constr).ASTErrors(); errs != nil {
 		writer.Error(w, http.StatusBadRequest,
 			types.NewErrorV1(types.CodeEvaluation, types.MsgEvaluationError).
@@ -231,43 +250,99 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m.Timer(timerEvalConstraints).Stop()
 
 	m.Timer(timerTranslateQueries).Start()
+	switch target {
+	case "multi":
+		targets := struct {
+			UCAST    *CompileResult `json:"ucast,omitempty"`
+			Postgres *CompileResult `json:"postgres,omitempty"`
+			MySQL    *CompileResult `json:"mysql,omitempty"`
+			MSSQL    *CompileResult `json:"sqlserver,omitempty"`
+		}{}
 
-	if pq.Queries != nil { // not unconditional NO
-		switch target {
-		case "ucast":
-			opts := &Opts{
-				Translations: mappings,
+		for _, targetTuple := range multi {
+			target, dialect := targetTuple[0], targetTuple[1]
+			mappings, err := lookupMappings(request.Options.Mappings, target, dialect)
+			if err != nil {
+				writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, "invalid mappings"))
+				return
 			}
-			ucast := BodiesToUCAST(pq.Queries, opts)
-			r := any(ucast)
-			if ucast == nil { // unconditional YES
-				// NOTE(sr): we cannot encode "no conditions" in ucast.UCASTNode{}, so we return an empty map
-				r = struct{}{}
-			}
-			r0 := any(CompileResult{Query: r})
-			result.Result = &r0
-		case "sql":
-			opts := &Opts{
-				Translations: mappings,
-			}
-			sql := ""
-			ucast := BodiesToUCAST(pq.Queries, opts)
-			if ucast != nil { // ucast == nil means unconditional YES, for which we'll keep `sql = ""`
-				sql0, err := ucast.AsSQL(dialect)
+			switch target {
+			case "ucast":
+				if targets.UCAST != nil {
+					continue // there's only one UCAST representation, don't translate that twice
+				}
+				r := queriesToUCAST(pq.Queries, mappings)
+				targets.UCAST = &CompileResult{Query: r}
+			case "sql":
+				sql, err := queriesToSQL(pq.Queries, mappings, dialect)
 				if err != nil {
-					writer.ErrorAuto(w, err)
+					writer.ErrorAuto(w, err) // TODO(sr): this isn't the best error we can create -- it'll be a 500 in the end, I think.
 					return
 				}
-				sql = sql0
+				switch dialect {
+				case "postgres":
+					targets.Postgres = &CompileResult{Query: sql}
+				case "mysql":
+					targets.MySQL = &CompileResult{Query: sql}
+				case "sqlserver":
+					targets.MSSQL = &CompileResult{Query: sql}
+				}
 			}
-			s0 := any(CompileResult{Query: sql})
-			result.Result = &s0
+		}
+
+		t0 := any(targets)
+		result.Result = &t0
+
+	default:
+		mappings, err := lookupMappings(request.Options.Mappings, target, dialect)
+		if err != nil {
+			writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, "invalid mappings"))
+			return
+		}
+
+		if pq.Queries != nil { // not unconditional NO
+			switch target {
+			case "ucast":
+				r := queriesToUCAST(pq.Queries, mappings)
+				r0 := any(CompileResult{Query: r})
+				result.Result = &r0
+			case "sql":
+				sql, err := queriesToSQL(pq.Queries, mappings, dialect)
+				if err != nil {
+					writer.ErrorAuto(w, err) // TODO(sr): this isn't the best error we can create -- it'll be a 500 in the end, I think.
+					return
+				}
+				s0 := any(CompileResult{Query: sql})
+				result.Result = &s0
+			}
 		}
 	}
 
 	m.Timer(timerTranslateQueries).Stop()
 	m.Timer(metrics.ServerHandler).Stop()
 	fin(w, result, m, includeMetrics(r), includeInstrumentation)
+}
+
+func queriesToUCAST(queries []ast.Body, mappings map[string]any) any {
+	ucast := BodiesToUCAST(queries, &Opts{Translations: mappings})
+	if ucast == nil { // ucast == nil means unconditional YES
+		return struct{}{}
+	}
+	return ucast
+}
+
+func queriesToSQL(queries []ast.Body, mappings map[string]any, dialect string) (string, error) {
+	sql := ""
+	ucast := BodiesToUCAST(queries, &Opts{Translations: mappings})
+	if ucast != nil { // ucast == nil means unconditional YES, for which we'll keep `sql = ""`
+		sql0, err := ucast.AsSQL(dialect)
+		if err != nil {
+			return "", err
+		}
+		sql = sql0
+	}
+
+	return sql, nil
 }
 
 type compileRequest struct {
@@ -281,6 +356,7 @@ type compileRequestOptions struct {
 	DisableInlining          []string
 	NondeterministicBuiltins bool
 	Mappings                 map[string]any
+	TargetDialects           []string
 }
 
 func readInputCompilePostV1(reqBytes []byte, queryParserOptions ast.ParserOptions) (*compileRequest, *types.ErrorV1) {
@@ -329,24 +405,34 @@ func readInputCompilePostV1(reqBytes []byte, queryParserOptions ast.ParserOption
 		Options: compileRequestOptions{
 			DisableInlining: request.Options.DisableInlining,
 			Mappings:        request.Options.Mappings,
+			TargetDialects:  request.Options.TargetDialects,
 		},
 	}, nil
 }
 
-func lookupMappings(mappings map[string]any, dialect, target string) (map[string]any, error) {
+func lookupMappings(mappings map[string]any, target, dialect string) (map[string]any, error) {
 	if mappings == nil {
 		return nil, nil
 	}
 
-	if m, ok := mappings[dialect].(map[string]any); ok && m != nil {
-		return m, nil
+	if md := mappings[dialect]; md != nil {
+		m, ok := md.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("invalid mappings for dialect %s", dialect)
+		}
+		if m != nil {
+			return m, nil
+		}
 	}
 
-	if m, ok := mappings[target].(map[string]any); ok {
-		return m, nil
+	if mt := mappings[target]; mt != nil {
+		n, ok := mt.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("invalid mappings for target %s", target)
+		}
+		return n, nil
 	}
-
-	return nil, fmt.Errorf("invalid mappings for dialect %s or target %s", dialect, target)
+	return nil, nil
 }
 
 func parseUnknownsFromAnnotations(comp *ast.Compiler) ([]*ast.Term, []*ast.Error) {
@@ -406,6 +492,8 @@ func parseHeader(accept string) (string, string, error) {
 	switch accepts[0] {
 	case "application/json":
 		return "", "", nil
+	case multiTargetJSON:
+		return "multi", "", nil
 	case ucastAllJSON:
 		return "ucast", "all", nil
 	case ucastMinimalJSON:
