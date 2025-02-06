@@ -48,7 +48,7 @@ builds:
 
 archives:
   - id: binary
-    format: binary
+    formats: binary
     files:
       - none*
     # example: eopa_Darwin_arm64
