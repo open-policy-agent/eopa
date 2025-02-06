@@ -1,7 +1,11 @@
 name: Manual Goreleaser run
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release"
+        required: true
 
 env:
   GOPRIVATE: github.com/StyraInc/opa
@@ -33,6 +37,7 @@ jobs:
         with:
           fetch-depth: 0
           path: enterprise-opa
+          ref: ${{ inputs.tag }}
       - id: go_version
         name: Read go version
         run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
@@ -52,7 +57,10 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/anchore/quill/main/install.sh |\
           sh -s -- -b /usr/local/bin
       - name: Run GoReleaser
-        run: make release-ci
+        # NOTE(sr): not calling the Makefile target here, since we've checked out a previous tag
+        run: |
+          ./build/latest-release-notes.sh --output="${RELEASE_NOTES}"
+          goreleaser release --clean --release-notes "${RELEASE_NOTES}" --timeout=60m
         working-directory: enterprise-opa
         env:
           HOSTNAME: github.actions.local
