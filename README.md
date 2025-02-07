@@ -185,7 +185,7 @@ Set up the following environment variables, and perform a `make release`:
       QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
 ```
 
-### MacOS sign-and-notarize failure
+### MacOS sign-and-notarize failure for local builds
 
 You can safely ignore the error, or set up Quill as described above.
 
@@ -193,6 +193,14 @@ You can safely ignore the error, or set up Quill as described above.
   ⨯ release failed after 5s error=post hook failed: failed to run 'quill sign-and-notarize /Users/kevin/src/github.com/styrainc/enterprise-opa-private/dist/darwin-build_darwin_amd64_v1/eopa -vv': exit status 1
 make: *** [release] Error 1
 ```
+
+### Release pipeline fails in notarization step
+
+We have seen two different causes of failure so far for Quill signing and notarization of the binaries in CI:
+ - Our company Apple Developer account needs to accept a new agreement.
+   - Resolution: Ask Stephan or ops to check for a new agreement. If there was a new agreement, then re-run the job after accepting. (Links: [page with quill keys](https://appstoreconnect.apple.com/access/integrations/api), [Account overview](https://developer.apple.com/account))
+ - The Apple notarization service itself is down.
+   - Resolution: Check the Apple Developer [System Status](https://developer.apple.com/system-status/) page for outages. If there's an outage, just wait until the service comes back up, and then re-run the job.
 
 ## Release Enterprise OPA
 
