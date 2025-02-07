@@ -20,7 +20,7 @@ require (
 	github.com/microsoft/go-mssqldb v1.8.0
 	github.com/minio/minio-go/v7 v7.0.84
 	github.com/open-policy-agent/opa v1.1.0
-	github.com/redpanda-data/benthos/v4 v4.44.0
+	github.com/redpanda-data/benthos/v4 v4.44.1
 	github.com/redpanda-data/connect/v4 v4.46.0
 	github.com/rogpeppe/go-internal v1.13.2-0.20241226121412-a5dc8ff20d0a
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
@@ -75,18 +75,18 @@ require (
 	github.com/apache/arrow/go/v16 v16.0.0 // indirect
 	github.com/apache/thrift v0.21.0 // indirect
 	github.com/aws/aws-sdk-go v1.55.6 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.36.0 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.36.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.8 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.57 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.57 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.31 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.31 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.31 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.59 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.59 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.32 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.32 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.32 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.5.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.75.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.5.6 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.13 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.13 // indirect
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.75.4 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/benhoyt/goawk v1.27.0 // indirect
@@ -296,9 +296,9 @@ require (
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/oauth2 v0.25.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/term v0.28.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/term v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
 	golang.org/x/tools v0.29.0 // indirect
