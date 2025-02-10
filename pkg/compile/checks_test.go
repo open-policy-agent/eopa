@@ -61,7 +61,9 @@ func TestPostPartialChecks(t *testing.T) {
 
 	trt.Runtime.Manager.Info = ast.MustParseTerm(`{"foo": "bar", "fox": 100}`)
 	chnd := compile.Handler(l)
-	chnd.SetManager(trt.Runtime.Manager)
+	if err := chnd.SetManager(trt.Runtime.Manager); err != nil {
+		t.Fatalf("set manager: %v", err)
+	}
 
 	for _, tc := range []struct {
 		note         string
@@ -120,6 +122,102 @@ include if input.fruits.colour == input.colour
 
 _use_metadata := rego.metadata.chain()`,
 			result: map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
+		},
+		{
+			note:         "happy path, reading unknowns from metadata (package scope, no kludge)",
+			omitUnknowns: true,
+			regoVerbatim: true,
+			rego: `
+# METADATA
+# scope: package
+# custom:
+#  unknowns:
+#   - input.fruits
+package filters
+
+include if input.fruits.colour == input.colour
+
+_use_metadata := rego.metadata.chain()`,
+			result: map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
+		},
+		{
+			note:         "happy path, reading unknowns from metadata chain, correct rule only (document scope)",
+			omitUnknowns: true,
+			regoVerbatim: true,
+			rego: `
+# METADATA
+# scope: package
+# custom:
+#  unknowns:
+#   - input.fruits
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#  unknowns:
+#   - input.baskets
+include if {
+	input.fruits.colour == input.colour
+	input.baskets.colour == input.colour
+}
+
+# METADATA
+# scope: document
+# description: if this metadata were picked up, the checks would fail
+# custom:
+#  unknowns:
+#   - input.colour
+red_herring if true
+
+_use_metadata := rego.metadata.chain()`,
+			result: map[string]any{
+				"type":     "compound",
+				"operator": "and",
+				"value": []any{
+					map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
+					map[string]any{"type": "field", "field": "baskets.colour", "operator": "eq", "value": "orange"},
+				},
+			},
+		},
+		{
+			note:         "happy path, reading unknowns from metadata chain, correct rule only (document scope, without kludge)",
+			omitUnknowns: true,
+			regoVerbatim: true,
+			rego: `
+# METADATA
+# scope: package
+# custom:
+#  unknowns:
+#   - input.fruits
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#  unknowns:
+#   - input.baskets
+include if {
+			input.fruits.colour == input.colour
+			input.baskets.colour == input.colour
+}
+
+# METADATA
+# scope: document
+# description: if this metadata were picked up, the checks would fail
+# custom:
+#  unknowns:
+#   - input.colour
+red_herring if true
+`,
+			result: map[string]any{
+				"type":     "compound",
+				"operator": "and",
+				"value": []any{
+					map[string]any{"type": "field", "field": "fruits.colour", "operator": "eq", "value": "orange"},
+					map[string]any{"type": "field", "field": "baskets.colour", "operator": "eq", "value": "orange"},
+				},
+			},
 		},
 		{
 			note:   "undefined field value",
@@ -562,6 +660,31 @@ other if input.fruits.price > 100
 include if input.fruits.colour == input.colour
 
 _use_metadata := rego.metadata.chain()`,
+			errors: []Error{
+				{
+					Code:     "invalid_unknown",
+					Location: ast.NewLocation(nil, "filters.rego", 4, 1),
+					Message:  "unknowns must be prefixed with `input` or `data`: inpu.fruits",
+				},
+				{
+					Code:     "invalid_unknown",
+					Location: ast.NewLocation(nil, "filters.rego", 4, 1),
+					Message:  "unknowns must be prefixed with `input` or `data`: future.keywrds",
+				},
+			},
+		},
+		{
+			note:         "bad metadata unknowns (no kludge)",
+			omitUnknowns: true,
+			rego: `
+# METADATA
+# custom:
+#  unknowns:
+#   - inpu.fruits
+#   - data.whatever
+#   - future.keywrds
+include if input.fruits.colour == input.colour
+`,
 			errors: []Error{
 				{
 					Code:     "invalid_unknown",

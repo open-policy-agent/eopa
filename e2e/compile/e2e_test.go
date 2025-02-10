@@ -493,8 +493,9 @@ func TestCompileHappyPathE2E(t *testing.T) {
 	}
 }
 
-// This test runs a single Compile API query, and asserts that the handler
+// This test runs three Compile API queries and asserts that the handler
 // execution added something to the exposed prometheus metrics at /v1/metrics.
+// Also, it checks that the cache hit/miss metrics have been exposed accordingly.
 func TestPrometheusMetrics(t *testing.T) {
 	eopa, _, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
@@ -503,10 +504,15 @@ func TestPrometheusMetrics(t *testing.T) {
 	our_wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 	eopaURL := fmt.Sprintf("http://localhost:%d", eopaHTTPPort)
 
-	unknowns := []string{"input.fruits"}
 	input := map[string]any{"fav_colour": "yellow"}
 	query := `data.filters.include`
-	policy := "package filters\ninclude if input.fruits.name == \"banana\""
+	policy := `package filters
+# METADATA
+# scope: document
+# custom:
+#   unknowns: [input.fruits]
+include if input.fruits.name == "banana"
+`
 
 	{ // exercise the Compile API
 		req, err := http.NewRequest("PUT", fmt.Sprintf("%s/v1/policies/policy.rego", eopaURL), strings.NewReader(policy))
@@ -519,9 +525,8 @@ func TestPrometheusMetrics(t *testing.T) {
 
 		// query the compile API
 		payload := map[string]any{
-			"input":    input,
-			"query":    query,
-			"unknowns": unknowns,
+			"input": input,
+			"query": query,
 		}
 
 		queryBytes, err := json.Marshal(payload)
@@ -529,57 +534,79 @@ func TestPrometheusMetrics(t *testing.T) {
 			t.Fatalf("Failed to marshal JSON: %v", err)
 		}
 
-		// POST to Compile API
-		req, err = http.NewRequest("POST",
-			fmt.Sprintf("%s/v1/compile", eopaURL),
-			strings.NewReader(string(queryBytes)))
-		if err != nil {
-			t.Fatalf("failed to create request: %v", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Accept", "application/vnd.styra.sql.postgres+json")
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			t.Fatalf("failed to execute request: %v", err)
-		}
-		defer resp.Body.Close()
-		var respPayload struct {
-			Result struct {
-				Query any `json:"query"`
-			} `json:"result"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
-			t.Fatalf("failed to decode response: %v", err)
-		}
-		if exp, act := "WHERE fruits.name = E'banana'", respPayload.Result.Query; exp != act {
-			t.Errorf("response: expected %v, got %v (response: %v)", exp, act, respPayload)
-		}
-	}
-
-	{ // check the /v1/metrics endpoint for the right line
-		needle := `http_request_duration_seconds_bucket{code="200",handler="v1/compile",method="post",`
-		resp, err := http.Get(fmt.Sprintf("%s/metrics", eopaURL))
-		if err != nil {
-			t.Fatalf("failed to send request: %v", err)
-		}
-		// search for line containing v1/compile
-		found := false
-		scanner := bufio.NewScanner(resp.Body)
-		for scanner.Scan() {
-			t.Log(scanner.Text()) // only output if test fails or '-v' is passed
-			if strings.HasPrefix(scanner.Text(), needle) {
-				found = true
-				break
+		for range 3 {
+			// POST to Compile API
+			req, err = http.NewRequest("POST",
+				fmt.Sprintf("%s/v1/compile", eopaURL),
+				strings.NewReader(string(queryBytes)))
+			if err != nil {
+				t.Fatalf("failed to create request: %v", err)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "application/vnd.styra.sql.postgres+json")
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("failed to execute request: %v", err)
+			}
+			defer resp.Body.Close()
+			var respPayload struct {
+				Result struct {
+					Query any `json:"query"`
+				} `json:"result"`
+			}
+			if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
+				t.Fatalf("failed to decode response: %v", err)
+			}
+			if exp, act := "WHERE fruits.name = E'banana'", respPayload.Result.Query; exp != act {
+				t.Errorf("response: expected %v, got %v (response: %v)", exp, act, respPayload)
 			}
 		}
-		if err := scanner.Err(); err != nil {
-			t.Fatalf("failed to scan response: %v", err)
-		}
-		if !found {
-			t.Errorf("expected v1/compile line in metrics, got none")
-		}
-
 	}
+
+	{ // check the /v1/metrics endpoint for the handler invokation lines
+		needle := `http_request_duration_seconds_bucket{code="200",handler="v1/compile",method="post",`
+		act := findMetrics(t, eopaURL, needle)
+		// NOTE(sr): The metric is a histogram, and we did multiple requests; so we only check
+		// for ANY lines being present, not their actual count.
+		if len(act) < 1 {
+			t.Errorf("expected v1/compile lines in metrics, got %v", act)
+		}
+	}
+
+	{ // check the /v1/metrics endpoint for the cache hit/miss lines
+		exp := []string{
+			`# TYPE eopa_compile_handler_unknowns_cache_lookups_total counter`,
+			`eopa_compile_handler_unknowns_cache_lookups_total{status="hit"} 2`,
+			`eopa_compile_handler_unknowns_cache_lookups_total{status="miss"} 1`,
+		}
+		act := findMetrics(t, eopaURL, exp...)
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Errorf("unexpected cache metrics, (-want, +got):\n%s", diff)
+		}
+	}
+}
+
+func findMetrics(t *testing.T, eopaURL string, needles ...string) []string {
+	t.Helper()
+	founds := []string{}
+	resp, err := http.Get(fmt.Sprintf("%s/metrics", eopaURL))
+	if err != nil {
+		t.Fatalf("failed to send request: %v", err)
+	}
+	// search for line containing v1/compile
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		//t.Log(scanner.Text()) // only output if test fails or '-v' is passed
+		for i := range needles {
+			if strings.Contains(scanner.Text(), needles[i]) {
+				founds = append(founds, scanner.Text())
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("failed to scan response: %v", err)
+	}
+	return founds
 }
 
 func getSQLAndRunQuery(t *testing.T, payload map[string]any, config *TestConfig, eopaURL string) []fruitRow {

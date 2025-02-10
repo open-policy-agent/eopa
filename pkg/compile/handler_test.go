@@ -5,8 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"maps"
+	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -121,12 +123,24 @@ func TestCompileHandlerMultiTarget(t *testing.T) {
 	}
 }
 
+func resetCaches(t testing.TB, s storage.Store) {
+	ctx := context.Background()
+	key := strconv.Itoa(rand.Int())
+	txn := storage.NewTransactionOrDie(ctx, s, storage.WriteParams)
+	if err := s.UpsertPolicy(ctx, txn, key, []byte(`package foo.num`+key)); err != nil {
+		t.Fatalf("cache trigger: %v", err)
+	}
+	if err := s.Commit(ctx, txn); err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+}
+
 func TestCompileHandlerMetrics(t *testing.T) {
 	var roles map[string]any
 	if err := json.Unmarshal(rolesJSON, &roles); err != nil {
 		t.Fatalf("unmarshal roles: %v", err)
 	}
-	chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
+	chnd, mgr := setup(t, benchRego, map[string]any{"roles": roles})
 
 	input := map[string]any{
 		"user": "caesar",
@@ -143,23 +157,39 @@ func TestCompileHandlerMetrics(t *testing.T) {
 
 	for _, target := range targets {
 		t.Run(strings.Split(target, "/")[1], func(t *testing.T) {
+			resetCaches(t, mgr.Store)
 			payload := map[string]any{ // NB(sr): unknowns are taken from metadata
 				"input": input,
 				"query": query,
 			}
-			resp := evalReq(t, chnd, payload, target)
-			if exp, act := map[string]float64{
-				"timer_eval_constraints_ns":      0,
-				"timer_extract_annotations_ns":   0,
-				"timer_prep_partial_ns":          0,
-				"timer_rego_external_resolve_ns": 0,
-				"timer_rego_partial_eval_ns":     0,
-				"timer_rego_query_compile_ns":    0,
-				"timer_rego_query_parse_ns":      0,
-				"timer_server_handler_ns":        0,
-				"timer_translate_queries_ns":     0,
-			}, resp.Metrics; !compareMetrics(exp, act) {
-				t.Fatalf("unexpected metrics: want %v, got %v", exp, act)
+			{
+				resp := evalReq(t, chnd, payload, target)
+				if exp, act := map[string]float64{
+					"timer_eval_constraints_ns":      0,
+					"timer_extract_annotations_ns":   0,
+					"timer_prep_partial_ns":          0,
+					"timer_rego_external_resolve_ns": 0,
+					"timer_rego_partial_eval_ns":     0,
+					"timer_rego_query_compile_ns":    0,
+					"timer_rego_query_parse_ns":      0,
+					"timer_server_handler_ns":        0,
+					"timer_translate_queries_ns":     0,
+				}, resp.Metrics; !compareMetrics(exp, act) {
+					t.Fatalf("unexpected metrics: want %v, got %v", exp, act)
+				}
+			}
+
+			{ // Redo without resetting the cache: no extraction happens
+				resp := evalReq(t, chnd, payload, target)
+				if n, ok := resp.Metrics["timer_extract_annotations_ns"]; ok {
+					t.Errorf("unexpected metric 'timer_extract_annotations_ns': %v", n)
+				}
+			}
+
+			// Redo without resetting the cache: no extraction happens
+			resp2 := evalReq(t, chnd, payload, target)
+			if n, ok := resp2.Metrics["timer_extract_annotations_ns"]; ok {
+				t.Errorf("unexpected metric 'timer_extract_annotations_ns': %v", n)
 			}
 		})
 	}
@@ -227,8 +257,6 @@ include if {
 include if {
 	input.foo.col == regex.match("^foo$", input.bar)
 }
-
-_use_md := rego.metadata.rule()
 `
 	chnd, mgr := setup(t, []byte(policy), map[string]any{})
 	config, _ := cache.ParseCachingConfig(nil)
@@ -308,7 +336,7 @@ func setup(t testing.TB, rego []byte, data any) (http.Handler, *plugins.Manager)
 		t.Fatalf("upsert policy: %v", err)
 	}
 	if err := trt.Runtime.Store.Write(ctx, txn, storage.AddOp, storage.Path{}, data); err != nil {
-		t.Fatalf("write roles: %v", err)
+		t.Fatalf("write data: %v", err)
 	}
 	if err := trt.Runtime.Store.Commit(ctx, txn); err != nil {
 		t.Fatalf("commit: %v", err)
@@ -316,7 +344,9 @@ func setup(t testing.TB, rego []byte, data any) (http.Handler, *plugins.Manager)
 
 	trt.Runtime.Manager.Info = ast.MustParseTerm(`{"foo": "bar", "fox": 100}`)
 	chnd := compile.Handler(l)
-	chnd.SetManager(trt.Runtime.Manager)
+	if err := chnd.SetManager(trt.Runtime.Manager); err != nil {
+		t.Fatalf("set manager: %v", err)
+	}
 
 	return chnd, trt.Runtime.Manager
 }

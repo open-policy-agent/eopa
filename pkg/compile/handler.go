@@ -2,11 +2,15 @@ package compile
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
+
+	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/logging"
@@ -39,6 +43,8 @@ const (
 	timerEvalConstraints    = "eval_constraints"
 	timerTranslateQueries   = "translate_queries"
 	timerExtractAnnotations = "extract_annotations"
+
+	unknownsCacheSize = 500
 )
 
 type CompileResult struct {
@@ -46,9 +52,9 @@ type CompileResult struct {
 }
 
 type CompileRequestV1 struct {
-	Input    *interface{} `json:"input"`
-	Query    string       `json:"query"`
-	Unknowns *[]string    `json:"unknowns"`
+	Input    *any      `json:"input"`
+	Query    string    `json:"query"`
+	Unknowns *[]string `json:"unknowns"`
 	Options  struct {
 		DisableInlining          []string       `json:"disableInlining,omitempty"`
 		NondeterministicBuiltins bool           `json:"nondeterministicBuiltins"`
@@ -59,21 +65,54 @@ type CompileRequestV1 struct {
 
 type CompileHandler interface {
 	http.Handler
-	SetManager(*plugins.Manager)
+	SetManager(*plugins.Manager) error
 }
 
 func Handler(l logging.Logger) CompileHandler {
-	return &hndl{Logger: l}
+	c, _ := lru.New[string, []*ast.Term](unknownsCacheSize)
+	return &hndl{Logger: l,
+		cache: c,
+		counter: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "eopa_compile_handler_unknowns_cache_lookups_total",
+			Help: "The number of lookups in the unknowns cache (label \"status\" indicates hit or miss)",
+		}, []string{"status"}),
+	}
 }
 
 type hndl struct {
 	logging.Logger
 	manager *plugins.Manager
+	cache   *lru.Cache[string, []*ast.Term]
+	counter *prometheus.CounterVec
 }
 
-func (h *hndl) SetManager(m *plugins.Manager) {
+func (h *hndl) SetManager(m *plugins.Manager) error {
 	m.ExtraRoute("/v1/compile", prometheusHandle, h.ServeHTTP)
+	ctx := context.TODO()
+	txn, err := m.Store.NewTransaction(ctx, storage.WriteParams)
+	if err != nil {
+		return fmt.Errorf("failed to create transaction: %w", err)
+	}
+	if _, err := m.Store.Register(ctx, txn, storage.TriggerConfig{
+		OnCommit: func(_ context.Context, _ storage.Transaction, evt storage.TriggerEvent) {
+			if evt.PolicyChanged() {
+				h.Logger.Debug("purging unknowns cache for policy change")
+				h.cache.Purge()
+			}
+		}}); err != nil {
+		return fmt.Errorf("failed to register trigger: %w", err)
+	}
+	if err := m.Store.Commit(ctx, txn); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+	if pr := m.PrometheusRegister(); pr != nil {
+		if err := pr.Register(h.counter); err != nil {
+			return err
+		}
+	}
+
 	h.manager = m
+	return nil
 }
 
 var unsafeBuiltinsMap = map[string]struct{}{ast.HTTPSend.Name: {}}
@@ -116,18 +155,16 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	comp := h.manager.GetCompiler()
-	unknowns := request.Unknowns
-	if len(unknowns) == 0 { // Read unknowns from metadata
-		m.Timer(timerExtractAnnotations).Start()
-		parsedUnknowns, errs := parseUnknownsFromAnnotations(comp)
+	unknowns := request.Unknowns // always wins over annotations if provided
+	if len(unknowns) == 0 {      // check cache for unknowns
+		var errs []*ast.Error
+		unknowns, errs = h.unknowns(ctx, txn, comp, m, request.Query)
 		if errs != nil {
 			writer.Error(w, http.StatusBadRequest,
 				types.NewErrorV1(types.CodeEvaluation, types.MsgEvaluationError).
 					WithASTErrors(errs))
 			return
 		}
-		unknowns = parsedUnknowns
-		m.Timer(timerExtractAnnotations).Stop()
 	}
 
 	target, dialect, err := parseHeader(r.Header.Get("Accept"))
@@ -323,6 +360,43 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fin(w, result, m, includeMetrics(r), includeInstrumentation)
 }
 
+func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, query ast.Body) ([]*ast.Term, []*ast.Error) {
+	qs := query.String()
+	unknowns, ok := h.cache.Get(qs)
+	if ok {
+		h.counter.WithLabelValues("hit").Inc()
+		return unknowns, nil
+	}
+	h.counter.WithLabelValues("miss").Inc()
+	m.Timer(timerExtractAnnotations).Start()
+	if len(query) != 1 {
+		return nil, nil
+	}
+	q, ok := query[0].Terms.(*ast.Term)
+	if !ok {
+		return nil, nil
+	}
+	queryRef, ok := (*q).Value.(ast.Ref)
+	if !ok {
+		return nil, nil
+	}
+	parsedUnknowns, errs := extractUnknownsFromAnnotations(comp, queryRef)
+	if errs != nil {
+		return nil, errs
+	}
+	if parsedUnknowns == nil { // none found on the compiler, re-parse modules
+		parsedUnknowns, errs = parseUnknownsFromModules(ctx, comp, h.manager.Store, txn, h.manager.ParserOptions(), queryRef)
+		if errs != nil {
+			return nil, errs
+		}
+	}
+	unknowns = parsedUnknowns
+	m.Timer(timerExtractAnnotations).Stop()
+
+	h.cache.Add(qs, unknowns)
+	return unknowns, nil
+}
+
 func queriesToUCAST(queries []ast.Body, mappings map[string]any) any {
 	ucast := BodiesToUCAST(queries, &Opts{Translations: mappings})
 	if ucast == nil { // ucast == nil means unconditional YES
@@ -435,34 +509,75 @@ func lookupMappings(mappings map[string]any, target, dialect string) (map[string
 	return nil, nil
 }
 
-func parseUnknownsFromAnnotations(comp *ast.Compiler) ([]*ast.Term, []*ast.Error) {
+func parseUnknownsFromModules(ctx context.Context, comp *ast.Compiler, store storage.Store, txn storage.Transaction, po ast.ParserOptions, ref ast.Ref) ([]*ast.Term, []*ast.Error) {
+	var errs []*ast.Error
+	mods, err := store.ListPolicies(ctx, txn)
+	if err != nil {
+		return nil, append(errs, ast.NewError(invalidUnknownCode, nil, "failed to list policies for annotation set: %s", err))
+	}
+	po.ProcessAnnotation = true
+	modules := make(map[string]*ast.Module, len(mods))
+	for _, module := range mods {
+		rego, err := store.GetPolicy(ctx, txn, module)
+		if err != nil {
+			return nil, append(errs, ast.NewError(invalidUnknownCode, nil, "failed to read module for annotation set: %s", err))
+		}
+		m, err := ast.ParseModuleWithOpts(module, string(rego), po)
+		if err != nil {
+			errs = append(errs, ast.NewError(invalidUnknownCode, nil, "failed to parse module for annotation set: %s", err))
+			continue
+		}
+		modules[module] = m
+	}
+	if errs != nil {
+		return nil, errs
+	}
+	comp.Compile(modules)
+	if len(comp.Errors) > 0 {
+		return nil, comp.Errors
+	}
+	return extractUnknownsFromAnnotations(comp, ref)
+}
+
+func extractUnknownsFromAnnotations(comp *ast.Compiler, ref ast.Ref) ([]*ast.Term, []*ast.Error) {
+	// find ast.Rule for ref
+	rules := comp.GetRulesExact(ref)
+	rule := rules[0] // rule scope doesn't make sense here, so it doesn't matter which rule we use
+	return unknownsFromAnnotationsSet(comp.GetAnnotationSet(), rule)
+}
+
+func unknownsFromAnnotationsSet(as *ast.AnnotationSet, rule *ast.Rule) ([]*ast.Term, []*ast.Error) {
+	if as == nil {
+		return nil, nil
+	}
 	var unknowns []*ast.Term
 	var errs []*ast.Error
 
-	if as := comp.GetAnnotationSet(); as != nil {
-		for _, ar := range as.Flatten() {
-			ann := ar.Annotations
-			unk, ok := ann.Custom["unknowns"]
+	for _, ar := range as.Chain(rule) {
+		ann := ar.Annotations
+		if ann == nil {
+			continue
+		}
+		unk, ok := ann.Custom["unknowns"]
+		if !ok {
+			continue
+		}
+		unkArray, ok := unk.([]any)
+		if !ok {
+			continue
+		}
+		for _, u := range unkArray {
+			s, ok := u.(string)
 			if !ok {
 				continue
 			}
-			unkArray, ok := unk.([]any)
-			if !ok {
-				continue
-			}
-			for _, u := range unkArray {
-				s, ok := u.(string)
-				if !ok {
-					continue
-				}
-				ref, err := ast.ParseRef(s)
-				if err != nil {
-					errs = append(errs, ast.NewError(invalidUnknownCode, ann.Loc(), "unknowns must be valid refs: %s", s))
-				} else if ref.HasPrefix(ast.DefaultRootRef) || ref.HasPrefix(ast.InputRootRef) {
-					unknowns = append(unknowns, ast.NewTerm(ref))
-				} else {
-					errs = append(errs, ast.NewError(invalidUnknownCode, ann.Loc(), "unknowns must be prefixed with `input` or `data`: %v", ref))
-				}
+			ref, err := ast.ParseRef(s)
+			if err != nil {
+				errs = append(errs, ast.NewError(invalidUnknownCode, ann.Loc(), "unknowns must be valid refs: %s", s))
+			} else if ref.HasPrefix(ast.DefaultRootRef) || ref.HasPrefix(ast.InputRootRef) {
+				unknowns = append(unknowns, ast.NewTerm(ref))
+			} else {
+				errs = append(errs, ast.NewError(invalidUnknownCode, ann.Loc(), "unknowns must be prefixed with `input` or `data`: %v", ref))
 			}
 		}
 	}

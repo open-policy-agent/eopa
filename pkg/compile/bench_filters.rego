@@ -34,5 +34,3 @@ resolver_include if {
 }
 
 user_is_resolver(user, tenant) if "resolver" in data.roles[tenant][user]
-
-_use_metadata := rego.metadata.rule()
