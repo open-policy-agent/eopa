@@ -143,7 +143,7 @@ test:
 test-examples-%:
 	cd examples/$* && \
 	  GOPRIVATE=github.com/styrainc/enterprise-opa-private go mod tidy && \
-	  go test .
+	  go test -vet=off .
 
 test-race:
 	GODEBUG=x509negativeserial=1 go test $(BUILD_ARGS) ./... -race

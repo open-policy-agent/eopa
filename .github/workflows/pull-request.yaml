@@ -12,6 +12,7 @@ concurrency:
 
 env:
   GOPRIVATE: github.com/StyraInc/opa
+  GOLANGCI_VERSION: 1.64.4
   REGAL_VERSION: 0.29.2
   BB_VERSION: 1.12.195
 
@@ -51,7 +52,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.60.1
+          version: v${{ env.GOLANGCI_VERSION }}
           args: --timeout=10m --out-format=colored-line-number,github-actions
       # Do a pre-flight check to ensure we don't bother with `buf` unless
       # we have protobuf changes present.

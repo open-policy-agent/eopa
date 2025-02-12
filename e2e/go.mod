@@ -78,15 +78,15 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.36.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.8 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.59 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.60 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.61 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.32 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.32 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.32 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.5.6 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.6.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.13 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.13 // indirect
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.76.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.76.1 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/benhoyt/goawk v1.27.0 // indirect
@@ -172,7 +172,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
 	github.com/hashicorp/vault/api/auth/approle v0.8.0 // indirect
-	github.com/huandu/go-sqlbuilder v1.33.1 // indirect
+	github.com/huandu/go-sqlbuilder v1.34.0 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/influxdata/go-syslog/v3 v3.0.0 // indirect
 	github.com/itchyny/gojq v0.12.17 // indirect
