@@ -44,8 +44,8 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/hashicorp/vault/api v1.16.0
-	github.com/hashicorp/vault/api/auth/approle v0.8.0
-	github.com/hashicorp/vault/api/auth/kubernetes v0.8.0
+	github.com/hashicorp/vault/api/auth/approle v0.9.0
+	github.com/hashicorp/vault/api/auth/kubernetes v0.9.0
 	github.com/huandu/go-sqlbuilder v1.34.0
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/jarcoal/httpmock v1.2.0
