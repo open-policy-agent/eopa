@@ -22,7 +22,7 @@ import (
 
 const (
 	ucastAcceptHeader = "application/vnd.styra.ucast.prisma+json"
-	sqlAcceptHeader   = "application/vnd.styra.sql.postgres+json"
+	sqlAcceptHeader   = "application/vnd.styra.sql.postgresql+json"
 )
 
 // Error is needed here because the ast.Error type cannot be

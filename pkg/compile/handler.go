@@ -32,7 +32,7 @@ const (
 	ucastMinimalJSON = "application/vnd.styra.ucast.minimal+json"
 	ucastPrismaJSON  = "application/vnd.styra.ucast.prisma+json"
 	ucastLINQJSON    = "application/vnd.styra.ucast.linq+json"
-	sqlPostgresJSON  = "application/vnd.styra.sql.postgres+json"
+	sqlPostgresJSON  = "application/vnd.styra.sql.postgresql+json"
 	sqlMySQLJSON     = "application/vnd.styra.sql.mysql+json"
 	sqlSQLServerJSON = "application/vnd.styra.sql.sqlserver+json"
 
@@ -310,7 +310,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "multi":
 		targets := struct {
 			UCAST    *CompileResult `json:"ucast,omitempty"`
-			Postgres *CompileResult `json:"postgres,omitempty"`
+			Postgres *CompileResult `json:"postgresql,omitempty"`
 			MySQL    *CompileResult `json:"mysql,omitempty"`
 			MSSQL    *CompileResult `json:"sqlserver,omitempty"`
 		}{}
@@ -336,7 +336,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				switch dialect {
-				case "postgres":
+				case "postgresql":
 					targets.Postgres = &CompileResult{Query: sql}
 				case "mysql":
 					targets.MySQL = &CompileResult{Query: sql}
@@ -637,7 +637,7 @@ func parseHeader(accept string) (string, string, error) {
 	case ucastLINQJSON:
 		return "ucast", "linq", nil
 	case sqlPostgresJSON:
-		return "sql", "postgres", nil
+		return "sql", "postgresql", nil
 	case sqlMySQLJSON:
 		return "sql", "mysql", nil
 	case sqlSQLServerJSON:

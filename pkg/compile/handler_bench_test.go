@@ -39,7 +39,7 @@ func BenchmarkCompileHandler(b *testing.B) {
 	}
 	query := "data.filters.include"
 	targets := []string{
-		"application/vnd.styra.sql.postgres+json",
+		"application/vnd.styra.sql.postgresql+json",
 		"application/vnd.styra.ucast.prisma+json",
 	}
 
@@ -96,7 +96,7 @@ func BenchmarkCompileHandlerPercentiles(tb *testing.B) {
 		},
 	}
 	query := "data.filters.include"
-	target := "application/vnd.styra.sql.postgres+json"
+	target := "application/vnd.styra.sql.postgresql+json"
 
 	payload := map[string]any{ // NB(sr): unknowns are taken from metadata
 		"input": input,

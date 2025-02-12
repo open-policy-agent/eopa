@@ -49,7 +49,7 @@ func TestMain(m *testing.M) {
 type DBType string
 
 const (
-	Postgres DBType = "postgres"
+	Postgres DBType = "postgresql"
 	MySQL    DBType = "mysql"
 	MSSQL    DBType = "sqlserver"
 )
@@ -223,7 +223,11 @@ func setupDB(t *testing.T, dbType DBType) (*TestConfig, func()) {
 		t.Fatalf("failed to setup test container: %v", err)
 	}
 
-	db, err := sql.Open(string(dbType), dbURL)
+	typ := string(dbType)
+	if dbType == Postgres {
+		typ = "postgres"
+	}
+	db, err := sql.Open(typ, dbURL)
 	if err != nil {
 		t.Fatalf("failed to connect to database: %v", err)
 	}
@@ -543,7 +547,7 @@ include if input.fruits.name == "banana"
 				t.Fatalf("failed to create request: %v", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Accept", "application/vnd.styra.sql.postgres+json")
+			req.Header.Set("Accept", "application/vnd.styra.sql.postgresql+json")
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
 				t.Fatalf("failed to execute request: %v", err)

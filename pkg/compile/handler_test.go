@@ -30,7 +30,7 @@ type Response struct {
 	Result struct {
 		Query    any   `json:"query,omitempty"`
 		UCAST    Query `json:"ucast,omitempty"`
-		Postgres Query `json:"postgres,omitempty"`
+		Postgres Query `json:"postgresql,omitempty"`
 		MySQL    Query `json:"mysql,omitempty"`
 		MSSQL    Query `json:"sqlserver,omitempty"`
 	} `json:"result"`
@@ -59,7 +59,7 @@ func TestCompileHandlerMultiTarget(t *testing.T) {
 		"query": query,
 		"options": map[string]any{
 			"targetDialects": []string{
-				"sql+postgres",
+				"sql+postgresql",
 				"sql+mysql",
 				"sql+sqlserver",
 				"ucast+prisma",
@@ -151,7 +151,7 @@ func TestCompileHandlerMetrics(t *testing.T) {
 	}
 	query := "data.filters.include"
 	targets := []string{
-		"application/vnd.styra.sql.postgres+json",
+		"application/vnd.styra.sql.postgresql+json",
 		"application/vnd.styra.ucast.prisma+json",
 	}
 
@@ -264,7 +264,7 @@ include if {
 	iqvc := cache.NewInterQueryValueCache(ctx, config)
 	mgr.SetCaches(iqc, iqvc)
 
-	query, target := "data.filters.include", "application/vnd.styra.sql.postgres+json"
+	query, target := "data.filters.include", "application/vnd.styra.sql.postgresql+json"
 
 	req := map[string]any{
 		"method":                       "GET",
