@@ -216,6 +216,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m.Timer(timerPrepPartial).Stop()
 
 	pq, err := prep.Partial(ctx,
+		rego.EvalTransaction(txn),
 		rego.EvalMetrics(m),
 		rego.EvalParsedInput(request.Input),
 		rego.EvalParsedUnknowns(unknowns),
@@ -551,7 +552,8 @@ func parseUnknownsFromModules(ctx context.Context, comp *ast.Compiler, store sto
 	if errs != nil {
 		return nil, errs
 	}
-	comp.Compile(modules)
+	comp.WithPathConflictsCheck(storage.NonEmpty(ctx, store, txn)).
+		Compile(modules)
 	if len(comp.Errors) > 0 {
 		return nil, comp.Errors
 	}
