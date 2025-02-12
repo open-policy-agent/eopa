@@ -163,7 +163,8 @@ func RunDataPolicyTest(ctx context.Context, rctx *tester.RunnerCtx, mod *ast.Mod
 		Support: pq.Support,
 	}
 
-	if res := Check(pq0, config.constraints).ASTErrors(); len(res) > 0 {
+	// TODO(sr): read translations from metadata, feed "shorts" into Check()
+	if res := Check(pq0, config.constraints, nil).ASTErrors(); len(res) > 0 {
 		tr.Error = ast.Errors(res)
 		rctx.Results <- tr
 	}

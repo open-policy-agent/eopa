@@ -277,8 +277,27 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		constr = NewConstraintSet(c)
 	}
 
+	// We collect all the mapped short names -- not per-dialect or per-target, since if
+	// you use a short, you need to provide a mapping for every target.
+	shorts := NewSet[string]()
+	for _, mapping := range request.Options.Mappings { // dt = dialect or target
+		m, ok := mapping.(map[string]any)
+		if !ok {
+			continue
+		}
+		for n, nmap := range m {
+			m, ok := nmap.(map[string]any)
+			if !ok {
+				continue
+			}
+			if _, ok := m["$table"]; ok {
+				shorts = shorts.Add(n)
+			}
+		}
+	}
+
 	// check PE queries against constraints
-	if errs := Check(pq, constr).ASTErrors(); errs != nil {
+	if errs := Check(pq, constr, shorts).ASTErrors(); errs != nil {
 		writer.Error(w, http.StatusBadRequest,
 			types.NewErrorV1(types.CodeEvaluation, types.MsgEvaluationError).
 				WithASTErrors(errs))

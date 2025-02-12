@@ -22,18 +22,24 @@ func (r *Results) ASTErrors() []*ast.Error {
 }
 
 type checker struct {
-	constraints Constraints
-	res         *Results
+	constraints   Constraints
+	shortUnknowns Set[string]
+	res           *Results
 }
 
 func (c *checker) Results() *Results {
 	return c.res
 }
 
-func Check(pq *rego.PartialQueries, constraints Constraints) *Results {
+// Check performs a set of checks on the given partial queries and support modules.
+// The constraints are used to determine which features are allowed in the partial queries.
+// The shorts are used to determine which short names are allowed, e.g. `input.foo` is
+// allowed if it's mapped to some table column.
+func Check(pq *rego.PartialQueries, constraints Constraints, shorts Set[string]) *Results {
 	check := checker{
-		constraints: constraints,
-		res:         &Results{},
+		constraints:   constraints,
+		shortUnknowns: shorts,
+		res:           &Results{},
 	}
 	for i := range pq.Queries {
 		check.Query(pq.Queries[i], pq.Support)
@@ -155,7 +161,7 @@ func checkBuiltins(c *checker, e *ast.Expr, _ []*ast.Module) *ast.Error {
 
 	// all our allowed builtins have two operands
 	for i := range 2 {
-		if err := checkOperand(op, e.Operand(i)); err != nil {
+		if err := checkOperand(c, op, e.Operand(i)); err != nil {
 			return err
 		}
 	}
@@ -193,7 +199,7 @@ func checkBuiltins(c *checker, e *ast.Expr, _ []*ast.Module) *ast.Error {
 	return nil
 }
 
-func checkOperand(op, t *ast.Term) *ast.Error {
+func checkOperand(c *checker, op, t *ast.Term) *ast.Error {
 	if t == nil {
 		return err(op.Loc(), "%v: missing operand", op)
 	}
@@ -205,12 +211,18 @@ func checkOperand(op, t *ast.Term) *ast.Error {
 		}
 		return err(loc, "%v: nested call operand: %v", op, v)
 	case ast.Ref:
-		if !v.HasPrefix(ast.InputRootRef) || len(v) != 3 {
-			if loc == nil {
-				loc = t.Loc()
+		if v.HasPrefix(ast.InputRootRef) {
+			if len(v) == 3 {
+				return nil
 			}
-			return err(loc, "%v: invalid ref operand: %v", op, v)
+			if len(v) == 2 && c.shortUnknowns.Contains(string(v[1].Value.(ast.String))) {
+				return nil
+			}
 		}
+		if loc == nil {
+			loc = t.Loc()
+		}
+		return err(loc, "%v: invalid ref operand: %v", op, v)
 	}
 	return nil
 }

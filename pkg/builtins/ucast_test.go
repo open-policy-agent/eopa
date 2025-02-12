@@ -41,6 +41,15 @@ func TestUCASTAsSQLBuiltin(t *testing.T) {
 			Result:  `{{"result": {"p": "WHERE name IS NOT NULL"} }}`,
 		},
 		{
+			Note: "short unknown, translated",
+			Source: `p := ucast.as_sql({"type": "field", "operator": "eq", "field": "name", "value": true}, "postgres", {
+				"name": {"$table": "foo"},
+				"foo": {"$self": "f", "name": "n"},
+			})`,
+			Dialect: "postgres",
+			Result:  `{{"result": {"p": "WHERE f.n = TRUE"} }}`,
+		},
+		{
 			Note:    "field ref argument",
 			Source:  `p := ucast.as_sql({"type": "field", "operator": "eq", "field": "name", "value": {"field": "x"}}, "postgres", {})`,
 			Dialect: "postgres",

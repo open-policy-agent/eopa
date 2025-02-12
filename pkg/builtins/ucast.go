@@ -56,6 +56,14 @@ func translateField(field string, translations *ast.Term) string {
 	before, after, found := strings.Cut(field, ".")
 	outTable = before
 	outColumn = after
+	if tableMapping := translations.Get(ast.StringTerm(before)); tableMapping != nil {
+		// See if there's a $table ref for the short unknown, and remap.
+		if tableName := tableMapping.Get(ast.StringTerm("$table")); tableName != nil {
+			outTable = string(tableName.Value.(ast.String))
+			// swap, make believe we picked up '<outTable>.name', not 'name'
+			before, after, found = outTable, before, true
+		}
+	}
 	// Is there a translation available for the table name?
 	if tableMapping := translations.Get(ast.StringTerm(before)); tableMapping != nil {
 		if _, ok := tableMapping.Value.(ast.Object); ok {

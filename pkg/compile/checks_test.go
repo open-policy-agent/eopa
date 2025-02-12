@@ -74,6 +74,7 @@ func TestPostPartialChecks(t *testing.T) {
 		input        any
 		query        string
 		errors       []Error
+		mappings     map[string]any
 		skip         string
 		result       map[string]any
 	}{
@@ -294,6 +295,37 @@ red_herring if true
 			note:   "happy path, not-equal",
 			rego:   `include if input.fruits.name != "apple"`,
 			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "ne", "value": "apple"},
+		},
+		{
+			note: "happy path, mapped short unknown",
+			rego: `package filters
+# METADATA
+# custom:
+#  unknowns:
+#   - input.name
+include if input.name != "apple"`,
+			regoVerbatim: true,
+			omitUnknowns: true,
+			mappings: map[string]any{
+				"name": map[string]any{"$table": "fruits"},
+			},
+			result: map[string]any{"type": "field", "field": "fruits.name", "operator": "ne", "value": "apple"},
+		},
+		{
+			note: "happy path, double-mapped short unknown",
+			rego: `package filters
+# METADATA
+# custom:
+#  unknowns:
+#   - input.name
+include if input.name != "apple"`,
+			regoVerbatim: true,
+			omitUnknowns: true,
+			mappings: map[string]any{
+				"name":   map[string]any{"$table": "fruits"},
+				"fruits": map[string]any{"$self": "FRUIT", "name": "NAME"},
+			},
+			result: map[string]any{"type": "field", "field": "FRUIT.NAME", "operator": "ne", "value": "apple"},
 		},
 		{
 			note: "happy path, not+equal",
@@ -757,6 +789,11 @@ include if input.fruits.colour == input.colour
 				"input":    input,
 				"query":    query,
 				"unknowns": unknowns,
+				"options": map[string]any{
+					"targetSQLTableMappings": map[string]any{
+						"ucast": tc.mappings,
+					},
+				},
 			}
 
 			jsonData, err := json.Marshal(payload)
