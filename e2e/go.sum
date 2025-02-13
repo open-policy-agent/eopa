@@ -131,8 +131,8 @@ github.com/PaesslerAG/jsonpath v0.1.1 h1:c1/AToHQMVsduPAa4Vh6xp2U0evy4t8SWp8imEs
 github.com/PaesslerAG/jsonpath v0.1.1/go.mod h1:lVboNxFGal/VwW6d9JzIy56bUsYAP6tH/x80vjnCseY=
 github.com/ProtonMail/go-crypto v1.1.5 h1:eoAQfK2dwL+tFSFpr7TbOaPNUbPiJj4fLYwwGE1FQO4=
 github.com/ProtonMail/go-crypto v1.1.5/go.mod h1:rA3QumHc/FZ8pAHreoekgiAbzpNsfQAosU5td4SnOrE=
-github.com/StyraInc/opa v1.1.1-0.20250204091909-f6e16f416f72 h1:NCjirszjnxxHQiyw+hl2nboM/fuBnfrSggBaG1Iixic=
-github.com/StyraInc/opa v1.1.1-0.20250204091909-f6e16f416f72/go.mod h1:T1pASQ1/vwfTa+e2fYcfpLCvWgYtqtiUv+IuA/dLPQs=
+github.com/StyraInc/opa v1.1.1-0.20250213122523-a94bde9a1494 h1:MmhLxfrDm1XznRLocezojRMeS7T+rIe9EHzeOlAZGKQ=
+github.com/StyraInc/opa v1.1.1-0.20250213122523-a94bde9a1494/go.mod h1:T1pASQ1/vwfTa+e2fYcfpLCvWgYtqtiUv+IuA/dLPQs=
 github.com/agnivade/levenshtein v1.2.0 h1:U9L4IOT0Y3i0TIlUIDJ7rVUziKi/zPbrJGaFrtYH3SY=
 github.com/agnivade/levenshtein v1.2.0/go.mod h1:QVVI16kDrtSuwcpd0p1+xMC6Z/VfhtCyDIjcwga4/DU=
 github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
@@ -537,8 +537,8 @@ github.com/hashicorp/vault-client-go v0.4.3 h1:zG7STGVgn/VK6rnZc0k8PGbfv2x/sJExR
 github.com/hashicorp/vault-client-go v0.4.3/go.mod h1:4tDw7Uhq5XOxS1fO+oMtotHL7j4sB9cp0T7U6m4FzDY=
 github.com/hashicorp/vault/api v1.16.0 h1:nbEYGJiAPGzT9U4oWgaaB0g+Rj8E59QuHKyA5LhwQN4=
 github.com/hashicorp/vault/api v1.16.0/go.mod h1:KhuUhzOD8lDSk29AtzNjgAu2kxRA9jL9NAbkFlqvkBA=
-github.com/hashicorp/vault/api/auth/approle v0.8.0 h1:FuVtWZ0xD6+wz1x0l5s0b4852RmVXQNEiKhVXt6lfQY=
-github.com/hashicorp/vault/api/auth/approle v0.8.0/go.mod h1:NV7O9r5JUtNdVnqVZeMHva81AIdpG0WoIQohNt1VCPM=
+github.com/hashicorp/vault/api/auth/approle v0.9.0 h1:FdpspwGVWnGiWmAxd5L1Yd+T+fX2kYnyAIvI5oGdvNs=
+github.com/hashicorp/vault/api/auth/approle v0.9.0/go.mod h1:fvtJhBs3AYMs2fXk4U5+u+7unhUGuboiKzFpLPpIazw=
 github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=
 github.com/hexops/gotextdiff v1.0.3/go.mod h1:pSWU5MAI3yDq+fZBTazCSJysOMbxWL1BSow5/V2vxeg=
 github.com/huandu/go-assert v1.1.6 h1:oaAfYxq9KNDi9qswn/6aE0EydfxSa+tWZC1KabNitYs=

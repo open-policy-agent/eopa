@@ -171,7 +171,7 @@ require (
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.7 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
-	github.com/hashicorp/vault/api/auth/approle v0.8.0 // indirect
+	github.com/hashicorp/vault/api/auth/approle v0.9.0 // indirect
 	github.com/huandu/go-sqlbuilder v1.34.0 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/influxdata/go-syslog/v3 v3.0.0 // indirect
@@ -320,4 +320,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v1.1.1-0.20250204091909-f6e16f416f72
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v1.1.1-0.20250213122523-a94bde9a1494

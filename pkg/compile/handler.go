@@ -27,15 +27,6 @@ import (
 const (
 	invalidUnknownCode = "invalid_unknown"
 
-	multiTargetJSON  = "application/vnd.styra.multitarget+json"
-	ucastAllJSON     = "application/vnd.styra.ucast.all+json"
-	ucastMinimalJSON = "application/vnd.styra.ucast.minimal+json"
-	ucastPrismaJSON  = "application/vnd.styra.ucast.prisma+json"
-	ucastLINQJSON    = "application/vnd.styra.ucast.linq+json"
-	sqlPostgresJSON  = "application/vnd.styra.sql.postgresql+json"
-	sqlMySQLJSON     = "application/vnd.styra.sql.mysql+json"
-	sqlSQLServerJSON = "application/vnd.styra.sql.sqlserver+json"
-
 	prometheusHandle = "v1/compile"
 
 	// Timer names
@@ -45,7 +36,30 @@ const (
 	timerExtractAnnotations = "extract_annotations"
 
 	unknownsCacheSize = 500
+
+	// These need to be kept up to date with `CompileApiKnownHeaders()` below
+	multiTargetJSON  = "application/vnd.styra.multitarget+json"
+	ucastAllJSON     = "application/vnd.styra.ucast.all+json"
+	ucastMinimalJSON = "application/vnd.styra.ucast.minimal+json"
+	ucastPrismaJSON  = "application/vnd.styra.ucast.prisma+json"
+	ucastLINQJSON    = "application/vnd.styra.ucast.linq+json"
+	sqlPostgresJSON  = "application/vnd.styra.sql.postgresql+json"
+	sqlMySQLJSON     = "application/vnd.styra.sql.mysql+json"
+	sqlSQLServerJSON = "application/vnd.styra.sql.sqlserver+json"
 )
+
+func CompileAPIKnownHeaders() []string {
+	return []string{
+		multiTargetJSON,
+		ucastAllJSON,
+		ucastMinimalJSON,
+		ucastPrismaJSON,
+		ucastLINQJSON,
+		sqlPostgresJSON,
+		sqlMySQLJSON,
+		sqlSQLServerJSON,
+	}
+}
 
 type CompileResult struct {
 	Query any `json:"query"`
