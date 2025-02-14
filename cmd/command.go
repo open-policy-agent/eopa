@@ -187,6 +187,14 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 					cmd.Flags().Lookup(dataKey).Value.Set(s)
 				}
 
+				if p, _ := cmd.Flags().GetBool("profile"); p {
+					t := cmd.Flag("target")
+					if !t.Changed || t.Value.String() != "rego" { // not explicitly requested rego already
+						logger.Warn("profiling is not supported in Enterprise OPA, switching to OPA's evaluation mode")
+						t.Value.Set("rego")
+					}
+				}
+
 				// do the license validate and activate asynchronously; so user doesn't have to wait
 				go func() {
 					if err := lic.ValidateLicense(cmd.Context(), lparams); err != nil {
