@@ -181,6 +181,7 @@ plugins:
 								},
 							},
 							"unknowns": []any{"input.fruits"},
+							"type":     "eopa.styra.com/compile",
 						},
 					}
 					if diff := cmp.Diff(dl, logs[0], stdIgnores); diff != "" {

@@ -14,6 +14,9 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
 )
 
+// decisionLogType is injected under custom.type in the DL entry
+const decisionLogType = "eopa.styra.com/compile"
+
 func getRevisions(ctx context.Context, store storage.Store, txn storage.Transaction) (string, map[string]server.BundleInfo, error) {
 	// Check if we still have a legacy bundle manifest in the store
 	legacyRevision, err := bundle.LegacyReadRevisionFromStore(ctx, store, txn)
@@ -88,6 +91,7 @@ func dlog(ctx context.Context,
 	addCustom(map[string]any{
 		"options":  orig.Options,
 		"unknowns": unknowns,
+		"type":     decisionLogType,
 	}, info)
 	return info, nil
 }
