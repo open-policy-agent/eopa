@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
+	"github.com/gorilla/mux"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -104,6 +106,7 @@ type hndl struct {
 
 func (h *hndl) SetManager(m *plugins.Manager) error {
 	extraRoute(m, "/v1/compile", prometheusHandle, h.ServeHTTP)
+	extraRoute(m, "/v1/compile/{path:.+}", prometheusHandle, h.ServeHTTP)
 	ctx := context.TODO()
 	txn, err := m.Store.NewTransaction(ctx, storage.WriteParams)
 	if err != nil {
@@ -135,6 +138,8 @@ func (h *hndl) SetManager(m *plugins.Manager) error {
 var unsafeBuiltinsMap = map[string]struct{}{ast.HTTPSend.Name: {}}
 
 func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	urlPath := mux.Vars(r)["path"]
+
 	ctx := r.Context()
 	explainMode := getExplain(r.URL.Query()[types.ParamExplainV1], types.ExplainOffV1)
 	includeInstrumentation := getBoolParam(r.URL, types.ParamInstrumentV1, true)
@@ -153,7 +158,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// NOTE(sr): We keep some fields twice: from the unparsed and from the transformed
 	// request (`orig` and `request` respectively), because otherwise, we'd need to re-
 	// transform the values back for including them in the decision logs.
-	orig, request, reqErr := readInputCompilePostV1(body, h.manager.ParserOptions())
+	orig, request, reqErr := readInputCompilePostV1(body, urlPath, h.manager.ParserOptions())
 	if reqErr != nil {
 		writer.Error(w, http.StatusBadRequest, reqErr)
 		return
@@ -406,7 +411,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			unk[i] = unknowns[i].String()
 		}
 
-		info, err := dlog(ctx, result.Result, orig, request, unk, m, h.manager.Store, txn)
+		info, err := dlog(ctx, urlPath, result.Result, orig, request, unk, m, h.manager.Store, txn)
 		if err != nil {
 			h.Logger.Error("failed to log decision: %v", err)
 			return
@@ -497,7 +502,7 @@ type compileRequestOptions struct {
 	TargetDialects           []string       `json:"targetDialects,omitempty"`
 }
 
-func readInputCompilePostV1(reqBytes []byte, queryParserOptions ast.ParserOptions) (*CompileRequestV1, *compileRequest, *types.ErrorV1) {
+func readInputCompilePostV1(reqBytes []byte, urlPath string, queryParserOptions ast.ParserOptions) (*CompileRequestV1, *compileRequest, *types.ErrorV1) {
 	var request CompileRequestV1
 
 	err := util.NewJSONDecoder(bytes.NewBuffer(reqBytes)).Decode(&request)
@@ -505,16 +510,21 @@ func readInputCompilePostV1(reqBytes []byte, queryParserOptions ast.ParserOption
 		return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "error(s) occurred while decoding request: %v", err.Error())
 	}
 
-	query, err := ast.ParseBodyWithOpts(request.Query, queryParserOptions)
-	if err != nil {
-		switch err := err.(type) {
-		case ast.Errors:
-			return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, types.MsgParseQueryError).WithASTErrors(err)
-		default:
-			return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "%v: %v", types.MsgParseQueryError, err)
+	var query ast.Body
+	if urlPath != "" {
+		query = []*ast.Expr{ast.NewExpr(ast.NewTerm(stringPathToDataRef(urlPath)))}
+	} else { // attempt to parse query
+		query, err = ast.ParseBodyWithOpts(request.Query, queryParserOptions)
+		if err != nil {
+			switch err := err.(type) {
+			case ast.Errors:
+				return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, types.MsgParseQueryError).WithASTErrors(err)
+			default:
+				return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "%v: %v", types.MsgParseQueryError, err)
+			}
+		} else if len(query) == 0 {
+			return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "missing required 'query' value")
 		}
-	} else if len(query) == 0 {
-		return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "missing required 'query' value")
 	}
 
 	var input ast.Value
@@ -728,4 +738,31 @@ func getExplain(p []string, zero types.ExplainModeV1) types.ExplainModeV1 {
 		}
 	}
 	return zero
+}
+
+func stringPathToDataRef(s string) (r ast.Ref) {
+	result := ast.Ref{ast.DefaultRootDocument}
+	return append(result, stringPathToRef(s)...)
+}
+
+func stringPathToRef(s string) (r ast.Ref) {
+	if len(s) == 0 {
+		return r
+	}
+	p := strings.Split(s, "/")
+	for _, x := range p {
+		if x == "" {
+			continue
+		}
+		if y, err := url.PathUnescape(x); err == nil {
+			x = y
+		}
+		i, err := strconv.Atoi(x)
+		if err != nil {
+			r = append(r, ast.StringTerm(x))
+		} else {
+			r = append(r, ast.IntNumberTerm(i))
+		}
+	}
+	return r
 }

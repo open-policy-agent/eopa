@@ -40,6 +40,7 @@ func getRevisions(ctx context.Context, store storage.Store, txn storage.Transact
 }
 
 func dlog(ctx context.Context,
+	path string,
 	result *any,
 	orig *CompileRequestV1,
 	request *compileRequest,
@@ -81,10 +82,8 @@ func dlog(ctx context.Context,
 
 		// Compile API specific fields
 		Results: result,
+		Path:    path,
 		Query:   orig.Query,
-
-		// other fields
-		// Path:  path,
 	}
 	addCustom(map[string]any{
 		"options":  orig.Options,

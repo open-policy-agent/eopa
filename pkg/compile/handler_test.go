@@ -359,6 +359,8 @@ func evalReq(t testing.TB, h http.Handler, payload map[string]any, target string
 		t.Fatalf("Failed to marshal JSON: %v", err)
 	}
 
+	// CAVEAT(sr): We're using the httptest machinery to simulate a request, so the actual
+	// request path is ignored.
 	req := httptest.NewRequest("POST", "/v1/compile?metrics=true", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", target)

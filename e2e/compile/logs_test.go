@@ -3,6 +3,7 @@
 package tests
 
 import (
+	cp "cmp"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,6 +20,8 @@ import (
 )
 
 type payload struct {
+	Query        string         `json:"query"`
+	Path         string         `json:"path"`
 	Result       any            `json:"result"`
 	Metrics      map[string]int `json:"metrics"`
 	ID           int            `json:"req_id"`
@@ -74,107 +77,116 @@ plugins:
 
 	for c, config := range configs {
 		t.Run(c, func(t *testing.T) {
-			eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort, config)
-			if err := eopa.Start(); err != nil {
-				t.Fatal(err)
-			}
-			wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
+			for _, tc := range []struct {
+				query string
+				path  string
+			}{
+				{path: "/filters/include"},
+				{query: "data.filters.include"},
+			} {
+				t.Run(fmt.Sprintf("query=%s/path=%s", cp.Or(tc.query, "none"), cp.Or(tc.path, "none")), func(t *testing.T) {
+					eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort, config)
+					if err := eopa.Start(); err != nil {
+						t.Fatal(err)
+					}
+					wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-			{ // store policy
-				req, err := http.NewRequest("PUT", fmt.Sprintf("%s/v1/policies/policy.rego", eopaURL), strings.NewReader(policy))
-				if err != nil {
-					t.Fatalf("failed to create request: %v", err)
-				}
-				if _, err := http.DefaultClient.Do(req); err != nil {
-					t.Fatalf("put policy: %v", err)
-				}
-			}
+					{ // store policy
+						req, err := http.NewRequest("PUT", fmt.Sprintf("%s/v1/policies/policy.rego", eopaURL), strings.NewReader(policy))
+						if err != nil {
+							t.Fatalf("failed to create request: %v", err)
+						}
+						if _, err := http.DefaultClient.Do(req); err != nil {
+							t.Fatalf("put policy: %v", err)
+						}
+					}
 
-			{ // act: send Compile API request
-				input := map[string]any{"favorites": []string{"banana", "orange"}}
-				query := `data.filters.include`
-				payload := map[string]any{
-					"input": input,
-					"query": query,
-					"options": map[string]any{
-						"targetSQLTableMappings": map[string]any{
-							"postgresql": map[string]any{
-								"fruits": map[string]string{
-									"$self": "f",
-									"name":  "n",
-								},
-							},
-						},
-					},
-				}
-
-				queryBytes, err := json.Marshal(payload)
-				if err != nil {
-					t.Fatalf("Failed to marshal JSON: %v", err)
-				}
-				req, err := http.NewRequest("POST",
-					fmt.Sprintf("%s/v1/compile", eopaURL),
-					strings.NewReader(string(queryBytes)))
-				if err != nil {
-					t.Fatalf("failed to create request: %v", err)
-				}
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Accept", "application/vnd.styra.sql.postgresql+json")
-				resp, err := http.DefaultClient.Do(req)
-				if err != nil {
-					t.Fatalf("failed to execute request: %v", err)
-				}
-				defer resp.Body.Close()
-				var respPayload struct {
-					Result struct {
-						Query any `json:"query"`
-					} `json:"result"`
-				}
-				if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
-					t.Fatalf("failed to decode response: %v", err)
-				}
-				if exp, act := "WHERE f.n IN (E'banana', E'orange')", respPayload.Result.Query; exp != act {
-					t.Errorf("response: expected %v, got %v (response: %v)", exp, act, respPayload)
-				}
-			}
-
-			var output io.Reader
-			switch c {
-			case "top-level":
-				output = eopaErr
-			case "per-output":
-				output = eopaOut
-			}
-
-			logs := collectDL(t, output, 1)
-			{
-				dl := payload{
-					Result: map[string]any{
-						"query": "WHERE f.n IN (E'banana', E'orange')",
-					},
-					Input: map[string]any{
-						"favorites": []any{"banana", "orange"},
-					},
-					ID:     2, // PUT policy is #1
-					Labels: standardLabels,
-					Custom: map[string]any{
-						"options": map[string]any{
-							"nondeterministicBuiltins": false,
-							"targetSQLTableMappings": map[string]any{
-								"postgresql": map[string]any{
-									"fruits": map[string]any{
-										"$self": "f",
-										"name":  "n",
+					{ // act: send Compile API request
+						input := map[string]any{"favorites": []string{"banana", "orange"}}
+						payload := map[string]any{
+							"query": tc.query, // may be empty
+							"input": input,
+							"options": map[string]any{
+								"targetSQLTableMappings": map[string]any{
+									"postgresql": map[string]any{
+										"fruits": map[string]string{
+											"$self": "f",
+											"name":  "n",
+										},
 									},
 								},
 							},
+						}
+
+						queryBytes, err := json.Marshal(payload)
+						if err != nil {
+							t.Fatalf("Failed to marshal JSON: %v", err)
+						}
+						req, err := http.NewRequest("POST",
+							fmt.Sprintf("%s/v1/compile%s", eopaURL, tc.path), // tc.path could be empty
+							strings.NewReader(string(queryBytes)))
+						if err != nil {
+							t.Fatalf("failed to create request: %v", err)
+						}
+						req.Header.Set("Content-Type", "application/json")
+						req.Header.Set("Accept", "application/vnd.styra.sql.postgresql+json")
+						resp, err := http.DefaultClient.Do(req)
+						if err != nil {
+							t.Fatalf("failed to execute request: %v", err)
+						}
+						defer resp.Body.Close()
+						var respPayload struct {
+							Result struct {
+								Query any `json:"query"`
+							} `json:"result"`
+						}
+						if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
+							t.Fatalf("failed to decode response: %v", err)
+						}
+						if exp, act := "WHERE f.n IN (E'banana', E'orange')", respPayload.Result.Query; exp != act {
+							t.Errorf("response: expected %v, got %v (response: %v)", exp, act, respPayload)
+						}
+					}
+
+					var output io.Reader
+					switch c {
+					case "top-level":
+						output = eopaErr
+					case "per-output":
+						output = eopaOut
+					}
+
+					logs := collectDL(t, output, 1)
+					dl := payload{
+						Query: tc.query,
+						Path:  strings.TrimPrefix(tc.path, "/"),
+						Result: map[string]any{
+							"query": "WHERE f.n IN (E'banana', E'orange')",
 						},
-						"unknowns": []any{"input.fruits"},
-					},
-				}
-				if diff := cmp.Diff(dl, logs[0], stdIgnores); diff != "" {
-					t.Errorf("diff: (-want +got):\n%s", diff)
-				}
+						Input: map[string]any{
+							"favorites": []any{"banana", "orange"},
+						},
+						ID:     2, // PUT policy is #1
+						Labels: standardLabels,
+						Custom: map[string]any{
+							"options": map[string]any{
+								"nondeterministicBuiltins": false,
+								"targetSQLTableMappings": map[string]any{
+									"postgresql": map[string]any{
+										"fruits": map[string]any{
+											"$self": "f",
+											"name":  "n",
+										},
+									},
+								},
+							},
+							"unknowns": []any{"input.fruits"},
+						},
+					}
+					if diff := cmp.Diff(dl, logs[0], stdIgnores); diff != "" {
+						t.Errorf("diff: (-want +got):\n%s", diff)
+					}
+				})
 			}
 		})
 	}
