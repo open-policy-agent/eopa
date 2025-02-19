@@ -16,6 +16,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/metrics"
 	"github.com/open-policy-agent/opa/v1/plugins"
+	"github.com/open-policy-agent/opa/v1/plugins/logs"
 	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/open-policy-agent/opa/v1/server/types"
 	"github.com/open-policy-agent/opa/v1/server/writer"
@@ -98,10 +99,11 @@ type hndl struct {
 	manager *plugins.Manager
 	cache   *lru.Cache[string, []*ast.Term]
 	counter *prometheus.CounterVec
+	dl      *logs.Plugin
 }
 
 func (h *hndl) SetManager(m *plugins.Manager) error {
-	m.ExtraRoute("/v1/compile", prometheusHandle, h.ServeHTTP)
+	extraRoute(m, "/v1/compile", prometheusHandle, h.ServeHTTP)
 	ctx := context.TODO()
 	txn, err := m.Store.NewTransaction(ctx, storage.WriteParams)
 	if err != nil {
@@ -125,6 +127,7 @@ func (h *hndl) SetManager(m *plugins.Manager) error {
 		}
 	}
 
+	h.dl = logs.Lookup(m)
 	h.manager = m
 	return nil
 }
@@ -147,7 +150,10 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	request, reqErr := readInputCompilePostV1(body, h.manager.ParserOptions())
+	// NOTE(sr): We keep some fields twice: from the unparsed and from the transformed
+	// request (`orig` and `request` respectively), because otherwise, we'd need to re-
+	// transform the values back for including them in the decision logs.
+	orig, request, reqErr := readInputCompilePostV1(body, h.manager.ParserOptions())
 	if reqErr != nil {
 		writer.Error(w, http.StatusBadRequest, reqErr)
 		return
@@ -172,7 +178,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	unknowns := request.Unknowns // always wins over annotations if provided
 	if len(unknowns) == 0 {      // check cache for unknowns
 		var errs []*ast.Error
-		unknowns, errs = h.unknowns(ctx, txn, comp, m, request.Query)
+		unknowns, errs = h.unknowns(ctx, txn, comp, m, orig.Query, request.Query)
 		if errs != nil {
 			writer.Error(w, http.StatusBadRequest,
 				types.NewErrorV1(types.CodeEvaluation, types.MsgEvaluationError).
@@ -195,7 +201,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		target == "multi" ||
 		request.Options.NondeterministicBuiltins
 
-	iqc, iqvc := h.manager.GetCaches()
+	iqc, iqvc := getCaches(h.manager)
 
 	opts := []func(*rego.Rego){
 		rego.Compiler(comp),
@@ -232,6 +238,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	pq, err := prep.Partial(ctx,
 		rego.EvalTransaction(txn),
 		rego.EvalMetrics(m),
+		rego.EvalTransaction(txn),
 		rego.EvalParsedInput(request.Input),
 		rego.EvalParsedUnknowns(unknowns),
 		rego.EvalPrintHook(h.manager.PrintHook()),
@@ -392,10 +399,23 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m.Timer(timerTranslateQueries).Stop()
 	m.Timer(metrics.ServerHandler).Stop()
 	fin(w, result, m, includeMetrics(r), includeInstrumentation)
+
+	if h.dl != nil {
+		unk := make([]string, len(unknowns))
+		for i := range unknowns {
+			unk[i] = unknowns[i].String()
+		}
+
+		info, err := dlog(ctx, result.Result, orig, request, unk, m, h.manager.Store, txn)
+		if err != nil {
+			h.Logger.Error("failed to log decision: %v", err)
+			return
+		}
+		h.dl.Log(ctx, info)
+	}
 }
 
-func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, query ast.Body) ([]*ast.Term, []*ast.Error) {
-	qs := query.String()
+func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, qs string, query ast.Body) ([]*ast.Term, []*ast.Error) {
 	unknowns, ok := h.cache.Get(qs)
 	if ok {
 		h.counter.WithLabelValues("hit").Inc()
@@ -431,6 +451,16 @@ func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.
 	return unknowns, nil
 }
 
+func fin(w http.ResponseWriter, result types.CompileResponseV1,
+	metrics metrics.Metrics,
+	includeMetrics, includeInstrumentation bool,
+) {
+	if includeMetrics || includeInstrumentation {
+		result.Metrics = metrics.All()
+	}
+	writer.JSONOK(w, result, true)
+}
+
 func queriesToUCAST(queries []ast.Body, mappings map[string]any) any {
 	ucast := BodiesToUCAST(queries, &Opts{Translations: mappings})
 	if ucast == nil { // ucast == nil means unconditional YES
@@ -461,37 +491,37 @@ type compileRequest struct {
 }
 
 type compileRequestOptions struct {
-	DisableInlining          []string
-	NondeterministicBuiltins bool
-	Mappings                 map[string]any
-	TargetDialects           []string
+	DisableInlining          []string       `json:"disableInlining,omitempty"`
+	NondeterministicBuiltins bool           `json:"nondeterministicBuiltins"`
+	Mappings                 map[string]any `json:"targetSQLTableMappings,omitempty"`
+	TargetDialects           []string       `json:"targetDialects,omitempty"`
 }
 
-func readInputCompilePostV1(reqBytes []byte, queryParserOptions ast.ParserOptions) (*compileRequest, *types.ErrorV1) {
+func readInputCompilePostV1(reqBytes []byte, queryParserOptions ast.ParserOptions) (*CompileRequestV1, *compileRequest, *types.ErrorV1) {
 	var request CompileRequestV1
 
 	err := util.NewJSONDecoder(bytes.NewBuffer(reqBytes)).Decode(&request)
 	if err != nil {
-		return nil, types.NewErrorV1(types.CodeInvalidParameter, "error(s) occurred while decoding request: %v", err.Error())
+		return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "error(s) occurred while decoding request: %v", err.Error())
 	}
 
 	query, err := ast.ParseBodyWithOpts(request.Query, queryParserOptions)
 	if err != nil {
 		switch err := err.(type) {
 		case ast.Errors:
-			return nil, types.NewErrorV1(types.CodeInvalidParameter, types.MsgParseQueryError).WithASTErrors(err)
+			return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, types.MsgParseQueryError).WithASTErrors(err)
 		default:
-			return nil, types.NewErrorV1(types.CodeInvalidParameter, "%v: %v", types.MsgParseQueryError, err)
+			return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "%v: %v", types.MsgParseQueryError, err)
 		}
 	} else if len(query) == 0 {
-		return nil, types.NewErrorV1(types.CodeInvalidParameter, "missing required 'query' value")
+		return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "missing required 'query' value")
 	}
 
 	var input ast.Value
 	if request.Input != nil {
 		input, err = ast.InterfaceToValue(*request.Input)
 		if err != nil {
-			return nil, types.NewErrorV1(types.CodeInvalidParameter, "error(s) occurred while converting input: %v", err)
+			return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "error(s) occurred while converting input: %v", err)
 		}
 	}
 
@@ -501,12 +531,12 @@ func readInputCompilePostV1(reqBytes []byte, queryParserOptions ast.ParserOption
 		for i, s := range *request.Unknowns {
 			unknowns[i], err = ast.ParseTerm(s)
 			if err != nil {
-				return nil, types.NewErrorV1(types.CodeInvalidParameter, "error(s) occurred while parsing unknowns: %v", err)
+				return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "error(s) occurred while parsing unknowns: %v", err)
 			}
 		}
 	}
 
-	return &compileRequest{
+	return &request, &compileRequest{
 		Query:    query,
 		Input:    input,
 		Unknowns: unknowns,
@@ -577,6 +607,9 @@ func parseUnknownsFromModules(ctx context.Context, comp *ast.Compiler, store sto
 func extractUnknownsFromAnnotations(comp *ast.Compiler, ref ast.Ref) ([]*ast.Term, []*ast.Error) {
 	// find ast.Rule for ref
 	rules := comp.GetRulesExact(ref)
+	if len(rules) == 0 {
+		return nil, nil
+	}
 	rule := rules[0] // rule scope doesn't make sense here, so it doesn't matter which rule we use
 	return unknownsFromAnnotationsSet(comp.GetAnnotationSet(), rule)
 }
@@ -618,15 +651,6 @@ func unknownsFromAnnotationsSet(as *ast.AnnotationSet, rule *ast.Rule) ([]*ast.T
 	}
 
 	return unknowns, errs
-}
-
-func fin(w http.ResponseWriter, result types.CompileResponseV1,
-	metrics metrics.Metrics,
-	includeMetrics, includeInstrumentation bool) {
-	if includeMetrics || includeInstrumentation {
-		result.Metrics = metrics.All()
-	}
-	writer.JSONOK(w, result, true)
 }
 
 func parseHeader(accept string) (string, string, error) {

@@ -290,7 +290,7 @@ func toFruitRows(xs []fruitJSON) []fruitRow {
 func TestCompileHappyPathE2E(t *testing.T) {
 	dbTypes := []DBType{Postgres, MySQL, MSSQL}
 
-	eopa, _, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort)
+	eopa, _, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort, "")
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -501,7 +501,7 @@ func TestCompileHappyPathE2E(t *testing.T) {
 // execution added something to the exposed prometheus metrics at /v1/metrics.
 // Also, it checks that the cache hit/miss metrics have been exposed accordingly.
 func TestPrometheusMetrics(t *testing.T) {
-	eopa, _, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort)
+	eopa, _, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort, "")
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -754,15 +754,23 @@ func getUCASTAndRunPrisma(t *testing.T, payload map[string]any, config *TestConf
 	return toFruitRows(rowsData)
 }
 
-func loadEnterpriseOPA(t *testing.T, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
+func loadEnterpriseOPA(t *testing.T, httpPort int, config string) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}
 
+	tempDir := t.TempDir()
 	args := []string{
 		"run",
 		"--server",
 		"--addr", fmt.Sprintf("localhost:%d", httpPort),
 		"--log-level=debug",
 		"--disable-telemetry",
+	}
+	if config != "" {
+		configFile := tempDir + "/config.yaml"
+		if err := os.WriteFile(configFile, []byte(config), 0600); err != nil {
+			t.Fatal(err)
+		}
+		args = append(args, "--config-file", configFile)
 	}
 	bin := os.Getenv("BINARY")
 	if bin == "" {

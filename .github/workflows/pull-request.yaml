@@ -542,7 +542,7 @@ jobs:
           INPUT_CHECKS_CONFIG: enterprise-opa/gobenchdata-checks.yml
           INPUT_PUBLISH_BRANCH: benchmarks
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
-        timeout-minutes: 10
+        timeout-minutes: 20
 
   cross-build:
     runs-on: ubuntu-22.04
