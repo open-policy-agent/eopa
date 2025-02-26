@@ -20,7 +20,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.77.1
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.37.15
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.15
-	github.com/benburkert/pbench v0.0.0-20160623210926-4ec5821845ef
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cespare/xxhash v1.1.0
 	github.com/cespare/xxhash/v2 v2.3.0
@@ -207,7 +206,6 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.7 // indirect
-	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/gdamore/tcell v1.4.0 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.5 // indirect

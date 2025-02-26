@@ -525,7 +525,7 @@ jobs:
           path: enterprise-opa
       - id: go_version
         name: Read go version
-        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
+        run: echo "go_version=1.23.6" >> $GITHUB_OUTPUT
         working-directory: enterprise-opa
 
         # benchmark, gobenchdata
