@@ -2,7 +2,7 @@ module github.com/styrainc/enterprise-opa-private/e2e
 
 go 1.23.4
 
-toolchain go1.23.5
+toolchain go1.24.0
 
 godebug x509negativeserial=1 // mssql docker container: https://github.com/microsoft/mssql-docker/issues/895
 
