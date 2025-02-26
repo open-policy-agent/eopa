@@ -1,7 +1,6 @@
 module github.com/styrainc/enterprise-opa-private
 
 go 1.23
-
 toolchain go1.24.0
 
 require (
@@ -78,7 +77,7 @@ require (
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.10.0
-	github.com/styrainc/regal v0.31.0
+	github.com/styrainc/regal v0.31.1
 	github.com/testcontainers/testcontainers-go v0.35.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.35.0
 	github.com/testcontainers/testcontainers-go/modules/localstack v0.35.0
