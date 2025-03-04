@@ -1,6 +1,9 @@
 module github.com/styrainc/eopa-examples-sdk
 
-go 1.23
+go 1.23.6
+
+toolchain go1.24.0
+
 require github.com/open-policy-agent/opa v1.1.0
 
 require (
@@ -44,7 +47,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
 	github.com/ProtonMail/go-crypto v1.1.5 // indirect
-	github.com/agnivade/levenshtein v1.2.0 // indirect
+	github.com/agnivade/levenshtein v1.2.1 // indirect
 	github.com/apache/arrow/go/v16 v16.0.0 // indirect
 	github.com/apache/pulsar-client-go v0.14.0 // indirect
 	github.com/ardielle/ardielle-go v1.5.2 // indirect
@@ -79,7 +82,7 @@ require (
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cncf/xds/go v0.0.0-20240905190251-b4127c9b8d78 // indirect
 	github.com/cockroachdb/apd/v3 v3.2.1 // indirect
-	github.com/containerd/containerd v1.7.25 // indirect
+	github.com/containerd/containerd v1.7.26 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect

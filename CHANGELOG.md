@@ -14,6 +14,16 @@ This optimization is now enabled by default, so your policies will immediately b
 
 ## v1.33.0
 
+[![OPA v1.2.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.2.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.2.0)
+[![Regal v0.31.1](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.31.1&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.31.1)
+
+This release brings in the latest OPA version, [v1.2.0](https://github.com/open-policy-agent/opa/releases/tag/v1.2.0),
+updates the embedded Regal version to [v0.31.1](https://github.com/StyraInc/regal/releases/tag/v0.31.1),
+and includes various other dependency bumps.
+
+
+## v1.33.0
+
 [![OPA v1.1.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.1.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.1.0)
 [![Regal v0.30.2](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.30.2&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.30.2)
 

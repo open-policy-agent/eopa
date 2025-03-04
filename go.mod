@@ -10,7 +10,7 @@ require (
 	github.com/Jeffail/gabs/v2 v2.7.0
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/OneOfOne/xxhash v1.2.8
-	github.com/agnivade/levenshtein v1.2.0
+	github.com/agnivade/levenshtein v1.2.1
 	github.com/apache/pulsar-client-go v0.14.0
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/aws/aws-sdk-go-v2 v1.36.2
@@ -177,7 +177,7 @@ require (
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cncf/xds/go v0.0.0-20240905190251-b4127c9b8d78 // indirect
 	github.com/cockroachdb/apd/v3 v3.2.1 // indirect
-	github.com/containerd/containerd v1.7.25 // indirect
+	github.com/containerd/containerd v1.7.26 // indirect
 	github.com/containerd/continuity v0.4.4 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
@@ -407,4 +407,4 @@ require (
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v1.1.1-0.20250213122523-a94bde9a1494
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v1.2.1-0.20250303045454-5230c4837935

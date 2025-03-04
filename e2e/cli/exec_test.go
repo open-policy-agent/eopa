@@ -75,16 +75,25 @@ bundles:
 	if err != nil {
 		t.Fatal(err)
 	}
-	act := map[string]any{}
-	if err := json.NewDecoder(bytes.NewReader(stdout)).Decode(&act); err != nil {
+
+	type result struct {
+		Path   string
+		Result any
+	}
+
+	type results struct {
+		Result []result
+	}
+	act := results{}
+	if err := dec.Decode(&act); err != nil {
 		t.Fatalf("parse stdout: %v", err)
 	}
-	exp := map[string]any{
-		"result": []any{
-			any(map[string]any{
-				"path":   inputPath,
-				"result": true,
-			}),
+	exp := results{
+		Result: []result{
+			{
+				Path:   inputPath,
+				Result: true,
+			},
 		},
 	}
 	if diff := cmp.Diff(exp, act); diff != "" {
@@ -131,16 +140,24 @@ plugins:
 
 	dec := json.NewDecoder(bytes.NewReader(stdout))
 	{
-		act := map[string]any{}
+		type result struct {
+			Path   string
+			Result any
+		}
+
+		type results struct {
+			Result []result
+		}
+		act := results{}
 		if err := dec.Decode(&act); err != nil {
 			t.Fatalf("parse stdout: %v", err)
 		}
-		exp := map[string]any{
-			"result": []any{
-				any(map[string]any{
-					"path":   inputPath,
-					"result": true,
-				}),
+		exp := results{
+			Result: []result{
+				{
+					Path:   inputPath,
+					Result: true,
+				},
 			},
 		}
 		if diff := cmp.Diff(exp, act); diff != "" {
