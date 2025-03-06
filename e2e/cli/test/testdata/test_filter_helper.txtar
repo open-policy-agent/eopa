@@ -1,0 +1,55 @@
+# without '-v', "debug" has no effect for passing tests
+exec eopa test .
+! stderr .
+cmp stdout exp/stdout
+
+# with '-v', we get the debug lines (subset asserted only)
+exec eopa test -v .
+! stderr .
+stdout '^data.filters.test_owner_can_see_their_fruit: PASS'
+stdout '^  executing query CREATE TABLE fruits \(id ANY, name ANY, owner_id ANY\) against :memory:'
+stdout '^  executing query DROP TABLE users against :memory:'
+stdout '^PASS: 1/1'
+
+-- filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.users"]
+include if input.users.name == input.username
+-- filters_test.rego --
+package filters
+
+import data.system.eopa.utils.tests.v1.filter
+
+fruits_table := [
+	{"id": 0, "name": "apple", "owner_id": "a"},
+	{"id": 1, "name": "banana", "owner_id": "a"},
+	{"id": 2, "name": "cherry", "owner_id": "b"},
+]
+
+users_table := [
+	{"id": "a", "name": "jane"},
+	{"id": "b", "name": "john"},
+]
+
+test_owner_can_see_their_fruit if {
+	filtered := filter.helper(
+		"data.filters.include",
+		"SELECT fruits.name, users.name as owner FROM fruits LEFT JOIN users ON fruits.owner_id = users.id",
+		{
+			"tables": {
+				"fruits": fruits_table,
+				"users": users_table,
+			},
+			"debug": true,
+		},
+	) with input.username as "jane"
+	count(filtered) == 2
+	{"name": "apple", "owner": "jane"} in filtered
+	{"name": "banana", "owner": "jane"} in filtered
+}
+-- exp/stdout --
+PASS: 1/1

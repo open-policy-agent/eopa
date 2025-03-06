@@ -919,6 +919,11 @@ func typeNull(v Value) bool {
 	return ok
 }
 
+func typeSpecializedBuiltin(chk func(Value) bool) func(*State, []Value) error {
+	return func(state *State, args []Value) error {
+		return isTypeBuiltin(state, args, chk)
+	}
+}
 func isTypeBuiltin(state *State, args []Value, chk func(Value) bool) error {
 	if isUndefinedType(args[0]) {
 		return nil

@@ -359,8 +359,6 @@ func enableEOPAOnly() {
 	builtins.Init()
 	opa_cmd.UserAgent(version.UserAgent())
 	opa_version.Version = version.Version
-	// tester.OverrideRunTest(compile.RunDataPolicyTest)
-	// opa_cmd.OverridePrettyReporter(compile.WrapPrettyReporter)
 }
 
 func setDefaults(c *cobra.Command) *cobra.Command {

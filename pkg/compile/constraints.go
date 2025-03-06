@@ -68,6 +68,11 @@ func NewConstraints(typ, variant string) (*Constraint, error) {
 	c := Constraint{Target: strings.ToUpper(typ), Variant: variant, Features: NewSet[string]()}
 	switch typ {
 	case "sql":
+		switch v := strings.ToLower(variant); v {
+		case "mysql", "postgresql", "sqlserver": // OK
+		default:
+			return nil, fmt.Errorf("unsupported variant for %s: %s", typ, variant)
+		}
 		c.Builtins = sqlBuiltins
 		c.Features.Add("not", "field-ref")
 	case "ucast":

@@ -243,7 +243,6 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	pq, err := prep.Partial(ctx,
 		rego.EvalTransaction(txn),
 		rego.EvalMetrics(m),
-		rego.EvalTransaction(txn),
 		rego.EvalParsedInput(request.Input),
 		rego.EvalParsedUnknowns(unknowns),
 		rego.EvalPrintHook(h.manager.PrintHook()),
@@ -306,22 +305,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// We collect all the mapped short names -- not per-dialect or per-target, since if
 	// you use a short, you need to provide a mapping for every target.
-	shorts := NewSet[string]()
-	for _, mapping := range request.Options.Mappings { // dt = dialect or target
-		m, ok := mapping.(map[string]any)
-		if !ok {
-			continue
-		}
-		for n, nmap := range m {
-			m, ok := nmap.(map[string]any)
-			if !ok {
-				continue
-			}
-			if _, ok := m["$table"]; ok {
-				shorts = shorts.Add(n)
-			}
-		}
-	}
+	shorts := ShortsFromMappings(request.Options.Mappings)
 
 	// check PE queries against constraints
 	if errs := Check(pq, constr, shorts).ASTErrors(); errs != nil {
@@ -420,6 +404,26 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func ShortsFromMappings(mappings map[string]any) Set[string] {
+	shorts := NewSet[string]()
+	for _, mapping := range mappings {
+		m, ok := mapping.(map[string]any)
+		if !ok {
+			continue
+		}
+		for n, nmap := range m {
+			m, ok := nmap.(map[string]any)
+			if !ok {
+				continue
+			}
+			if _, ok := m["$table"]; ok {
+				shorts = shorts.Add(n)
+			}
+		}
+	}
+	return shorts
+}
+
 func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, qs string, query ast.Body) ([]*ast.Term, []*ast.Error) {
 	unknowns, ok := h.cache.Get(qs)
 	if ok {
@@ -439,7 +443,7 @@ func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.
 	if !ok {
 		return nil, nil
 	}
-	parsedUnknowns, errs := extractUnknownsFromAnnotations(comp, queryRef)
+	parsedUnknowns, errs := ExtractUnknownsFromAnnotations(comp, queryRef)
 	if errs != nil {
 		return nil, errs
 	}
@@ -611,10 +615,10 @@ func parseUnknownsFromModules(ctx context.Context, comp *ast.Compiler, store sto
 	if len(comp.Errors) > 0 {
 		return nil, comp.Errors
 	}
-	return extractUnknownsFromAnnotations(comp, ref)
+	return ExtractUnknownsFromAnnotations(comp, ref)
 }
 
-func extractUnknownsFromAnnotations(comp *ast.Compiler, ref ast.Ref) ([]*ast.Term, []*ast.Error) {
+func ExtractUnknownsFromAnnotations(comp *ast.Compiler, ref ast.Ref) ([]*ast.Term, []*ast.Error) {
 	// find ast.Rule for ref
 	rules := comp.GetRulesExact(ref)
 	if len(rules) == 0 {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/topdown"
+
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
@@ -105,74 +106,47 @@ func (f function) execute(state *State, args []Value) error {
 	return err
 }
 
+var specializedBuiltins = map[string]func(*State, []Value) error{
+	ast.Member.Name:           memberBuiltin,
+	ast.MemberWithKey.Name:    memberWithKeyBuiltin,
+	ast.ObjectGet.Name:        objectGetBuiltin,
+	ast.ObjectKeys.Name:       objectKeysBuiltin,
+	ast.ObjectRemove.Name:     objectRemoveBuiltin,
+	ast.ObjectFilter.Name:     objectFilterBuiltin,
+	ast.ObjectUnion.Name:      objectUnionBuiltin,
+	ast.Concat.Name:           stringsConcatBuiltin,
+	ast.EndsWith.Name:         stringsEndsWithBuiltin,
+	ast.StartsWith.Name:       stringsStartsWithBuiltin,
+	ast.Sprintf.Name:          stringsSprintfBuiltin,
+	ast.ArrayConcat.Name:      arrayConcatBuiltin,
+	ast.ArraySlice.Name:       arraySliceBuiltin,
+	ast.Count.Name:            countBuiltin,
+	ast.WalkBuiltin.Name:      walkBuiltin,
+	ast.Equal.Name:            equalBuiltin,
+	ast.NotEqual.Name:         notEqualBuiltin,
+	ast.Or.Name:               binaryOrBuiltin,
+	ast.IsArray.Name:          typeSpecializedBuiltin(typeArray),
+	ast.IsString.Name:         typeSpecializedBuiltin(typeString),
+	ast.IsBoolean.Name:        typeSpecializedBuiltin(typeBoolean),
+	ast.IsObject.Name:         typeSpecializedBuiltin(typeObject),
+	ast.IsSet.Name:            typeSpecializedBuiltin(typeSet),
+	ast.IsNumber.Name:         typeSpecializedBuiltin(typeNumber),
+	ast.IsNull.Name:           typeSpecializedBuiltin(typeNull),
+	ast.JSONUnmarshal.Name:    jsonUnmarshalBuiltin,
+	ast.TypeNameBuiltin.Name:  typenameBuiltin,
+	ast.NumbersRange.Name:     numbersRangeBuiltin,
+	ast.NumbersRangeStep.Name: numbersRangeStepBuiltin,
+	ast.GlobMatch.Name:        globMatchBuiltin,
+}
+
 func (builtin builtin) Execute(state *State, args []Value) error {
 	// Try to use a builtin implementation operating directly with
 	// the internal data types. The conversions to AST data type
 	// is an expensive (heap heavy) operation.
 
 	name := builtin.Name()
-
-	switch name {
-	case ast.Member.Name:
-		return memberBuiltin(state, args)
-	case ast.MemberWithKey.Name:
-		return memberWithKeyBuiltin(state, args)
-	case ast.ObjectGet.Name:
-		return objectGetBuiltin(state, args)
-	case ast.ObjectKeys.Name:
-		return objectKeysBuiltin(state, args)
-	case ast.ObjectRemove.Name:
-		return objectRemoveBuiltin(state, args)
-	case ast.ObjectFilter.Name:
-		return objectFilterBuiltin(state, args)
-	case ast.ObjectUnion.Name:
-		return objectUnionBuiltin(state, args)
-	case ast.Concat.Name:
-		return stringsConcatBuiltin(state, args)
-	case ast.EndsWith.Name:
-		return stringsEndsWithBuiltin(state, args)
-	case ast.StartsWith.Name:
-		return stringsStartsWithBuiltin(state, args)
-	case ast.Sprintf.Name:
-		return stringsSprintfBuiltin(state, args)
-	case ast.ArrayConcat.Name:
-		return arrayConcatBuiltin(state, args)
-	case ast.ArraySlice.Name:
-		return arraySliceBuiltin(state, args)
-	case ast.Count.Name:
-		return countBuiltin(state, args)
-	case ast.WalkBuiltin.Name:
-		return walkBuiltin(state, args)
-	case ast.Equal.Name:
-		return equalBuiltin(state, args)
-	case ast.NotEqual.Name:
-		return notEqualBuiltin(state, args)
-	case ast.Or.Name:
-		return binaryOrBuiltin(state, args)
-	case ast.IsArray.Name:
-		return isTypeBuiltin(state, args, typeArray)
-	case ast.IsString.Name:
-		return isTypeBuiltin(state, args, typeString)
-	case ast.IsBoolean.Name:
-		return isTypeBuiltin(state, args, typeBoolean)
-	case ast.IsObject.Name:
-		return isTypeBuiltin(state, args, typeObject)
-	case ast.IsSet.Name:
-		return isTypeBuiltin(state, args, typeSet)
-	case ast.IsNumber.Name:
-		return isTypeBuiltin(state, args, typeNumber)
-	case ast.IsNull.Name:
-		return isTypeBuiltin(state, args, typeNull)
-	case ast.JSONUnmarshal.Name:
-		return jsonUnmarshalBuiltin(state, args)
-	case ast.TypeNameBuiltin.Name:
-		return typenameBuiltin(state, args)
-	case ast.NumbersRange.Name:
-		return numbersRangeBuiltin(state, args)
-	case ast.NumbersRangeStep.Name:
-		return numbersRangeStepBuiltin(state, args)
-	case ast.GlobMatch.Name:
-		return globMatchBuiltin(state, args)
+	if spec, ok := specializedBuiltins[name]; ok {
+		return spec(state, args)
 	}
 
 	// If none available, revert to standard OPA builtin
@@ -636,14 +610,38 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 	inner := state.New()
 	defer inner.Release()
 
-	args := inner.Args(int(call.ArgsLen()))
-	call.ArgsIter(func(i uint32, arg LocalOrConst) error {
-		args[i] = state.Value(arg)
-		return nil
-	})
-
 	fid := call.Func()
-	if err := state.Func(fid).Execute(inner, args); err != nil {
+	f := state.Func(fid)
+
+	var err error
+	// Special-branching for rego.compile
+	if f.IsBuiltin() {
+		if builtin(f).Name() == "rego.compile" {
+			args := inner.Args(2 + int(call.ArgsLen())) // input and data prepended
+			args[0] = state.Local(Input)
+			args[1] = state.Local(Data)
+			call.ArgsIter(func(i uint32, arg LocalOrConst) error {
+				args[i+2] = state.Value(arg)
+				return nil
+			})
+			err = regoCompileBuiltin(inner, args)
+		} else {
+			args := inner.Args(int(call.ArgsLen()))
+			call.ArgsIter(func(i uint32, arg LocalOrConst) error {
+				args[i] = state.Value(arg)
+				return nil
+			})
+			err = builtin(f).Execute(inner, args)
+		}
+	} else { // all other (rego) functions
+		args := inner.Args(int(call.ArgsLen()))
+		call.ArgsIter(func(i uint32, arg LocalOrConst) error {
+			args[i] = state.Value(arg)
+			return nil
+		})
+		err = f.execute(inner, args)
+	}
+	if err != nil {
 		return false, 0, err
 	}
 

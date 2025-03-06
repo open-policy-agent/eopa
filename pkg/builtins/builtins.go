@@ -75,6 +75,7 @@ var DefaultBuiltins = [...]*ast.Builtin{
 	mongoDBFind,
 	mongoDBFindOne,
 	regoEval,
+	regoCompile,
 	sqlSend,
 	vaultSend,
 	neo4jQuery,

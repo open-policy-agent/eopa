@@ -21,6 +21,8 @@ import (
 )
 
 const (
+	RegoCompileName = "rego.compile"
+
 	// regoEvalBuiltinCacheKey is the key in the builtin context cache that
 	// points to the rego.eval() specific intra-query cache resides at.
 	regoEvalBuiltinCacheKey        regoEvalKey = "REGO_EVAL_CACHE_KEY"

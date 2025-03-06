@@ -1,0 +1,85 @@
+exec eopa test success
+! stderr .
+cmp stdout exp/stdout
+
+-- success/filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.user"]
+include if input.user == input.username
+
+include if input.fruits.name in {"apple", "banana", input.extra_fruit}
+-- success/filters_test.rego --
+package filters
+
+test_generated_where_clause if {
+	conditions := rego.compile({
+		"query": "data.filters.include",
+		"target": "sql+postgresql",
+		"mappings": {"postgresql": {
+			"user": {"$table": "users"},
+			"users": {"user": "name"},
+		}},
+	}) with input.username as "jane"
+		with input.extra_fruit as "orange"
+	conditions.sql == "WHERE (users.name = E'jane' OR fruits.name IN (E'apple', E'banana', E'orange'))"
+}
+-- exp/stdout --
+PASS: 1/1
+-- failure/filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.users"]
+include if input.users.name == object.get(input, "username", "unknown")
+
+include if input.fruits.name in {"apple", "banana", input.extra_fruit}
+-- failure/filters_test.rego --
+package filters
+
+test_generated_where_clause if {
+	conditions := rego.compile({
+		"query": "data.filters.include",
+		"target": "sql+postgresql",
+	}) with input.username as "jane"
+		with input.extra_fruit as "orange"
+	print(conditions)
+	conditions.sql == "WHERE (users.name = E'jane' OR fruits.name IN (E'apple', E'banana', E'orange'))"
+}
+-- empty_query/filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.users"]
+include if 2 + 2 == 4
+
+test_generated_where_clause if {
+	conditions := rego.compile({
+		"query": "data.filters.include",
+		"target": "sql+postgresql",
+	})
+	conditions.sql == ""
+}
+-- no_query/filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.users"]
+include if false
+
+test_generated_where_clause if {
+	# NB(sr): print() is the only thing in rego that accepts `undefined` arguments
+	print(rego.compile({
+		"query": "data.filters.include",
+		"target": "sql+postgresql",
+	}))
+}

@@ -1,7 +1,7 @@
 export GOPRIVATE=github.com/StyraInc/opa
 FORK_BRANCH := eopa-1.2.0
-
 BUILD_ARGS := --tags=use_opa_fork
+
 ifdef AUTH_RELEASE
 NEWEST := $(shell git tag -l --sort -version:refname | head -n 1)
 ifeq ($(AUTH_RELEASE), $(NEWEST))

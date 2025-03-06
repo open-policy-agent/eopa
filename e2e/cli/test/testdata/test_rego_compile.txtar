@@ -1,0 +1,122 @@
+exec eopa test success
+! stderr .
+cmp stdout exp/stdout
+
+# this data filter policy isn't in the fragment
+! exec eopa test failure/filters_test.rego failure/filters.rego
+stdout '^data\.filters\.test_generated_where_clause: ERROR '
+stdout '^  1 error occurred during compilation:$'
+stdout '^failure/filters\.rego:7: pe_fragment_error: eq: nested call operand: object\.get\(input, "username", "unknown"\)'
+stdout '^--------------------------------------------------------------------------------$'
+stdout '^ERROR: 1/1$'
+
+# this data filter policy isn't in the fragment, with raise_error: false
+! exec eopa test failure_inband_errors/filters_test.rego failure/filters.rego
+! stderr .
+stdout '^failure_inband_errors/filters_test\.rego:$'
+stdout '^data.filters.test_generated_where_clause: FAIL'
+stdout '^  {"errors": {{"code": "pe_fragment_error", "location": {"col": 32, "file": "failure/filters.rego", "row": 7}, "message": "eq: nested call operand: object.get\(input, \\"username\\", \\"unknown\\"\)"}}}'
+stdout '^FAIL: 1/1$'
+
+# this data filter policy translates to an empty query (unconditional YES)
+exec eopa test empty_query/filters.rego
+! stderr .
+cmp stdout exp/stdout
+
+# this data filter policy translates to NO query (unconditional NO)
+exec eopa test -v no_query/filters.rego
+! stderr .
+stdout '^data.filters.test_generated_where_clause: PASS'
+stdout '^  <undefined>'
+stdout '^PASS: 1/1$'
+
+-- success/filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.users"]
+include if input.users.name == input.username
+
+include if input.fruits.name in {"apple", "banana", input.extra_fruit}
+-- success/filters_test.rego --
+package filters
+
+test_generated_where_clause if {
+	conditions := rego.compile({
+		"query": "data.filters.include",
+		"target": "sql+postgresql",
+	}) with input.username as "jane"
+		with input.extra_fruit as "orange"
+	conditions.sql == "WHERE (users.name = E'jane' OR fruits.name IN (E'apple', E'banana', E'orange'))"
+}
+-- exp/stdout --
+PASS: 1/1
+-- failure/filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.users"]
+include if input.users.name == object.get(input, "username", "unknown")
+
+include if input.fruits.name in {"apple", "banana", input.extra_fruit}
+-- failure/filters_test.rego --
+package filters
+
+test_generated_where_clause if {
+	conditions := rego.compile({
+		"query": "data.filters.include",
+		"target": "sql+postgresql",
+	}) with input.username as "jane"
+		with input.extra_fruit as "orange"
+	print(conditions)
+	conditions.sql == "WHERE (users.name = E'jane' OR fruits.name IN (E'apple', E'banana', E'orange'))"
+}
+-- failure_inband_errors/filters_test.rego --
+package filters
+
+test_generated_where_clause if {
+	conditions := rego.compile({
+		"query": "data.filters.include",
+		"target": "sql+postgresql",
+		"raise_error": false,
+	}) with input.username as "jane"
+		with input.extra_fruit as "orange"
+	print(conditions)
+	conditions.sql == "WHERE (users.name = E'jane' OR fruits.name IN (E'apple', E'banana', E'orange'))"
+}
+-- empty_query/filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.users"]
+include if 2 + 2 == 4
+
+test_generated_where_clause if {
+	conditions := rego.compile({
+		"query": "data.filters.include",
+		"target": "sql+postgresql",
+	})
+	conditions.sql == ""
+}
+-- no_query/filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.users"]
+include if false
+
+test_generated_where_clause if {
+	# NB(sr): print() is the only thing in rego that accepts `undefined` arguments
+	print(rego.compile({
+		"query": "data.filters.include",
+		"target": "sql+postgresql",
+	}))
+}
