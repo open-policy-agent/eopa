@@ -48,6 +48,15 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+type result struct {
+	Path   string
+	Result any
+}
+
+type results struct {
+	Result []result
+}
+
 func TestExecSuccessWithBuiltin(t *testing.T) {
 	args := []string{"exec", "--log-level", "debug", "--decision", "/test/p", "--no-license-fallback"} // need to append input
 	policy := `package test
@@ -76,15 +85,8 @@ bundles:
 		t.Fatal(err)
 	}
 
-	type result struct {
-		Path   string
-		Result any
-	}
-
-	type results struct {
-		Result []result
-	}
 	act := results{}
+	dec := json.NewDecoder(bytes.NewReader(stdout))
 	if err := dec.Decode(&act); err != nil {
 		t.Fatalf("parse stdout: %v", err)
 	}
@@ -140,14 +142,6 @@ plugins:
 
 	dec := json.NewDecoder(bytes.NewReader(stdout))
 	{
-		type result struct {
-			Path   string
-			Result any
-		}
-
-		type results struct {
-			Result []result
-		}
 		act := results{}
 		if err := dec.Decode(&act); err != nil {
 			t.Fatalf("parse stdout: %v", err)
