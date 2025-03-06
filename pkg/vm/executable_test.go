@@ -31,13 +31,21 @@ func test(t testing.TB) {
 		strings{}.Write(s)
 	}
 
-	// builtin
+	// builtins
 
 	{
 		b := builtin(builtin{}.Write("builtin", false))
 
 		check(t, "name", b.Name(), "builtin")
 		check(t, "relation", b.Relation(), false)
+		check(t, "size", size(b), int(len(b)))
+	}
+
+	// specialized builtin
+	{
+		b := specializedBuiltin(specializedBuiltin{}.Write(32))
+
+		check(t, "number", b.Num(), uint32(32))
 		check(t, "size", size(b), int(len(b)))
 	}
 

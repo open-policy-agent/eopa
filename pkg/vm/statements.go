@@ -33,12 +33,11 @@ func (p plan) Execute(state *State) error {
 	return err
 }
 
-func (f function) Execute(state *State, args []Value) error {
-	if !f.IsBuiltin() {
-		return f.execute(state, args)
-	}
-
-	return builtin(f).Execute(state, args)
+func (f function) Execute(_, inner *State, args []Value) error {
+	// 	if f.Type() == typeBuiltin {
+	// 		return builtin(f).Execute(state, args)
+	// 	}
+	return f.execute(inner, args)
 }
 
 func isHashable(as []Value) bool {
@@ -106,49 +105,17 @@ func (f function) execute(state *State, args []Value) error {
 	return err
 }
 
-var specializedBuiltins = map[string]func(*State, []Value) error{
-	ast.Member.Name:           memberBuiltin,
-	ast.MemberWithKey.Name:    memberWithKeyBuiltin,
-	ast.ObjectGet.Name:        objectGetBuiltin,
-	ast.ObjectKeys.Name:       objectKeysBuiltin,
-	ast.ObjectRemove.Name:     objectRemoveBuiltin,
-	ast.ObjectFilter.Name:     objectFilterBuiltin,
-	ast.ObjectUnion.Name:      objectUnionBuiltin,
-	ast.Concat.Name:           stringsConcatBuiltin,
-	ast.EndsWith.Name:         stringsEndsWithBuiltin,
-	ast.StartsWith.Name:       stringsStartsWithBuiltin,
-	ast.Sprintf.Name:          stringsSprintfBuiltin,
-	ast.ArrayConcat.Name:      arrayConcatBuiltin,
-	ast.ArraySlice.Name:       arraySliceBuiltin,
-	ast.Count.Name:            countBuiltin,
-	ast.WalkBuiltin.Name:      walkBuiltin,
-	ast.Equal.Name:            equalBuiltin,
-	ast.NotEqual.Name:         notEqualBuiltin,
-	ast.Or.Name:               binaryOrBuiltin,
-	ast.IsArray.Name:          typeSpecializedBuiltin(typeArray),
-	ast.IsString.Name:         typeSpecializedBuiltin(typeString),
-	ast.IsBoolean.Name:        typeSpecializedBuiltin(typeBoolean),
-	ast.IsObject.Name:         typeSpecializedBuiltin(typeObject),
-	ast.IsSet.Name:            typeSpecializedBuiltin(typeSet),
-	ast.IsNumber.Name:         typeSpecializedBuiltin(typeNumber),
-	ast.IsNull.Name:           typeSpecializedBuiltin(typeNull),
-	ast.JSONUnmarshal.Name:    jsonUnmarshalBuiltin,
-	ast.TypeNameBuiltin.Name:  typenameBuiltin,
-	ast.NumbersRange.Name:     numbersRangeBuiltin,
-	ast.NumbersRangeStep.Name: numbersRangeStepBuiltin,
-	ast.GlobMatch.Name:        globMatchBuiltin,
+func (builtin specializedBuiltin) Execute(outer, inner *State, args []Value) error {
+	n := builtin.Num()
+	if n == regoCompileSF {
+		args = append(args, outer.Local(Input), outer.Local(Data)) // input and data appended
+		return regoCompileBuiltin(inner, args)
+	}
+	n0 := builtin.Num() & 31
+	return specializedBuiltinsByNum[n0](inner, args)
 }
 
-func (builtin builtin) Execute(state *State, args []Value) error {
-	// Try to use a builtin implementation operating directly with
-	// the internal data types. The conversions to AST data type
-	// is an expensive (heap heavy) operation.
-
-	name := builtin.Name()
-	if spec, ok := specializedBuiltins[name]; ok {
-		return spec(state, args)
-	}
-
+func (builtin builtin) Execute(_, state *State, args []Value) error {
 	// If none available, revert to standard OPA builtin
 	// implementations using AST types.
 
@@ -183,6 +150,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		a[i] = ast.NewTerm(v)
 	}
 
+	name := builtin.Name()
 	if name == ast.InternalPrint.Name {
 		bctx.Location = &ast.Location{}
 	}
@@ -365,7 +333,7 @@ var exs = [...]func([]byte, *State) (bool, uint32, error){
 	typeStatementSetAdd:           n[setAdd],
 	typeStatementWith:             n[with],
 	// ...
-	64: nil,
+	63: nil,
 }
 
 func (s statement) Execute(state *State) (stop bool, index uint32, size int, err error) {
@@ -547,7 +515,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 		return false, 0, nil
 	}
 
-	if err := f.Execute(inner, args); err != nil {
+	if err := f.Execute(nil, inner, args); err != nil {
 		return false, 0, err
 	}
 
@@ -606,41 +574,41 @@ func externalCall(state *State, path []string, args []Value) (interface{}, bool,
 	return state.ValueOps().Call(state.Globals.Ctx, data, a, state)
 }
 
+type execF interface {
+	Execute(*State, *State, []Value) error
+}
+
+type funcish interface {
+	~[]byte
+	execF
+}
+
+func f[T funcish](xs []byte, s, i *State, args []Value) error {
+	return T(xs).Execute(s, i, args)
+}
+
+var functionTbl = [...]func([]byte, *State, *State, []Value) error{
+	f[builtin],
+	f[specializedBuiltin],
+	f[function],
+	3: nil,
+}
+
 func (call call) Execute(state *State) (bool, uint32, error) {
 	inner := state.New()
 	defer inner.Release()
 
+	args := inner.Args(int(call.ArgsLen()))
+	call.ArgsIter(func(i uint32, arg LocalOrConst) error {
+		args[i] = state.Value(arg)
+		return nil
+	})
+
 	fid := call.Func()
 	f := state.Func(fid)
-
-	var err error
-	// Special-branching for rego.compile
-	if f.IsBuiltin() {
-		if builtin(f).Name() == "rego.compile" {
-			args := inner.Args(2 + int(call.ArgsLen())) // input and data prepended
-			args[0] = state.Local(Input)
-			args[1] = state.Local(Data)
-			call.ArgsIter(func(i uint32, arg LocalOrConst) error {
-				args[i+2] = state.Value(arg)
-				return nil
-			})
-			err = regoCompileBuiltin(inner, args)
-		} else {
-			args := inner.Args(int(call.ArgsLen()))
-			call.ArgsIter(func(i uint32, arg LocalOrConst) error {
-				args[i] = state.Value(arg)
-				return nil
-			})
-			err = builtin(f).Execute(inner, args)
-		}
-	} else { // all other (rego) functions
-		args := inner.Args(int(call.ArgsLen()))
-		call.ArgsIter(func(i uint32, arg LocalOrConst) error {
-			args[i] = state.Value(arg)
-			return nil
-		})
-		err = f.execute(inner, args)
-	}
+	fti := (f.Type() % typeBuiltin) & 3
+	ft := functionTbl[fti]
+	err := ft(f, state, inner, args)
 	if err != nil {
 		return false, 0, err
 	}

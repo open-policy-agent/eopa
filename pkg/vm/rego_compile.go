@@ -17,10 +17,10 @@ import (
 )
 
 func regoCompileBuiltin(state *State, args []Value) error {
-	if isUndefinedType(args[2]) {
+	if isUndefinedType(args[0]) {
 		return nil
 	}
-	obj := args[2]
+	obj := args[0]
 
 	if isObj, err := state.ValueOps().IsObject(state.Globals.Ctx, obj); err != nil {
 		return err
@@ -61,7 +61,7 @@ func regoCompileBuiltin(state *State, args []Value) error {
 		return nil
 	}
 
-	input, data := args[0], args[1]
+	input, data := args[1], args[2]
 	dv, err := state.ValueOps().ToInterface(state.Globals.Ctx, data)
 	if err != nil {
 		return err

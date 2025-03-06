@@ -16,6 +16,116 @@ type (
 	}
 )
 
+const (
+	memberSF = iota
+	memberWithKeySF
+	objectGetSF
+	objectKeysSF
+	objectRemoveSF
+	objectFilterSF
+	objectUnionSF
+	concatSF
+	endsWithSF
+	startsWithSF
+	sprintfSF
+	arrayConcatSF
+	arraySliceSF
+	countSF
+	walkBuiltinSF
+	equalSF
+	notEqualSF
+	orSF
+	isArraySF
+	isStringSF
+	isBooleanSF
+	isObjectSF
+	isSetSF
+	isNumberSF
+	isNullSF
+	jsonUnmarshalSF
+	typeNameBuiltinSF
+	numbersRangeSF
+	numbersRangeStepSF
+	globMatchSF
+	regoCompileSF
+)
+
+var specializedBuiltins = map[string]uint32{
+	ast.Member.Name:           memberSF,
+	ast.MemberWithKey.Name:    memberWithKeySF,
+	ast.ObjectGet.Name:        objectGetSF,
+	ast.ObjectKeys.Name:       objectKeysSF,
+	ast.ObjectRemove.Name:     objectRemoveSF,
+	ast.ObjectFilter.Name:     objectFilterSF,
+	ast.ObjectUnion.Name:      objectUnionSF,
+	ast.Concat.Name:           concatSF,
+	ast.EndsWith.Name:         endsWithSF,
+	ast.StartsWith.Name:       startsWithSF,
+	ast.Sprintf.Name:          sprintfSF,
+	ast.ArrayConcat.Name:      arrayConcatSF,
+	ast.ArraySlice.Name:       arraySliceSF,
+	ast.Count.Name:            countSF,
+	ast.WalkBuiltin.Name:      walkBuiltinSF,
+	ast.Equal.Name:            equalSF,
+	ast.NotEqual.Name:         notEqualSF,
+	ast.Or.Name:               orSF,
+	ast.IsArray.Name:          isArraySF,
+	ast.IsString.Name:         isStringSF,
+	ast.IsBoolean.Name:        isBooleanSF,
+	ast.IsObject.Name:         isObjectSF,
+	ast.IsSet.Name:            isSetSF,
+	ast.IsNumber.Name:         isNumberSF,
+	ast.IsNull.Name:           isNullSF,
+	ast.JSONUnmarshal.Name:    jsonUnmarshalSF,
+	ast.TypeNameBuiltin.Name:  typeNameBuiltinSF,
+	ast.NumbersRange.Name:     numbersRangeSF,
+	ast.NumbersRangeStep.Name: numbersRangeStepSF,
+	ast.GlobMatch.Name:        globMatchSF,
+	"rego.compile":            regoCompileSF,
+}
+
+var specializedBuiltinsByNum = [...]func(*State, []Value) error{
+	memberSF:           memberBuiltin,
+	memberWithKeySF:    memberWithKeyBuiltin,
+	objectGetSF:        objectGetBuiltin,
+	objectKeysSF:       objectKeysBuiltin,
+	objectRemoveSF:     objectRemoveBuiltin,
+	objectFilterSF:     objectFilterBuiltin,
+	objectUnionSF:      objectUnionBuiltin,
+	concatSF:           stringsConcatBuiltin,
+	endsWithSF:         stringsEndsWithBuiltin,
+	startsWithSF:       stringsStartsWithBuiltin,
+	sprintfSF:          stringsSprintfBuiltin,
+	arrayConcatSF:      arrayConcatBuiltin,
+	arraySliceSF:       arraySliceBuiltin,
+	countSF:            countBuiltin,
+	walkBuiltinSF:      walkBuiltin,
+	equalSF:            equalBuiltin,
+	notEqualSF:         notEqualBuiltin,
+	orSF:               binaryOrBuiltin,
+	isArraySF:          typeSpecializedBuiltinFunc(typeArray),
+	isStringSF:         typeSpecializedBuiltinFunc(typeString),
+	isBooleanSF:        typeSpecializedBuiltinFunc(typeBoolean),
+	isObjectSF:         typeSpecializedBuiltinFunc(typeObject),
+	isSetSF:            typeSpecializedBuiltinFunc(typeSet),
+	isNumberSF:         typeSpecializedBuiltinFunc(typeNumber),
+	isNullSF:           typeSpecializedBuiltinFunc(typeNull),
+	jsonUnmarshalSF:    jsonUnmarshalBuiltin,
+	typeNameBuiltinSF:  typenameBuiltin,
+	numbersRangeSF:     numbersRangeBuiltin,
+	numbersRangeStepSF: numbersRangeStepBuiltin,
+	globMatchSF:        globMatchBuiltin,
+	regoCompileSF:      regoCompileBuiltin, // NB(sr): This is one is handled in a special way
+	// ...
+	31: nil,
+}
+
+func typeSpecializedBuiltinFunc(chk func(Value) bool) func(*State, []Value) error {
+	return func(state *State, args []Value) error {
+		return isTypeBuiltin(state, args, chk)
+	}
+}
+
 func NewCompiler() *Compiler {
 	return &Compiler{functionIndex: make(map[string]int)}
 }
@@ -118,6 +228,9 @@ func (c *Compiler) compileFuncs() ([]byte, error) {
 		putOffsetIndex(functions, foffsets, i, offset)
 
 		// Encode the built-in
+		if num, ok := specializedBuiltins[decl.Name]; ok {
+			functions = append(functions, specializedBuiltin{}.Write(num)...)
+		}
 
 		functions = append(functions, builtin{}.Write(decl.Name, relation)...)
 	}

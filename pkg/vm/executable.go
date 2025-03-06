@@ -46,6 +46,7 @@ const (
 	typeStatementWith
 
 	typeBuiltin
+	typeSpecializedBuiltin
 	typeFunction
 )
 
@@ -56,16 +57,17 @@ type (
 
 	// Structure
 
-	plans      []byte
-	plan       []byte
-	strings    []byte
-	functions  []byte
-	function   []byte
-	builtin    []byte
-	blocks     []byte
-	block      []byte
-	statements []byte
-	statement  []byte
+	plans              []byte
+	plan               []byte
+	strings            []byte
+	functions          []byte
+	function           []byte
+	builtin            []byte
+	specializedBuiltin []byte
+	blocks             []byte
+	block              []byte
+	statements         []byte
+	statement          []byte
 
 	// Statements
 
@@ -307,7 +309,15 @@ func (function) Write(name string, index int, params []Local, ret Local, blocks 
 
 //go:inline
 func (f function) IsBuiltin() bool {
-	return getUint32(f, 4) == typeBuiltin
+	switch getUint32(f, 4) {
+	case typeBuiltin, typeSpecializedBuiltin:
+		return true
+	}
+	return false
+}
+
+func (f function) Type() uint32 {
+	return getUint32(f, 4)
 }
 
 //go:inline
@@ -375,6 +385,19 @@ func (f function) PathIter(fcn func(i uint32, arg string) error) error {
 func (f function) Blocks() blocks {
 	offset := getOffsetIndex(f, 16, 3)
 	return blocks(f[offset:])
+}
+
+func (specializedBuiltin) Write(num uint32) []byte {
+	var l uint32 = 4 + 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, l) // length
+	d = appendUint32(d, typeSpecializedBuiltin)
+	d = appendUint32(d, num)
+	return d
+}
+
+func (b specializedBuiltin) Num() uint32 {
+	return getUint32(b, 8)
 }
 
 func (builtin) Write(name string, relation bool) []byte {
