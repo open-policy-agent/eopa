@@ -95,8 +95,7 @@ var dbConfigs = map[DBType]containerConfig{
 			"MYSQL_PASSWORD":      "testpass",
 			"MYSQL_ROOT_PASSWORD": "rootpass",
 		},
-		waitFor: wait.ForListeningPort("3306/tcp").
-			WithStartupTimeout(2 * time.Minute),
+		waitFor:     wait.ForLog("port: 3306  MySQL Community Server"),
 		urlTemplate: "testuser:testpass@tcp(%s:%s)/testdb",
 	},
 	MSSQL: {
