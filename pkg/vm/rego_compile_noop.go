@@ -4,6 +4,6 @@ package vm
 
 import "errors"
 
-func regoCompileBuiltin(*State, []Value) error {
+func regoCompileBuiltin(_, _ *State, _ []Value) error {
 	return errors.New("rego.compile is not supported in source-availability mode")
 }

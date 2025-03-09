@@ -44,10 +44,13 @@ const (
 	typeStatementScan
 	typeStatementSetAdd
 	typeStatementWith
+)
 
-	typeBuiltin
+const (
+	typeBuiltin = iota
 	typeSpecializedBuiltin
 	typeFunction
+	typeSpecializedBuiltinRegoCompile
 )
 
 type (
@@ -57,17 +60,18 @@ type (
 
 	// Structure
 
-	plans              []byte
-	plan               []byte
-	strings            []byte
-	functions          []byte
-	function           []byte
-	builtin            []byte
-	specializedBuiltin []byte
-	blocks             []byte
-	block              []byte
-	statements         []byte
-	statement          []byte
+	plans                         []byte
+	plan                          []byte
+	strings                       []byte
+	functions                     []byte
+	function                      []byte
+	builtin                       []byte
+	specializedBuiltin            []byte
+	specializedBuiltinRegoCompile []byte
+	blocks                        []byte
+	block                         []byte
+	statements                    []byte
+	statement                     []byte
 
 	// Statements
 
@@ -310,7 +314,7 @@ func (function) Write(name string, index int, params []Local, ret Local, blocks 
 //go:inline
 func (f function) IsBuiltin() bool {
 	switch getUint32(f, 4) {
-	case typeBuiltin, typeSpecializedBuiltin:
+	case typeBuiltin, typeSpecializedBuiltin, typeSpecializedBuiltinRegoCompile:
 		return true
 	}
 	return false
@@ -398,6 +402,14 @@ func (specializedBuiltin) Write(num uint32) []byte {
 
 func (b specializedBuiltin) Num() uint32 {
 	return getUint32(b, 8)
+}
+
+func (specializedBuiltinRegoCompile) Write() []byte {
+	var l uint32 = 4 + 4
+	d := make([]byte, 0, l)
+	d = appendUint32(d, l) // length
+	d = appendUint32(d, typeSpecializedBuiltinRegoCompile)
+	return d
 }
 
 func (builtin) Write(name string, relation bool) []byte {

@@ -33,13 +33,6 @@ func (p plan) Execute(state *State) error {
 	return err
 }
 
-func (f function) Execute(_, inner *State, args []Value) error {
-	// 	if f.Type() == typeBuiltin {
-	// 		return builtin(f).Execute(state, args)
-	// 	}
-	return f.execute(inner, args)
-}
-
 func isHashable(as []Value) bool {
 	if len(as) > 9 {
 		return false
@@ -53,7 +46,7 @@ func isHashable(as []Value) bool {
 	return true
 }
 
-func (f function) execute(state *State, args []Value) error {
+func (f function) Execute(state *State, args []Value) error {
 	index, ret := f.Index(), f.Return()
 
 	funArgs := args[2:f.ParamsLen()]
@@ -105,17 +98,16 @@ func (f function) execute(state *State, args []Value) error {
 	return err
 }
 
-func (builtin specializedBuiltin) Execute(outer, inner *State, args []Value) error {
-	n := builtin.Num()
-	if n == regoCompileSF {
-		args = append(args, outer.Local(Input), outer.Local(Data)) // input and data appended
-		return regoCompileBuiltin(inner, args)
-	}
-	n0 := builtin.Num() & 31
-	return specializedBuiltinsByNum[n0](inner, args)
+func (builtin specializedBuiltin) Execute(state *State, args []Value) error {
+	n := builtin.Num() & 31
+	return specializedBuiltinsByNum[n](state, args)
 }
 
-func (builtin builtin) Execute(_, state *State, args []Value) error {
+func (specializedBuiltinRegoCompile) Execute(outer, inner *State, args []Value) error {
+	return regoCompileBuiltin(outer, inner, args)
+}
+
+func (builtin builtin) Execute(state *State, args []Value) error {
 	// If none available, revert to standard OPA builtin
 	// implementations using AST types.
 
@@ -515,7 +507,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 		return false, 0, nil
 	}
 
-	if err := f.Execute(nil, inner, args); err != nil {
+	if err := f.Execute(inner, args); err != nil {
 		return false, 0, err
 	}
 
@@ -575,7 +567,7 @@ func externalCall(state *State, path []string, args []Value) (interface{}, bool,
 }
 
 type execF interface {
-	Execute(*State, *State, []Value) error
+	Execute(*State, []Value) error
 }
 
 type funcish interface {
@@ -583,14 +575,17 @@ type funcish interface {
 	execF
 }
 
-func f[T funcish](xs []byte, s, i *State, args []Value) error {
-	return T(xs).Execute(s, i, args)
+func f[T funcish](xs []byte, s *State, args []Value) error {
+	return T(xs).Execute(s, args)
 }
 
-var functionTbl = [...]func([]byte, *State, *State, []Value) error{
+// function table for branchless dispatch of methods for the different
+// function types: topdown builtins, specialized builtins, rego functions
+var functionTbl = [...]func([]byte, *State, []Value) error{
 	f[builtin],
 	f[specializedBuiltin],
 	f[function],
+	// ...
 	3: nil,
 }
 
@@ -606,11 +601,18 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 
 	fid := call.Func()
 	f := state.Func(fid)
-	fti := (f.Type() % typeBuiltin) & 3
-	ft := functionTbl[fti]
-	err := ft(f, state, inner, args)
-	if err != nil {
-		return false, 0, err
+	ftype := f.Type()
+	if ftype < 3 { // this check lets us avoid the bounds-check for functionTbl
+		ft := functionTbl[ftype]
+		err := ft(f, inner, args)
+		if err != nil {
+			return false, 0, err
+		}
+	} else {
+		err := specializedBuiltinRegoCompile(f).Execute(state, inner, args)
+		if err != nil {
+			return false, 0, err
+		}
 	}
 
 	result, ok := inner.Return()

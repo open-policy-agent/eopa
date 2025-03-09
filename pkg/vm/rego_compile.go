@@ -16,7 +16,7 @@ import (
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )
 
-func regoCompileBuiltin(state *State, args []Value) error {
+func regoCompileBuiltin(outer, state *State, args []Value) error {
 	if isUndefinedType(args[0]) {
 		return nil
 	}
@@ -61,7 +61,7 @@ func regoCompileBuiltin(state *State, args []Value) error {
 		return nil
 	}
 
-	input, data := args[1], args[2]
+	input, data := outer.Local(Input), outer.Local(Data)
 	dv, err := state.ValueOps().ToInterface(state.Globals.Ctx, data)
 	if err != nil {
 		return err

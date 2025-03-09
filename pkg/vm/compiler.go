@@ -47,7 +47,6 @@ const (
 	numbersRangeSF
 	numbersRangeStepSF
 	globMatchSF
-	regoCompileSF
 )
 
 var specializedBuiltins = map[string]uint32{
@@ -81,7 +80,6 @@ var specializedBuiltins = map[string]uint32{
 	ast.NumbersRange.Name:     numbersRangeSF,
 	ast.NumbersRangeStep.Name: numbersRangeStepSF,
 	ast.GlobMatch.Name:        globMatchSF,
-	"rego.compile":            regoCompileSF,
 }
 
 var specializedBuiltinsByNum = [...]func(*State, []Value) error{
@@ -115,7 +113,6 @@ var specializedBuiltinsByNum = [...]func(*State, []Value) error{
 	numbersRangeSF:     numbersRangeBuiltin,
 	numbersRangeStepSF: numbersRangeStepBuiltin,
 	globMatchSF:        globMatchBuiltin,
-	regoCompileSF:      regoCompileBuiltin, // NB(sr): This is one is handled in a special way
 	// ...
 	31: nil,
 }
@@ -230,6 +227,9 @@ func (c *Compiler) compileFuncs() ([]byte, error) {
 		// Encode the built-in
 		if num, ok := specializedBuiltins[decl.Name]; ok {
 			functions = append(functions, specializedBuiltin{}.Write(num)...)
+		}
+		if decl.Name == "rego.compile" {
+			functions = append(functions, specializedBuiltinRegoCompile{}.Write()...)
 		}
 
 		functions = append(functions, builtin{}.Write(decl.Name, relation)...)
