@@ -12,6 +12,82 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.35.0
+
+[![OPA v1.2.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.2.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.2.0)
+[![Regal v0.31.1](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.31.1&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.31.1)
+
+This release includes a fix for ref heads in evaluation (see [upstream issue](https://github.com/open-policy-agent/opa/issues/7399))
+and includes various dependency bumps.
+
+
+### `rego.compile` and test helpers for data policy testing
+
+This release features a new built-in function, `rego.compile`, that mirrors the extended Compile API of Enterprise OPA.
+It is intended for data filter policy testing.
+
+It is accompanied by a helper function, `data.system.eopa.utils.tests.v1.filter.helper` that allows for exemplary data policy testing.
+
+With a data policy like this, `filters.rego`,
+
+```rego
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.tickets", "input.users"]
+include if input.users.name == input.username
+```
+
+you can use the helper to create a test that actually filters some tables:
+
+```rego
+package filters
+
+import data.system.eopa.utils.tests.v1.filter
+
+tickets_table := [
+	{"id": 0, "description": "bluetooth icon is green", "assignee": "a"},
+	{"id": 1, "description": "yellow pages are purple", "assignee": "a"},
+	{"id": 2, "description": "bluegrass sounds orange", "assignee": "b"},
+]
+
+users_table := [
+	{"id": "a", "name": "jane"},
+	{"id": "b", "name": "john"},
+]
+
+test_assignee_can_see_their_tickets if {
+	filtered := filter.helper(
+		"data.filters.include",
+		"SELECT tickets.description, users.name as assignee FROM tickets LEFT JOIN users ON tickets.assignee = users.id",
+		{"tables": {
+			"tickets": tickets_table,
+			"users": users_table,
+		}},
+	) with input.username as "jane"
+	count(filtered) == 2
+	{"description": "bluetooth icon is green", "assignee": "jane"} in filtered
+	{"description": "yellow pages are purple", "assignee": "jane"} in filtered
+}
+```
+
+The low-level built-in method `rego.compile` can be used to write unit tests for the generated filter queries, like
+
+```rego
+package filters
+
+test_generated_where_clause if {
+	conditions := rego.compile({
+		"query": "data.filters.include",
+		"target": "sql+postgresql",
+	}) with input.username as "jane"
+	conditions.sql == "WHERE users.name = E'jane'"
+}
+```
+
+
 ## v1.34.0
 
 [![OPA v1.2.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.2.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.2.0)
