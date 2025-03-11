@@ -18,6 +18,7 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/http"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/kafka"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/ldap"
+	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/localfile"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/mongodb"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/okta"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/s3"
@@ -36,6 +37,7 @@ var dataPluginRegistry = map[string]plugins.Factory{
 	okta.Name:              okta.Factory(),
 	s3.Name:                s3.Factory(),
 	string(benthos.Pulsar): benthos.Factory(benthos.Pulsar),
+	localfile.Name:         localfile.Factory(),
 } // type -> plugin
 
 // Data plugin
