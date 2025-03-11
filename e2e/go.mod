@@ -18,7 +18,7 @@ require (
 	github.com/hashicorp/vault/api v1.16.0
 	github.com/lib/pq v1.10.9
 	github.com/microsoft/go-mssqldb v1.8.0
-	github.com/minio/minio-go/v7 v7.0.87
+	github.com/minio/minio-go/v7 v7.0.88
 	github.com/open-policy-agent/opa v1.2.0
 	github.com/redpanda-data/benthos/v4 v4.45.0
 	github.com/redpanda-data/connect/v4 v4.49.1
