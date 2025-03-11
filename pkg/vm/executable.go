@@ -347,7 +347,7 @@ func (f function) ParamsIter(fcn func(i uint32, arg Local) error) error {
 	offset := uint32(16 + appendOffsetSize(4))
 	n := getUint32(f, offset)
 
-	for i := uint32(0); i < n; i++ {
+	for i := range n {
 		if err := fcn(i, getLocal(f, offset+4+i*sizeofLocal)); err != nil {
 			return err
 		}
@@ -376,7 +376,7 @@ func (f function) PathIter(fcn func(i uint32, arg string) error) error {
 	data := f[offset:]
 
 	n := getUint32(data, 0)
-	for i := uint32(0); i < n; i++ {
+	for i := range n {
 		stringOffset := getOffsetIndex(data, 4, int(i))
 		if err := fcn(i, getString(data, stringOffset)); err != nil {
 			return err
@@ -756,7 +756,7 @@ func (c callDynamic) ArgsIter(fcn func(i uint32, arg Local) error) error {
 	offset := uint32(8)
 	n := getUint32(c, offset)
 
-	for i := uint32(0); i < n; i++ {
+	for i := range n {
 		if err := fcn(i, getLocal(c, offset+4+i*sizeofLocal)); err != nil {
 			return err
 		}
@@ -784,7 +784,7 @@ func (c callDynamic) PathIter(fcn func(i uint32, arg LocalOrConst) error) error 
 	offset := uint32(getLocalArraySize(c, 8)) + 8
 	n := getUint32(c, offset)
 
-	for i := uint32(0); i < n; i++ {
+	for i := range n {
 		if err := fcn(i, getLocalOrConst(c, offset+4+i*sizeofLocalOrConst)); err != nil {
 			return err
 		}
@@ -831,7 +831,7 @@ func (c call) ArgsIter(fcn func(i uint32, arg LocalOrConst) error) error {
 	offset := uint32(12)
 	n := getUint32(c, offset)
 
-	for i := uint32(0); i < n; i++ {
+	for i := range n {
 		if err := fcn(i, getLocalOrConst(c, offset+4+i*sizeofLocalOrConst)); err != nil {
 			return err
 		}
@@ -1608,7 +1608,7 @@ func (w with) Path() []int {
 	n := getUint32(w, offset)
 
 	a := make([]int, 0, n)
-	for i := uint32(0); i < n; i++ {
+	for i := range n {
 		v := getInt32(w, offset+4+i*sizeofInt32)
 		a = append(a, int(v))
 	}
@@ -1624,7 +1624,7 @@ func (w with) PathIter(fcn func(i uint32, arg int) error) error {
 	offset := uint32(12)
 	n := getUint32(w, offset)
 
-	for i := uint32(0); i < n; i++ {
+	for i := range n {
 		if err := fcn(i, int(getInt32(w, offset+4+i*sizeofInt32))); err != nil {
 			return err
 		}
@@ -1666,11 +1666,8 @@ func appendOffsetSize(n int) int {
 }
 
 func appendOffsetIndex(d []byte, n int) []byte {
-	l := make([]byte, 4)
-	for i := 0; i < n; i++ {
-		d = append(d, l...)
-	}
-	return d
+	l := make([]byte, 4*n)
+	return append(d, l...)
 }
 
 func putOffsetIndex(data []byte, offset uint32, i int, value uint32) {
@@ -1773,7 +1770,7 @@ func getStringArray(data []byte, offset uint32) []string {
 	n := getUint32(data, 0)
 
 	a := make([]string, n)
-	for i := uint32(0); i < n; i++ {
+	for i := range n {
 		stringOffset := getOffsetIndex(data, 4, int(i))
 		a[i] = getString(data, stringOffset)
 	}
@@ -1809,7 +1806,7 @@ func getLocalArray(data []byte, offset uint32) []Local {
 	n := getUint32(data, offset)
 
 	a := make([]Local, 0, n)
-	for i := uint32(0); i < n; i++ {
+	for i := range n {
 		a = append(a, getLocal(data, offset+4+i*sizeofLocal))
 	}
 
@@ -1903,7 +1900,7 @@ func getLocalOrConstArray(data []byte, offset uint32) []LocalOrConst {
 	n := getUint32(data, offset)
 
 	l := make([]LocalOrConst, n)
-	for i := uint32(0); i < n; i++ {
+	for i := range n {
 		l[i] = getLocalOrConst(data, offset+4+i*sizeofLocalOrConst)
 	}
 

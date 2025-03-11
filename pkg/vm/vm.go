@@ -56,7 +56,7 @@ const (
 type (
 	VM struct {
 		executable   Executable
-		data         *interface{}
+		data         *any
 		ops          DataOperations
 		stringsCache []atomic.Pointer[fjson.String]
 	}
@@ -66,10 +66,10 @@ type (
 		PrintHook                   print.Hook
 		Metrics                     metrics.Metrics
 		Seed                        io.Reader
-		Runtime                     interface{}
+		Runtime                     any
 		InterQueryBuiltinCache      cache.InterQueryCache
 		InterQueryBuiltinValueCache cache.InterQueryValueCache
-		Input                       *interface{} // Input as golang native data.
+		Input                       *any // Input as golang native data.
 		Limits                      *Limits
 		Cache                       builtins.Cache
 		NDBCache                    builtins.NDBCache
@@ -101,7 +101,7 @@ type (
 		vm                          *VM
 		BuiltinFuncs                map[string]*topdown.Builtin
 		Capabilities                *ast.Capabilities
-		Input                       *interface{}
+		Input                       *any
 		NDBCache                    builtins.NDBCache
 		Runtime                     *ast.Term
 		ResultSet                   fjson.Set
@@ -110,7 +110,7 @@ type (
 		memoize                     []map[k]Value
 		Limits                      Limits
 		StrictBuiltinErrors         bool
-		IntermediateResults         map[int]interface{}
+		IntermediateResults         map[int]any
 	}
 
 	Limits struct {
@@ -128,7 +128,7 @@ type (
 		registers [registersSize]Value
 	}
 
-	Value interface{}
+	Value any
 
 	Local        int
 	LocalOrConst struct {
@@ -212,14 +212,14 @@ func (vm *VM) WithExecutable(executable Executable) *VM {
 
 // WithDataNamespace hooks an external namespace implementation to use
 // as 'data.'.
-func (vm *VM) WithDataNamespace(data interface{}) *VM {
+func (vm *VM) WithDataNamespace(data any) *VM {
 	vm.data = &data
 	return vm
 }
 
 // WithDataJSON stores golang native data for the evaluation to use as
 // 'data.'.
-func (vm *VM) WithDataJSON(data interface{}) *VM {
+func (vm *VM) WithDataJSON(data any) *VM {
 	vm.data = &data
 	return vm
 }
@@ -240,10 +240,10 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 			continue
 		}
 
-		var input *interface{}
+		var input *any
 		if opts.Input != nil {
 			var err error
-			var i interface{}
+			var i any
 			i, err = vm.ops.FromInterface(ctx, *opts.Input)
 			if err != nil {
 				return nil, err
@@ -291,7 +291,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 			Cache:                       opts.Cache,
 			InterQueryBuiltinCache:      opts.InterQueryBuiltinCache,
 			InterQueryBuiltinValueCache: opts.InterQueryBuiltinValueCache,
-			IntermediateResults:         make(map[int]interface{}),
+			IntermediateResults:         make(map[int]any),
 		}
 		// If we're provided an external (probably shared) topdown.Cancel, let's
 		// use it.
@@ -345,7 +345,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 							// Convert the map used to filter out duplicates to slice.
 
 							results := results.(map[string]struct{})
-							l := make([]interface{}, 0, len(results))
+							l := make([]any, 0, len(results))
 
 							for hash := range results {
 								l = append(l, hash)
@@ -375,7 +375,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 	return nil, ErrQueryNotFound
 }
 
-func (vm *VM) runtime(ctx context.Context, v interface{}) (*ast.Term, error) {
+func (vm *VM) runtime(ctx context.Context, v any) (*ast.Term, error) {
 	var runtime ast.Value
 	if v != nil {
 		switch v := v.(type) {
@@ -624,7 +624,7 @@ func (s *State) IsData(l Local) bool {
 	return s.locals.data.isSet(int(l))
 }
 
-func (s *State) DataGet(ctx context.Context, value, key interface{}) (interface{}, bool, error) {
+func (s *State) DataGet(ctx context.Context, value, key any) (any, bool, error) {
 	if y, ok, err := s.ValueOps().Get(ctx, value, key); ok || err != nil {
 		return y, ok, err
 	}
@@ -767,7 +767,7 @@ func (l *Locals) SetReturn(source Local, defined bool) {
 func (s *State) findReg(v Local) *registersList {
 	buckets := int(v) / registersSize
 	r := &s.locals.registers
-	for i := 0; i < buckets; i++ {
+	for range buckets {
 		if r.next == nil {
 			r.next = registersPool.Get().(*registersList)
 		}

@@ -165,8 +165,8 @@ func BuiltinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter fun
 
 	if err != nil {
 		if !raiseError {
-			m := map[string]interface{}{
-				"error": map[string]interface{}{
+			m := map[string]any{
+				"error": map[string]any{
 					"message": string(err.Error()),
 				},
 			}

@@ -28,7 +28,7 @@ type hashable interface {
 	Hash() uint64
 }
 
-func hashImpl[T io.Writer](ctx context.Context, value interface{}, hasher T) error {
+func hashImpl[T io.Writer](ctx context.Context, value any, hasher T) error {
 	// Note Hasher writer below never returns an error.
 
 	switch value := value.(type) {
@@ -74,7 +74,7 @@ func hashImpl[T io.Writer](ctx context.Context, value interface{}, hasher T) err
 		hasher.Write([]byte{typeHashObject})
 
 		var m uint64
-		if err := value.Iter(ctx, func(k, v interface{}) (bool, error) {
+		if err := value.Iter(ctx, func(k, v any) (bool, error) {
 			hasher := xxhash.New()
 			err := hashImpl(ctx, k, hasher)
 			if err != nil {

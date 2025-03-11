@@ -103,7 +103,7 @@ func (c *CacheHook) onConfig(_ context.Context, conf *config.Config) (*config.Co
 
 // getEvalCacheKey converts the provided input (in binary JSON format)
 // to a cache key.
-func (vm *VM) getEvalCacheKey(ctx context.Context, plan int, input *interface{}) (ast.Object, error) {
+func (vm *VM) getEvalCacheKey(ctx context.Context, plan int, input *any) (ast.Object, error) {
 	if input == nil {
 		return nil, nil
 	}

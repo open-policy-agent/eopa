@@ -383,9 +383,9 @@ func (s scan) Execute(state *State) (bool, uint32, error) {
 	source, skey, svalue := s.Source(), s.Key(), s.Value()
 	block := s.Block()
 
-	if err2 := func(f func(key, value interface{}) (bool, error)) error {
+	if err2 := func(f func(key, value any) (bool, error)) error {
 		return state.ValueOps().Iter(state.Globals.Ctx, state.Local(source), *noescape(&f))
-	}(func(key, value interface{}) (bool, error) {
+	}(func(key, value any) (bool, error) {
 		state.SetValue(skey, key)
 		state.SetValue(svalue, value)
 
@@ -522,7 +522,7 @@ func (call callDynamic) Execute(state *State) (bool, uint32, error) {
 	return false, 0, nil
 }
 
-func externalCall(state *State, path []string, args []Value) (interface{}, bool, bool, error) {
+func externalCall(state *State, path []string, args []Value) (any, bool, bool, error) {
 	if len(path) > 0 {
 		path = path[1:]
 	}
@@ -532,10 +532,10 @@ func externalCall(state *State, path []string, args []Value) (interface{}, bool,
 	}
 
 	data := state.Local(Data)
-	a := make([]*interface{}, len(args))
+	a := make([]*any, len(args))
 	for i := range a {
 		if !isUndefinedType(args[i]) {
-			a[i] = (*interface{})(&args[i])
+			a[i] = (*any)(&args[i])
 		}
 	}
 
@@ -635,7 +635,7 @@ func (call call) Execute(state *State) (bool, uint32, error) {
 
 // record records call results into context to be extracted after plan
 // execution completes.
-func record(state *State, fid int, resultValue interface{}) error {
+func record(state *State, fid int, resultValue any) error {
 	switch intermediateResultsMode {
 	case intermediateResultsDisabled: // nothing to do
 	case intermediateResultsNoValueMode:
@@ -662,9 +662,9 @@ func record(state *State, fid int, resultValue interface{}) error {
 		}
 
 	case intermediateResultsValueMode:
-		a, ok := state.Globals.IntermediateResults[fid].([]interface{})
+		a, ok := state.Globals.IntermediateResults[fid].([]any)
 		if !ok {
-			a = make([]interface{}, 0)
+			a = make([]any, 0)
 		}
 
 		if resultValue != nil {

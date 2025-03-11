@@ -44,9 +44,9 @@ func memberBuiltin(state *State, args []Value) error {
 
 	var found bool
 
-	if err := func(f func(key, value interface{}) (bool, error)) error {
+	if err := func(f func(key, value any) (bool, error)) error {
 		return state.ValueOps().Iter(state.Globals.Ctx, args[1], *noescape(&f))
-	}(func(_, v interface{}) (bool, error) {
+	}(func(_, v any) (bool, error) {
 		found, _ = state.ValueOps().Equal(state.Globals.Ctx, args[0], v)
 		return found, nil
 	}); err != nil {
@@ -120,9 +120,9 @@ func objectGetBuiltin(state *State, args []Value) error {
 
 	var found bool
 
-	if err := func(f func(key, value interface{}) (bool, error)) error {
+	if err := func(f func(key, value any) (bool, error)) error {
 		return state.ValueOps().Iter(state.Globals.Ctx, path, *noescape(&f))
-	}(func(_, v interface{}) (bool, error) { // path array values are our object keys
+	}(func(_, v any) (bool, error) { // path array values are our object keys
 		obj, found, _ = state.ValueOps().Get(state.Globals.Ctx, obj, v)
 		return !found, nil // always iterate path array to the end if found
 	}); err != nil {
@@ -224,7 +224,7 @@ func objectSelect(state *State, args []Value, keep bool) error {
 		}
 	case fjson.Array:
 		s := fjson.NewSet(0)
-		for i := 0; i < coll.Len(); i++ {
+		for i := range coll.Len() {
 			s = s.Add(coll.Iterate(i))
 		}
 		selected = func(key fjson.Json) (bool, error) {
@@ -309,7 +309,7 @@ func stringsConcatBuiltin(state *State, args []Value) error {
 			strs = make([]string, n)
 		}
 
-		for i := 0; i < n; i++ {
+		for i := range n {
 			str, ok := array.Iterate(i).(*fjson.String)
 			if !ok {
 				v, err := state.ValueOps().ToAST(state.Globals.Ctx, array.Iterate(i))
@@ -450,11 +450,11 @@ func stringsSprintfBuiltin(state *State, args []Value) error {
 
 	// Prefer allocating a fixed size slice, to keep it in stack.
 
-	var a []interface{}
+	var a []any
 	if n := astArr.Len(); n <= 4 {
-		a = make([]interface{}, n, 4)
+		a = make([]any, n, 4)
 	} else {
-		a = make([]interface{}, n)
+		a = make([]any, n)
 	}
 
 	for i := range a {
@@ -1048,7 +1048,7 @@ func globMatchBuiltin(state *State, args []Value) error {
 		if err != nil || d == nil {
 			return err
 		}
-		for i := 0; i < d.Len(); i++ {
+		for i := range d.Len() {
 			x, ok := d.Iterate(i).(*fjson.String)
 			if !ok || len(*x) != 1 {
 				v, err := state.ValueOps().ToAST(state.Globals.Ctx, d.Iterate(i))

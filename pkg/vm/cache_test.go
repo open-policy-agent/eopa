@@ -96,7 +96,7 @@ func TestEvalCache(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.note, func(t *testing.T) {
-			var input interface{}
+			var input any
 			if err := json.Unmarshal([]byte(tc.input), &input); err != nil {
 				t.Fatal(err)
 			}

@@ -520,7 +520,7 @@ func BenchmarkExecutable(b *testing.B) {
 	}
 }
 
-func check(t testing.TB, field string, a, b interface{}) {
+func check(t testing.TB, field string, a, b any) {
 	if !reflect.DeepEqual(a, b) {
 		t.Errorf("field not equal %v: %v %v", field, a, b)
 	}

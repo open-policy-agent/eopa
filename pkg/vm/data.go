@@ -17,7 +17,7 @@ var (
 	ErrInvalidData = errors.New("invalid data")      // Unsupported data type detected.
 	ErrIllegalIter = errors.New("illegal iteration") // Illegal iteration over persisted table detected.
 
-	// prebuilt types are not stored as their specific types to keep them allocated as ready for interface{}.
+	// prebuilt types are not stored as their specific types to keep them allocated as ready for any.
 
 	prebuiltTrue  fjson.Json = fjson.NewBool(true)
 	prebuiltFalse fjson.Json = fjson.NewBool(false)
@@ -37,20 +37,20 @@ type (
 
 	// IterableObject is the interface for external, read-only (probably persisted) object implementations.
 	IterableObject interface {
-		Get(ctx context.Context, key interface{}) (interface{}, bool, error)
-		Iter(ctx context.Context, f func(key, value interface{}) (bool, error)) error
+		Get(ctx context.Context, key any) (any, bool, error)
+		Iter(ctx context.Context, f func(key, value any) (bool, error)) error
 	}
 
 	GetCallNamespace interface {
-		GetCall(ctx context.Context, key interface{}) (interface{}, bool, error)
+		GetCall(ctx context.Context, key any) (any, bool, error)
 	}
 
 	CallNamespace interface {
-		Call(ctx context.Context, args []*interface{}, caller *State) (interface{}, bool, bool, error)
+		Call(ctx context.Context, args []*any, caller *State) (any, bool, bool, error)
 	}
 )
 
-func (*DataOperations) Get(ctx context.Context, value, key interface{}) (interface{}, bool, error) {
+func (*DataOperations) Get(ctx context.Context, value, key any) (any, bool, error) {
 	jkey, err := castJSON(ctx, key)
 	if err != nil {
 		return nil, false, err
@@ -103,7 +103,7 @@ func (*DataOperations) Get(ctx context.Context, value, key interface{}) (interfa
 	return nil, false, nil
 }
 
-func (*DataOperations) GetCall(ctx context.Context, value, key interface{}) (interface{}, bool, error) {
+func (*DataOperations) GetCall(ctx context.Context, value, key any) (any, bool, error) {
 	jkey, err := castJSON(ctx, key)
 	if err != nil {
 		return nil, false, err
@@ -117,7 +117,7 @@ func (*DataOperations) GetCall(ctx context.Context, value, key interface{}) (int
 	return nil, false, nil
 }
 
-func (*DataOperations) IsCall(value interface{}) (bool, error) {
+func (*DataOperations) IsCall(value any) (bool, error) {
 	switch value.(type) {
 	case CallNamespace:
 		return true, nil
@@ -126,7 +126,7 @@ func (*DataOperations) IsCall(value interface{}) (bool, error) {
 	}
 }
 
-func (*DataOperations) Call(ctx context.Context, value interface{}, args []*interface{}, caller *State) (interface{}, bool, bool, error) {
+func (*DataOperations) Call(ctx context.Context, value any, args []*any, caller *State) (any, bool, bool, error) {
 	switch v := value.(type) {
 	case CallNamespace:
 		return v.Call(ctx, args, caller)
@@ -135,7 +135,7 @@ func (*DataOperations) Call(ctx context.Context, value interface{}, args []*inte
 	return nil, false, false, nil
 }
 
-func (*DataOperations) ArrayAppend(ctx context.Context, array interface{}, value interface{}) (interface{}, bool, error) {
+func (*DataOperations) ArrayAppend(ctx context.Context, array any, value any) (any, bool, error) {
 	jvalue, err := castJSON(ctx, value)
 	if err != nil {
 		return nil, false, err
@@ -157,7 +157,7 @@ func (*DataOperations) ArrayAppend(ctx context.Context, array interface{}, value
 	return array, false, nil
 }
 
-func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (interface{}, error) {
+func (*DataOperations) CopyShallow(ctx context.Context, value any) (any, error) {
 	switch v := value.(type) {
 	case fjson.Null:
 		return value, nil
@@ -193,7 +193,7 @@ func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (inte
 	case IterableObject:
 		// TODO: Return a copy-on-write object.
 		obj := fjson.NewObject2(0)
-		if err := v.Iter(ctx, func(k, v interface{}) (bool, error) {
+		if err := v.Iter(ctx, func(k, v any) (bool, error) {
 			kj, err := castJSON(ctx, k)
 			if err != nil {
 				return true, err
@@ -218,7 +218,7 @@ func (*DataOperations) CopyShallow(ctx context.Context, value interface{}) (inte
 	return nil, nil
 }
 
-func (*DataOperations) Equal(ctx context.Context, a, b interface{}) (bool, error) {
+func (*DataOperations) Equal(ctx context.Context, a, b any) (bool, error) {
 	ja, err := castJSON(ctx, a)
 	if err != nil {
 		return false, err
@@ -233,7 +233,7 @@ func (*DataOperations) Equal(ctx context.Context, a, b interface{}) (bool, error
 }
 
 // FromInterface converts a golang native data to internal representation.
-func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (fjson.Json, error) {
+func (o *DataOperations) FromInterface(ctx context.Context, x any) (fjson.Json, error) {
 	switch x := x.(type) {
 	case nil:
 		return o.MakeNull(), nil
@@ -268,7 +268,7 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (fjso
 			values = append(values, fjson.NewString(v))
 		}
 		return fjson.NewArray(values, len(x)), nil
-	case []interface{}:
+	case []any:
 		values := make([]fjson.File, 0, len(x))
 		for _, v := range x {
 			y, err := o.FromInterface(ctx, v)
@@ -289,7 +289,7 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (fjso
 			arr.SetIdx(i, y.(fjson.File))
 		}
 		return arr, nil
-	case map[string]interface{}:
+	case map[string]any:
 		obj := fjson.NewObject2(len(x))
 		for k, v := range x {
 			y, err := o.FromInterface(ctx, v)
@@ -299,7 +299,7 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (fjso
 			obj = obj.Insert(fjson.NewString(k), y)
 		}
 		return obj, nil
-	case []map[string]interface{}:
+	case []map[string]any:
 		values := make([]fjson.File, 0, len(x))
 		for _, v := range x {
 			y, err := o.FromInterface(ctx, v)
@@ -365,7 +365,7 @@ func (o *DataOperations) FromInterface(ctx context.Context, x interface{}) (fjso
 	}
 }
 
-func (o *DataOperations) Iter(ctx context.Context, v interface{}, f func(key, value interface{}) (bool, error)) error {
+func (o *DataOperations) Iter(ctx context.Context, v any, f func(key, value any) (bool, error)) error {
 	switch v := v.(type) {
 	case fjson.Array:
 		n := v.Len()
@@ -398,7 +398,7 @@ func (o *DataOperations) Iter(ctx context.Context, v interface{}, f func(key, va
 	return nil
 }
 
-func (*DataOperations) IsArray(ctx context.Context, v interface{}) (bool, error) {
+func (*DataOperations) IsArray(ctx context.Context, v any) (bool, error) {
 	switch v.(type) {
 	case fjson.Array:
 		return true, nil
@@ -410,7 +410,7 @@ func (*DataOperations) IsArray(ctx context.Context, v interface{}) (bool, error)
 	}
 }
 
-func (*DataOperations) IsSet(ctx context.Context, v interface{}) (bool, error) {
+func (*DataOperations) IsSet(ctx context.Context, v any) (bool, error) {
 	switch v.(type) {
 	case fjson.Set:
 		return true, nil
@@ -420,7 +420,7 @@ func (*DataOperations) IsSet(ctx context.Context, v interface{}) (bool, error) {
 	}
 }
 
-func (*DataOperations) IsObject(ctx context.Context, v interface{}) (bool, error) {
+func (*DataOperations) IsObject(ctx context.Context, v any) (bool, error) {
 	switch v.(type) {
 	case fjson.Object, IterableObject, fjson.Object2:
 		return true, nil
@@ -466,7 +466,7 @@ func (o *DataOperations) MakeNumberInt(i int64) fjson.Json {
 	return fjson.NewFloat(gojson.Number(strconv.FormatInt(i, 10)))
 }
 
-func (*DataOperations) MakeNumberRef(n interface{}) fjson.Float {
+func (*DataOperations) MakeNumberRef(n any) fjson.Float {
 	return fjson.NewFloat(gojson.Number(n.(*fjson.String).Value()))
 }
 
@@ -478,7 +478,7 @@ func (*DataOperations) MakeString(v string) *fjson.String {
 	return fjson.NewString(v)
 }
 
-func (o *DataOperations) Len(ctx context.Context, v interface{}) (fjson.Json, error) {
+func (o *DataOperations) Len(ctx context.Context, v any) (fjson.Json, error) {
 	switch v := v.(type) {
 	case fjson.Array:
 		return o.MakeNumberInt(int64(v.Len())), nil
@@ -510,7 +510,7 @@ func (o *DataOperations) Len(ctx context.Context, v interface{}) (fjson.Json, er
 	}
 }
 
-func (*DataOperations) ObjectGet(ctx context.Context, object, key interface{}) (interface{}, bool, error) {
+func (*DataOperations) ObjectGet(ctx context.Context, object, key any) (any, bool, error) {
 	jkey, err := castJSON(ctx, key)
 	if err != nil {
 		return nil, false, err
@@ -538,7 +538,7 @@ func (*DataOperations) ObjectGet(ctx context.Context, object, key interface{}) (
 	return nil, false, nil
 }
 
-func (*DataOperations) ObjectInsert(ctx context.Context, object, key, value interface{}) (interface{}, bool, error) {
+func (*DataOperations) ObjectInsert(ctx context.Context, object, key, value any) (any, bool, error) {
 	jkey, err := castJSON(ctx, key)
 	if err != nil {
 		return nil, false, err
@@ -579,7 +579,7 @@ func (*DataOperations) ObjectInsert(ctx context.Context, object, key, value inte
 	}
 }
 
-func (o *DataOperations) ObjectMerge(ctx context.Context, a, b interface{}) (interface{}, error) {
+func (o *DataOperations) ObjectMerge(ctx context.Context, a, b any) (any, error) {
 	_, okaa := a.(fjson.Object)
 	_, okab := a.(IterableObject)
 	_, okac := a.(fjson.Object2)
@@ -634,7 +634,7 @@ func (o *DataOperations) ObjectMerge(ctx context.Context, a, b interface{}) (int
 	return merged, nil
 }
 
-func objectIterate(ctx context.Context, obj interface{}, f func(key, value fjson.Json) (bool, error)) error {
+func objectIterate(ctx context.Context, obj any, f func(key, value fjson.Json) (bool, error)) error {
 	if obj, ok := obj.(fjson.Object); ok {
 		for i, name := range obj.Names() {
 			if stop, err := f(fjson.NewString(name), obj.Iterate(i)); err != nil {
@@ -651,7 +651,7 @@ func objectIterate(ctx context.Context, obj interface{}, f func(key, value fjson
 		return obj.Iter(f)
 	}
 
-	return obj.(IterableObject).Iter(ctx, func(key, value interface{}) (bool, error) {
+	return obj.(IterableObject).Iter(ctx, func(key, value any) (bool, error) {
 		jkey, err := castJSON(ctx, key)
 		if err != nil {
 			return false, err
@@ -666,7 +666,7 @@ func objectIterate(ctx context.Context, obj interface{}, f func(key, value fjson
 	})
 }
 
-func objectGet(ctx context.Context, obj interface{}, key fjson.Json) (interface{}, bool, error) {
+func objectGet(ctx context.Context, obj any, key fjson.Json) (any, bool, error) {
 	if obj, ok := obj.(fjson.Object); ok {
 		if s, ok := key.(*fjson.String); ok {
 			value := obj.Value(s.Value())
@@ -684,7 +684,7 @@ func objectGet(ctx context.Context, obj interface{}, key fjson.Json) (interface{
 	return obj.(IterableObject).Get(ctx, key)
 }
 
-func (*DataOperations) SetAdd(ctx context.Context, set, value interface{}) (interface{}, error) {
+func (*DataOperations) SetAdd(ctx context.Context, set, value any) (any, error) {
 	jvalue, err := castJSON(ctx, value)
 	if err != nil {
 		return nil, err
@@ -702,7 +702,7 @@ func (*DataOperations) SetAdd(ctx context.Context, set, value interface{}) (inte
 	return set, nil
 }
 
-func (o *DataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, error) {
+func (o *DataOperations) ToAST(ctx context.Context, v any) (ast.Value, error) {
 	switch v := v.(type) {
 	case fjson.Null:
 		return v.AST(), nil
@@ -730,7 +730,7 @@ func (o *DataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, e
 
 	case IterableObject:
 		obj := ast.NewObject()
-		if err := v.Iter(ctx, func(k, v interface{}) (bool, error) {
+		if err := v.Iter(ctx, func(k, v any) (bool, error) {
 			a, err := o.ToAST(ctx, k)
 			if err != nil {
 				return true, err
@@ -754,7 +754,7 @@ func (o *DataOperations) ToAST(ctx context.Context, v interface{}) (ast.Value, e
 }
 
 // ToInterface converts the data to golang native presentation.
-func (o *DataOperations) ToInterface(ctx context.Context, v interface{}) (interface{}, error) {
+func (o *DataOperations) ToInterface(ctx context.Context, v any) (any, error) {
 	v, err := o.ToAST(ctx, v)
 	if err != nil {
 		return nil, err
@@ -763,7 +763,7 @@ func (o *DataOperations) ToInterface(ctx context.Context, v interface{}) (interf
 	return ast.JSONWithOpt(v.(ast.Value), ast.JSONOpt{SortSets: false})
 }
 
-func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
+func castJSON(ctx context.Context, v any) (fjson.Json, error) {
 	j, ok := v.(fjson.Json)
 	if ok {
 		return j, nil
@@ -772,7 +772,7 @@ func castJSON(ctx context.Context, v interface{}) (fjson.Json, error) {
 	switch v := v.(type) {
 	case IterableObject:
 		obj := fjson.NewObject2(0)
-		err := v.Iter(ctx, func(k, v interface{}) (bool, error) {
+		err := v.Iter(ctx, func(k, v any) (bool, error) {
 			jk, err := castJSON(ctx, k)
 			if err != nil {
 				return false, err
