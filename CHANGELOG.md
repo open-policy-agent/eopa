@@ -12,6 +12,32 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.36.0
+
+[![OPA v1.2.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.2.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.2.0)
+[![Regal v0.31.1](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.31.1&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.31.1)
+
+This release includes an new local file data source, for pulling in data stored on disk.
+
+### Local File Data Source
+
+Enterprise OPA can now read in data from local files on disk:
+
+```yaml
+# enterprise-opa.yaml
+plugins:
+  data:
+    users:
+      type: localfile
+      file_path: users.json
+      file_type: json
+      polling_interval: 1s
+      rego_transform: "data.localfile.transform"
+```
+
+[See the docs for more information.](https://docs.styra.com/enterprise-opa/reference/configuration/data/localfile)
+
+
 ## v1.35.0
 
 [![OPA v1.2.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.2.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.2.0)
