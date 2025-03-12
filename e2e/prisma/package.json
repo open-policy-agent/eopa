@@ -9,10 +9,10 @@
   "license": "",
   "description": "",
   "dependencies": {
-    "@prisma/client": "^6.4.1",
+    "@prisma/client": "^6.5.0",
     "@styra/ucast-prisma": "^0.0.9"
   },
   "devDependencies": {
-    "prisma": "^6.4.1"
+    "prisma": "^6.5.0"
   }
 }
