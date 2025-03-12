@@ -1,4 +1,3 @@
-// nolint
 package grpc_test
 
 import (
@@ -68,7 +67,7 @@ func setupTest(t *testing.T, config, storeDataInput string, storePolicyInputs ma
 		decoder := json.NewDecoder(bytes.NewBufferString(storeDataInput))
 		decoder.UseNumber()
 
-		var data map[string]interface{}
+		var data map[string]any
 		if err := decoder.Decode(&data); err != nil {
 			t.Fatal(err)
 		}
@@ -157,7 +156,7 @@ func TestCreateData(t *testing.T) {
 	// gRPC server setup/teardown boilerplate
 	listener := setupTest(t, defaultGRPCConfig, `{}`, nil)
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("passthrough://bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
@@ -194,7 +193,7 @@ func TestGetDataBaseDocument(t *testing.T) {
 	// gRPC server setup/teardown boilerplate
 	listener := setupTest(t, defaultGRPCConfig, `{"a": 27}`, nil)
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("passthrough://bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
@@ -223,7 +222,7 @@ func TestUpdateData(t *testing.T) {
 	// gRPC server setup/teardown boilerplate
 	listener := setupTest(t, defaultGRPCConfig, `{"a": 27}`, nil)
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("passthrough://bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
@@ -259,7 +258,7 @@ func TestDeleteData(t *testing.T) {
 	// gRPC server setup/teardown boilerplate
 	listener := setupTest(t, defaultGRPCConfig, `{"a": 27}`, nil)
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("passthrough://bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
@@ -307,8 +306,8 @@ plugins:
 	ctx := context.Background()
 	// We up our receive size here so that we can check that the large
 	// message was stored correctly.
-	conn, err := grpc.DialContext(ctx,
-		"bufnet",
+	conn, err := grpc.NewClient(
+		"passthrough://bufnet",
 		grpc.WithContextDialer(GetBufDialer(listener)),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(8589934592)))
@@ -319,7 +318,7 @@ plugins:
 	client := datav1.NewDataServiceClient(conn)
 
 	// Build an 8+ MB protobuf struct:
-	bigStruct, err := structpb.NewStruct(map[string]interface{}{
+	bigStruct, err := structpb.NewStruct(map[string]any{
 		"0": megabyteString,
 		"1": megabyteString,
 		"2": megabyteString,
@@ -442,7 +441,7 @@ func TestStreamingDataRWSeq(t *testing.T) {
 			}
 			listener := setupTest(t, defaultGRPCConfig, storeData, nil)
 			ctx := context.Background()
-			conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+			conn, err := grpc.NewClient("passthrough://bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				t.Fatalf("Failed to dial bufnet: %v", err)
 			}

@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"runtime"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/storage"
@@ -70,7 +71,7 @@ func bulkRWParsePolicyFromRequest(req *bulkv1.BulkRWRequest_WritePolicyRequest) 
 
 // Parsing function for individual Data write payloads.
 // Returns a bjson.BJSON under-the-hood.
-func bulkRWParseDataFromRequest(req *bulkv1.BulkRWRequest_WriteDataRequest) (interface{}, error) {
+func bulkRWParseDataFromRequest(req *bulkv1.BulkRWRequest_WriteDataRequest) (any, error) {
 	var data *structpb.Value
 
 	switch x := req.GetReq().(type) {
@@ -114,14 +115,10 @@ func (s *Server) BulkRW(ctx context.Context, req *bulkv1.BulkRWRequest) (*bulkv1
 		writesPolicy := req.GetWritesPolicy()
 		if len(writesPolicy) > 0 {
 			parsedPolicies := make([]*ast.Module, len(writesPolicy))
+			// Cap the worker pool to GOMAXPROCS, since additional concurrency won't help.
 			wg, errCtx := errgroup.WithContext(ctx)
+			wg.SetLimit(runtime.GOMAXPROCS(0))
 			for i := range writesPolicy {
-				// Note(philip): This local copy of i is necessary,
-				// otherwise the goroutine will refer to the loop's
-				// iterator variable directly, which will mutate over time
-				// unpredictably.
-				// Reference: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
-				i := i
 				wg.Go(func() error {
 					select {
 					case <-errCtx.Done():
@@ -191,15 +188,11 @@ func (s *Server) BulkRW(ctx context.Context, req *bulkv1.BulkRWRequest) (*bulkv1
 		// up the call chain.
 		writesData := req.GetWritesData()
 		if len(writesData) > 0 {
-			parsedData := make([]interface{}, len(writesData))
+			parsedData := make([]any, len(writesData))
+			// Cap the worker pool to GOMAXPROCS, since additional concurrency won't help.
 			wg, errCtx := errgroup.WithContext(ctx)
+			wg.SetLimit(runtime.GOMAXPROCS(0))
 			for i := range writesData {
-				// Note(philip): This local copy of i is necessary,
-				// otherwise the goroutine will refer to the loop's
-				// iterator variable directly, which will mutate over time
-				// unpredictably.
-				// Reference: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
-				i := i
 				wg.Go(func() error {
 					select {
 					case <-errCtx.Done():
@@ -270,14 +263,10 @@ func (s *Server) BulkRW(ctx context.Context, req *bulkv1.BulkRWRequest) (*bulkv1
 		readsPolicy := req.GetReadsPolicy()
 		if len(readsPolicy) > 0 {
 			out.ReadsPolicy = make([]*bulkv1.BulkRWResponse_ReadPolicyResponse, len(readsPolicy))
+			// Cap the worker pool to GOMAXPROCS, since additional concurrency won't help.
 			wg, errCtx := errgroup.WithContext(ctx)
+			wg.SetLimit(runtime.GOMAXPROCS(0))
 			for i := range readsPolicy {
-				// Note(philip): This local copy of i is necessary,
-				// otherwise the goroutine will refer to the loop's
-				// iterator variable directly, which will mutate over time
-				// unpredictably.
-				// Reference: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
-				i := i
 				wg.Go(func() error {
 					select {
 					case <-errCtx.Done():
@@ -291,7 +280,7 @@ func (s *Server) BulkRW(ctx context.Context, req *bulkv1.BulkRWRequest) (*bulkv1
 						resp, err := s.getPolicyFromRequest(ctx, txn, policyReadReq)
 						if err != nil {
 							s.store.Abort(ctx, txn)
-							listErr, err := structpb.NewList([]interface{}{structpb.NewStringValue(err.Error())})
+							listErr, err := structpb.NewList([]any{structpb.NewStringValue(err.Error())})
 							if err != nil {
 								return status.Error(codes.Internal, "error serialization failed")
 							}
@@ -318,14 +307,10 @@ func (s *Server) BulkRW(ctx context.Context, req *bulkv1.BulkRWRequest) (*bulkv1
 		readsData := req.GetReadsData()
 		if len(readsData) > 0 {
 			out.ReadsData = make([]*bulkv1.BulkRWResponse_ReadDataResponse, len(readsData))
+			// Cap the worker pool to GOMAXPROCS, since additional concurrency won't help.
 			wg, errCtx := errgroup.WithContext(ctx)
+			wg.SetLimit(runtime.GOMAXPROCS(0))
 			for i := range readsData {
-				// Note(philip): This local copy of i is necessary,
-				// otherwise the goroutine will refer to the loop's
-				// iterator variable directly, which will mutate over time
-				// unpredictably.
-				// Reference: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
-				i := i
 				wg.Go(func() error {
 					select {
 					case <-errCtx.Done():
@@ -339,7 +324,7 @@ func (s *Server) BulkRW(ctx context.Context, req *bulkv1.BulkRWRequest) (*bulkv1
 						resp, err := s.getDataFromRequest(ctx, txn, dataReadReq)
 						if err != nil {
 							s.store.Abort(ctx, txn)
-							listErr, err := structpb.NewList([]interface{}{structpb.NewStringValue(err.Error())})
+							listErr, err := structpb.NewList([]any{structpb.NewStringValue(err.Error())})
 							if err != nil {
 								return status.Error(codes.Internal, "error serialization failed")
 							}

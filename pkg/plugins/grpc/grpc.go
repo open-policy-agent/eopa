@@ -18,6 +18,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -466,12 +467,7 @@ func (s *Server) WithMinTLSVersion(minTLSVersion uint16) *Server {
 }
 
 func isMinTLSVersionSupported(TLSVersion uint16) bool {
-	for _, version := range supportedTLSVersions {
-		if TLSVersion == version {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(supportedTLSVersions, TLSVersion)
 }
 
 // Utility function for path reachability.
@@ -524,7 +520,7 @@ func (s *Server) checkPathScope(ctx context.Context, txn storage.Transaction, pa
 		return nil
 	}
 
-	bundleRoots := map[string][]string{}
+	bundleRoots := make(map[string][]string, len(names))
 	for _, name := range names {
 		roots, err := bundle.ReadBundleRootsFromStore(ctx, s.store, txn, name)
 		if err != nil && !storage.IsNotFound(err) {
@@ -714,6 +710,7 @@ func getRevisions(ctx context.Context, store storage.Store, txn storage.Transact
 		return br, err
 	}
 
+	br.Revisions = make(map[string]string, len(names))
 	for _, name := range names {
 		r, err := bundle.ReadBundleRevisionFromStore(ctx, store, txn, name)
 		if err != nil && !storage.IsNotFound(err) {
@@ -742,7 +739,7 @@ type decisionLogger struct {
 	logger    func(context.Context, *opa_server.Info) error
 }
 
-func (l decisionLogger) Log(ctx context.Context, txn storage.Transaction, decisionID, remoteAddr, path string, query string, goInput *interface{}, astInput ast.Value, goResults *interface{}, ndbCache builtins.NDBCache, err error, m metrics.Metrics) error {
+func (l decisionLogger) Log(ctx context.Context, txn storage.Transaction, decisionID, remoteAddr, path string, query string, goInput *any, astInput ast.Value, goResults *any, ndbCache builtins.NDBCache, err error, m metrics.Metrics) error {
 	if l.logger == nil {
 		return nil
 	}

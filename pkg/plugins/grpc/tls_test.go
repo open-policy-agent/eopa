@@ -1,4 +1,3 @@
-// nolint
 package grpc_test
 
 import (
@@ -19,8 +18,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"github.com/open-policy-agent/opa/storage"
-	"github.com/open-policy-agent/opa/util"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/util"
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm" // important! use VM for rego.Eval below
@@ -77,7 +76,7 @@ func TestServerTLS(t *testing.T) {
 		t.Fatal("failed to parse CA cert")
 	}
 	creds := credentials.NewClientTLSFromCert(pool, "opa.example.com")
-	conn, err := grpc.Dial(":9191", grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(":9191", grpc.WithTransportCredentials(creds))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +128,7 @@ func TestTLSIsMandatoryWhenEnabled(t *testing.T) {
 	waitForStorePath(ctx, t, store, "/test/a")
 
 	creds := insecure.NewCredentials()
-	conn, err := grpc.Dial(":9191", grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(":9191", grpc.WithTransportCredentials(creds))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +200,7 @@ func TestMutualTLSHappyPath(t *testing.T) {
 		RootCAs:      caCertPool,
 	}
 	creds := credentials.NewTLS(&tc)
-	conn, err := grpc.Dial(":9191", grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(":9191", grpc.WithTransportCredentials(creds))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +263,7 @@ func TestMutualTLSFailureClientLacksCert(t *testing.T) {
 		t.Fatal("failed to parse CA cert")
 	}
 	creds := credentials.NewClientTLSFromCert(pool, "opa.example.com")
-	conn, err := grpc.Dial(":9191", grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(":9191", grpc.WithTransportCredentials(creds))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +337,7 @@ func TestMutualTLSFailureWrongRootCA(t *testing.T) {
 		RootCAs:      caCertPool,
 	}
 	creds := credentials.NewTLS(&tc)
-	conn, err := grpc.Dial(":9191", grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(":9191", grpc.WithTransportCredentials(creds))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +360,7 @@ func storeWithData(_ context.Context, t *testing.T, data string) storage.Store {
 	decoder := json.NewDecoder(bytes.NewBufferString(data))
 	decoder.UseNumber()
 
-	var dataResult map[string]interface{}
+	var dataResult map[string]any
 	if err := decoder.Decode(&dataResult); err != nil {
 		t.Fatal(err)
 	}

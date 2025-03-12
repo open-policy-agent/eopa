@@ -15,7 +15,7 @@ func Factory() plugins.Factory {
 	return &factory{}
 }
 
-func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
+func (factory) New(m *plugins.Manager, config any) plugins.Plugin {
 	m.UpdatePluginStatus(PluginName, &plugins.Status{State: plugins.StateNotReady})
 
 	out := grpcServerPlugin{
@@ -32,7 +32,7 @@ func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 }
 
 // We don't transform any items here, we just validate that they're correct if present.
-func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) {
+func (factory) Validate(_ *plugins.Manager, config []byte) (any, error) {
 	c := Config{}
 	err := util.Unmarshal(config, &c)
 	if err != nil {

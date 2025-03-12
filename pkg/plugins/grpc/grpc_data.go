@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"runtime"
 	"strings"
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
@@ -95,7 +96,7 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid input")
 	}
-	var goInput *interface{}
+	var goInput *any
 	if input != nil {
 		x, err := ast.JSON(input)
 		if err != nil {
@@ -202,8 +203,8 @@ func (s *Server) getDataFromRequest(ctx context.Context, txn storage.Transaction
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	// Convert through interface{} to correctly return to using numeric types.
-	var interfaceHop interface{}
+	// Convert through any to correctly return to using numeric types.
+	var interfaceHop any
 	if err := bjson.Unmarshal(bjsonItem, &interfaceHop); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -324,14 +325,10 @@ func (s *Server) streamingDataRWHandleWritesParallel(ctx context.Context, txn st
 
 	// Unpack writes in parallel.
 	parsedData := make([]any, len(writes))
+	// Cap the worker pool to GOMAXPROCS, since additional concurrency won't help.
 	wg, errCtx := errgroup.WithContext(ctx)
+	wg.SetLimit(runtime.GOMAXPROCS(0))
 	for i := range writes {
-		// Note(philip): This local copy of i is necessary,
-		// otherwise the goroutine will refer to the loop's
-		// iterator variable directly, which will mutate over time
-		// unpredictably.
-		// Reference: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
-		i := i
 		wg.Go(func() error {
 			select {
 			case <-errCtx.Done():
@@ -392,14 +389,10 @@ func (s *Server) streamingDataRWHandleWritesParallel(ctx context.Context, txn st
 // This function handles transaction lifetimes internally. It creates an individual read transaction for each read request in the list.
 func (s *Server) streamingDataRWHandleReadsParallel(ctx context.Context, reads []*datav1.StreamingDataRWRequest_ReadRequest) ([]*datav1.StreamingDataRWResponse_ReadResponse, error) {
 	out := make([]*datav1.StreamingDataRWResponse_ReadResponse, len(reads))
+	// Cap the worker pool to GOMAXPROCS, since additional concurrency won't help.
 	wg, errCtx := errgroup.WithContext(ctx)
+	wg.SetLimit(runtime.GOMAXPROCS(0))
 	for i := range reads {
-		// Note(philip): This local copy of i is necessary,
-		// otherwise the goroutine will refer to the loop's
-		// iterator variable directly, which will mutate over time
-		// unpredictably.
-		// Reference: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
-		i := i
 		wg.Go(func() error {
 			select {
 			case <-errCtx.Done():

@@ -29,7 +29,7 @@ func remoteAddrFromContext(ctx context.Context) string {
 // generates a unary request interceptor for the gRPC server that is
 // pre-loaded with the correct logger to use.
 func NewLoggingUnaryServerInterceptor(counter *uint64, logger logging.Logger) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, inner grpc.UnaryHandler) (resp interface{}, err error) {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, inner grpc.UnaryHandler) (resp any, err error) {
 		var rctx logging.RequestContext
 		rctx.ReqID = atomic.AddUint64(counter, uint64(1))
 		t0 := time.Now()
@@ -49,7 +49,7 @@ func NewLoggingUnaryServerInterceptor(counter *uint64, logger logging.Logger) gr
 		dt := time.Since(t0)
 
 		if logging.Info <= logger.GetLevel() {
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"client_addr": rctx.ClientAddr,
 				"req_id":      rctx.ReqID,
 				"req_method":  rctx.ReqMethod,
@@ -80,7 +80,7 @@ func (s *wrappedStream) Context() context.Context {
 // generates a stream request interceptor for the gRPC server that is
 // pre-loaded with the correct logger to use.
 func NewLoggingStreamServerInterceptor(counter *uint64, logger logging.Logger) grpc.StreamServerInterceptor {
-	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		var rctx logging.RequestContext
 		rctx.ReqID = atomic.AddUint64(counter, uint64(1))
 		ctx := ss.Context()
@@ -103,7 +103,7 @@ func NewLoggingStreamServerInterceptor(counter *uint64, logger logging.Logger) g
 		dt := time.Since(t0)
 
 		if logging.Info <= logger.GetLevel() {
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"client_addr": rctx.ClientAddr,
 				"req_id":      rctx.ReqID,
 				"req_method":  rctx.ReqMethod,

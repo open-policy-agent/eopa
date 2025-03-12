@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"runtime"
 
 	policyv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
 
@@ -311,14 +312,10 @@ func (s *Server) streamingPolicyRWHandleWritesParallel(ctx context.Context, txn 
 
 	// Unpack writes in parallel.
 	parsedPolicy := make([]*ast.Module, len(writes))
+	// Cap the worker pool to GOMAXPROCS, since additional concurrency won't help.
 	wg, errCtx := errgroup.WithContext(ctx)
+	wg.SetLimit(runtime.GOMAXPROCS(0))
 	for i := range writes {
-		// Note(philip): This local copy of i is necessary,
-		// otherwise the goroutine will refer to the loop's
-		// iterator variable directly, which will mutate over time
-		// unpredictably.
-		// Reference: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
-		i := i
 		wg.Go(func() error {
 			select {
 			case <-errCtx.Done():
@@ -378,14 +375,10 @@ func (s *Server) streamingPolicyRWHandleWritesParallel(ctx context.Context, txn 
 // This function handles transaction lifetimes internally. It creates an individual read transaction for each read request in the list.
 func (s *Server) streamingPolicyRWHandleReadsParallel(ctx context.Context, reads []*policyv1.StreamingPolicyRWRequest_ReadRequest) ([]*policyv1.StreamingPolicyRWResponse_ReadResponse, error) {
 	out := make([]*policyv1.StreamingPolicyRWResponse_ReadResponse, len(reads))
+	// Cap the worker pool to GOMAXPROCS, since additional concurrency won't help.
 	wg, errCtx := errgroup.WithContext(ctx)
+	wg.SetLimit(runtime.GOMAXPROCS(0))
 	for i := range reads {
-		// Note(philip): This local copy of i is necessary,
-		// otherwise the goroutine will refer to the loop's
-		// iterator variable directly, which will mutate over time
-		// unpredictably.
-		// Reference: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
-		i := i
 		wg.Go(func() error {
 			select {
 			case <-errCtx.Done():

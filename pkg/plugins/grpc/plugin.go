@@ -145,7 +145,7 @@ func (p *grpcServerPlugin) Stop(context.Context) {
 	p.logger.Info("Done with graceful shutdown of gRPC server.")
 }
 
-func (p *grpcServerPlugin) Reconfigure(ctx context.Context, config interface{}) {
+func (p *grpcServerPlugin) Reconfigure(ctx context.Context, config any) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 	newConf := config.(Config)

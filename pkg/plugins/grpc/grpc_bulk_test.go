@@ -1,4 +1,3 @@
-// nolint
 package grpc_test
 
 import (
@@ -309,12 +308,14 @@ func TestBulkRW(t *testing.T) {
 			}
 			listener := setupTest(t, defaultGRPCConfig, storeData, storePolicyMap)
 			ctx := context.Background()
-			conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+			conn, err := grpc.NewClient("passthrough://bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+			// grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				t.Fatalf("Failed to dial bufnet: %v", err)
 			}
 			defer conn.Close()
 			client := bulkv1.NewBulkServiceClient(conn)
+
 			resp, err := client.BulkRW(ctx, tc.request)
 			if err != nil {
 				// No error expected? Fail test.
@@ -426,7 +427,7 @@ func TestBulkRWSeq(t *testing.T) {
 			}
 			listener := setupTest(t, defaultGRPCConfig, storeData, storePolicyMap)
 			ctx := context.Background()
-			conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
+			conn, err := grpc.NewClient("passthrough://bufnet", grpc.WithContextDialer(GetBufDialer(listener)), grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				t.Fatalf("Failed to dial bufnet: %v", err)
 			}
