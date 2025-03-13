@@ -33,4 +33,4 @@ resolver_include if {
 	input.tickets.resolved == false
 }
 
-user_is_resolver(user, tenant) if "resolver" in data.roles[tenant][user]
+user_is_resolver(user, tenant) if "resolver" in data.roles[tenant][user] # regal ignore:external-reference

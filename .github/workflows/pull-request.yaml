@@ -13,7 +13,7 @@ concurrency:
 env:
   GOPRIVATE: github.com/StyraInc/opa
   GOLANGCI_VERSION: 1.64.4
-  REGAL_VERSION: 0.29.2
+  REGAL_VERSION: 0.31.1
   BB_VERSION: 1.12.195
 
 jobs:
@@ -96,7 +96,7 @@ jobs:
         with:
           version: ${{ env.REGAL_VERSION }}
       - name: Run Regal Lint
-        run: regal lint --format github . || exit 0
+        run: regal lint --format github .
 
   test:
     name: Test
