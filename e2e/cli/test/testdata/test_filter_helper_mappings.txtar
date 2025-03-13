@@ -31,10 +31,10 @@ test_owner_can_see_their_fruit if {
 		"data.filters.include",
 		"SELECT fruits.name, users.name as owner FROM fruits LEFT JOIN users ON fruits.owner_id = users.id",
 		{
-			"tables": {
-				"fruits": fruits_table,
-				"users": users_table,
-			},
+			"fruits": fruits_table,
+			"users": users_table,
+		},
+		{
 			"debug": true,
 			"mappings": {"name": {"$table": "users"}},
 		},

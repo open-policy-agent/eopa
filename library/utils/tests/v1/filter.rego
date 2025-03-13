@@ -4,12 +4,12 @@
 #  Utility setup for testing data filtering policies.
 package system.eopa.utils.tests.v1
 
-filter["helper"](query, select, opts) := results if {
+filter.helper(query, select, tables, opts) := results if {
 	db := object.get(opts, "db", ":memory:")
 	debug := object.get(opts, "debug", false)
 	mappings := object.get(opts, "mappings", {})
 
-	setup_tables(debug, db, opts.tables)
+	setup_tables(debug, db, tables)
 	conditions = rego.compile({
 		"query": query,
 		"target": "sql+mysql",
@@ -18,7 +18,7 @@ filter["helper"](query, select, opts) := results if {
 	print_debug(debug, "rego.compile response: %v", [conditions])
 	results := list(debug, db, select, conditions.sql)
 	print_debug(debug, "list response: %v", [results])
-	drop_tables(debug, db, opts.tables)
+	drop_tables(debug, db, tables)
 }
 
 setup_tables(debug, db, tables) if {
