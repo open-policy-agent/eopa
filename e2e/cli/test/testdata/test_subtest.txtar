@@ -1,0 +1,45 @@
+exec eopa test test_pass.rego
+! stderr .
+cmp stdout exp/stdout
+
+# with verbose output, subtests are shown
+exec eopa test -v test_pass.rego
+! stderr .
+stdout '^test_pass.rego:$'
+stdout '^data.testpkg.test_multiple: PASS'
+stdout '^  bar: PASS$'
+stdout '^  foo: PASS$'
+stdout '^PASS: 1/1$'
+
+! exec eopa test test_subfail.rego
+! stderr .
+stdout '^test_subfail.rego:$'
+stdout '^data.testpkg.test_multiple: FAIL'
+stdout '^  bar: FAIL$'
+stdout '^  foo: PASS$'
+stdout '^FAIL: 1/1$'
+
+-- test_pass.rego --
+package testpkg
+
+test_multiple[note] if {
+	some note, tc in {
+		"foo": 3,
+		"bar": 5,
+	}
+	tc >= 3
+	tc <= 5
+}
+-- test_subfail.rego --
+package testpkg
+
+test_multiple[note] if {
+	some note, tc in {
+		"foo": 3,
+		"bar": 5,
+	}
+	tc >= 3
+	tc < 5
+}
+-- exp/stdout --
+PASS: 1/1

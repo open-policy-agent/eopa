@@ -125,6 +125,7 @@ func (builtin builtin) Execute(state *State, args []Value) error {
 		PrintHook:                   state.Globals.PrintHook,
 		Capabilities:                state.Globals.Capabilities,
 		DistributedTracingOpts:      state.Globals.TracingOpts,
+		QueryTracers:                state.Globals.QueryTracers,
 	}
 
 	a := make([]*ast.Term, len(args))

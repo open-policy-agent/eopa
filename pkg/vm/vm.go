@@ -78,6 +78,7 @@ type (
 		TracingOpts                 tracing.Options
 		StrictBuiltinErrors         bool
 		ExternalCancel              topdown.Cancel
+		QueryTracers                []topdown.QueryTracer
 	}
 
 	// State holds all the evaluation state and is passed along the statements as the evaluation progresses.
@@ -111,6 +112,7 @@ type (
 		Limits                      Limits
 		StrictBuiltinErrors         bool
 		IntermediateResults         map[int]any
+		QueryTracers                []topdown.QueryTracer
 	}
 
 	Limits struct {
@@ -292,6 +294,7 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 			InterQueryBuiltinCache:      opts.InterQueryBuiltinCache,
 			InterQueryBuiltinValueCache: opts.InterQueryBuiltinValueCache,
 			IntermediateResults:         make(map[int]any),
+			QueryTracers:                opts.QueryTracers,
 		}
 		// If we're provided an external (probably shared) topdown.Cancel, let's
 		// use it.
