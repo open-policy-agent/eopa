@@ -7,9 +7,9 @@ package system.eopa.utils.tests.v1
 filter.helper(query, select, tables, opts) := results if {
 	db := object.get(opts, "db", ":memory:")
 	debug := object.get(opts, "debug", false)
-	mappings := object.get(opts, "mappings", {})
-
 	setup_tables(debug, db, tables)
+
+	mappings := object.get(opts, "mappings", {})
 	conditions = rego.compile({
 		"query": query,
 		"target": "sql+mysql",
@@ -61,7 +61,7 @@ drop_table(debug, db, name) := sql.send(sql_query(debug, db, q)) if {
 } else := true
 
 list(debug, db, select, where) := res.rows if {
-	q := sprintf("%s %s", [select, where])
+	q := build_query(select, where)
 	res := sql.send(sql_query(debug, db, q))
 }
 
@@ -73,6 +73,14 @@ sql_query(debug, db, q) := {
 	"raise_error": false, # return errors in-band
 } if {
 	print_debug(debug, "executing query %s against %s", [q, db])
+}
+
+build_query(select, where) := concat(" ", [select, where]) if not contains(lower(select), " where ")
+
+build_query(select, where) := combined if {
+	contains(lower(select), " where ")
+	where_sans_where := substring(where, 6, -1) # drop "WHERE "
+	combined := sprintf("%s AND (%s)", [select, where_sans_where])
 }
 
 print_debug(debug, format, args) if {
