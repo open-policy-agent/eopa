@@ -12,6 +12,15 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.36.1
+
+[![OPA v1.2.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.2.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.2.0)
+[![Regal v0.31.1](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.31.1&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.31.1)
+
+This release includes a bug fix for ref heads and an overeager planner optimization (see [upstream issue](https://github.com/open-policy-agent/opa/issues/7399) and [fix](https://github.com/open-policy-agent/opa/pull/7439)).
+It also features performance improvements to the [gRPC API plugin](https://docs.styra.com/enterprise-opa/tutorials/integrating/go-grpc).
+
+
 ## v1.36.0
 
 [![OPA v1.2.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.2.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.2.0)
