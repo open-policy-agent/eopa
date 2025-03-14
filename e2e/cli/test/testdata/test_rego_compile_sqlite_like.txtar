@@ -1,0 +1,40 @@
+# This test documents the edge case related to LIKE in SQLite:
+# It's case-insensitive. Our translation logic does not expect
+# that: the translation is therefore incorrect.
+exec eopa test .
+! stderr .
+cmp stdout exp/stdout
+
+-- filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits"]
+include if startswith(input.fruits.name, input.fruit_prefix)
+-- filters_test.rego --
+package filters
+
+import data.system.eopa.utils.tests.v1.filter
+
+fruits_table := [
+	{"id": 0, "name": "apple"},
+	{"id": 1, "name": "banana"},
+	{"id": 2, "name": "cherry"},
+]
+
+test_owner_can_see_their_fruit_excluding_applets if {
+	filtered := filter.helper(
+		"data.filters.include",
+		"SELECT fruits.name FROM fruits",
+		{
+			"fruits": fruits_table,
+		},
+		{"debug": true},
+	) with input.fruit_prefix as "APP"
+	count(filtered) == 1
+	{"name": "apple"} in filtered
+}
+-- exp/stdout --
+PASS: 1/1
