@@ -12,6 +12,46 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.36.2
+
+[![OPA v1.2.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.2.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.2.0)
+[![Regal v0.31.1](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.31.1&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.31.1)
+
+This release fixes a bug where [parameterized tests](https://www.openpolicyagent.org/docs/latest/policy-testing/#parameterized-tests-and-data-driven-testing) were not properly evaluated in Enterprise OPA.
+
+There is also a small change to the `filter.helper()` arguments: The mandatory tables argument is now a positional argument:
+
+Before:
+```rego
+filtered := filter.helper(
+  "data.filters.include",
+  "SELECT fruits.name, users.name as owner FROM fruits LEFT JOIN users ON fruits.owner_id = users.id",
+  {
+    "tables": {
+      "fruits": fruits_table,
+      "users": users_table,
+    },
+    "debug": true,
+  })
+```
+
+After:
+```rego
+filtered := filter.helper(
+  "data.filters.include",
+  "SELECT fruits.name, users.name as owner FROM fruits LEFT JOIN users ON fruits.owner_id = users.id",
+  {
+    "fruits": fruits_table,
+    "users": users_table,
+  },
+  {
+    "debug": true,
+  })
+```
+
+Also, the `filter.helper()` now accepts a SQL query (second argument) that already contains a `WHERE` clause.
+
+
 ## v1.36.1
 
 [![OPA v1.2.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.2.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.2.0)
