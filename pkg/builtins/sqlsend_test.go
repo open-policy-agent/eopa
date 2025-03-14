@@ -653,7 +653,7 @@ func startOracle(t *testing.T) backend {
 			},
 
 			WaitingFor: wait.ForAll(
-				wait.ForLog("DATABASE IS READY TO USE!").WithStartupTimeout(60*time.Second),
+				wait.ForLog("DATABASE IS READY TO USE!").WithStartupTimeout(2*60*time.Second),
 				wait.ForListeningPort("1521/tcp"),
 			),
 		},
