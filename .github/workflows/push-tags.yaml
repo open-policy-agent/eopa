@@ -22,18 +22,18 @@ jobs:
       QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
     steps:
       - name: Tune GitHub-hosted runner network
-        uses: smorimoto/tune-github-hosted-runner-network@v1
+        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # ratchet:smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
-        uses: tibdex/github-app-token@v2
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # ratchet:tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
       - name: Override GH Token Env Var
         run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
-      - uses: open-policy-agent/setup-opa@v2
+      - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # ratchet:open-policy-agent/setup-opa@v2
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
           path: enterprise-opa
@@ -41,14 +41,14 @@ jobs:
         name: Read go version
         run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
         working-directory: enterprise-opa
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # ratchet:actions/setup-go@v5
         with:
           go-version: ${{ steps.go_version.outputs.go_version }}
           cache-dependency-path: enterprise-opa/go.sum
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@90a3faa9d0182683851fbfa97ca1a2cb983bfca3 # ratchet:goreleaser/goreleaser-action@v6
         with:
           install-only: true
       - name: Install anchore/quill (macos signing)
@@ -69,29 +69,29 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Tune GitHub-hosted runner network
-        uses: smorimoto/tune-github-hosted-runner-network@v1
+        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # ratchet:smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
-        uses: tibdex/github-app-token@v2
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # ratchet:tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
       - name: Override GH Token Env Var
         run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
-      - uses: open-policy-agent/setup-opa@v2
+      - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # ratchet:open-policy-agent/setup-opa@v2
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
       - id: go_version
         name: Read go version
         run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # ratchet:actions/setup-go@v5
         with:
           go-version: ${{ steps.go_version.outputs.go_version }}
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      - uses: ko-build/setup-ko@v0.8
+      - uses: ko-build/setup-ko@d982fec422852203cfb2053a8ec6ad302280d04d # ratchet:ko-build/setup-ko@v0.8
       - name: Build and Push Images
         run: make auth-deploy-ci-debug auth-deploy-ci
         env:
@@ -104,23 +104,23 @@ jobs:
       BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
     steps:
       - name: Tune GitHub-hosted runner network
-        uses: smorimoto/tune-github-hosted-runner-network@v1
+        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # ratchet:smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
-        uses: tibdex/github-app-token@v2
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # ratchet:tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
       - name: Override GH Token Env Var
         run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
       # Note(philip): We need to install the `buf` CLI before we can lint our protobuf sources.
       # The action uses the repo-scoped GITHUB_TOKEN to allow one of its dependencies (Octokit)
       # to skip Github API rate limits when fetching the latest buf build artifact.
-      - uses: bufbuild/buf-setup-action@v1
+      - uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # ratchet:bufbuild/buf-setup-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       # Note(philip): We do not use bufbuild/buf-push-action@v1 here, because that action
@@ -134,10 +134,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Tune GitHub-hosted runner network
-        uses: smorimoto/tune-github-hosted-runner-network@v1
+        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # ratchet:smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
-        uses: tibdex/github-app-token@v2
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # ratchet:tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
@@ -146,10 +146,10 @@ jobs:
       - name: Setup Github API token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Check out code for EOPA
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: open-policy-agent/setup-opa@v2
+      - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # ratchet:open-policy-agent/setup-opa@v2
       - name: Pick up OPA version
         id: supported-opa-version
         run: echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
@@ -157,7 +157,7 @@ jobs:
         id: supported-regal-version
         run: echo "regal_version=v$(build/get-regal-version.sh)" >> $GITHUB_OUTPUT
       - name: Check out code for the public repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
         with:
           repository: StyraInc/enterprise-opa
           path: _public

@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Tune GitHub-hosted runner network
-        uses: smorimoto/tune-github-hosted-runner-network@v1
+        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # ratchet:smorimoto/tune-github-hosted-runner-network@v1
       - name: Generate GitHub App Token
         id: generate_token
-        uses: tibdex/github-app-token@v2
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # ratchet:tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
@@ -25,20 +25,20 @@ jobs:
         run: |
           echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
           echo "GITHUB_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
-      - uses: open-policy-agent/setup-opa@v2
+      - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # ratchet:open-policy-agent/setup-opa@v2
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
       - id: go_version
         name: Read go version
         run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # ratchet:actions/setup-go@v5
         with:
           go-version: ${{ steps.go_version.outputs.go_version }}
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      - uses: ko-build/setup-ko@v0.8
+      - uses: ko-build/setup-ko@d982fec422852203cfb2053a8ec6ad302280d04d # ratchet:ko-build/setup-ko@v0.8
       - name: Build and Push
         run: make deploy-ci
       - name: Debug Build and Push

@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Tune GitHub-hosted runner network
-        uses: smorimoto/tune-github-hosted-runner-network@v1
+        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # ratchet:smorimoto/tune-github-hosted-runner-network@v1
 
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
 
       - name: Cleanup
         run: |
