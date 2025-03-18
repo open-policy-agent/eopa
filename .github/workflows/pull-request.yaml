@@ -398,7 +398,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
       - name: install skopeo
-        uses: jaxxstorm/action-install-gh-release@cd6b2b78ad38bdd294341cda064ec0692b06215b # ratchet:jaxxstorm/action-install-gh-release@v1.14.0
+        uses: jaxxstorm/action-install-gh-release@4304621e8c48d66093a8a214af5d5b5bc3b3d943 # ratchet:jaxxstorm/action-install-gh-release@v2.0.0
         with:
           repo: lework/skopeo-binary
           extension-matching: disable
