@@ -1,0 +1,11 @@
+name: workflow prereqs
+description: "Prerequisites to _all_ workflow runs"
+inputs: {}
+outputs: {}
+runs:
+  using: composite
+  steps:
+    - name: check that all actions are pinned
+      uses: 'docker://ghcr.io/sethvargo/ratchet@sha256:78f70ed0c85830a78bd9eeb265f49aa375d71887e4245aebc5da9c641d76b245'
+      with:
+        args: check .github/workflows/benchmarks.yaml .github/workflows/branch-cache-cleanup.yaml .github/workflows/goreleaser.yaml .github/workflows/nightly.yaml .github/workflows/pull-request.yaml .github/workflows/push-main.yaml .github/workflows/push-tags.yaml .github/workflows/update-base.yaml .github/workflows/update-cli-docs.yaml

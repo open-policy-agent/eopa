@@ -17,8 +17,16 @@ env:
   BB_VERSION: 1.12.195
 
 jobs:
+  prereqs:
+    name: Prereqs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
+      - uses: ./.github/actions/prereqs
+
   lint:
     name: Analysis & Linting
+    needs: prereqs
     runs-on: ubuntu-22.04
     steps:
       - name: Tune GitHub-hosted runner network
@@ -100,6 +108,7 @@ jobs:
 
   test:
     name: Test
+    needs: prereqs
     runs-on: ubuntu-22.04
     steps:
       - name: Tune GitHub-hosted runner network
@@ -224,6 +233,7 @@ jobs:
 
   proto-docs-push:
     name: Push Protobuf docs to BSR
+    needs: prereqs
     runs-on: ubuntu-22.04
     steps:
       - name: Tune GitHub-hosted runner network
@@ -265,6 +275,7 @@ jobs:
 
   build:
     name: Ko Build
+    needs: prereqs
     runs-on: ubuntu-22.04
     steps:
       - name: Tune GitHub-hosted runner network
@@ -332,6 +343,7 @@ jobs:
 
   goreleaser:
     name: Goreleaser build
+    needs: prereqs
     runs-on: ubuntu-22.04
     steps:
       - name: Tune GitHub-hosted runner network
@@ -497,6 +509,7 @@ jobs:
 
   performance-related:
     name: Performance
+    needs: prereqs
     runs-on: ubuntu-22.04
     steps:
       - name: Tune GitHub-hosted runner network
@@ -546,6 +559,7 @@ jobs:
 
   cross-build:
     runs-on: ubuntu-22.04
+    needs: prereqs
     strategy:
       fail-fast: true
       matrix:
@@ -606,8 +620,7 @@ jobs:
   cross-test-releases:
     name: Cross Test Releases
     runs-on: ${{ matrix.os }}
-    needs:
-      - cross-build
+    needs: cross-build
     strategy:
       fail-fast: false
       matrix:
