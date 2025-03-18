@@ -369,7 +369,7 @@ jobs:
         # Equivalent to:
         # $ trivy image $IMAGE
       - name: Run Trivy scan on image
-        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # ratchet:aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # ratchet:aquasecurity/trivy-action@0.30.0
         with:
           image-ref: ${{ steps.enterprise-opa.outputs.image }}
           format: table
@@ -394,7 +394,7 @@ jobs:
       # Equivalent to:
       # $ trivy fs .
       - name: Run Trivy scan on repo
-        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # ratchet:aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # ratchet:aquasecurity/trivy-action@0.30.0
         with:
           scan-type: fs
           format: table
