@@ -13,8 +13,6 @@ concurrency:
 env:
   GOPRIVATE: github.com/StyraInc/opa
   GOLANGCI_VERSION: 1.64.4
-  REGAL_VERSION: 0.31.1
-  BB_VERSION: 1.12.195
 
 jobs:
   prereqs:
@@ -51,12 +49,10 @@ jobs:
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
-      - id: go_version
-        name: Read go version
-        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
-      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # ratchet:actions/setup-go@v5
-        with:
-          go-version: ${{ steps.go_version.outputs.go_version }}
+      - name: Install tools
+        uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # ratchet:jdx/mise-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
       - name: golangci-lint
         uses: golangci/golangci-lint-action@4696ba8babb6127d732c3c6dde519db15edab9ea # ratchet:golangci/golangci-lint-action@v6
         with:
@@ -99,10 +95,6 @@ jobs:
             echo "::info:: If the diffs above include the protoc version number, consider reinstalling to get the latest protbuf/grpc tooling."
             exit 1
           fi
-      - name: Setup Regal
-        uses: StyraInc/setup-regal@33a142b1189004e0f14bf42b15972c67eecce776 # ratchet:StyraInc/setup-regal@v1.0.0
-        with:
-          version: ${{ env.REGAL_VERSION }}
       - name: Run Regal Lint
         run: regal lint --format github .
 
@@ -197,6 +189,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # ratchet:jdx/mise-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Download binary tarball
@@ -297,20 +291,16 @@ jobs:
           private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
       - name: Override GH Token Env Var
         run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
-      - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # ratchet:open-policy-agent/setup-opa@v2
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
-      - id: go_version
-        name: Read go version
-        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
-      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # ratchet:actions/setup-go@v5
-        with:
-          go-version: ${{ steps.go_version.outputs.go_version }}
+      - name: Install tools
+        uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # ratchet:jdx/mise-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      - uses: ko-build/setup-ko@d982fec422852203cfb2053a8ec6ad302280d04d # ratchet:ko-build/setup-ko@v0.8
       - name: Check for base image changes (apko.yaml, apko-debug.yaml)
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # ratchet:dorny/paths-filter@v3
         id: changes
@@ -318,14 +308,10 @@ jobs:
           filters: |
             apko:
               - 'apko*.yaml'
-      - name: Install apko
-        uses: jaxxstorm/action-install-gh-release@cd6b2b78ad38bdd294341cda064ec0692b06215b # ratchet:jaxxstorm/action-install-gh-release@v1.14.0
-        with:
-          repo: chainguard-dev/apko
-          tag: v0.14.7
-          cache: enable
-          binaries-location: apko_0.14.7_linux_amd64
-        if: steps.changes.outputs.apko == 'true'
+      - name: Prep ko
+        run: |
+          echo "${{ github.token }}" | ko login ghcr.io --username "dummy" --password-stdin
+          echo "KO_DOCKER_REPO=ghcr.io/styrainc" >> $GITHUB_ENV
       - name: Build images
         run: make build build-debug
         env:
@@ -595,16 +581,10 @@ jobs:
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
-      - id: go_version
-        name: Read go version
-        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
-      - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # ratchet:open-policy-agent/setup-opa@v2
-      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # ratchet:actions/setup-go@v5
-        with:
-          go-version: ${{ steps.go_version.outputs.go_version }}
-      - uses: turtlequeue/setup-babashka@2d4df498c7a578b4f3e906283f9af913590bdec7 # ratchet:turtlequeue/setup-babashka@v1.7.0
-        with:
-          babashka-version: ${{ env.BB_VERSION }}
+      - name: Install tools
+        uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # ratchet:jdx/mise-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
       - run: bb build/cross-build
         env:
           OUTPUTDIR: bins/
@@ -657,9 +637,13 @@ jobs:
         with:
           name: cross-binaries-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
           path: bins
-      - uses: turtlequeue/setup-babashka@2d4df498c7a578b4f3e906283f9af913590bdec7 # ratchet:turtlequeue/setup-babashka@v1.7.0
-        with:
-          babashka-version: ${{ env.BB_VERSION }}
+      - name: Install tools
+        uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # ratchet:jdx/mise-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+        with: # NB(sr): this workflow doesn't checkout code, so we'll have to replicate the version here
+          tool_versions: |
+            babashka 1.12.195
       - run: bb bins/cross-run
         env:
           EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}

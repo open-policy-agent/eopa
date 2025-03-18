@@ -1,3 +1,8 @@
 grpcurl 1.8.7
 protoc 24.3
 node 22
+apko 0.25
+ko 0.17
+opa 1.2.0
+regal 0.31.1
+babashka 1.12.195
