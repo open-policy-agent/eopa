@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -25,6 +26,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/util"
+
+	"github.com/styrainc/enterprise-opa-private/pkg/internal/levenshtein"
 )
 
 const (
@@ -39,6 +42,9 @@ const (
 	timerExtractAnnotations = "extract_annotations"
 
 	unknownsCacheSize = 500
+
+	// maxDistanceForHint is the levenshtein distance below which we'll emit a hint
+	maxDistanceForHint = 3
 
 	// These need to be kept up to date with `CompileApiKnownHeaders()` below
 	multiTargetJSON  = "application/vnd.styra.multitarget+json"
@@ -78,6 +84,18 @@ type CompileRequestV1 struct {
 		Mappings                 map[string]any `json:"targetSQLTableMappings,omitempty"`
 		TargetDialects           []string       `json:"targetDialects,omitempty"`
 	} `json:"options,omitempty"`
+}
+
+type CompileResponseV1 struct {
+	Result      *any            `json:"result,omitempty"`
+	Explanation types.TraceV1   `json:"explanation,omitempty"`
+	Metrics     types.MetricsV1 `json:"metrics,omitempty"`
+	Hints       []Hint          `json:"hints,omitempty"`
+}
+
+type Hint struct {
+	Message  string        `json:"message"`
+	Location *ast.Location `json:"location,omitempty"`
 }
 
 type CompileHandler interface {
@@ -240,6 +258,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	m.Timer(timerPrepPartial).Stop()
 
+	var qt failTracer
 	pq, err := prep.Partial(ctx,
 		rego.EvalTransaction(txn),
 		rego.EvalMetrics(m),
@@ -249,6 +268,8 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rego.EvalNondeterministicBuiltins(evalNonDet),
 		rego.EvalInterQueryBuiltinCache(iqc),
 		rego.EvalInterQueryBuiltinValueCache(iqvc),
+		rego.EvalQueryTracer(&qt),
+		rego.EvalRuleIndexing(false),
 	)
 	if err != nil {
 		switch err := err.(type) {
@@ -262,7 +283,9 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.Logger.Debug("queries %v", pq.Queries)
 	h.Logger.Debug("support %v", pq.Support)
 
-	result := types.CompileResponseV1{}
+	result := CompileResponseV1{
+		Hints: qt.Hints(unknowns),
+	}
 
 	if target == "" { // "legacy" PE request
 		var i any = types.PartialEvaluationResultV1{
@@ -460,7 +483,8 @@ func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.
 	return unknowns, nil
 }
 
-func fin(w http.ResponseWriter, result types.CompileResponseV1,
+func fin(w http.ResponseWriter,
+	result CompileResponseV1,
 	metrics metrics.Metrics,
 	includeMetrics, includeInstrumentation bool,
 ) {
@@ -771,4 +795,94 @@ func stringPathToRef(s string) (r ast.Ref) {
 		}
 	}
 	return r
+}
+
+type failTracer struct {
+	exprs []*ast.Expr
+}
+
+func FailTracer() *failTracer {
+	return &failTracer{}
+}
+
+// Enabled always returns true if the failTracer is instantiated.
+func (b *failTracer) Enabled() bool {
+	return b != nil
+}
+
+func (b *failTracer) TraceEvent(evt topdown.Event) {
+	if evt.Op == topdown.FailOp {
+		expr, ok := evt.Node.(*ast.Expr)
+		if ok {
+			b.exprs = append(b.exprs, expr)
+		}
+	}
+}
+
+// Config returns the Tracers standard configuration
+func (*failTracer) Config() topdown.TraceConfig {
+	return topdown.TraceConfig{PlugLocalVars: true}
+}
+
+func (b *failTracer) Hints(unknowns []*ast.Term) []Hint {
+	var hints []Hint //nolint:prealloc
+	seenRefs := map[string]struct{}{}
+	candidates := make([]string, 0, len(unknowns))
+	for i := range unknowns {
+		candidates = append(candidates, string(unknowns[i].Value.(ast.Ref)[1].Value.(ast.String)))
+	}
+
+	for _, expr := range b.exprs {
+		var ref ast.Ref // when this is processed, only one input.X.Y ref is in the expression (SSA)
+		switch {
+		case expr.IsCall():
+			for i := range 2 {
+				op := expr.Operand(i)
+				if r, ok := op.Value.(ast.Ref); ok && r.HasPrefix(ast.InputRootRef) {
+					ref = r
+				}
+			}
+		}
+		// NOTE(sr): if we allow naked ast.Term for filter policies, they need to be handled in switch ^
+
+		if len(ref) < 2 {
+			continue
+		}
+		tblPart, ok := ref[1].Value.(ast.String)
+		if !ok {
+			continue
+		}
+		miss := string(tblPart)
+		rs := ref[1:].String()
+		if _, ok := seenRefs[rs]; ok {
+			continue
+		}
+
+		closestStrings := levenshtein.ClosestStrings(maxDistanceForHint, miss, slices.Values(candidates))
+		proposals := make([]ast.Ref, len(closestStrings))
+		for i := range closestStrings {
+			if len(ref) >= 1 {
+				prop := make([]*ast.Term, 2, len(ref))
+				prop[0] = ast.InputRootDocument
+				prop[1] = ast.StringTerm(closestStrings[i])
+				prop = append(prop, ref[2:]...)
+				proposals[i] = prop
+			}
+		}
+		var msg string
+		switch len(proposals) {
+		case 0:
+			continue
+		case 1:
+			msg = fmt.Sprintf("%v undefined, did you mean %s?", ref, proposals[0])
+		default:
+			msg = fmt.Sprintf("%v undefined, did you mean any of %v?", ref, proposals)
+		}
+		hints = append(hints, Hint{
+			Location: expr.Loc(),
+			Message:  msg,
+		})
+		seenRefs[rs] = struct{}{}
+	}
+	return hints
 }

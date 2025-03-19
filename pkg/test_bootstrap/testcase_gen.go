@@ -2,16 +2,18 @@ package test_bootstrap
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"text/template"
 
-	"github.com/agnivade/levenshtein"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/dependencies"
+
 	"github.com/styrainc/enterprise-opa-private/pkg/internal/edittree"
+	"github.com/styrainc/enterprise-opa-private/pkg/internal/levenshtein"
 )
 
 // Note(philip): We use a custom interface type + sorting logic for improved
@@ -335,22 +337,8 @@ func GetRuleCustomAnnotationWithKey(key string, entrypoint ast.Ref, compiler *as
 	}
 
 	// Annotation not present? Suggest to the user the closest annotations that might be relevant.
-	smallestDistance := 65536 // Based on the largest string size supported by agnivade/levenshtein.
-	closestStrings := []string{}
-	for k := range testNamesToAnnotations {
-		levDist := levenshtein.ComputeDistance(key, k)
-		switch {
-		case levDist < smallestDistance:
-			closestStrings = []string{k}
-			smallestDistance = levDist
-		case levDist == smallestDistance:
-			closestStrings = append(closestStrings, k)
-			smallestDistance = levDist
-		default:
-			continue
-		}
-	}
-	slices.Sort(closestStrings)
+	// Based on the largest string size supported by agnivade/levenshtein.
+	closestStrings := levenshtein.ClosestStrings(65536, key, maps.Keys(testNamesToAnnotations))
 	return nil, fmt.Errorf("custom annotation, test-bootstrap-name: '%s' not found in policies. Closest matching annotation(s) are: %v", key, closestStrings)
 }
 

@@ -35,6 +35,7 @@ type Response struct {
 		MSSQL    Query `json:"sqlserver,omitempty"`
 	} `json:"result"`
 	Metrics map[string]float64 `json:"metrics"`
+	Hints   []map[string]any   `json:"hints"`
 }
 
 func TestCompileHandlerMultiTarget(t *testing.T) {
@@ -316,6 +317,50 @@ include if {
 				check(t, iqc, iqvc)
 			}
 		})
+	}
+}
+
+func TestCompileHandlerHints(t *testing.T) {
+	typoRego := `package filters
+# METADATA
+# scope: document
+# custom:
+#   unknowns: [input.fruits]
+include if input.fruits.name == "apple"
+include if input.fruit.cost < input.max
+`
+	chnd, _ := setup(t, []byte(typoRego), map[string]any{})
+	input := map[string]any{
+		"max": 1,
+	}
+	query := "data.filters.include"
+	target := "application/vnd.styra.sql.postgresql+json"
+
+	payload := map[string]any{ // NB(sr): unknowns are taken from metadata
+		"input": input,
+		"query": query,
+	}
+	resp := evalReq(t, chnd, payload, target)
+
+	{ // check results
+		if exp, act := "WHERE fruits.name = E'apple'", resp.Result.Query; exp != act {
+			t.Errorf("want %s, got %s", exp, act)
+		}
+	}
+	{ // check hints
+		exp := []map[string]any{
+			{
+				"location": map[string]any{
+					"col":  float64(12),
+					"row":  float64(7),
+					"file": "test",
+				},
+				"message": "input.fruit.cost undefined, did you mean input.fruits.cost?",
+			},
+		}
+		if diff := cmp.Diff(exp, resp.Hints); diff != "" {
+			t.Errorf("unexpected hints (-want, +got):\n%s", diff)
+		}
 	}
 }
 
