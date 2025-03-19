@@ -509,12 +509,14 @@ type compileRequestOptions struct {
 func readInputCompilePostV1(reqBytes []byte, urlPath string, queryParserOptions ast.ParserOptions) (*CompileRequestV1, *compileRequest, *types.ErrorV1) {
 	var request CompileRequestV1
 
-	err := util.NewJSONDecoder(bytes.NewBuffer(reqBytes)).Decode(&request)
-	if err != nil {
-		return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "error(s) occurred while decoding request: %v", err.Error())
+	if len(reqBytes) > 0 {
+		if err := util.NewJSONDecoder(bytes.NewBuffer(reqBytes)).Decode(&request); err != nil {
+			return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "error(s) occurred while decoding request: %v", err.Error())
+		}
 	}
 
 	var query ast.Body
+	var err error
 	if urlPath != "" {
 		query = []*ast.Expr{ast.NewExpr(ast.NewTerm(stringPathToDataRef(urlPath)))}
 	} else { // attempt to parse query

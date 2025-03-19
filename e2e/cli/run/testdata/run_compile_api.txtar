@@ -1,0 +1,45 @@
+[windows] ! exec eopa run --log-level error --addr :61699 --server filters.rego &eopa&
+[!windows]  exec eopa run --log-level error --addr :61699 --server filters.rego &eopa&
+! stdout .
+! stderr .
+
+# block until the server reports health OK
+httpwait 'http://localhost:61699/health' '{}'
+
+# curl with input
+exec curl -Ss --url http://localhost:61699/v1/compile/filters/include -d '{"input": {"favorite": "banana"}}' -H 'Accept: application/vnd.styra.sql.postgresql+json'
+! stderr .
+cmp stdout exp/stdout_banana
+
+# curl without input (will use GET)
+exec curl -Ss --url http://localhost:61699/v1/compile/filters/include -H 'Accept: application/vnd.styra.sql.postgresql+json'
+! stderr .
+cmp stdout exp/stdout_apple
+
+stop eopa
+! stdout .
+! stderr .
+
+-- filters.rego --
+package filters
+# METADATA
+# scope: document
+# custom:
+#   unknowns: [input.fruits]
+include if input.fruits.name == input.favorite
+include if {
+  input.fruits.name == "apple"
+  not input.favorite
+}
+-- exp/stdout_banana --
+{
+  "result": {
+    "query": "WHERE fruits.name = E'banana'"
+  }
+}
+-- exp/stdout_apple --
+{
+  "result": {
+    "query": "WHERE fruits.name = E'apple'"
+  }
+}
