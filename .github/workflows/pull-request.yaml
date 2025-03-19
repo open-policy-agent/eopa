@@ -54,7 +54,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ env.GH_API_TOKEN }}
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@4696ba8babb6127d732c3c6dde519db15edab9ea # ratchet:golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 # ratchet:golangci/golangci-lint-action@v6
         with:
           version: v${{ env.GOLANGCI_VERSION }}
           args: --timeout=10m --out-format=colored-line-number,github-actions
