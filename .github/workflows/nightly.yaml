@@ -331,12 +331,12 @@ jobs:
           platforms: arm64
         if: matrix.GOARCH == 'arm64'
       - name: Download release binaries
-        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # ratchet:actions/download-artifact@v4
+        uses: actions/download-artifact@b14cf4c92620c250e1c074ab0a5800e37df86765 # ratchet:actions/download-artifact@v4
         with:
           name: binaries
           path: dist
       - name: Download test binaries
-        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # ratchet:actions/download-artifact@v4
+        uses: actions/download-artifact@b14cf4c92620c250e1c074ab0a5800e37df86765 # ratchet:actions/download-artifact@v4
         with:
           name: cross-binaries-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
           path: bins
@@ -360,7 +360,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Download image tarball
-        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # ratchet:actions/download-artifact@v4
+        uses: actions/download-artifact@b14cf4c92620c250e1c074ab0a5800e37df86765 # ratchet:actions/download-artifact@v4
         with:
           name: image
       - name: Enterprise OPA image
