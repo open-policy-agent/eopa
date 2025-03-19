@@ -637,13 +637,10 @@ jobs:
         with:
           name: cross-binaries-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
           path: bins
-      - name: Install tools
-        uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # ratchet:jdx/mise-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with: # NB(sr): this workflow doesn't checkout code, so we'll have to replicate the version here
-          tool_versions: |
-            babashka 1.12.195
+      - uses: turtlequeue/setup-babashka@2d4df498c7a578b4f3e906283f9af913590bdec7 # ratchet:turtlequeue/setup-babashka@v1.7.0
+        # NOTE(sr): mise-install doesn't work reliably on windows, it seems. This action worked well before.
+        with:
+          babashka-version: 1.12.195
       - run: bb bins/cross-run
         env:
           EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
