@@ -129,7 +129,7 @@ jobs:
           echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
           echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
         working-directory: enterprise-opa
-      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # ratchet:actions/setup-go@v5
+      - uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # ratchet:actions/setup-go@v5
         with:
           cache-dependency-path: enterprise-opa/go.sum
           go-version: ${{ steps.enterprise-opa.outputs.go_version }}
@@ -359,7 +359,7 @@ jobs:
       - id: go_version
         name: Read go version
         run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
-      - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # ratchet:actions/setup-go@v5
+      - uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # ratchet:actions/setup-go@v5
         with:
           go-version: ${{ steps.go_version.outputs.go_version }}
       - name: Setup github api token
