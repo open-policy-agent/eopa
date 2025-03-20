@@ -33,6 +33,7 @@ type Response struct {
 		Postgres Query `json:"postgresql,omitempty"`
 		MySQL    Query `json:"mysql,omitempty"`
 		MSSQL    Query `json:"sqlserver,omitempty"`
+		SQLite   Query `json:"sqlite,omitempty"`
 	} `json:"result"`
 	Metrics map[string]float64 `json:"metrics"`
 	Hints   []map[string]any   `json:"hints"`
@@ -63,6 +64,7 @@ func TestCompileHandlerMultiTarget(t *testing.T) {
 				"sql+postgresql",
 				"sql+mysql",
 				"sql+sqlserver",
+				"sql+sqlite",
 				"ucast+prisma",
 			},
 		},
@@ -77,6 +79,9 @@ func TestCompileHandlerMultiTarget(t *testing.T) {
 			t.Errorf("mysql, want %s, got %s", exp, act)
 		}
 		if exp, act := "WHERE ((tickets.tenant = N'2' AND users.name = N'caesar') OR (tickets.tenant = N'2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))", resp.Result.MSSQL.Query; exp != act {
+			t.Errorf("mssql, want %s, got %s", exp, act)
+		}
+		if exp, act := "WHERE ((tickets.tenant = '2' AND users.name = 'caesar') OR (tickets.tenant = '2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))", resp.Result.SQLite.Query; exp != act {
 			t.Errorf("mssql, want %s, got %s", exp, act)
 		}
 

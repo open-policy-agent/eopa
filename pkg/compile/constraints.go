@@ -69,11 +69,13 @@ func NewConstraints(typ, variant string) (*Constraint, error) {
 	switch typ {
 	case "sql":
 		switch v := strings.ToLower(variant); v {
-		case "mysql", "postgresql", "sqlserver": // OK
+		case "sqlite":
+			c.Builtins = sqlSQLiteBuiltins
+		case "mysql", "postgresql", "sqlserver", "sqlite-internal":
+			c.Builtins = sqlBuiltins
 		default:
 			return nil, fmt.Errorf("unsupported variant for %s: %s", typ, variant)
 		}
-		c.Builtins = sqlBuiltins
 		c.Features.Add("not", "field-ref")
 	case "ucast":
 		switch v := strings.ToLower(variant); v {
@@ -194,9 +196,10 @@ func (cs *ConstraintSet) String() string {
 }
 
 var (
-	// So far, we don't need to differentiate between the SQL dialects,
-	// they all can do the Set we currently translate.
 	sqlBuiltins = allBuiltins
+
+	// sqlite doesn't support startswith/endswith/contains
+	sqlSQLiteBuiltins = ucastBuiltins.Clone().Add("internal.member_2")
 
 	ucastBuiltins = NewSet(
 		"eq",

@@ -12,8 +12,8 @@ filter.helper(query, select, tables, opts) := results if {
 	mappings := object.get(opts, "mappings", {})
 	conditions = rego.compile({
 		"query": query,
-		"target": "sql+mysql",
-		"mappings": {"mysql": mappings},
+		"target": "sql+sqlite-internal",
+		"mappings": {"sqlite-internal": mappings},
 	})
 	print_debug(debug, "rego.compile response: %v", [conditions])
 	results := list(debug, db, select, conditions.sql)

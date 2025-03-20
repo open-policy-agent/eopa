@@ -3,6 +3,7 @@ package builtins
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"io"
 	"strings"
@@ -543,9 +544,34 @@ func init() {
 
 	mysql.SetLogger(null{})
 	snowflake.GetLogger().SetOutput(io.Discard)
+
+	// register our styra-internal functions
+	sqlite.RegisterDeterministicScalarFunction("styra_startswith", 2, arity2StringFunc(strings.HasPrefix))
+	sqlite.RegisterDeterministicScalarFunction("styra_endswith", 2, arity2StringFunc(strings.HasSuffix))
+	sqlite.RegisterDeterministicScalarFunction("styra_contains", 2, arity2StringFunc(strings.Contains))
 }
 
 // Suppress error messages from Go MySQL driver like "[mysql] 2023/07/27 15:59:30 packets.go:37: unexpected EOF"
 type null struct{}
 
 func (null) Print(...any) {}
+
+func arity2StringFunc(f func(string, string) bool) func(*sqlite.FunctionContext, []driver.Value) (driver.Value, error) {
+	return func(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+		if args[0] == nil || args[1] == nil {
+			return nil, nil
+		}
+
+		a, ok := args[0].(string)
+		if !ok {
+			return nil, errors.New("arg[0] must be a string")
+		}
+
+		b, ok := args[1].(string)
+		if !ok {
+			return nil, errors.New("arg[1] must be a string")
+		}
+
+		return f(a, b), nil
+	}
+}

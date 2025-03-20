@@ -412,6 +412,42 @@ include if input.name != "apple"`,
 			},
 		},
 		{
+			note:   "invalid builtin: startswith (sqlite)",
+			rego:   `include if startswith(input.fruits.name, "app")`,
+			target: "application/vnd.styra.sql.sqlite+json",
+			errors: []Error{
+				{
+					Code:     "pe_fragment_error",
+					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
+					Message:  "invalid builtin `startswith`: unsupported for SQL (sqlite)",
+				},
+			},
+		},
+		{
+			note:   "invalid builtin: endswith (sqlite)",
+			rego:   `include if endswith(input.fruits.name, "ple")`,
+			target: "application/vnd.styra.sql.sqlite+json",
+			errors: []Error{
+				{
+					Code:     "pe_fragment_error",
+					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
+					Message:  "invalid builtin `endswith`: unsupported for SQL (sqlite)",
+				},
+			},
+		},
+		{
+			note:   "invalid builtin: contains (sqlite)",
+			rego:   `include if contains(input.fruits.name, "pp")`,
+			target: "application/vnd.styra.sql.sqlite+json",
+			errors: []Error{
+				{
+					Code:     "pe_fragment_error",
+					Location: ast.NewLocation(nil, "filters.rego", 3, 12),
+					Message:  "invalid builtin `contains`: unsupported for SQL (sqlite)",
+				},
+			},
+		},
+		{
 			note: "invalid builtin",
 			rego: `include if object.get(input, ["fruits", "colour"], "grey") == input.colour`,
 			errors: []Error{

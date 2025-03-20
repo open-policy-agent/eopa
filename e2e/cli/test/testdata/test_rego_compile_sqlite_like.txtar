@@ -1,6 +1,12 @@
 # This test documents the edge case related to LIKE in SQLite:
 # It's case-insensitive. Our translation logic does not expect
-# that: the translation is therefore incorrect.
+# that: the translation of startwith into LIKE would therefore
+# be incorrect.
+# Instead, we have internal-only builtins
+#  * styra_startswith(string, string): bool
+#  * styra_endswith(string, string): bool
+#  * styra_contains(string, string): bool
+# which check their strings case-sensitively.
 exec eopa test .
 ! stderr .
 cmp stdout exp/stdout
@@ -13,6 +19,10 @@ package filters
 # custom:
 #   unknowns: ["input.fruits"]
 include if startswith(input.fruits.name, input.fruit_prefix)
+
+include if endswith(input.fruits.name, input.fruit_suffix)
+
+include if contains(input.fruits.name, input.fruit_infix)
 -- filters_test.rego --
 package filters
 
@@ -24,17 +34,31 @@ fruits_table := [
 	{"id": 2, "name": "cherry"},
 ]
 
-test_owner_can_see_their_fruit_excluding_applets if {
+test_owner_can_see_their_fruit if {
 	filtered := filter.helper(
 		"data.filters.include",
 		"SELECT fruits.name FROM fruits",
-		{
-			"fruits": fruits_table,
-		},
+		{"fruits": fruits_table},
 		{"debug": true},
 	) with input.fruit_prefix as "APP"
-	count(filtered) == 1
+		with input.fruit_suffix as "ANA"
+		with input.fruit_infix as "RR"
+	count(filtered) == 0
+}
+
+test_owner_can_see_their_fruit_lowercase if {
+	filtered := filter.helper(
+		"data.filters.include",
+		"SELECT fruits.name FROM fruits",
+		{"fruits": fruits_table},
+		{"debug": true},
+	) with input.fruit_prefix as "app"
+		with input.fruit_suffix as "ana"
+		with input.fruit_infix as "rr"
+	count(filtered) == 3
 	{"name": "apple"} in filtered
+	{"name": "banana"} in filtered
+	{"name": "cherry"} in filtered
 }
 -- exp/stdout --
-PASS: 1/1
+PASS: 2/2

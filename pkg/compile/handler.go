@@ -55,6 +55,7 @@ const (
 	sqlPostgresJSON  = "application/vnd.styra.sql.postgresql+json"
 	sqlMySQLJSON     = "application/vnd.styra.sql.mysql+json"
 	sqlSQLServerJSON = "application/vnd.styra.sql.sqlserver+json"
+	sqliteJSON       = "application/vnd.styra.sql.sqlite+json"
 )
 
 func CompileAPIKnownHeaders() []string {
@@ -67,6 +68,7 @@ func CompileAPIKnownHeaders() []string {
 		sqlPostgresJSON,
 		sqlMySQLJSON,
 		sqlSQLServerJSON,
+		sqliteJSON,
 	}
 }
 
@@ -347,6 +349,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Postgres *CompileResult `json:"postgresql,omitempty"`
 			MySQL    *CompileResult `json:"mysql,omitempty"`
 			MSSQL    *CompileResult `json:"sqlserver,omitempty"`
+			SQLite   *CompileResult `json:"sqlite,omitempty"`
 		}{}
 
 		for _, targetTuple := range multi {
@@ -376,6 +379,8 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					targets.MySQL = &CompileResult{Query: sql}
 				case "sqlserver":
 					targets.MSSQL = &CompileResult{Query: sql}
+				case "sqlite":
+					targets.SQLite = &CompileResult{Query: sql}
 				}
 			}
 		}
@@ -722,6 +727,8 @@ func parseHeader(accept string) (string, string, error) {
 		return "sql", "mysql", nil
 	case sqlSQLServerJSON:
 		return "sql", "sqlserver", nil
+	case sqliteJSON:
+		return "sql", "sqlite", nil
 	}
 
 	return "", "", fmt.Errorf("unsupported header: %s", accepts[0])
