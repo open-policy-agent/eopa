@@ -317,12 +317,12 @@ jobs:
         env:
           SKIP_IMAGES: ${{ steps.changes.outputs.apko == 'false' }}
       - name: Upload image tarball
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # ratchet:actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
         with:
           name: image
           path: local.tar
       - name: Upload debug image tarball
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # ratchet:actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
         with:
           name: image-debug
           path: local-debug.tar
@@ -375,7 +375,7 @@ jobs:
           GITHUB_TOKEN: ${{ env.GH_API_TOKEN }}
           EOPA_TELEMETRY_URL: http://127.0.0.1:9191
       - name: Upload binary tarball
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # ratchet:actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
         with:
           name: binary
           path: dist/linux-windows-build_linux_amd64_v1/eopa
@@ -592,7 +592,7 @@ jobs:
           GOOS: ${{ matrix.GOOS }}
           GOARCH: ${{ matrix.GOARCH }}
       - name: Upload cross-build binaries
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # ratchet:actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
         with:
           name: cross-binaries-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
           path: bins

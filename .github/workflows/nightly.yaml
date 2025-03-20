@@ -55,7 +55,7 @@ jobs:
           SKIP_IMAGES: true
         working-directory: enterprise-opa
       - name: Upload image tarball
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # ratchet:actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
         with:
           name: image
           path: enterprise-opa/local.tar
@@ -221,7 +221,7 @@ jobs:
           HOSTNAME: github.actions.local
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
       - name: Upload release artifacts
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # ratchet:actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
         with:
           name: binaries
           path: |
@@ -284,7 +284,7 @@ jobs:
           GOOS: ${{ matrix.GOOS }}
           GOARCH: ${{ matrix.GOARCH }}
       - name: Upload test binaries
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # ratchet:actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
         with:
           name: cross-binaries-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
           path: bins
