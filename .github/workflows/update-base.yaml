@@ -10,8 +10,7 @@ jobs:
     name: Prereqs
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
-      - uses: ./.github/actions/prereqs
+      - uses: StyraInc/styra-init-action@main # ratchet:exclude
 
   deploy:
     name: Build and push base images
