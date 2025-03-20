@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -21,6 +22,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/microsoft/go-mssqldb"
+	_ "modernc.org/sqlite"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/google/go-cmp/cmp"
@@ -52,6 +54,7 @@ const (
 	Postgres DBType = "postgresql"
 	MySQL    DBType = "mysql"
 	MSSQL    DBType = "sqlserver"
+	SQLite   DBType = "sqlite"
 )
 
 // TestConfig holds test configuration
@@ -108,10 +111,17 @@ var dbConfigs = map[DBType]containerConfig{
 		waitFor:     wait.ForLog("Recovery is complete."),
 		urlTemplate: "sqlserver://sa:MyStr0ngPassw0rd!@%s:%s",
 	},
+	SQLite: {
+		urlTemplate: ":memory:",
+	},
 }
 
 // setupTestContainer creates and starts a database container
 func setupTestContainer(ctx context.Context, dbType DBType) (testcontainers.Container, string, error) {
+	if dbType == SQLite {
+		return nil, ":memory:", nil
+	}
+
 	config := dbConfigs[dbType]
 
 	containerReq := testcontainers.ContainerRequest{
@@ -158,6 +168,14 @@ func getCreateTableSQL(dbType DBType) string {
 		return `
         CREATE TABLE IF NOT EXISTS fruit (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            colour VARCHAR(100) NOT NULL,
+            price INT
+        )`
+	case SQLite:
+		return `
+        CREATE TABLE IF NOT EXISTS fruit (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             name VARCHAR(100) NOT NULL,
             colour VARCHAR(100) NOT NULL,
             price INT
@@ -231,12 +249,18 @@ func setupDB(t *testing.T, dbType DBType) (*TestConfig, func()) {
 	if err != nil {
 		t.Fatalf("failed to connect to database: %v", err)
 	}
+	if dbType == SQLite {
+		db.SetMaxOpenConns(1)
+	}
 
 	if err := initializeTestData(db, dbType); err != nil {
 		t.Fatalf("failed to initialize test data: %v", err)
 	}
 
 	cleanup := func() {
+		if container == nil {
+			return
+		}
 		if err := db.Close(); err != nil {
 			t.Errorf("failed to close database connection: %v", err)
 		}
@@ -288,7 +312,7 @@ func toFruitRows(xs []fruitJSON) []fruitRow {
 // "include" query that filters rows from a table based on some conditions.
 // The conditions are defined in the data policy.
 func TestCompileHappyPathE2E(t *testing.T) {
-	dbTypes := []DBType{Postgres, MySQL, MSSQL}
+	dbTypes := []DBType{Postgres, MySQL, MSSQL, SQLite}
 
 	eopa, _, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort, "")
 	if err := eopa.Start(); err != nil {
@@ -322,6 +346,7 @@ func TestCompileHappyPathE2E(t *testing.T) {
 		policy  string
 		expRows []fruitRow
 		prisma  bool
+		exclude []DBType
 	}{
 		{
 			name:    "no conditions",
@@ -368,28 +393,33 @@ func TestCompileHappyPathE2E(t *testing.T) {
 			policy:  `include if startswith(input.fruits.name, "app")`,
 			expRows: []fruitRow{apple},
 			prisma:  true,
+			exclude: []DBType{SQLite},
 		},
 		{
 			name:    "simple contains",
 			policy:  `include if contains(input.fruits.name, "a")`,
 			expRows: []fruitRow{apple, banana, orange},
 			prisma:  true,
+			exclude: []DBType{SQLite},
 		},
 		{
 			name:    "startswith + escaping '_'",
 			policy:  `include if startswith(input.fruits.name, "ap_")`, // if "_" wasn't escaped properly, it would match "apple"
 			expRows: nil,
+			exclude: []DBType{SQLite},
 		},
 		{
 			name:    "startswith + escaping '%'",
 			policy:  `include if startswith(input.fruits.name, "%ppl")`, // if "%" wasn't escaped properly, it would match "apple"
 			expRows: nil,
+			exclude: []DBType{SQLite},
 		},
 		{
 			name:    "simple endswith",
 			policy:  `include if endswith(input.fruits.name, "le")`,
 			expRows: []fruitRow{apple},
 			prisma:  true,
+			exclude: []DBType{SQLite},
 		},
 		{
 			name:    "internal.member_2",
@@ -470,6 +500,9 @@ func TestCompileHappyPathE2E(t *testing.T) {
 				}
 				t.Run("db/"+tt.name, func(t *testing.T) {
 					t.Parallel()
+					if slices.Contains(tt.exclude, dbType) {
+						t.Skip("skipped via exclude")
+					}
 
 					// second, query the compile API
 					mappings := make(map[string]any, 1)
