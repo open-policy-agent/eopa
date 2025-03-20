@@ -640,7 +640,7 @@ jobs:
       - uses: turtlequeue/setup-babashka@2d4df498c7a578b4f3e906283f9af913590bdec7 # ratchet:turtlequeue/setup-babashka@v1.7.0
         # NOTE(sr): mise-install doesn't work reliably on windows, it seems. This action worked well before.
         with:
-          babashka-version: 1.12.195
+          babashka-version: 1.12.197
       - run: bb bins/cross-run
         env:
           EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
