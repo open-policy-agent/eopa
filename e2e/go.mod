@@ -32,6 +32,7 @@ require (
 	github.com/twmb/franz-go/pkg/kadm v1.15.0
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
+	modernc.org/sqlite v1.36.1
 )
 
 require (
@@ -141,7 +142,7 @@ require (
 	github.com/godbus/dbus v4.1.0+incompatible // indirect
 	github.com/gofrs/uuid/v5 v5.3.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
@@ -172,7 +173,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
 	github.com/hashicorp/vault/api/auth/approle v0.9.0 // indirect
-	github.com/huandu/go-sqlbuilder v1.34.0 // indirect
+	github.com/huandu/go-sqlbuilder v1.35.0 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/influxdata/go-syslog/v3 v3.0.0 // indirect
 	github.com/itchyny/gojq v0.12.17 // indirect
@@ -315,7 +316,6 @@ require (
 	modernc.org/libc v1.61.13 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.8.2 // indirect
-	modernc.org/sqlite v1.36.1 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
