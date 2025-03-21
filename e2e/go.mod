@@ -20,7 +20,7 @@ require (
 	github.com/microsoft/go-mssqldb v1.8.0
 	github.com/minio/minio-go/v7 v7.0.88
 	github.com/open-policy-agent/opa v1.2.0
-	github.com/redpanda-data/benthos/v4 v4.45.1
+	github.com/redpanda-data/benthos/v4 v4.46.0
 	github.com/redpanda-data/connect/v4 v4.50.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
