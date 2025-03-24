@@ -27,6 +27,10 @@ jobs:
       QUILL_NOTARY_KEY: ${{ secrets.QUILL_NOTARY_KEY }}
       QUILL_NOTARY_KEY_ID: ${{ secrets.QUILL_NOTARY_KEY_ID }}
       QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
+      CERT_ID: ${{ secrets.CERT_ID }}
+      SM_API_KEY: ${{ secrets.SM_API_KEY }}
+      SM_CLIENT_CERT_FILE: ${{ github.workspace }}/bot-client-auth-cert.p12
+      SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # ratchet:smorimoto/tune-github-hosted-runner-network@v1
@@ -63,6 +67,22 @@ jobs:
         run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/quill/main/install.sh |\
           sh -s -- -b /usr/local/bin
+      - name: Set up Java
+        uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # ratchet:actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: "temurin"
+      - name: Download Jsign + add script to PATH
+        run: |
+          wget https://github.com/ebourg/jsign/releases/download/7.1/jsign-7.1.jar
+          echo "#!/usr/bin/env bash" >> jsign
+          echo "java -jar $GITHUB_WORKSPACE/jsign-7.1.jar \"\$@\"" >> jsign
+          chmod +x jsign
+          echo $GITHUB_WORKSPACE >> $GITHUB_PATH
+      - name: Extract client authentication cert
+        run: echo $SM_CLIENT_CERT_FILE_BASE64 | base64 --decode > bot-client-auth-cert.p12
+        env:
+          SM_CLIENT_CERT_FILE_BASE64: ${{ secrets.SM_CLIENT_CERT_FILE_BASE64 }}
       - name: Run GoReleaser
         # NOTE(sr): not calling the Makefile target here, since we've checked out a previous tag
         run: |
@@ -77,3 +97,39 @@ jobs:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
           RELEASE_NOTES: ../release-notes.md
           EOPA_TELEMETRY_URL: https://load-telemetry.corp.styra.com
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: windows-binaries
+          if-no-files-found: error
+          path: |
+            enterprise-opa/dist/windows*/*.exe
+
+  verify-authenticode-signature:
+    name: Verify signature
+    runs-on: ubuntu-22.04
+    needs: goreleaser
+    steps:
+      - name: Tune GitHub-hosted runner network
+        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # ratchet:smorimoto/tune-github-hosted-runner-network@v1
+      - name: Check out code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download generated artifacts
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
+        with:
+          name: windows-binaries
+          path: windows-binaries
+      - name: Get Root CA certificate.
+        run: curl -x GET https://cacerts.digicert.com/DigiCertTrustedRootG4.crt.pem > rootca.pem
+      - name: Install osslsigncode
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y osslsigncode
+      - name: Verify signature
+        run: |
+          for file in $(ls windows-binaries/**/*.exe); do
+            echo "Processing $file"
+            osslsigncode verify -CAfile rootca.pem -TSA-CAfile rootca.pem $file
+          done
