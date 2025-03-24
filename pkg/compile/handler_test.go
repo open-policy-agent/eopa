@@ -69,7 +69,7 @@ func TestCompileHandlerMultiTarget(t *testing.T) {
 			},
 		},
 	}
-	resp := evalReq(t, chnd, payload, target)
+	resp, httpResp := evalReq(t, chnd, payload, target)
 
 	{ // check results
 		if exp, act := "WHERE ((tickets.tenant = E'2' AND users.name = E'caesar') OR (tickets.tenant = E'2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))", resp.Result.Postgres.Query; exp != act {
@@ -127,6 +127,11 @@ func TestCompileHandlerMultiTarget(t *testing.T) {
 			t.Fatalf("unexpected metrics: want %v, got %v", exp, act)
 		}
 	}
+	{ // and response content-type
+		if exp, act := target, httpResp.Header.Get("Content-Type"); exp != act {
+			t.Errorf("expected content-type %s, got %s", exp, act)
+		}
+	}
 }
 
 func resetCaches(t testing.TB, s storage.Store) {
@@ -168,8 +173,8 @@ func TestCompileHandlerMetrics(t *testing.T) {
 				"input": input,
 				"query": query,
 			}
-			{
-				resp := evalReq(t, chnd, payload, target)
+			{ // check metrics
+				resp, _ := evalReq(t, chnd, payload, target)
 				if exp, act := map[string]float64{
 					"timer_eval_constraints_ns":      0,
 					"timer_extract_annotations_ns":   0,
@@ -186,16 +191,17 @@ func TestCompileHandlerMetrics(t *testing.T) {
 			}
 
 			{ // Redo without resetting the cache: no extraction happens
-				resp := evalReq(t, chnd, payload, target)
+				resp, _ := evalReq(t, chnd, payload, target)
 				if n, ok := resp.Metrics["timer_extract_annotations_ns"]; ok {
 					t.Errorf("unexpected metric 'timer_extract_annotations_ns': %v", n)
 				}
 			}
 
-			// Redo without resetting the cache: no extraction happens
-			resp2 := evalReq(t, chnd, payload, target)
-			if n, ok := resp2.Metrics["timer_extract_annotations_ns"]; ok {
-				t.Errorf("unexpected metric 'timer_extract_annotations_ns': %v", n)
+			{ // Redo without resetting the cache: no extraction happens
+				resp, _ := evalReq(t, chnd, payload, target)
+				if n, ok := resp.Metrics["timer_extract_annotations_ns"]; ok {
+					t.Errorf("unexpected metric 'timer_extract_annotations_ns': %v", n)
+				}
 			}
 		})
 	}
@@ -313,7 +319,7 @@ include if {
 				"input": tc.input,
 				"query": query,
 			}
-			resp := evalReq(t, chnd, payload, target)
+			resp, _ := evalReq(t, chnd, payload, target)
 			if exp, act := "WHERE foo.col = TRUE", resp.Result.Query; exp != act {
 				t.Errorf("response: expected %v, got %v", exp, act)
 			}
@@ -345,7 +351,7 @@ include if input.fruit.cost < input.max
 		"input": input,
 		"query": query,
 	}
-	resp := evalReq(t, chnd, payload, target)
+	resp, _ := evalReq(t, chnd, payload, target)
 
 	{ // check results
 		if exp, act := "WHERE fruits.name = E'apple'", resp.Result.Query; exp != act {
@@ -401,7 +407,7 @@ func setup(t testing.TB, rego []byte, data any) (http.Handler, *plugins.Manager)
 	return chnd, trt.Runtime.Manager
 }
 
-func evalReq(t testing.TB, h http.Handler, payload map[string]any, target string) Response {
+func evalReq(t testing.TB, h http.Handler, payload map[string]any, target string) (Response, *http.Response) {
 	t.Helper()
 
 	jsonData, err := json.Marshal(payload)
@@ -426,5 +432,5 @@ func evalReq(t testing.TB, h http.Handler, payload map[string]any, target string
 		t.Fatalf("unmarshal response: %v", err)
 	}
 
-	return resp
+	return resp, rr.Result()
 }

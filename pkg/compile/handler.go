@@ -3,6 +3,7 @@ package compile
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -56,6 +57,9 @@ const (
 	sqlMySQLJSON     = "application/vnd.styra.sql.mysql+json"
 	sqlSQLServerJSON = "application/vnd.styra.sql.sqlserver+json"
 	sqliteJSON       = "application/vnd.styra.sql.sqlite+json"
+
+	// back-compat
+	applicationJSON = "application/json"
 )
 
 func CompileAPIKnownHeaders() []string {
@@ -71,6 +75,8 @@ func CompileAPIKnownHeaders() []string {
 		sqliteJSON,
 	}
 }
+
+var allKnownHeaders = append(CompileAPIKnownHeaders(), applicationJSON)
 
 type CompileResult struct {
 	Query any `json:"query"`
@@ -212,11 +218,13 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	target, dialect, err := parseHeader(r.Header.Get("Accept"))
+	contentType, err := sanitizeHeader(r.Header.Get("Accept"))
 	if err != nil {
 		writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, "Accept header: %s", err.Error()))
 		return
 	}
+
+	target, dialect := targetDialect(contentType)
 
 	// We require evaluating non-det builtins for the translated targets:
 	// We're not able to meaningfully tanslate things like http.send, sql.send, or
@@ -295,7 +303,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Support: pq.Support,
 		}
 		result.Result = &i
-		fin(w, result, m, includeMetrics(r), includeInstrumentation)
+		fin(w, result, applicationJSON, m, includeMetrics(r), includeInstrumentation, pretty(r))
 		return
 	}
 
@@ -415,7 +423,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	m.Timer(timerTranslateQueries).Stop()
 	m.Timer(metrics.ServerHandler).Stop()
-	fin(w, result, m, includeMetrics(r), includeInstrumentation)
+	fin(w, result, contentType, m, includeMetrics(r), includeInstrumentation, pretty(r))
 
 	if h.dl != nil {
 		unk := make([]string, len(unknowns))
@@ -490,13 +498,26 @@ func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.
 
 func fin(w http.ResponseWriter,
 	result CompileResponseV1,
+	contentType string,
 	metrics metrics.Metrics,
-	includeMetrics, includeInstrumentation bool,
+	includeMetrics, includeInstrumentation, pretty bool,
 ) {
 	if includeMetrics || includeInstrumentation {
 		result.Metrics = metrics.All()
 	}
-	writer.JSONOK(w, result, true)
+
+	enc := json.NewEncoder(w)
+	if pretty {
+		enc.SetIndent("", "  ")
+	}
+
+	w.Header().Add("Content-Type", contentType)
+	// If Encode() calls w.Write() for the first time, it'll set the HTTP status
+	// to 200 OK.
+	if err := enc.Encode(result); err != nil {
+		writer.ErrorAuto(w, err)
+		return
+	}
 }
 
 func queriesToUCAST(queries []ast.Body, mappings map[string]any) any {
@@ -698,45 +719,56 @@ func unknownsFromAnnotationsSet(as *ast.AnnotationSet, rule *ast.Rule) ([]*ast.T
 	return unknowns, errs
 }
 
-func parseHeader(accept string) (string, string, error) {
+func sanitizeHeader(accept string) (string, error) {
 	if accept == "" {
-		return "", "", errors.New("missing required header")
+		return "", errors.New("missing required header")
 	}
 
-	accepts := strings.Split(accept, ",")
-	if len(accepts) != 1 {
-		return "", "", errors.New("multiple headers not supported")
+	if strings.Contains(accept, ",") {
+		return "", errors.New("multiple headers not supported")
 	}
 
-	switch accepts[0] {
-	case "application/json":
-		return "", "", nil
+	if !slices.Contains(allKnownHeaders, accept) {
+		return "", fmt.Errorf("unsupported header: %s", accept)
+	}
+
+	return accept, nil
+}
+
+func targetDialect(accept string) (string, string) {
+	switch accept {
+	case applicationJSON:
+		return "", ""
 	case multiTargetJSON:
-		return "multi", "", nil
+		return "multi", ""
 	case ucastAllJSON:
-		return "ucast", "all", nil
+		return "ucast", "all"
 	case ucastMinimalJSON:
-		return "ucast", "minimal", nil
+		return "ucast", "minimal"
 	case ucastPrismaJSON:
-		return "ucast", "prisma", nil
+		return "ucast", "prisma"
 	case ucastLINQJSON:
-		return "ucast", "linq", nil
+		return "ucast", "linq"
 	case sqlPostgresJSON:
-		return "sql", "postgresql", nil
+		return "sql", "postgresql"
 	case sqlMySQLJSON:
-		return "sql", "mysql", nil
+		return "sql", "mysql"
 	case sqlSQLServerJSON:
-		return "sql", "sqlserver", nil
+		return "sql", "sqlserver"
 	case sqliteJSON:
-		return "sql", "sqlite", nil
+		return "sql", "sqlite"
 	}
 
-	return "", "", fmt.Errorf("unsupported header: %s", accepts[0])
+	panic("unreachable")
 }
 
 // taken from v1/server/server.go
 func includeMetrics(r *http.Request) bool {
 	return getBoolParam(r.URL, types.ParamMetricsV1, true)
+}
+
+func pretty(r *http.Request) bool {
+	return getBoolParam(r.URL, types.ParamPrettyV1, true)
 }
 
 func getBoolParam(url *url.URL, name string, ifEmpty bool) bool {

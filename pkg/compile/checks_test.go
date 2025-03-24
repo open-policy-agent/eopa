@@ -865,7 +865,7 @@ include if input.fruits.colour == input.colour
 				}
 			}
 
-			{
+			{ // compare errors
 				exp := tc.errors
 				var resp struct {
 					Errors []Error `json:"errors"`
@@ -884,8 +884,7 @@ include if input.fruits.colour == input.colour
 				}
 			}
 
-			{
-				// compare results
+			{ // compare results
 				var resp struct {
 					Result struct {
 						Query map[string]any `json:"query"`
@@ -898,6 +897,15 @@ include if input.fruits.colour == input.colour
 				act := resp.Result.Query
 				if diff := go_cmp.Diff(tc.result, act); diff != "" {
 					t.Errorf("response unexpected (-want, +got):\n%s", diff)
+				}
+			}
+
+			{ // check content-type (unless there are errors)
+				if len(tc.errors) == 0 {
+					resp := rr.Result()
+					if exp, act := target, resp.Header.Get("Content-Type"); exp != act {
+						t.Errorf("expected content-type %s, got %s", exp, act)
+					}
 				}
 			}
 		})
