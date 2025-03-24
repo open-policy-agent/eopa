@@ -37,7 +37,6 @@ endif
 # only release images are tagged "latest"
 export KO_DOCKER_REPO=ghcr.io/styrainc/enterprise-opa
 KO_BUILD := ko build . --image-label org.opencontainers.image.source=https://github.com/StyraInc/enterprise-opa
-KO_BUILD_LOCAL := KO_DOCKER_REPO=ko.local $(KO_BUILD) --base-import-paths
 KO_BUILD_DEPLOY := $(KO_BUILD) --bare --platform=linux/amd64,linux/arm64
 
 BUILD_DIR := $(shell echo `pwd`)
@@ -97,7 +96,8 @@ run: build-local
 	docker run -e EOPA_LICENSE_TOKEN -e EOPA_LICENSE_KEY -p 8181:8181 -v $$(pwd):/cwd -w /cwd ko.local/enterprise-opa-private:edge run --server --log-level debug
 
 # build local container image (tagged)
-build-local: build
+build-local:
+	KO_DEFAULTBASEIMAGE=$(KO_BASE_IMAGE_LOCAL_REF) $(KO_BUILD) --push=false --tarball=local.tar --platform "linux/$(ARCH)"
 	skopeo copy docker-archive:local.tar docker-daemon:ko.local/enterprise-opa-private:edge
 
 # build container.
