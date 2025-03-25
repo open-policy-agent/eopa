@@ -9,17 +9,17 @@ jobs:
     name: Prereqs
     runs-on: ubuntu-24.04
     steps:
-      - uses: StyraInc/styra-init-action@main # ratchet:exclude
+      - uses: StyraInc/styra-init-action@main
 
   cleanup:
     needs: prereqs
     runs-on: ubuntu-latest
     steps:
       - name: Tune GitHub-hosted runner network
-        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # ratchet:smorimoto/tune-github-hosted-runner-network@v1
+        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
 
       - name: Check out code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Cleanup
         run: |
