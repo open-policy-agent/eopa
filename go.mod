@@ -110,7 +110,7 @@ require (
 	google.golang.org/grpc v1.71.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/h2non/gock.v1 v1.1.2
-	modernc.org/sqlite v1.36.1
+	modernc.org/sqlite v1.36.2
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -227,7 +227,7 @@ require (
 	github.com/google/flatbuffers v24.12.23+incompatible // indirect
 	github.com/google/go-dap v0.12.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/google/pprof v0.0.0-20240409012703-83162a5b38cd // indirect
+	github.com/google/pprof v0.0.0-20250317173921-a4b03ec1a45e // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
