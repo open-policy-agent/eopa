@@ -1,46 +1,59 @@
+version: "2"
 run:
-  timeout: 5m
   build-tags:
     - use_opa_fork
-linters-settings:
-  lll:
-    line-length: 200
-
-  revive:
-    rules:
-      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unused-parameter
-      - name: unused-parameter
-        severity: warning
-        disabled: false
-        arguments:
-          - allowRegex: "^_"
-
-output:
-  print-issued-lines: true
-  sort-results: true
-
 linters:
-  disable-all: true
+  default: none
   enable:
     - govet
     - ineffassign
-    - revive # replacement for golint
+    - prealloc
+    - revive
+    - staticcheck
+    - unused
+  settings:
+    lll:
+      line-length: 200
+    revive:
+      rules:
+        - name: unused-parameter
+          arguments:
+            - allowRegex: ^_
+          severity: warning
+          disabled: false
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: (.+)\.go$
+        text: 'var-naming: don''t use an underscore in package name'
+      - path: (.+)\.go$
+        text: 'var-naming: var (.*Json.*) should be '
+      - path: (.+)\.go$
+        text: 'var-naming: type (.*Json.*) should be '
+      - path: (.+)\.go$
+        text: 'unexported-return: exported method (.*) returns unexported type'
+      - path: (.+)\.go$
+        text: 'exported: type name will be used (.*) by other packages, and that stutters'
+    paths:
+      - pkg/json/internal
+      - internal/benthos
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
     - gofmt
     - goimports
-    - unused
-    - typecheck
-    - staticcheck
-    - gosimple
-    - prealloc
-
-issues:
-  exclude:
-    - "var-naming: don't use an underscore in package name"
-    - "var-naming: var (.*Json.*) should be "
-    - "var-naming: type (.*Json.*) should be "
-    - "unexported-return: exported method (.*) returns unexported type"
-    - "exported: type name will be used (.*) by other packages, and that stutters"
-    #- 'SA1019: "github.com/open-policy-agent/opa/.*" is deprecated'
-  exclude-dirs:
-    - pkg/json/internal # copied from stdlib
-    - internal/benthos # internalized benthos code
+  exclusions:
+    generated: lax
+    paths:
+      - pkg/json/internal
+      - internal/benthos
+      - third_party$
+      - builtin$
+      - examples$

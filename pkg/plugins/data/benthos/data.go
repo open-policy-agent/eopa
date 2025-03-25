@@ -35,7 +35,7 @@ var _ types.Triggerer = (*Data)(nil)
 
 func (c *Data) Start(ctx context.Context) error {
 	c.exit = make(chan struct{})
-	if err := c.Rego.Prepare(ctx); err != nil {
+	if err := c.Prepare(ctx); err != nil {
 		return fmt.Errorf("prepare rego_transform: %w", err)
 	}
 	if err := storage.Txn(ctx, c.manager.Store, storage.WriteParams, func(txn storage.Transaction) error {
@@ -83,7 +83,7 @@ func (c *Data) consumePulsar(ctx context.Context, mb service.MessageBatch) error
 			return err
 		}
 	}
-	if err := c.Rego.Ingest(ctx, c.Path(), batch); err != nil {
+	if err := c.Ingest(ctx, c.Path(), batch); err != nil {
 		c.log.Error("plugin %s at %s: %v", c.Name(), c.Config.path, err)
 	}
 	c.log.WithFields(map[string]any{

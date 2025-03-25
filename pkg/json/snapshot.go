@@ -76,15 +76,15 @@ func (s snapshot) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (s snapshot) Diff(other Collections) (*utils.BytesReader, int64, bool, error) {
-	return diff(s.ObjectBinary.content, s.Len(), other.(*snapshot).ObjectBinary.content)
+	return diff(s.content, s.Len(), other.(*snapshot).content)
 }
 
 func (s snapshot) Writable() WritableCollections {
-	return &writableSnapshot{data: s.ObjectBinary.Clone(true).(Object)}
+	return &writableSnapshot{data: s.Clone(true).(Object)}
 }
 
 func (s snapshot) Reader() *utils.MultiReader {
-	if reader, ok := s.ObjectBinary.content.(*snapshotObjectReader); ok {
+	if reader, ok := s.content.(*snapshotObjectReader); ok {
 		return reader.content
 	}
 
@@ -92,12 +92,12 @@ func (s snapshot) Reader() *utils.MultiReader {
 }
 
 func (s snapshot) DeltaReader() *utils.MultiReader {
-	if reader, ok := s.ObjectBinary.content.(*deltaObjectReader); ok {
+	if reader, ok := s.content.(*deltaObjectReader); ok {
 		return reader.delta
 	}
 
-	if reader, ok := s.ObjectBinary.content.(*deltaPatchObjectReader); ok {
-		delta, err := reader.deltaPatch.serialize()
+	if reader, ok := s.content.(*deltaPatchObjectReader); ok {
+		delta, err := reader.serialize()
 		checkError(err)
 
 		return utils.NewMultiReaderFromBytesReader(delta)
@@ -151,16 +151,16 @@ func (s *snapshot) WriteMeta(name string, key string, value string) bool {
 }
 
 func (s snapshot) newDeltaPatch() *deltaPatch {
-	if reader, ok := s.ObjectBinary.content.(*snapshotObjectReader); ok {
+	if reader, ok := s.content.(*snapshotObjectReader); ok {
 		return newDeltaPatch(reader.content, s.slen, nil, s.objects)
 	}
 
-	if reader, ok := s.ObjectBinary.content.(*deltaPatchObjectReader); ok {
+	if reader, ok := s.content.(*deltaPatchObjectReader); ok {
 		// Keep extending the patch with new writes instead of creating new.
 		return reader.deltaPatch
 	}
 
-	reader := s.ObjectBinary.content.(*deltaObjectReader)
+	reader := s.content.(*deltaObjectReader)
 	return newDeltaPatch(reader.snapshot, s.slen, reader.delta, s.objects)
 }
 

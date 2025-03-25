@@ -16,7 +16,6 @@ import (
 	opa_version "github.com/open-policy-agent/opa/v1/version"
 
 	"github.com/styrainc/enterprise-opa-private/internal/license"
-	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
 	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
 	"github.com/styrainc/enterprise-opa-private/internal/version"
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
@@ -32,7 +31,7 @@ const brand = "Enterprise OPA"
 // while others actually define a --data flag.
 const dataKey = "data"
 
-func addLicenseFlags(c *cobra.Command, licenseParams *keygen.LicenseParams) {
+func addLicenseFlags(c *cobra.Command, licenseParams *license.LicenseParams) {
 	c.Flags().StringVar(&licenseParams.Key, "license-key", "", "Location of file containing EOPA_LICENSE_KEY")
 	c.Flags().StringVar(&licenseParams.Token, "license-token", "", "Location of file containing EOPA_LICENSE_TOKEN")
 }
@@ -102,7 +101,7 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 	logLevel := util.NewEnumFlag("info", []string{"debug", "info", "error"})
 	logFormat := util.NewEnumFlag("json", []string{"json", "json-pretty"})
 
-	lparams := keygen.NewLicenseParams()
+	lparams := license.NewLicenseParams()
 
 	// NOTE(sr): viper supports a bunch of config file formats, but let's decide
 	//           which formats we'd like to support, not just take them all as-is.

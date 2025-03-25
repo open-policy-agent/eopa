@@ -198,7 +198,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 			return nil, err
 		}
 	}
-	p.rt.EnableVersionCheck = !(disableTelemetry || skipVersionCheck) // either one of these disables
+	p.rt.EnableVersionCheck = !disableTelemetry && !skipVersionCheck // either one of these disables
 
 	// ints
 	for _, f := range []struct {

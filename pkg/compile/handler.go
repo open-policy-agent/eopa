@@ -141,7 +141,7 @@ func (h *hndl) SetManager(m *plugins.Manager) error {
 	if _, err := m.Store.Register(ctx, txn, storage.TriggerConfig{
 		OnCommit: func(_ context.Context, _ storage.Transaction, evt storage.TriggerEvent) {
 			if evt.PolicyChanged() {
-				h.Logger.Debug("purging unknowns cache for policy change")
+				h.Debug("purging unknowns cache for policy change")
 				h.cache.Purge()
 			}
 		}}); err != nil {
@@ -290,8 +290,8 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	h.Logger.Debug("queries %v", pq.Queries)
-	h.Logger.Debug("support %v", pq.Support)
+	h.Debug("queries %v", pq.Queries)
+	h.Debug("support %v", pq.Support)
 
 	result := CompileResponseV1{
 		Hints: qt.Hints(unknowns),
@@ -433,7 +433,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		info, err := dlog(ctx, urlPath, result.Result, orig, request, unk, m, h.manager.Store, txn)
 		if err != nil {
-			h.Logger.Error("failed to log decision: %v", err)
+			h.Error("failed to log decision: %v", err)
 			return
 		}
 		h.dl.Log(ctx, info)

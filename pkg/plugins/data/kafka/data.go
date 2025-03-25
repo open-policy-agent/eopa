@@ -38,7 +38,7 @@ var _ types.Triggerer = (*Data)(nil)
 
 func (c *Data) Start(ctx context.Context) error {
 	c.exit = make(chan struct{})
-	if err := c.Rego.Prepare(ctx); err != nil {
+	if err := c.Prepare(ctx); err != nil {
 		return fmt.Errorf("prepare rego_transform: %w", err)
 	}
 	if err := storage.Txn(ctx, c.manager.Store, storage.WriteParams, func(txn storage.Transaction) error {
@@ -135,7 +135,7 @@ LOOP:
 		case <-c.exit:
 			break LOOP
 		default:
-			if !c.Rego.Ready() { // don't fetch and drop if we're not ready
+			if !c.Ready() { // don't fetch and drop if we're not ready
 				time.Sleep(100 * time.Millisecond)
 				continue
 			}
@@ -199,7 +199,7 @@ func (c *Data) transformAndSave(ctx context.Context, n int, iter *kgo.FetchesRec
 		batch[i] = mapFromRecord(record)
 		i++
 	}
-	if err := c.Rego.Ingest(ctx, c.Path(), batch); err != nil {
+	if err := c.Ingest(ctx, c.Path(), batch); err != nil {
 		c.log.Error("plugin %s at %s: %v", c.Name(), c.Config.path, err)
 	}
 }

@@ -12,7 +12,7 @@ concurrency:
 
 env:
   GOPRIVATE: github.com/StyraInc/opa
-  GOLANGCI_VERSION: 1.64.4
+  GOLANGCI_VERSION: 2.0.1
 
 jobs:
   prereqs:
@@ -53,10 +53,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ env.GH_API_TOKEN }}
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 # v6.5.2
+        uses: golangci/golangci-lint-action@1481404843c368bc19ca9406f87d6e0fc97bdcfd # v7.0.0
         with:
           version: v${{ env.GOLANGCI_VERSION }}
-          args: --timeout=10m --out-format=colored-line-number,github-actions
+          args: --timeout=10m
       # Do a pre-flight check to ensure we don't bother with `buf` unless
       # we have protobuf changes present.
       - name: Check for proto/ file changes in git diffs.

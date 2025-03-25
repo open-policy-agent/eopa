@@ -192,7 +192,7 @@ func checkBuiltins(c *checker, e *ast.Expr, _ []*ast.Module) *ast.Error {
 				found = true
 			}
 		}
-		if !found && !(twoRefsOK && unknownRefs == 2) {
+		if !found && !(twoRefsOK && unknownRefs == 2) { // nolint:staticcheck
 			return err(loc, "both rhs and lhs non-scalar/non-ground")
 		}
 	}

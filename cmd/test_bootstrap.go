@@ -55,7 +55,7 @@ and test cases may be required!
 		Args: func(_ *cobra.Command, args []string) error {
 			// Pre-flight check to ensure we didn't have a name collision with `eopa test`!
 			if _, err := os.Stat("bootstrap"); !errors.Is(err, fs.ErrNotExist) {
-				return fmt.Errorf("Name collision between 'eopa test' and 'eopa test bootstrap' commands detected. No tests will be run or generated.")
+				return fmt.Errorf("Name collision between 'eopa test' and 'eopa test bootstrap' commands detected. No tests will be run or generated.") // nolint:staticcheck
 			}
 
 			if len(args) == 0 {

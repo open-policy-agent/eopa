@@ -14,7 +14,6 @@ import (
 
 	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/kafka"
-	eopa_storage "github.com/styrainc/enterprise-opa-private/pkg/storage"
 	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
 )
 
@@ -224,7 +223,7 @@ func getTestManager() *plugins.Manager {
 }
 
 func getTestManagerWithOpts(config []byte, stores ...storage.Store) *plugins.Manager {
-	store := eopa_storage.New()
+	store := inmem.New()
 	if len(stores) == 1 {
 		store = stores[0]
 	}

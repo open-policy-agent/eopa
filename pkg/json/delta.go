@@ -651,7 +651,7 @@ func diffImpl(a contentReader, aoff int64, alen int64, b contentReader, boff int
 
 	// Types are not the same, write the b value.
 	if tb != ta {
-		if !((tb == typeObjectFull || tb == typeObjectThin || tb == typeObjectPatch) &&
+		if !((tb == typeObjectFull || tb == typeObjectThin || tb == typeObjectPatch) && // nolint:staticcheck
 			(ta == typeObjectFull || ta == typeObjectThin || ta == typeObjectPatch)) {
 			noff, err := reserialize(b, alen, boff, embeddingAllowed, buffer, cache)
 			if noff >= 0 {

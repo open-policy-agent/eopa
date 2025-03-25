@@ -40,7 +40,7 @@ type Data struct {
 var _ types.Triggerer = (*Data)(nil)
 
 func (c *Data) Start(ctx context.Context) error {
-	if err := c.Rego.Prepare(ctx); err != nil {
+	if err := c.Prepare(ctx); err != nil {
 		return fmt.Errorf("prepare rego_transform: %w", err)
 	}
 	c.exit = make(chan struct{})
@@ -176,7 +176,7 @@ func (c *Data) poll(ctx context.Context, conf *okta.Configuration) error {
 	if len(merr) > 0 {
 		return fmt.Errorf("not all resources were fetched: %v", errors.Join(merr...))
 	}
-	if err := c.Rego.Ingest(ctx, c.Path(), results); err != nil {
+	if err := c.Ingest(ctx, c.Path(), results); err != nil {
 		return fmt.Errorf("plugin %s at %s: %w", c.Name(), c.Config.path, err)
 	}
 	return nil

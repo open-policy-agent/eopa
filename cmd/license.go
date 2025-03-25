@@ -9,7 +9,6 @@ import (
 
 	"github.com/styrainc/enterprise-opa-private/cmd/trial"
 	"github.com/styrainc/enterprise-opa-private/internal/license"
-	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
 	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
 	"github.com/styrainc/enterprise-opa-private/pkg/tui"
 )
@@ -31,7 +30,7 @@ func showExp(online bool, expiry time.Time) {
 	}
 }
 
-func LicenseCmd(lic *license.Checker, lparams *keygen.LicenseParams) *cobra.Command {
+func LicenseCmd(lic *license.Checker, lparams *license.LicenseParams) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "license",
 		Short: "License status",

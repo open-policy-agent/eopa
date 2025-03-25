@@ -178,7 +178,7 @@ func testCollectionVerify(t *testing.T, c Collections, expected map[string]testR
 
 	// Then reconstruct the collection from bytes and re-run the check.
 
-	source := c.(*snapshot).ObjectBinary.content.(*deltaPatchObjectReader).deltaPatch.snapshot
+	source := c.(*snapshot).content.(*deltaPatchObjectReader).snapshot
 	s := make([]byte, source.Len())
 	if _, err := source.ReadAt(s, 0); err != nil {
 		panic(err)

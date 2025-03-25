@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/mithrandie/csvq-driver"
-	_ "github.com/mithrandie/csvq-driver" // import driver
 	"github.com/mithrandie/csvq/lib/query"
 	"github.com/mithrandie/go-text"
 	"github.com/mithrandie/go-text/table"

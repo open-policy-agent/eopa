@@ -42,7 +42,7 @@ func preparePointer(ptr string) ([]string, error) {
 	}
 
 	if ptr[0] != '/' {
-		return nil, fmt.Errorf("Invalid pointer")
+		return nil, fmt.Errorf("invalid pointer")
 	}
 
 	p := strings.Split(ptr, "/")
@@ -57,14 +57,14 @@ func preparePointer(ptr string) ([]string, error) {
 
 // unescapePointerSeg unescapes a path segment.
 func UnescapePointerSeg(ptr string) string {
-	ptr = strings.Replace(ptr, "~1", "/", -1)
-	return strings.Replace(ptr, "~0", "~", -1)
+	ptr = strings.ReplaceAll(ptr, "~1", "/")
+	return strings.ReplaceAll(ptr, "~0", "~")
 }
 
 // escapePointerSeg escapes a string to be safe string for a path segment.
 func EscapePointerSeg(ptr string) string {
-	ptr = strings.Replace(ptr, "~", "~0", -1)
-	return strings.Replace(ptr, "/", "~1", -1)
+	ptr = strings.ReplaceAll(ptr, "~", "~0")
+	return strings.ReplaceAll(ptr, "/", "~1")
 }
 
 // Extract returns a value from an JSON document as per RFC 6901

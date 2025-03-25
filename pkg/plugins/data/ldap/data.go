@@ -36,7 +36,7 @@ var _ types.Triggerer = (*Data)(nil)
 
 func (c *Data) Start(ctx context.Context) error {
 	c.exit = make(chan struct{})
-	if err := c.Rego.Prepare(ctx); err != nil {
+	if err := c.Prepare(ctx); err != nil {
 		return fmt.Errorf("prepare rego_transform: %w", err)
 	}
 	if err := storage.Txn(ctx, c.manager.Store, storage.WriteParams, func(txn storage.Transaction) error {
@@ -162,7 +162,7 @@ func (c *Data) poll(ctx context.Context, u *url.URL) error {
 		return fmt.Errorf("converting result failed: %w", err)
 	}
 
-	if err := c.Rego.Ingest(ctx, c.Path(), data); err != nil {
+	if err := c.Ingest(ctx, c.Path(), data); err != nil {
 		return fmt.Errorf("plugin %s at %s: %w", c.Name(), c.Config.path, err)
 	}
 	return nil

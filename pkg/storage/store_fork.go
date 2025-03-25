@@ -31,7 +31,7 @@ func New2(ctx context.Context, logger logging.Logger, prom prometheus.Registerer
 		return nil, err
 	}
 
-	var root storage.Store = inmem.New()
+	root := inmem.New()
 	var options Options
 
 	if diskOptions != nil {

@@ -48,7 +48,7 @@ type Data struct {
 var _ types.Triggerer = (*Data)(nil)
 
 func (c *Data) Start(ctx context.Context) error {
-	if err := c.Rego.Prepare(ctx); err != nil {
+	if err := c.Prepare(ctx); err != nil {
 		return fmt.Errorf("prepare rego_transform: %w", err)
 	}
 	r, err := git.Init(memory.NewStorage(), memfs.New())
@@ -148,7 +148,7 @@ func (c *Data) poll(ctx context.Context) error {
 		return err
 	}
 
-	if err := c.Rego.Ingest(ctx, c.Path(), results); err != nil {
+	if err := c.Ingest(ctx, c.Path(), results); err != nil {
 		return fmt.Errorf("plugin %s at %s: %w", c.Name(), c.Config.path, err)
 	}
 	return nil

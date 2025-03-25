@@ -73,8 +73,8 @@ transform[k] := v if {
 func minioContainer(ctx context.Context, t *testing.T) (testcontainers.Container, string) {
 	t.Helper()
 	tc, err := tc_minio.Run(ctx, "minio/minio:latest", testcontainers.CustomizeRequestOption(func(r *testcontainers.GenericContainerRequest) error {
-		r.ContainerRequest.Env["MINIO_ROOT_USER"] = minioRootUser
-		r.ContainerRequest.Env["MINIO_ROOT_PASSWORD"] = minioRootPassword
+		r.Env["MINIO_ROOT_USER"] = minioRootUser
+		r.Env["MINIO_ROOT_PASSWORD"] = minioRootPassword
 		return nil
 	}))
 	if err != nil {

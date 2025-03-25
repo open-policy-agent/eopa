@@ -74,8 +74,8 @@ func TestJSONPointer(t *testing.T) {
 		{s, "/t2", s.T2},
 		{s, "/t2/abc", s.T2.Abc},
 		{s, "/bar", *s.Bar},
-		{s, "/abc", s.t2.Abc},
-		{s, "/t3/def", s.t3.Def},
+		{s, "/abc", s.Abc},
+		{s, "/t3/def", s.Def},
 		// Exercise both map field access and more complicated primitive values.
 		{map[int]string{1: "v"}, "/1", "v"},
 		{map[int]*string{1: &str}, "/1", "v"},

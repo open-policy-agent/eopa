@@ -259,8 +259,8 @@ func operand2Str(op ir.Operand) string {
 		return local2Str(*l)
 	}
 	s := op.Value.String()
-	s = strings.Replace(s, "<", "(", -1)
-	s = strings.Replace(s, ">", ")", -1)
+	s = strings.ReplaceAll(s, "<", "(")
+	s = strings.ReplaceAll(s, ">", ")")
 	return s
 }
 

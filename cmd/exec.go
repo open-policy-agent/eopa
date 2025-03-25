@@ -11,13 +11,12 @@ import (
 	"github.com/open-policy-agent/opa/v1/sdk"
 
 	"github.com/styrainc/enterprise-opa-private/internal/license"
-	keygen "github.com/styrainc/enterprise-opa-private/internal/license"
 	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
 	eopa_sdk "github.com/styrainc/enterprise-opa-private/pkg/sdk"
 )
 
 // Run provides the CLI entrypoint for the `exec` subcommand
-func initExec(opa *cobra.Command, lic *license.Checker, lparams *keygen.LicenseParams) *cobra.Command {
+func initExec(opa *cobra.Command, lic *license.Checker, lparams *license.LicenseParams) *cobra.Command {
 	fallback := opa.RunE
 	// Only override Run, so we keep the args and usage texts
 	opa.RunE = func(c *cobra.Command, args []string) error {
