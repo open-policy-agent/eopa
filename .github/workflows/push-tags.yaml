@@ -224,15 +224,15 @@ jobs:
         id: changes
         run: |
           cd _public;
-          if git diff --name-only -r mainartifacts-${{ github.ref_name }} | grep -q 'proto/';
+          if git diff --name-only -r main artifacts-${{ github.ref_name }} | grep -q 'proto/';
           then
             echo "proto=true" >> $GITHUB_OUTPUT
           fi
-          if git diff --name-only -r mainartifacts-${{ github.ref_name }} | grep -q 'capabilities/';
+          if git diff --name-only -r main artifacts-${{ github.ref_name }} | grep -q 'capabilities/';
           then
             echo "capabilities=true" >> $GITHUB_OUTPUT
           fi
-          if git diff --name-only mainartifacts-${{ github.ref_name }} | grep -q 'README.md';
+          if git diff --name-only main artifacts-${{ github.ref_name }} | grep -q 'README.md';
           then
             echo "badges=true" >> $GITHUB_OUTPUT
           fi
@@ -252,7 +252,7 @@ jobs:
           fi
           # Remove trailing comma and space
           message="${message%, }"
-          gh pr create -B main--head artifacts-${{ github.ref_name }} --title "$message for ${{ github.ref_name }} release" --body 'Created by Github action'
+          gh pr create -B main --head artifacts-${{ github.ref_name }} --title "$message for ${{ github.ref_name }} release" --body 'Created by Github action'
         env:
           GITHUB_TOKEN: ${{steps.generate_token.outputs.token }}
 
