@@ -20,6 +20,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/open-policy-agent/opa/v1/util"
 	"github.com/testcontainers/testcontainers-go"
+	tc_log "github.com/testcontainers/testcontainers-go/log"
 	tc_wait "github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/styrainc/enterprise-opa-private/e2e/utils"
@@ -138,7 +139,7 @@ func testEnvoy(t *testing.T, ctx context.Context, eopaHost string, eopaEnvoyPort
 
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
-		Logger:           testcontainers.TestLogger(t),
+		Logger:           tc_log.TestLogger(t),
 		Started:          true,
 	})
 	if err != nil {

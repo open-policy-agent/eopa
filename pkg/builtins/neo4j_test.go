@@ -20,6 +20,7 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 
 	"github.com/testcontainers/testcontainers-go"
+	tc_log "github.com/testcontainers/testcontainers-go/log"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
@@ -302,7 +303,7 @@ func startNeo4j(t *testing.T, username, password string) (testcontainers.Contain
 				wait.ForListeningPort("7687/tcp"),
 			),
 		},
-		Logger:  testcontainers.TestLogger(t),
+		Logger:  tc_log.TestLogger(t),
 		Started: true,
 	})
 	if err != nil {

@@ -17,6 +17,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown/cache"
 
 	"github.com/testcontainers/testcontainers-go"
+	tc_log "github.com/testcontainers/testcontainers-go/log"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -413,7 +414,7 @@ func startMongoDB(t *testing.T, username, password string) (testcontainers.Conta
 				wait.ForListeningPort("27017/tcp"),
 			),
 		},
-		Logger:  testcontainers.TestLogger(t),
+		Logger:  tc_log.TestLogger(t),
 		Started: true,
 	})
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
+	tc_log "github.com/testcontainers/testcontainers-go/log"
 	"github.com/testcontainers/testcontainers-go/modules/mssql"
 	"github.com/testcontainers/testcontainers-go/modules/mysql"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -657,7 +658,7 @@ func startOracle(t *testing.T) backend {
 				wait.ForListeningPort("1521/tcp"),
 			),
 		},
-		Logger:  testcontainers.TestLogger(t),
+		Logger:  tc_log.TestLogger(t),
 		Started: true,
 	})
 	if err != nil {
@@ -691,7 +692,7 @@ func startOracle(t *testing.T) backend {
 
 func testLogger(t testing.TB) testcontainers.CustomizeRequestOption {
 	return testcontainers.CustomizeRequestOption(func(req *testcontainers.GenericContainerRequest) error {
-		req.Logger = testcontainers.TestLogger(t)
+		req.Logger = tc_log.TestLogger(t)
 		return nil
 	})
 }

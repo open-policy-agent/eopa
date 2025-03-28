@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	rhttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/testcontainers/testcontainers-go"
+	tc_log "github.com/testcontainers/testcontainers-go/log"
 	tc_wait "github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/open-policy-agent/opa/v1/storage"
@@ -132,7 +133,7 @@ func testServer(ctx context.Context, t *testing.T) (string, testcontainers.Conta
 
 	c := must(testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
-		Logger:           testcontainers.TestLogger(t),
+		Logger:           tc_log.TestLogger(t),
 		Started:          true,
 	}))(t)
 	mappedPort := must(c.MappedPort(ctx, "3890/tcp"))(t)

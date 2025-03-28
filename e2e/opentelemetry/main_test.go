@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
+	tc_log "github.com/testcontainers/testcontainers-go/log"
 	tc_wait "github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/styrainc/enterprise-opa-private/e2e/retry"
@@ -200,7 +201,7 @@ func collector(t *testing.T, ctx context.Context) (testcontainers.Container, str
 
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
-		Logger:           testcontainers.TestLogger(t),
+		Logger:           tc_log.TestLogger(t),
 		Started:          true,
 	})
 	if err != nil {

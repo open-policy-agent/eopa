@@ -20,6 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/testcontainers/testcontainers-go"
+	tc_log "github.com/testcontainers/testcontainers-go/log"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
@@ -439,7 +440,7 @@ func startRedis(t *testing.T, username, password string) (testcontainers.Contain
 				wait.ForListeningPort("6379/tcp"),
 			),
 		},
-		Logger:  testcontainers.TestLogger(t),
+		Logger:  tc_log.TestLogger(t),
 		Started: true,
 	})
 	if err != nil {
