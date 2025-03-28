@@ -18,8 +18,7 @@ jobs:
   goreleaser:
     name: GoReleaser
     runs-on: ubuntu-24.04
-    needs:
-      - kopush
+    needs: prereqs
     env:
       QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }} # base64 encoded contents
       QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }} # p12 password
