@@ -17,7 +17,7 @@ jobs:
   build:
     name: Build and Test
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
@@ -110,7 +110,7 @@ jobs:
   race:
     name: Race Detector
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
@@ -166,7 +166,7 @@ jobs:
   goreleaser:
     name: GoReleaser
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }} # base64 encoded contents
       QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }} # p12 password
@@ -183,7 +183,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo apt clean
-          docker rmi $(docker image ls -aq)
+          docker image ls -aq | xargs -r docker rmi
           df -h
       - name: Generate GitHub App Token
         id: generate_token
@@ -230,7 +230,7 @@ jobs:
   cross-build:
     name: Cross Build
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: true
       matrix:
@@ -253,9 +253,9 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo apt clean
-          docker rmi $(docker image ls -aq)
+          docker image ls -aq | xargs -r docker rmi
           df -h
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-24.04'
       - name: Generate GitHub App Token
         id: generate_token
         uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
@@ -298,10 +298,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             GOOS: linux
             GOARCH: amd64
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             GOOS: linux
             GOARCH: arm64
           - os: macos-latest
@@ -321,9 +321,9 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo apt clean
-          docker rmi $(docker image ls -aq)
+          docker image ls -aq | xargs -r docker rmi
           df -h
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-24.04'
       - name: Set up QEMU
         uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
         with:
@@ -349,7 +349,7 @@ jobs:
 
   trivy-scan-image:
     name: Trivy security scan image
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build
     steps:
       - name: Tune GitHub-hosted runner network
@@ -382,7 +382,7 @@ jobs:
   trivy-scan-repo:
     name: Trivy security scan repo
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
@@ -406,7 +406,7 @@ jobs:
   govulncheck:
     name: Go vulnerability check
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
@@ -433,7 +433,7 @@ jobs:
   fuzzer:
     name: Go Fuzzer
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
@@ -444,7 +444,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo apt clean
-          docker rmi $(docker image ls -aq)
+          docker image ls -aq | xargs -r docker rmi
           df -h
       - name: Generate GitHub App Token
         id: generate_token

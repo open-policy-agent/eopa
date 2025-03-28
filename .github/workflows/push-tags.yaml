@@ -17,7 +17,7 @@ jobs:
 
   goreleaser:
     name: GoReleaser
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - kopush
     env:
@@ -96,7 +96,7 @@ jobs:
   kopush:
     name: Ko Push
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
@@ -130,7 +130,7 @@ jobs:
   proto-docs-push:
     name: Push Protobuf docs to BSR
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
     steps:
@@ -163,7 +163,7 @@ jobs:
   pr-artifacts:
     name: Publish proto defs and capabilities.json using a PR
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
@@ -258,7 +258,7 @@ jobs:
 
   verify-authenticode-signature:
     name: Verify signature
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: goreleaser
     steps:
       - name: Tune GitHub-hosted runner network

@@ -16,7 +16,7 @@ jobs:
     name: Benchmarks
     needs: prereqs
     if: ${{ github.actor != 'dependabot[bot]' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0

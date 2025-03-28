@@ -24,7 +24,7 @@ jobs:
   lint:
     name: Analysis & Linting
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
@@ -35,7 +35,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo apt clean
-          docker rmi $(docker image ls -aq)
+          docker image ls -aq | xargs -r docker rmi
           df -h
       - name: Generate GitHub App Token
         id: generate_token
@@ -100,7 +100,7 @@ jobs:
   test:
     name: Test
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
@@ -159,7 +159,7 @@ jobs:
 
   test-e2e:
     name: Test E2E
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - goreleaser
     steps:
@@ -172,7 +172,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo apt clean
-          docker rmi $(docker image ls -aq)
+          docker image ls -aq | xargs -r docker rmi
           df -h
       - name: Generate GitHub App Token
         id: generate_token
@@ -227,7 +227,7 @@ jobs:
   proto-docs-push:
     name: Push Protobuf docs to BSR
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
@@ -269,7 +269,7 @@ jobs:
   build:
     name: Ko Build
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
@@ -280,7 +280,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo apt clean
-          docker rmi $(docker image ls -aq)
+          docker image ls -aq | xargs -r docker rmi
           df -h
       - name: Generate GitHub App Token
         id: generate_token
@@ -329,7 +329,7 @@ jobs:
   goreleaser:
     name: Goreleaser build
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
@@ -340,7 +340,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo apt clean
-          docker rmi $(docker image ls -aq)
+          docker image ls -aq | xargs -r docker rmi
           df -h
       - name: Generate GitHub App Token
         id: generate_token
@@ -381,7 +381,7 @@ jobs:
 
   smoke-docker:
     name: Smoke test docker images
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build
     steps:
       - name: Tune GitHub-hosted runner network
@@ -425,7 +425,7 @@ jobs:
 
   smoke-caps:
     name: Smoke Test Capabilities
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: goreleaser
     steps:
       - name: Tune GitHub-hosted runner network
@@ -455,7 +455,7 @@ jobs:
 
   smoke-cli:
     name: Smoke Test CLI
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: build
     steps:
       - name: Tune GitHub-hosted runner network
@@ -467,7 +467,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo apt clean
-          docker rmi $(docker image ls -aq)
+          docker image ls -aq | xargs -r docker rmi
           df -h
       - name: Generate GitHub App Token
         id: generate_token
@@ -495,7 +495,7 @@ jobs:
   performance-related:
     name: Performance
     needs: prereqs
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
@@ -506,7 +506,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo apt clean
-          docker rmi $(docker image ls -aq)
+          docker image ls -aq | xargs -r docker rmi
           df -h
       - name: Generate GitHub App Token
         id: generate_token
@@ -543,7 +543,7 @@ jobs:
         timeout-minutes: 20
 
   cross-build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: prereqs
     strategy:
       fail-fast: true
@@ -566,7 +566,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo apt clean
-          docker rmi $(docker image ls -aq)
+          docker image ls -aq | xargs -r docker rmi
           df -h
       - name: Generate GitHub App Token
         id: generate_token
@@ -604,7 +604,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             GOOS: linux
             GOARCH: amd64
           - os: macos-latest
@@ -628,9 +628,9 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo apt clean
-          docker rmi $(docker image ls -aq)
+          docker image ls -aq | xargs -r docker rmi
           df -h
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-24.04'
       - name: Download cross-build binaries
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
