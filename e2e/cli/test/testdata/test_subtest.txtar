@@ -9,15 +9,14 @@ stdout '^test_pass.rego:$'
 stdout '^data.testpkg.test_multiple: PASS'
 stdout '^  bar: PASS$'
 stdout '^  foo: PASS$'
-stdout '^PASS: 1/1$'
+stdout '^PASS: 2/2$'
 
 ! exec eopa test test_subfail.rego
 ! stderr .
 stdout '^test_subfail.rego:$'
 stdout '^data.testpkg.test_multiple: FAIL'
-stdout '^  bar: FAIL$'
-stdout '^  foo: PASS$'
-stdout '^FAIL: 1/1$'
+stdout '^PASS: 1/2$'
+stdout '^FAIL: 1/2$'
 
 -- test_pass.rego --
 package testpkg
@@ -42,4 +41,4 @@ test_multiple[note] if {
 	tc < 5
 }
 -- exp/stdout --
-PASS: 1/1
+PASS: 2/2
