@@ -10,10 +10,10 @@ import (
 	"testing"
 )
 
-//go:embed bench_filters.rego
+//go:embed testdata/bench_filters.rego
 var benchRego []byte
 
-//go:embed roles.json
+//go:embed testdata/roles.json
 var rolesJSON []byte
 
 var roles = func() any {

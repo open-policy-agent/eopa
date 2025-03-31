@@ -4,6 +4,7 @@
 #   unknowns:
 #     - input.tickets
 #     - input.users
+#   mask_rule: data.filters.mask_from_annotation
 package filters
 
 tenancy if input.tickets.tenant == input.tenant.id # tenancy check
@@ -34,3 +35,26 @@ resolver_include if {
 }
 
 user_is_resolver(user, tenant) if "resolver" in data.roles[tenant][user] # regal ignore:external-reference
+
+# Default-deny mask.
+default masks.tickets.description := {"replace": {"value": "***"}}
+
+# Allow viewing the field if user is an admin or a resolver.
+masks.tickets.description := {} if {
+	"admin" in data.roles[input.tenant][input.user]
+}
+
+masks.tickets.description := {} if {
+	"resolver" in data.roles[input.tenant][input.user]
+}
+
+default mask_from_annotation.tickets.id := {"replace": {"value": "***"}}
+
+# Allow viewing the field if user is an admin or a resolver.
+mask_from_annotation.tickets.id := {} if {
+	"admin" in data.roles[input.tenant][input.user]
+}
+
+mask_from_annotation.tickets.id := {} if {
+	"resolver" in data.roles[input.tenant][input.user]
+}

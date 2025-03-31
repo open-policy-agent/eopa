@@ -32,17 +32,21 @@ import (
 )
 
 const (
-	invalidUnknownCode = "invalid_unknown"
+	invalidUnknownCode  = "invalid_unknown"
+	invalidMaskRuleCode = "invalid_mask_rule"
 
 	prometheusHandle = "v1/compile"
 
 	// Timer names
-	timerPrepPartial        = "prep_partial"
-	timerEvalConstraints    = "eval_constraints"
-	timerTranslateQueries   = "translate_queries"
-	timerExtractAnnotations = "extract_annotations"
+	timerPrepPartial                = "prep_partial"
+	timerEvalConstraints            = "eval_constraints"
+	timerTranslateQueries           = "translate_queries"
+	timerExtractAnnotationsUnknowns = "extract_annotations_unknowns"
+	timerExtractAnnotationsMask     = "extract_annotations_mask"
+	timerEvalMaskRule               = "eval_mask_rule"
 
-	unknownsCacheSize = 500
+	unknownsCacheSize    = 500
+	maskingRuleCacheSize = 500
 
 	// maxDistanceForHint is the levenshtein distance below which we'll emit a hint
 	maxDistanceForHint = 3
@@ -79,9 +83,11 @@ func CompileAPIKnownHeaders() []string {
 var allKnownHeaders = append(CompileAPIKnownHeaders(), applicationJSON)
 
 type CompileResult struct {
-	Query any `json:"query"`
+	Query any            `json:"query"`
+	Masks map[string]any `json:"masks,omitempty"`
 }
 
+// Incoming JSON request body structure.
 type CompileRequestV1 struct {
 	Input    *any      `json:"input"`
 	Query    string    `json:"query"`
@@ -91,6 +97,7 @@ type CompileRequestV1 struct {
 		NondeterministicBuiltins bool           `json:"nondeterministicBuiltins"`
 		Mappings                 map[string]any `json:"targetSQLTableMappings,omitempty"`
 		TargetDialects           []string       `json:"targetDialects,omitempty"`
+		MaskRule                 string         `json:"maskRule,omitempty"`
 	} `json:"options,omitempty"`
 }
 
@@ -112,22 +119,31 @@ type CompileHandler interface {
 }
 
 func Handler(l logging.Logger) CompileHandler {
-	c, _ := lru.New[string, []*ast.Term](unknownsCacheSize)
-	return &hndl{Logger: l,
-		cache: c,
-		counter: prometheus.NewCounterVec(prometheus.CounterOpts{
+	cu, _ := lru.New[string, []*ast.Term](unknownsCacheSize)
+	mu, _ := lru.New[string, ast.Ref](maskingRuleCacheSize)
+	return &hndl{
+		Logger:            l,
+		unknownsCache:     cu,
+		maskingRulesCache: mu,
+		counterUnknownsCache: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "eopa_compile_handler_unknowns_cache_lookups_total",
 			Help: "The number of lookups in the unknowns cache (label \"status\" indicates hit or miss)",
+		}, []string{"status"}),
+		counterMaskingRulesCache: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "eopa_compile_handler_masking_rules_cache_lookups_total",
+			Help: "The number of lookups in the masking rules cache (label \"status\" indicates hit or miss)",
 		}, []string{"status"}),
 	}
 }
 
 type hndl struct {
 	logging.Logger
-	manager *plugins.Manager
-	cache   *lru.Cache[string, []*ast.Term]
-	counter *prometheus.CounterVec
-	dl      *logs.Plugin
+	manager                  *plugins.Manager
+	unknownsCache            *lru.Cache[string, []*ast.Term]
+	maskingRulesCache        *lru.Cache[string, ast.Ref]
+	counterUnknownsCache     *prometheus.CounterVec
+	counterMaskingRulesCache *prometheus.CounterVec
+	dl                       *logs.Plugin
 }
 
 func (h *hndl) SetManager(m *plugins.Manager) error {
@@ -142,16 +158,21 @@ func (h *hndl) SetManager(m *plugins.Manager) error {
 		OnCommit: func(_ context.Context, _ storage.Transaction, evt storage.TriggerEvent) {
 			if evt.PolicyChanged() {
 				h.Debug("purging unknowns cache for policy change")
-				h.cache.Purge()
+				h.unknownsCache.Purge()
+				h.maskingRulesCache.Purge()
 			}
-		}}); err != nil {
+		},
+	}); err != nil {
 		return fmt.Errorf("failed to register trigger: %w", err)
 	}
 	if err := m.Store.Commit(ctx, txn); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	if pr := m.PrometheusRegister(); pr != nil {
-		if err := pr.Register(h.counter); err != nil {
+		if err := pr.Register(h.counterUnknownsCache); err != nil {
+			return err
+		}
+		if err := pr.Register(h.counterMaskingRulesCache); err != nil {
 			return err
 		}
 	}
@@ -184,7 +205,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// NOTE(sr): We keep some fields twice: from the unparsed and from the transformed
 	// request (`orig` and `request` respectively), because otherwise, we'd need to re-
 	// transform the values back for including them in the decision logs.
-	orig, request, reqErr := readInputCompilePostV1(body, urlPath, h.manager.ParserOptions())
+	orig, request, reqErr := readInputCompilePostV1(h.manager.GetCompiler(), body, urlPath, h.manager.ParserOptions())
 	if reqErr != nil {
 		writer.Error(w, http.StatusBadRequest, reqErr)
 		return
@@ -216,6 +237,58 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					WithASTErrors(errs))
 			return
 		}
+	}
+
+	maskingRule := request.Options.MaskRule // always wins over annotations if provided
+	if maskingRule == nil {
+		var errs []*ast.Error
+		maskingRule, errs = h.maskRule(ctx, txn, comp, m, orig.Query, request.Query)
+		if errs != nil {
+			writer.Error(w, http.StatusBadRequest,
+				types.NewErrorV1(types.CodeEvaluation, types.MsgEvaluationError).
+					WithASTErrors(errs))
+			return
+		}
+	}
+	var maskResult map[string]any
+	var maskResultValue ast.Value
+
+	if maskingRule != nil {
+		iqc, iqvc := getCaches(h.manager)
+		m.Timer(timerEvalMaskRule).Start()
+
+		opts := []func(*rego.Rego){
+			rego.Compiler(comp),
+			rego.Store(h.manager.Store),
+			rego.Transaction(txn), // piggyback on previously opened read transaction.
+			rego.Query(maskingRule.String()),
+			rego.Instrument(includeInstrumentation),
+			rego.Metrics(m),
+			rego.Runtime(h.manager.Info),
+			rego.UnsafeBuiltins(unsafeBuiltinsMap),
+			rego.InterQueryBuiltinCache(iqc),
+			rego.InterQueryBuiltinValueCache(iqvc),
+			rego.PrintHook(h.manager.PrintHook()),
+			// rego.QueryTracer(tracer),
+			// rego.DistributedTracingOpts(s.distributedTracingOpts), // Not available in EOPA's handler.
+		}
+
+		maskResultValue, err = h.EvalMaskingRule(ctx, txn, request.Input, opts)
+		if err != nil {
+			switch err := err.(type) {
+			case ast.Errors:
+				writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, types.MsgCompileModuleError).WithASTErrors(err))
+			default:
+				writer.ErrorAuto(w, err)
+			}
+			return
+		}
+		if err := util.Unmarshal([]byte(maskResultValue.String()), &maskResult); err != nil {
+			h.Error("failed to round-trip mask body: %v", err)
+			return
+		}
+
+		m.Timer(timerEvalMaskRule).Stop()
 	}
 
 	contentType, err := sanitizeHeader(r.Header.Get("Accept"))
@@ -373,7 +446,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					continue // there's only one UCAST representation, don't translate that twice
 				}
 				r := queriesToUCAST(pq.Queries, mappings)
-				targets.UCAST = &CompileResult{Query: r}
+				targets.UCAST = &CompileResult{Query: r, Masks: maskResult}
 			case "sql":
 				sql, err := queriesToSQL(pq.Queries, mappings, dialect)
 				if err != nil {
@@ -382,13 +455,13 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				switch dialect {
 				case "postgresql":
-					targets.Postgres = &CompileResult{Query: sql}
+					targets.Postgres = &CompileResult{Query: sql, Masks: maskResult}
 				case "mysql":
-					targets.MySQL = &CompileResult{Query: sql}
+					targets.MySQL = &CompileResult{Query: sql, Masks: maskResult}
 				case "sqlserver":
-					targets.MSSQL = &CompileResult{Query: sql}
+					targets.MSSQL = &CompileResult{Query: sql, Masks: maskResult}
 				case "sqlite":
-					targets.SQLite = &CompileResult{Query: sql}
+					targets.SQLite = &CompileResult{Query: sql, Masks: maskResult}
 				}
 			}
 		}
@@ -407,7 +480,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			switch target {
 			case "ucast":
 				r := queriesToUCAST(pq.Queries, mappings)
-				r0 := any(CompileResult{Query: r})
+				r0 := any(CompileResult{Query: r, Masks: maskResult})
 				result.Result = &r0
 			case "sql":
 				sql, err := queriesToSQL(pq.Queries, mappings, dialect)
@@ -415,13 +488,14 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					writer.ErrorAuto(w, err) // TODO(sr): this isn't the best error we can create -- it'll be a 500 in the end, I think.
 					return
 				}
-				s0 := any(CompileResult{Query: sql})
+				s0 := any(CompileResult{Query: sql, Masks: maskResult})
 				result.Result = &s0
 			}
 		}
 	}
 
 	m.Timer(timerTranslateQueries).Stop()
+
 	m.Timer(metrics.ServerHandler).Stop()
 	fin(w, result, contentType, m, includeMetrics(r), includeInstrumentation, pretty(r))
 
@@ -431,7 +505,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			unk[i] = unknowns[i].String()
 		}
 
-		info, err := dlog(ctx, urlPath, result.Result, orig, request, unk, m, h.manager.Store, txn)
+		info, err := dlog(ctx, urlPath, result.Result, orig, request, unk, maskingRule.String(), m, h.manager.Store, txn)
 		if err != nil {
 			h.Error("failed to log decision: %v", err)
 			return
@@ -461,13 +535,13 @@ func ShortsFromMappings(mappings map[string]any) Set[string] {
 }
 
 func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, qs string, query ast.Body) ([]*ast.Term, []*ast.Error) {
-	unknowns, ok := h.cache.Get(qs)
+	unknowns, ok := h.unknownsCache.Get(qs)
 	if ok {
-		h.counter.WithLabelValues("hit").Inc()
+		h.counterUnknownsCache.WithLabelValues("hit").Inc()
 		return unknowns, nil
 	}
-	h.counter.WithLabelValues("miss").Inc()
-	m.Timer(timerExtractAnnotations).Start()
+	h.counterUnknownsCache.WithLabelValues("miss").Inc()
+	m.Timer(timerExtractAnnotationsUnknowns).Start()
 	if len(query) != 1 {
 		return nil, nil
 	}
@@ -484,15 +558,19 @@ func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.
 		return nil, errs
 	}
 	if parsedUnknowns == nil { // none found on the compiler, re-parse modules
-		parsedUnknowns, errs = parseUnknownsFromModules(ctx, comp, h.manager.Store, txn, h.manager.ParserOptions(), queryRef)
+		comp, errs = ensureCompilerParsedAnnotations(ctx, comp, h.manager.Store, txn, h.manager.ParserOptions())
+		if errs != nil {
+			return nil, errs
+		}
+		parsedUnknowns, errs = ExtractUnknownsFromAnnotations(comp, queryRef)
 		if errs != nil {
 			return nil, errs
 		}
 	}
 	unknowns = parsedUnknowns
-	m.Timer(timerExtractAnnotations).Stop()
+	m.Timer(timerExtractAnnotationsUnknowns).Stop()
 
-	h.cache.Add(qs, unknowns)
+	h.unknownsCache.Add(qs, unknowns)
 	return unknowns, nil
 }
 
@@ -542,6 +620,7 @@ func queriesToSQL(queries []ast.Body, mappings map[string]any, dialect string) (
 	return sql, nil
 }
 
+// Processed, internal version of the compile request.
 type compileRequest struct {
 	Query    ast.Body
 	Input    ast.Value
@@ -554,9 +633,11 @@ type compileRequestOptions struct {
 	NondeterministicBuiltins bool           `json:"nondeterministicBuiltins"`
 	Mappings                 map[string]any `json:"targetSQLTableMappings,omitempty"`
 	TargetDialects           []string       `json:"targetDialects,omitempty"`
+	MaskRule                 ast.Ref        `json:"maskRule,omitempty"`
+	MaskInput                ast.Value      `json:"maskInput,omitempty"`
 }
 
-func readInputCompilePostV1(reqBytes []byte, urlPath string, queryParserOptions ast.ParserOptions) (*CompileRequestV1, *compileRequest, *types.ErrorV1) {
+func readInputCompilePostV1(comp *ast.Compiler, reqBytes []byte, urlPath string, queryParserOptions ast.ParserOptions) (*CompileRequestV1, *compileRequest, *types.ErrorV1) {
 	var request CompileRequestV1
 
 	if len(reqBytes) > 0 {
@@ -602,6 +683,15 @@ func readInputCompilePostV1(reqBytes []byte, urlPath string, queryParserOptions 
 		}
 	}
 
+	var maskRuleRef ast.Ref
+	if request.Options.MaskRule != "" {
+		maskRuleRef, err = ast.ParseRef(request.Options.MaskRule)
+		if err != nil {
+			hint := fuzzyRuleNameMatchHint(comp, request.Options.MaskRule)
+			return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "error(s) occurred while parsing mask_rule name: %s", hint)
+		}
+	}
+
 	return &request, &compileRequest{
 		Query:    query,
 		Input:    input,
@@ -610,6 +700,7 @@ func readInputCompilePostV1(reqBytes []byte, urlPath string, queryParserOptions 
 			DisableInlining: request.Options.DisableInlining,
 			Mappings:        request.Options.Mappings,
 			TargetDialects:  request.Options.TargetDialects,
+			MaskRule:        maskRuleRef,
 		},
 	}, nil
 }
@@ -639,7 +730,7 @@ func lookupMappings(mappings map[string]any, target, dialect string) (map[string
 	return nil, nil
 }
 
-func parseUnknownsFromModules(ctx context.Context, comp *ast.Compiler, store storage.Store, txn storage.Transaction, po ast.ParserOptions, ref ast.Ref) ([]*ast.Term, []*ast.Error) {
+func ensureCompilerParsedAnnotations(ctx context.Context, comp *ast.Compiler, store storage.Store, txn storage.Transaction, po ast.ParserOptions) (*ast.Compiler, []*ast.Error) {
 	var errs []*ast.Error
 	mods, err := store.ListPolicies(ctx, txn)
 	if err != nil {
@@ -667,7 +758,7 @@ func parseUnknownsFromModules(ctx context.Context, comp *ast.Compiler, store sto
 	if len(comp.Errors) > 0 {
 		return nil, comp.Errors
 	}
-	return ExtractUnknownsFromAnnotations(comp, ref)
+	return comp, nil
 }
 
 func ExtractUnknownsFromAnnotations(comp *ast.Compiler, ref ast.Ref) ([]*ast.Term, []*ast.Error) {
@@ -717,6 +808,115 @@ func unknownsFromAnnotationsSet(as *ast.AnnotationSet, rule *ast.Rule) ([]*ast.T
 	}
 
 	return unknowns, errs
+}
+
+// Modeled after (*hndl).unknowns.
+func (h *hndl) maskRule(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, qs string, query ast.Body) (ast.Ref, []*ast.Error) {
+	mr, ok := h.maskingRulesCache.Get(qs)
+	if ok {
+		h.counterMaskingRulesCache.WithLabelValues("hit").Inc()
+		return mr, nil
+	}
+	h.counterMaskingRulesCache.WithLabelValues("miss").Inc()
+
+	m.Timer(timerExtractAnnotationsMask).Start()
+	if len(query) != 1 {
+		return nil, nil
+	}
+	q, ok := query[0].Terms.(*ast.Term)
+	if !ok {
+		return nil, nil
+	}
+	queryRef, ok := (*q).Value.(ast.Ref)
+	if !ok {
+		return nil, nil
+	}
+	parsedMaskingRule, err := ExtractMaskRuleRefFromAnnotations(comp, queryRef)
+	if err != nil {
+		return parsedMaskingRule, []*ast.Error{err}
+	}
+	if parsedMaskingRule == nil { // none found on the compiler, re-parse modules
+		comp, errs := ensureCompilerParsedAnnotations(ctx, comp, h.manager.Store, txn, h.manager.ParserOptions())
+		if errs != nil {
+			return nil, errs
+		}
+		parsedMaskingRule, err := ExtractMaskRuleRefFromAnnotations(comp, queryRef)
+		if err != nil {
+			return parsedMaskingRule, []*ast.Error{err}
+		}
+	}
+	mr = parsedMaskingRule
+	m.Timer(timerExtractAnnotationsMask).Stop()
+
+	h.maskingRulesCache.Add(qs, parsedMaskingRule)
+	return mr, nil
+}
+
+func ExtractMaskRuleRefFromAnnotations(comp *ast.Compiler, ref ast.Ref) (ast.Ref, *ast.Error) {
+	// find ast.Rule for ref
+	rules := comp.GetRulesExact(ref)
+	if len(rules) == 0 {
+		return nil, nil
+	}
+	rule := rules[0] // rule scope doesn't make sense here, so it doesn't matter which rule we use
+	return maskRuleFromAnnotationsSet(comp, comp.GetAnnotationSet(), rule)
+}
+
+func maskRuleFromAnnotationsSet(comp *ast.Compiler, as *ast.AnnotationSet, rule *ast.Rule) (ast.Ref, *ast.Error) {
+	if as == nil {
+		return nil, nil
+	}
+
+	for _, ar := range as.Chain(rule) {
+		ann := ar.Annotations
+		if ann == nil {
+			continue
+		}
+		// If the mask_rule key is present, validate and parse it.
+		if maskRule, ok := ann.Custom["mask_rule"]; ok {
+			if s, ok := maskRule.(string); ok {
+				maskRuleRef, err := ast.ParseRef(s)
+				if err != nil {
+					hint := fuzzyRuleNameMatchHint(comp, s)
+					return nil, ast.NewError(invalidMaskRuleCode, ann.Loc(), "mask_rule was not a valid ref: %s", hint)
+				}
+				return maskRuleRef, nil
+			}
+			return nil, ast.NewError(invalidMaskRuleCode, ann.Loc(), "mask_rule must be a valid ref string: %v", maskRule)
+		}
+	}
+
+	return nil, nil // No mask rule found.
+}
+
+// Unlike in the OPA HTTP server, errors around eval are propagated upward, and handled there.
+func (h *hndl) EvalMaskingRule(ctx context.Context, txn storage.Transaction, input ast.Value, opts []func(*rego.Rego)) (ast.Value, error) {
+	rr := rego.New(opts...)
+
+	pq, err := rr.PrepareForEval(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// s.preparedEvalQueries.Insert(pqID, preparedQuery)
+
+	evalOpts := []rego.EvalOption{
+		rego.EvalTransaction(txn),
+		rego.EvalParsedInput(input),
+	}
+
+	rs, err := pq.Eval(
+		ctx,
+		evalOpts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rs) == 0 {
+		return nil, nil
+	}
+
+	return ast.InterfaceToValue(rs[0].Expressions[0].Value)
 }
 
 func sanitizeHeader(accept string) (string, error) {
@@ -772,7 +972,6 @@ func pretty(r *http.Request) bool {
 }
 
 func getBoolParam(url *url.URL, name string, ifEmpty bool) bool {
-
 	p, ok := url.Query()[name]
 	if !ok {
 		return false
@@ -924,4 +1123,32 @@ func (b *failTracer) Hints(unknowns []*ast.Term) []Hint {
 		seenRefs[rs] = struct{}{}
 	}
 	return hints
+}
+
+// Returns a list of similar rule names that might match the input string.
+// Warning(philip): This is expensive, as the cost grows linearly with the
+// number of rules present on the compiler. It should be used only for
+// error messages.
+func fuzzyRuleNameMatchHint(comp *ast.Compiler, input string) string {
+	rules := comp.GetRules(ast.Ref{ast.DefaultRootDocument})
+	ruleNames := make([]string, 0, len(rules))
+	for _, rule := range rules {
+		if rule.Default {
+			continue
+		}
+		ruleNames = append(ruleNames, rule.Module.Package.Path.String()+"."+rule.Head.Name.String())
+	}
+	closest := levenshtein.ClosestStrings(65536, input, slices.Values(ruleNames))
+	proposals := slices.Compact(closest)
+
+	var msg string
+	switch len(proposals) {
+	case 0:
+		return ""
+	case 1:
+		msg = fmt.Sprintf("%s undefined, did you mean %s?", input, proposals[0])
+	default:
+		msg = fmt.Sprintf("%s undefined, did you mean one of %v?", input, proposals)
+	}
+	return msg
 }

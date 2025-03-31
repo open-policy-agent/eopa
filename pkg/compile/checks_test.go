@@ -41,6 +41,7 @@ type Error struct {
 // variant, which includes all the builtins. For error cases, we check
 // both constrained UCAST, and SQL.
 func TestPostPartialChecks(t *testing.T) {
+	t.Parallel()
 	const defaultQuery = "data.filters.include"
 	defaultInput := map[string]any{
 		"a":      true,

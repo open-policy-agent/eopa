@@ -48,6 +48,7 @@ func dlog(ctx context.Context,
 	orig *CompileRequestV1,
 	request *compileRequest,
 	unknowns []string,
+	maskRule string,
 	m metrics.Metrics,
 	store storage.Store,
 	txn storage.Transaction,
@@ -89,9 +90,10 @@ func dlog(ctx context.Context,
 		Query:   orig.Query,
 	}
 	addCustom(map[string]any{
-		"options":  orig.Options,
-		"unknowns": unknowns,
-		"type":     decisionLogType,
+		"options":   orig.Options,
+		"unknowns":  unknowns,
+		"type":      decisionLogType,
+		"mask_rule": maskRule,
 	}, info)
 	return info, nil
 }

@@ -56,7 +56,10 @@ package filters
 # METADATA
 # custom:
 #   unknowns: [input.fruits]
+#   mask_rule: data.filters.mask
 include if input.fruits.name in input.favorites
+
+default mask.fruits.supplier := {"replace": {"value": "***"}}
 `
 
 	configs := map[string]string{
@@ -137,13 +140,18 @@ plugins:
 						defer resp.Body.Close()
 						var respPayload struct {
 							Result struct {
-								Query any `json:"query"`
+								Query any            `json:"query"`
+								Masks map[string]any `json:"masks,omitempty"`
 							} `json:"result"`
 						}
 						if err := json.NewDecoder(resp.Body).Decode(&respPayload); err != nil {
 							t.Fatalf("failed to decode response: %v", err)
 						}
 						if exp, act := "WHERE f.n IN (E'banana', E'orange')", respPayload.Result.Query; exp != act {
+							t.Errorf("response: expected %v, got %v (response: %v)", exp, act, respPayload)
+						}
+						exp, act := map[string]any{"fruits": map[string]any{"supplier": map[string]any{"replace": map[string]any{"value": "***"}}}}, respPayload.Result.Masks
+						if diff := cmp.Diff(exp, act); diff != "" {
 							t.Errorf("response: expected %v, got %v (response: %v)", exp, act, respPayload)
 						}
 					}
@@ -162,6 +170,13 @@ plugins:
 						Path:  strings.TrimPrefix(tc.path, "/"),
 						Result: map[string]any{
 							"query": "WHERE f.n IN (E'banana', E'orange')",
+							"masks": map[string]any{
+								"fruits": map[string]any{
+									"supplier": map[string]any{
+										"replace": map[string]any{"value": "***"},
+									},
+								},
+							},
 						},
 						Input: map[string]any{
 							"favorites": []any{"banana", "orange"},
@@ -180,8 +195,9 @@ plugins:
 									},
 								},
 							},
-							"unknowns": []any{"input.fruits"},
-							"type":     "eopa.styra.com/compile",
+							"unknowns":  []any{"input.fruits"},
+							"type":      "eopa.styra.com/compile",
+							"mask_rule": "data.filters.mask",
 						},
 					}
 					if diff := cmp.Diff(dl, logs[0], stdIgnores); diff != "" {

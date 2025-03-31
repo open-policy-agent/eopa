@@ -25,10 +25,12 @@ import (
 
 type Query struct {
 	Query any `json:"query,omitempty"`
+	Masks any `json:"masks,omitempty"`
 }
 type Response struct {
 	Result struct {
 		Query    any   `json:"query,omitempty"`
+		Masks    any   `json:"masks,omitempty"`
 		UCAST    Query `json:"ucast,omitempty"`
 		Postgres Query `json:"postgresql,omitempty"`
 		MySQL    Query `json:"mysql,omitempty"`
@@ -40,6 +42,7 @@ type Response struct {
 }
 
 func TestCompileHandlerMultiTarget(t *testing.T) {
+	t.Parallel()
 	var roles map[string]any
 	if err := json.Unmarshal(rolesJSON, &roles); err != nil {
 		t.Fatalf("unmarshal roles: %v", err)
@@ -114,15 +117,17 @@ func TestCompileHandlerMultiTarget(t *testing.T) {
 	}
 	{ // also check for metrics
 		if exp, act := map[string]float64{
-			"timer_eval_constraints_ns":      0,
-			"timer_extract_annotations_ns":   0,
-			"timer_prep_partial_ns":          0,
-			"timer_rego_external_resolve_ns": 0,
-			"timer_rego_partial_eval_ns":     0,
-			"timer_rego_query_compile_ns":    0,
-			"timer_rego_query_parse_ns":      0,
-			"timer_server_handler_ns":        0,
-			"timer_translate_queries_ns":     0,
+			"timer_eval_constraints_ns":             0,
+			"timer_eval_mask_rule_ns":               0,
+			"timer_extract_annotations_unknowns_ns": 0,
+			"timer_extract_annotations_mask_ns":     0,
+			"timer_prep_partial_ns":                 0,
+			"timer_rego_external_resolve_ns":        0,
+			"timer_rego_partial_eval_ns":            0,
+			"timer_rego_query_compile_ns":           0,
+			"timer_rego_query_parse_ns":             0,
+			"timer_server_handler_ns":               0,
+			"timer_translate_queries_ns":            0,
 		}, resp.Metrics; !compareMetrics(exp, act) {
 			t.Fatalf("unexpected metrics: want %v, got %v", exp, act)
 		}
@@ -147,6 +152,7 @@ func resetCaches(t testing.TB, s storage.Store) {
 }
 
 func TestCompileHandlerMetrics(t *testing.T) {
+	t.Parallel()
 	var roles map[string]any
 	if err := json.Unmarshal(rolesJSON, &roles); err != nil {
 		t.Fatalf("unmarshal roles: %v", err)
@@ -176,15 +182,17 @@ func TestCompileHandlerMetrics(t *testing.T) {
 			{ // check metrics
 				resp, _ := evalReq(t, chnd, payload, target)
 				if exp, act := map[string]float64{
-					"timer_eval_constraints_ns":      0,
-					"timer_extract_annotations_ns":   0,
-					"timer_prep_partial_ns":          0,
-					"timer_rego_external_resolve_ns": 0,
-					"timer_rego_partial_eval_ns":     0,
-					"timer_rego_query_compile_ns":    0,
-					"timer_rego_query_parse_ns":      0,
-					"timer_server_handler_ns":        0,
-					"timer_translate_queries_ns":     0,
+					"timer_eval_constraints_ns":             0,
+					"timer_eval_mask_rule_ns":               0,
+					"timer_extract_annotations_unknowns_ns": 0,
+					"timer_extract_annotations_mask_ns":     0,
+					"timer_prep_partial_ns":                 0,
+					"timer_rego_external_resolve_ns":        0,
+					"timer_rego_partial_eval_ns":            0,
+					"timer_rego_query_compile_ns":           0,
+					"timer_rego_query_parse_ns":             0,
+					"timer_server_handler_ns":               0,
+					"timer_translate_queries_ns":            0,
 				}, resp.Metrics; !compareMetrics(exp, act) {
 					t.Fatalf("unexpected metrics: want %v, got %v", exp, act)
 				}
@@ -192,15 +200,21 @@ func TestCompileHandlerMetrics(t *testing.T) {
 
 			{ // Redo without resetting the cache: no extraction happens
 				resp, _ := evalReq(t, chnd, payload, target)
-				if n, ok := resp.Metrics["timer_extract_annotations_ns"]; ok {
-					t.Errorf("unexpected metric 'timer_extract_annotations_ns': %v", n)
+				if n, ok := resp.Metrics["timer_extract_annotations_unknowns_ns"]; ok {
+					t.Errorf("unexpected metric 'timer_extract_annotations_unknowns_ns': %v", n)
+				}
+				if n, ok := resp.Metrics["timer_extract_annotations_mask_ns"]; ok {
+					t.Errorf("unexpected metric 'timer_extract_annotations_mask_ns': %v", n)
 				}
 			}
 
 			{ // Redo without resetting the cache: no extraction happens
 				resp, _ := evalReq(t, chnd, payload, target)
-				if n, ok := resp.Metrics["timer_extract_annotations_ns"]; ok {
-					t.Errorf("unexpected metric 'timer_extract_annotations_ns': %v", n)
+				if n, ok := resp.Metrics["timer_extract_annotations_unknowns_ns"]; ok {
+					t.Errorf("unexpected metric 'timer_extract_annotations_unknowns_ns': %v", n)
+				}
+				if n, ok := resp.Metrics["timer_extract_annotations_mask_ns"]; ok {
+					t.Errorf("unexpected metric 'timer_extract_annotations_mask_ns': %v", n)
 				}
 			}
 		})
@@ -256,6 +270,7 @@ func VCHasNoEntry(key ast.Value) cf {
 }
 
 func TestCompileHandlerCaches(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	policy := `package filters
 # METADATA
@@ -332,6 +347,7 @@ include if {
 }
 
 func TestCompileHandlerHints(t *testing.T) {
+	t.Parallel()
 	typoRego := `package filters
 # METADATA
 # scope: document
@@ -373,6 +389,62 @@ include if input.fruit.cost < input.max
 			t.Errorf("unexpected hints (-want, +got):\n%s", diff)
 		}
 	}
+}
+
+func TestCompileHandlerMaskingRules(t *testing.T) {
+	t.Parallel()
+	var roles map[string]any
+	if err := json.Unmarshal(rolesJSON, &roles); err != nil {
+		t.Fatalf("unmarshal roles: %v", err)
+	}
+
+	input := map[string]any{
+		"user": "caesar",
+		"tenant": map[string]any{
+			"id":   2,
+			"name": "acmecorp",
+		},
+	}
+	query := "data.filters.include"
+	target := "application/vnd.styra.sql.postgresql+json"
+
+	t.Run("mask rule from payload parameter", func(t *testing.T) {
+		t.Parallel()
+		chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
+		payload := map[string]any{ // NB(sr): unknowns are taken from metadata
+			"input": input,
+			"query": query,
+			"options": map[string]any{
+				"maskRule": "data.filters.masks",
+			},
+		}
+		resp, _ := evalReq(t, chnd, payload, target)
+
+		if exp, act := "WHERE ((tickets.tenant = E'2' AND users.name = E'caesar') OR (tickets.tenant = E'2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))", resp.Result.Query; exp != act {
+			t.Fatalf("response: expected %v, got %v", exp, act)
+		}
+		exp, act := map[string]any{"tickets": map[string]any{"description": map[string]any{"replace": map[string]any{"value": "***"}}}}, resp.Result.Masks
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Fatalf("masks, (-want, +got):\n%s", diff)
+		}
+	})
+	t.Run("mask rule from rule annotation", func(t *testing.T) {
+		t.Parallel()
+		chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
+		payload := map[string]any{
+			"input": input,
+			"query": query,
+		}
+		resp, _ := evalReq(t, chnd, payload, target)
+
+		if exp, act := "WHERE ((tickets.tenant = E'2' AND users.name = E'caesar') OR (tickets.tenant = E'2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))", resp.Result.Query; exp != act {
+			t.Fatalf("response: expected %v, got %v", exp, act)
+		}
+		exp, act := map[string]any{"tickets": map[string]any{"id": map[string]any{"replace": map[string]any{"value": "***"}}}}, resp.Result.Masks
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Fatalf("masks, (-want, +got):\n%s", diff)
+		}
+	})
 }
 
 func setup(t testing.TB, rego []byte, data any) (http.Handler, *plugins.Manager) {
