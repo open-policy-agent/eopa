@@ -31,8 +31,8 @@ require (
 	github.com/twmb/franz-go v1.18.1
 	github.com/twmb/franz-go/pkg/kadm v1.15.0
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
-	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
-	modernc.org/sqlite v1.36.2
+	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
+	modernc.org/sqlite v1.37.0
 )
 
 require (
@@ -294,7 +294,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/mod v0.23.0 // indirect
+	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/oauth2 v0.28.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
@@ -302,7 +302,7 @@ require (
 	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
-	golang.org/x/tools v0.30.0 // indirect
+	golang.org/x/tools v0.31.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/api v0.228.0 // indirect
 	google.golang.org/genproto v0.0.0-20250303144028-a0af3efb3deb // indirect
@@ -313,9 +313,9 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	modernc.org/libc v1.61.13 // indirect
+	modernc.org/libc v1.62.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.8.2 // indirect
+	modernc.org/memory v1.9.1 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
