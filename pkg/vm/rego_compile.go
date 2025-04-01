@@ -3,11 +3,13 @@
 package vm
 
 import (
+	"context"
 	"fmt"
 	go_strings "strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/rego"
+	"github.com/open-policy-agent/opa/v1/storage"
 	opa_inmem "github.com/open-policy-agent/opa/v1/storage/inmem"
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
@@ -57,7 +59,12 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 	queryRef := ast.MustParseRef(query)
 	parsedUnknowns, errs := compile.ExtractUnknownsFromAnnotations(comp, queryRef)
 	if errs != nil {
-		state.SetReturnValue(Unused, astErrorsToObject(state, errs))
+		state.SetReturnValue(Unused, astErrorsToObject(state, errs...))
+		return nil
+	}
+	maskingRuleRef, err0 := compile.ExtractMaskRuleRefFromAnnotations(comp, queryRef)
+	if err0 != nil {
+		state.SetReturnValue(Unused, astErrorsToObject(state, err0))
 		return nil
 	}
 
@@ -66,9 +73,23 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 	if err != nil {
 		return err
 	}
+	var inputVal ast.Value
+	if input != nil {
+		iv, err := castJSON(state.Globals.Ctx, input)
+		if err != nil {
+			return err
+		}
+		inputVal = iv.AST()
+	}
 	// NOTE(sr): Fiddling with BJSON was too cumbersome when the ordinary store
 	// did the trick just as well. We can revisit.
 	store := opa_inmem.NewFromObject(dv.(map[string]any))
+
+	// eval masks first
+	masks, err := evalMaskingRule(state.Globals.Ctx, maskingRuleRef, store, comp, inputVal)
+	if err != nil {
+		return err
+	}
 
 	r := []func(*rego.Rego){
 		rego.EvalMode(ast.EvalModeTopdown), // override to ensure that rule indices are built
@@ -92,13 +113,7 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 	evalOpts := []rego.EvalOption{
 		rego.EvalParsedUnknowns(parsedUnknowns),
 		rego.EvalNondeterministicBuiltins(true),
-	}
-	if input != nil {
-		iv, err := castJSON(state.Globals.Ctx, input)
-		if err != nil {
-			return err
-		}
-		evalOpts = append(evalOpts, rego.EvalParsedInput(iv.AST()))
+		rego.EvalParsedInput(inputVal),
 	}
 
 	pq, err := prep.Partial(state.Globals.Ctx, evalOpts...)
@@ -138,14 +153,45 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 		sql = sql0
 	}
 
-	state.SetReturnValue(Unused, state.ValueOps().MakeObject().Insert(
+	res := state.ValueOps().MakeObject().Insert(
 		state.ValueOps().MakeString("sql"),
 		state.ValueOps().MakeString(sql),
-	))
+	)
+	if maskingRuleRef != nil {
+		m, err := state.ValueOps().FromInterface(state.Globals.Ctx, masks)
+		if err != nil {
+			return err
+		}
+		res.Insert(state.ValueOps().MakeString("masks"), m)
+	}
+	state.SetReturnValue(Unused, res)
 	return nil
 }
 
-func astErrorsToObject(state *State, errs []*ast.Error) fjson.Json {
+func evalMaskingRule(ctx context.Context, mr ast.Ref, store storage.Store, comp *ast.Compiler, input ast.Value) (any, error) {
+	if mr == nil {
+		return nil, nil
+	}
+	opts := []func(*rego.Rego){
+		rego.Compiler(comp),
+		rego.Store(store),
+		rego.ParsedQuery(ast.NewBody(ast.NewExpr(ast.NewTerm(mr)))),
+		rego.UnsafeBuiltins(map[string]struct{}{ast.HTTPSend.Name: {}}),
+		rego.ParsedInput(input),
+		// rego.PrintHook(h.manager.PrintHook()), // TODO(sr): support print here
+	}
+	rs, err := rego.New(opts...).Eval(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(rs) == 0 {
+		return nil, nil
+	}
+
+	return rs[0].Expressions[0].Value, nil
+}
+
+func astErrorsToObject(state *State, errs ...*ast.Error) fjson.Json {
 	var e any = state.ValueOps().MakeSet()
 	for i := range errs {
 		ei, _ := state.ValueOps().FromInterface(state.Globals.Ctx, errs[i])
@@ -174,7 +220,7 @@ func maybeRaise(state *State, err error, errString string, raise bool) error {
 
 func maybeRaiseASTErrors(state *State, errs []*ast.Error, raise bool) error {
 	if !raise {
-		state.SetReturnValue(Unused, astErrorsToObject(state, errs))
+		state.SetReturnValue(Unused, astErrorsToObject(state, errs...))
 		return nil
 	}
 	return aerrs{errs: errs}
