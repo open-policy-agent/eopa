@@ -4,7 +4,7 @@
 #  Utility setup for testing data filtering policies.
 package system.eopa.utils.tests.v1
 
-filter.helper(query, select, tables, opts) := results if {
+filter.helper(query, select, tables, opts) := masked if {
 	db := object.get(opts, "db", ":memory:")
 	debug := object.get(opts, "debug", false)
 	setup_tables(debug, db, tables)
@@ -18,6 +18,8 @@ filter.helper(query, select, tables, opts) := results if {
 	print_debug(debug, "rego.compile response: %v", [conditions])
 	results := list(debug, db, select, conditions.query)
 	print_debug(debug, "list response: %v", [results])
+	masked := mask_rows(results, conditions, opts)
+	print_debug(debug, "`masked response: %v", [masked])
 	drop_tables(debug, db, tables)
 }
 
@@ -87,3 +89,22 @@ print_debug(debug, format, args) if {
 	debug # regal ignore:redundant-existence-check
 	print(sprintf(format, args)) # regal ignore:dubious-print-sprintf,print-or-trace-call
 } else := true
+
+mask_rows(rows, conditions, opts) := results if {
+	mapping := opts.masking
+	rules := conditions.masks
+	results := [mask_row(row, rules, mapping) | some row in rows]
+}
+
+mask_rows(rows, _, opts) := rows if not "masking" in object.keys(opts)
+
+mask_row(row, rules, mapping) := {k: maybe_masked(k, v, rules, mapping) | some k, v in row}
+
+maybe_masked(key, val, rules, mapping) := mval if {
+	[table, col] := split(mapping[key], ".")
+	mval := mask_val(val, rules[table][col])
+}
+
+else := val
+
+mask_val(val, {"replace": {"value": x}}) := x
