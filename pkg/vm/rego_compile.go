@@ -154,7 +154,7 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 	}
 
 	res := state.ValueOps().MakeObject().Insert(
-		state.ValueOps().MakeString("sql"),
+		state.ValueOps().MakeString("query"),
 		state.ValueOps().MakeString(sql),
 	)
 	if maskingRuleRef != nil {

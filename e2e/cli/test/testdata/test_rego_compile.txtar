@@ -49,7 +49,7 @@ test_generated_where_clause if {
 		"target": "sql+postgresql",
 	}) with input.username as "jane"
 		with input.extra_fruit as "orange"
-	conditions.sql == "WHERE (users.name = E'jane' OR fruits.name IN (E'apple', E'banana', E'orange'))"
+	conditions.query == "WHERE (users.name = E'jane' OR fruits.name IN (E'apple', E'banana', E'orange'))"
 }
 -- exp/stdout --
 PASS: 1/1
@@ -73,7 +73,7 @@ test_generated_where_clause if {
 	}) with input.username as "jane"
 		with input.extra_fruit as "orange"
 	print(conditions)
-	conditions.sql == "WHERE (users.name = E'jane' OR fruits.name IN (E'apple', E'banana', E'orange'))"
+	conditions.query == "WHERE (users.name = E'jane' OR fruits.name IN (E'apple', E'banana', E'orange'))"
 }
 -- failure_inband_errors/filters_test.rego --
 package filters
@@ -86,7 +86,7 @@ test_generated_where_clause if {
 	}) with input.username as "jane"
 		with input.extra_fruit as "orange"
 	print(conditions)
-	conditions.sql == "WHERE (users.name = E'jane' OR fruits.name IN (E'apple', E'banana', E'orange'))"
+	conditions.query == "WHERE (users.name = E'jane' OR fruits.name IN (E'apple', E'banana', E'orange'))"
 }
 -- empty_query/filters.rego --
 package filters
@@ -102,7 +102,7 @@ test_generated_where_clause if {
 		"query": "data.filters.include",
 		"target": "sql+postgresql",
 	})
-	conditions.sql == ""
+	conditions.query == ""
 }
 -- no_query/filters.rego --
 package filters

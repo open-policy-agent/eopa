@@ -16,7 +16,7 @@ filter.helper(query, select, tables, opts) := results if {
 		"mappings": {"sqlite-internal": mappings},
 	})
 	print_debug(debug, "rego.compile response: %v", [conditions])
-	results := list(debug, db, select, conditions.sql)
+	results := list(debug, db, select, conditions.query)
 	print_debug(debug, "list response: %v", [results])
 	drop_tables(debug, db, tables)
 }
