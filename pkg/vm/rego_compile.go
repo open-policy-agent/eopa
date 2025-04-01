@@ -46,6 +46,7 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 	query, _ := o["query"].(string)
 	target, _ := o["target"].(string)
 	mappings, _ := o["mappings"].(map[string]any)
+	maskRule, _ := o["mask_rule"].(string)
 
 	raise, ok := o["raise_error"].(bool)
 	if !ok { // unset, default to true like sql.send
@@ -62,10 +63,21 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 		state.SetReturnValue(Unused, astErrorsToObject(state, errs...))
 		return nil
 	}
-	maskingRuleRef, err0 := compile.ExtractMaskRuleRefFromAnnotations(comp, queryRef)
-	if err0 != nil {
-		state.SetReturnValue(Unused, astErrorsToObject(state, err0))
-		return nil
+
+	var maskingRuleRef ast.Ref
+	if maskRule != "" { // wins over annotations
+		ref, err := ast.ParseRef(maskRule)
+		if err != nil {
+			return err
+		}
+		maskingRuleRef = ref
+	} else {
+		var err0 *ast.Error
+		maskingRuleRef, err0 = compile.ExtractMaskRuleRefFromAnnotations(comp, queryRef)
+		if err0 != nil {
+			state.SetReturnValue(Unused, astErrorsToObject(state, err0))
+			return nil
+		}
 	}
 
 	input, data := outer.Local(Input), outer.Local(Data)
