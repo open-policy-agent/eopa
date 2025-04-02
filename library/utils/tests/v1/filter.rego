@@ -19,7 +19,7 @@ filter.helper(query, select, tables, opts) := masked if {
 	results := list(debug, db, select, conditions.query)
 	print_debug(debug, "list response: %v", [results])
 	masked := mask_rows(results, conditions, opts)
-	print_debug(debug, "`masked response: %v", [masked])
+	print_debug(debug, "masked response: %v", [masked])
 	drop_tables(debug, db, tables)
 }
 
@@ -63,7 +63,8 @@ drop_table(debug, db, name) := sql.send(sql_query(debug, db, q)) if {
 } else := true
 
 list(debug, db, select, where) := res.rows if {
-	q := build_query(select, where)
+	print_debug(contains(lower(select), " as "), "WARN: SELECT with AS aliases can conflict with masking", [])
+	q := sprintf("WITH tmp AS (%s) SELECT * FROM tmp", [build_query(select, where)])
 	res := sql.send(sql_query(debug, db, q))
 }
 
@@ -91,20 +92,40 @@ print_debug(debug, format, args) if {
 } else := true
 
 mask_rows(rows, conditions, opts) := results if {
-	mapping := opts.masking
+	mapping := object.get(opts, "masking", {})
 	rules := conditions.masks
+	warn_if_duplicate_column_names_in_rules(rows, rules, mapping)
 	results := [mask_row(row, rules, mapping) | some row in rows]
 }
+else := rows
 
-mask_rows(rows, _, opts) := rows if not "masking" in object.keys(opts)
-
-mask_row(row, rules, mapping) := {k: maybe_masked(k, v, rules, mapping) | some k, v in row}
-
-maybe_masked(key, val, rules, mapping) := mval if {
-	[table, col] := split(mapping[key], ".")
-	mval := mask_val(val, rules[table][col])
+default warn_if_duplicate_column_names_in_rules(_, _, _) := true
+warn_if_duplicate_column_names_in_rules(rows, rules, mapping) if {
+	row := rows[0] # they all share their keys
+	some key, _ in row
+	not key in object.keys(mapping)
+	count({r | r := rules[_][key]}) > 1 # regal ignore:prefer-some-in-iteration
+	print(sprintf(`WARN: cannot guess mask mapping for result column "%s"`, [key])) # regal ignore:dubious-print-sprintf,print-or-trace-call,line-length
 }
 
-else := val
+mask_row(row, rules, mapping) := {k: maybe_masked(k, v, matching_rules(k, rules, mapping)) | some k, v in row}
 
-mask_val(val, {"replace": {"value": x}}) := x
+maybe_masked(key, val, rules) := mval if {
+	count(rules) == 1
+	some rule in rules
+	mval := mask_val(val, rule)
+}
+
+maybe_masked(key, val, rules) := val if count(rules) > 1 # WARN already issued
+
+maybe_masked(_, val, set()) := val
+
+matching_rules(key, rules, mapping) := { rules[table][col] |
+	# explicit match
+	[table, col] := split(mapping[key], ".")
+} | { rules[_][key] | # regal ignore:prefer-some-in-iteration
+	# best guess by column name only if there is no mapping provided
+	not key in object.keys(mapping)
+}
+
+mask_val(_, {"replace": {"value": x}}) := x

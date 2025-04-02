@@ -1,8 +1,18 @@
-exec eopa test .
+exec eopa test explicit_mask_map
 ! stderr .
 cmp stdout exp/stdout
 
--- filters.rego --
+exec eopa test implicit_mask
+! stderr .
+cmp stdout exp/stdout
+
+exec eopa test -v implicit_mask_warn # -v to see the warning even though the test passes
+! stderr .
+stdout '^  WARN: SELECT with AS aliases can conflict with masking'
+stdout '^  WARN: cannot guess mask mapping for result column "name"'
+stdout '^PASS: 1/1$'
+
+-- explicit_mask_map/filters.rego --
 package filters
 
 # METADATA
@@ -15,7 +25,7 @@ include if input.users.name == input.username
 mask.users.phone.replace.value := "<phone>"
 mask.fruits.name.replace.value := "<name>"
 mask.users.name.replace.value := "<username>"
--- filters_test.rego --
+-- explicit_mask_map/filters_test.rego --
 package filters
 
 import data.system.eopa.utils.tests.v1.filter
@@ -51,6 +61,92 @@ test_owner_can_see_their_fruit if {
 	count(filtered_and_masked) == 2
 	{"id": 0, "name": "<name>", "owner": "<username>", "phone": "<phone>"} in filtered_and_masked
 	{"id": 1, "name": "<name>", "owner": "<username>", "phone": "<phone>"} in filtered_and_masked
+}
+-- implicit_mask/filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.users"]
+#   mask_rule: data.filters.mask
+include if input.users.name == input.username
+
+mask.users.phone.replace.value := "<phone>"
+mask.fruits.name.replace.value := "<name>"
+-- implicit_mask/filters_test.rego --
+package filters
+
+import data.system.eopa.utils.tests.v1.filter
+
+fruits_table := [
+	{"id": 0, "name": "apple", "owner_id": "a"},
+	{"id": 1, "name": "banana", "owner_id": "a"},
+	{"id": 2, "name": "cherry", "owner_id": "b"},
+]
+
+users_table := [
+	{"id": "a", "name": "jane", "phone": "0123"},
+	{"id": "b", "name": "john", "phone": "4567"},
+]
+
+test_owner_can_see_their_fruit if {
+	filtered_and_masked := filter.helper(
+		"data.filters.include",
+		"SELECT fruits.*, users.name AS owner, users.phone FROM fruits LEFT JOIN users ON fruits.owner_id = users.id",
+		{
+			"fruits": fruits_table,
+			"users": users_table,
+		},
+		{
+			"debug": true,
+		},
+	) with input.username as "jane"
+	count(filtered_and_masked) == 2
+	{"id": 0, "name": "<name>", "owner": "jane", "owner_id": "a", "phone": "<phone>"} in filtered_and_masked
+	{"id": 1, "name": "<name>", "owner": "jane", "owner_id": "a", "phone": "<phone>"} in filtered_and_masked
+}
+-- implicit_mask_warn/filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.users"]
+#   mask_rule: data.filters.mask
+include if input.users.name == input.username
+
+mask.users.name.replace.value := "<username>"
+mask.fruits.name.replace.value := "<name>"
+-- implicit_mask_warn/filters_test.rego --
+package filters
+
+import data.system.eopa.utils.tests.v1.filter
+
+fruits_table := [
+	{"id": 0, "name": "apple", "owner_id": "a"},
+	{"id": 1, "name": "banana", "owner_id": "a"},
+	{"id": 2, "name": "cherry", "owner_id": "b"},
+]
+
+users_table := [
+	{"id": "a", "name": "jane"},
+	{"id": "b", "name": "john"},
+]
+
+test_owner_can_see_their_fruit if {
+	filtered_and_masked := filter.helper(
+		"data.filters.include",
+		"SELECT fruits.name, users.name AS owner FROM fruits LEFT JOIN users ON fruits.owner_id = users.id",
+		{
+			"fruits": fruits_table,
+			"users": users_table,
+		},
+		{},
+	) with input.username as "jane"
+	count(filtered_and_masked) == 2
+	{"name": "apple", "owner": "jane"} in filtered_and_masked
+	{"name": "banana", "owner": "jane"} in filtered_and_masked
 }
 -- exp/stdout --
 PASS: 1/1

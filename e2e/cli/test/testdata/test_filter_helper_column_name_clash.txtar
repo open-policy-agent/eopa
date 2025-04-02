@@ -1,0 +1,44 @@
+exec eopa test clash_of_column_names
+! stderr .
+cmp stdout exp/stdout
+
+-- clash_of_column_names/filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.users"]
+include if input.users.name == input.username
+-- clash_of_column_names/filters_test.rego --
+package filters
+
+import data.system.eopa.utils.tests.v1.filter
+
+fruits_table := [
+	{"id": 0, "name": "apple", "owner_id": "a"},
+	{"id": 1, "name": "banana", "owner_id": "a"},
+	{"id": 2, "name": "cherry", "owner_id": "b"},
+]
+
+users_table := [
+	{"id": "a", "name": "jane"},
+	{"id": "b", "name": "john"},
+]
+
+test_query_returns_all_columns if {
+	filtered_and_masked := filter.helper(
+		"data.filters.include",
+		"SELECT * FROM fruits LEFT JOIN users ON fruits.owner_id = users.id",
+		{
+			"fruits": fruits_table,
+			"users": users_table,
+		},
+		{},
+	) with input.username as "jane"
+	count(filtered_and_masked) == 2
+	{"id": 0, "id:1": "a", "name": "apple", "name:1": "jane", "owner_id": "a",} in filtered_and_masked
+	{"id": 1, "id:1": "a", "name": "banana", "name:1": "jane", "owner_id": "a",} in filtered_and_masked
+}
+-- exp/stdout --
+PASS: 1/1
