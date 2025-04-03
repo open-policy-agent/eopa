@@ -11,6 +11,7 @@ var ignoreFuncs = []string{
 	"github.com/golang/glog.(*fileSink).flushDaemon",
 	"github.com/patrickmn/go-cache.(*janitor).Run",
 	"github.com/testcontainers/testcontainers-go.(*Reaper).connect.func1",
+	"github.com/snowflakedb/gosnowflake.initOCSPCacheClearer.func1",
 }
 
 var Defaults = initOpts()
