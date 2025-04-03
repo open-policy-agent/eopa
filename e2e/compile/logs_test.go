@@ -185,7 +185,7 @@ plugins:
 						Labels: standardLabels,
 						Custom: map[string]any{
 							"options": map[string]any{
-								"nondeterministicBuiltins": false,
+								"nondeterministicBuiltins": true,
 								"targetSQLTableMappings": map[string]any{
 									"postgresql": map[string]any{
 										"fruits": map[string]any{

@@ -2,6 +2,7 @@ package compile
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -302,10 +303,12 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// We require evaluating non-det builtins for the translated targets:
 	// We're not able to meaningfully tanslate things like http.send, sql.send, or
 	// io.jwt.decode_verify into SQL or UCAST, so we try to eval them out where possible.
-	evalNonDet := target == "ucast" ||
-		target == "sql" ||
-		target == "multi" ||
-		request.Options.NondeterministicBuiltins
+	orig.Options.NondeterministicBuiltins = cmp.Or(
+		target == "ucast",
+		target == "sql",
+		target == "multi",
+		orig.Options.NondeterministicBuiltins,
+	)
 
 	iqc, iqvc := getCaches(h.manager)
 
@@ -314,11 +317,11 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rego.Store(h.manager.Store),
 		rego.Transaction(txn),
 		rego.ParsedQuery(request.Query),
-		rego.DisableInlining(request.Options.DisableInlining),
+		rego.DisableInlining(orig.Options.DisableInlining),
 		rego.QueryTracer(buf),
 		rego.Instrument(includeInstrumentation),
 		rego.Metrics(m),
-		rego.NondeterministicBuiltins(evalNonDet),
+		rego.NondeterministicBuiltins(orig.Options.NondeterministicBuiltins),
 		rego.Runtime(h.manager.Info),
 		rego.UnsafeBuiltins(unsafeBuiltinsMap),
 		rego.InterQueryBuiltinCache(iqc),
@@ -348,7 +351,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rego.EvalParsedInput(request.Input),
 		rego.EvalParsedUnknowns(unknowns),
 		rego.EvalPrintHook(h.manager.PrintHook()),
-		rego.EvalNondeterministicBuiltins(evalNonDet),
+		rego.EvalNondeterministicBuiltins(orig.Options.NondeterministicBuiltins),
 		rego.EvalInterQueryBuiltinCache(iqc),
 		rego.EvalInterQueryBuiltinValueCache(iqvc),
 		rego.EvalQueryTracer(&qt),
@@ -382,12 +385,12 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// build ConstraintSet for single- and multi-target requests
 	m.Timer(timerEvalConstraints).Start()
-	multi := make([][2]string, len(request.Options.TargetDialects))
+	multi := make([][2]string, len(orig.Options.TargetDialects))
 	var constr *ConstraintSet
 	switch target {
 	case "multi":
-		constrs := make([]*Constraint, len(request.Options.TargetDialects))
-		for i, targetTuple := range request.Options.TargetDialects {
+		constrs := make([]*Constraint, len(orig.Options.TargetDialects))
+		for i, targetTuple := range orig.Options.TargetDialects {
 			s := strings.Split(targetTuple, "+")
 			target, dialect := s[0], s[1]
 			multi[i] = [2]string{target, dialect}
@@ -411,7 +414,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// We collect all the mapped short names -- not per-dialect or per-target, since if
 	// you use a short, you need to provide a mapping for every target.
-	shorts := ShortsFromMappings(request.Options.Mappings)
+	shorts := ShortsFromMappings(orig.Options.Mappings)
 
 	// check PE queries against constraints
 	if errs := Check(pq, constr, shorts).ASTErrors(); errs != nil {
@@ -435,7 +438,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		for _, targetTuple := range multi {
 			target, dialect := targetTuple[0], targetTuple[1]
-			mappings, err := lookupMappings(request.Options.Mappings, target, dialect)
+			mappings, err := lookupMappings(orig.Options.Mappings, target, dialect)
 			if err != nil {
 				writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, "invalid mappings"))
 				return
@@ -470,7 +473,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		result.Result = &t0
 
 	default:
-		mappings, err := lookupMappings(request.Options.Mappings, target, dialect)
+		mappings, err := lookupMappings(orig.Options.Mappings, target, dialect)
 		if err != nil {
 			writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, "invalid mappings"))
 			return
@@ -629,12 +632,8 @@ type compileRequest struct {
 }
 
 type compileRequestOptions struct {
-	DisableInlining          []string       `json:"disableInlining,omitempty"`
-	NondeterministicBuiltins bool           `json:"nondeterministicBuiltins"`
-	Mappings                 map[string]any `json:"targetSQLTableMappings,omitempty"`
-	TargetDialects           []string       `json:"targetDialects,omitempty"`
-	MaskRule                 ast.Ref        `json:"maskRule,omitempty"`
-	MaskInput                ast.Value      `json:"maskInput,omitempty"`
+	MaskRule  ast.Ref   `json:"maskRule,omitempty"`
+	MaskInput ast.Value `json:"maskInput,omitempty"`
 }
 
 func readInputCompilePostV1(comp *ast.Compiler, reqBytes []byte, urlPath string, queryParserOptions ast.ParserOptions) (*CompileRequestV1, *compileRequest, *types.ErrorV1) {
@@ -697,10 +696,7 @@ func readInputCompilePostV1(comp *ast.Compiler, reqBytes []byte, urlPath string,
 		Input:    input,
 		Unknowns: unknowns,
 		Options: compileRequestOptions{
-			DisableInlining: request.Options.DisableInlining,
-			Mappings:        request.Options.Mappings,
-			TargetDialects:  request.Options.TargetDialects,
-			MaskRule:        maskRuleRef,
+			MaskRule: maskRuleRef,
 		},
 	}, nil
 }
