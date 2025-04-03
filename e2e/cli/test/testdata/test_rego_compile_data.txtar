@@ -1,0 +1,40 @@
+exec eopa test success
+! stderr .
+cmp stdout exp/stdout
+
+-- success/data.json --
+{"foo": {"a": "A", "b": "B"}}
+-- success/filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.users"]
+#   mask_rule: data.filters.mask
+include if {
+    input.users.name == input.username
+    data.foo.a == "A"
+    data.foo.b == "C" # overridden via with
+}
+
+mask.fruits.name.replace.value := "<name>" if {
+    data.foo.a == "A"
+    data.foo.b == "C" # overridden via with
+}
+
+-- success/filters_test.rego --
+package filters
+
+test_generated_where_clause if {
+	conditions := rego.compile({
+		"query": "data.filters.include",
+		"target": "sql+postgresql",
+	}) with input.username as "jane"
+		with input.extra_fruit as "orange"
+		with data.foo.b as "C"
+	conditions.query == "WHERE users.name = E'jane'"
+	conditions.masks == { "fruits": { "name": { "replace": { "value": "<name>" } } } }
+}
+-- exp/stdout --
+PASS: 1/1
