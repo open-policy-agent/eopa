@@ -284,9 +284,11 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-		if err := util.Unmarshal([]byte(maskResultValue.String()), &maskResult); err != nil {
-			h.Error("failed to round-trip mask body: %v", err)
-			return
+		if maskResultValue != nil {
+			if err := util.Unmarshal([]byte(maskResultValue.String()), &maskResult); err != nil {
+				h.Error("failed to round-trip mask body: %v", err)
+				return
+			}
 		}
 
 		m.Timer(timerEvalMaskRule).Stop()
