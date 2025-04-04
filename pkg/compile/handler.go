@@ -231,7 +231,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	unknowns := request.Unknowns // always wins over annotations if provided
 	if len(unknowns) == 0 {      // check cache for unknowns
 		var errs []*ast.Error
-		unknowns, errs = h.unknowns(ctx, txn, comp, m, orig.Query, request.Query)
+		unknowns, errs = h.unknowns(ctx, txn, comp, m, urlPath, request.Query)
 		if errs != nil {
 			writer.Error(w, http.StatusBadRequest,
 				types.NewErrorV1(types.CodeEvaluation, types.MsgEvaluationError).
@@ -243,7 +243,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	maskingRule := request.Options.MaskRule // always wins over annotations if provided
 	if maskingRule == nil {
 		var errs []*ast.Error
-		maskingRule, errs = h.maskRule(ctx, txn, comp, m, orig.Query, request.Query)
+		maskingRule, errs = h.maskRule(ctx, txn, comp, m, urlPath, request.Query)
 		if errs != nil {
 			writer.Error(w, http.StatusBadRequest,
 				types.NewErrorV1(types.CodeEvaluation, types.MsgEvaluationError).
@@ -539,8 +539,14 @@ func ShortsFromMappings(mappings map[string]any) Set[string] {
 	return shorts
 }
 
-func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, qs string, query ast.Body) ([]*ast.Term, []*ast.Error) {
-	unknowns, ok := h.unknownsCache.Get(qs)
+func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, path string, query ast.Body) ([]*ast.Term, []*ast.Error) {
+	key := path
+	// TODO(sr): Remove this once we've removed support for /v1/compile without {path},
+	// so urlPath will be required under all circumstances.
+	if key == "" {
+		key = query.String()
+	}
+	unknowns, ok := h.unknownsCache.Get(key)
 	if ok {
 		h.counterUnknownsCache.WithLabelValues("hit").Inc()
 		return unknowns, nil
@@ -575,7 +581,7 @@ func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.
 	unknowns = parsedUnknowns
 	m.Timer(timerExtractAnnotationsUnknowns).Stop()
 
-	h.unknownsCache.Add(qs, unknowns)
+	h.unknownsCache.Add(key, unknowns)
 	return unknowns, nil
 }
 
@@ -809,8 +815,14 @@ func unknownsFromAnnotationsSet(as *ast.AnnotationSet, rule *ast.Rule) ([]*ast.T
 }
 
 // Modeled after (*hndl).unknowns.
-func (h *hndl) maskRule(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, qs string, query ast.Body) (ast.Ref, []*ast.Error) {
-	mr, ok := h.maskingRulesCache.Get(qs)
+func (h *hndl) maskRule(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, path string, query ast.Body) (ast.Ref, []*ast.Error) {
+	key := path
+	// TODO(sr): Remove this once we've removed support for /v1/compile without {path},
+	// so urlPath will be required under all circumstances.
+	if key == "" {
+		key = query.String()
+	}
+	mr, ok := h.maskingRulesCache.Get(key)
 	if ok {
 		h.counterMaskingRulesCache.WithLabelValues("hit").Inc()
 		return mr, nil
@@ -846,7 +858,7 @@ func (h *hndl) maskRule(ctx context.Context, txn storage.Transaction, comp *ast.
 	mr = parsedMaskingRule
 	m.Timer(timerExtractAnnotationsMask).Stop()
 
-	h.maskingRulesCache.Add(qs, parsedMaskingRule)
+	h.maskingRulesCache.Add(key, parsedMaskingRule)
 	return mr, nil
 }
 
