@@ -4,10 +4,13 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/gorilla/mux"
 )
 
 //go:embed testdata/bench_filters.rego
@@ -35,7 +38,7 @@ func BenchmarkCompileHandler(b *testing.B) {
 			"name": "acmecorp",
 		},
 	}
-	query := "data.filters.include"
+	path := "filters/include"
 	targets := []string{
 		"application/vnd.styra.sql.postgresql+json",
 		"application/vnd.styra.ucast.prisma+json",
@@ -47,7 +50,6 @@ func BenchmarkCompileHandler(b *testing.B) {
 			// The percentile-recording tests below is making use of the unknowns cache.
 			payload := map[string]any{
 				"input":    input,
-				"query":    query,
 				"unknowns": []string{"input.tickets", "input.users"},
 			}
 			jsonData, err := json.Marshal(payload)
@@ -57,11 +59,13 @@ func BenchmarkCompileHandler(b *testing.B) {
 			b.ResetTimer()
 
 			for range b.N {
-				req := httptest.NewRequest("POST", "/v1/compile", bytes.NewBuffer(jsonData))
+				req := httptest.NewRequest("POST", fmt.Sprintf("/v1/compile/%s", path), bytes.NewBuffer(jsonData))
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Accept", target)
 				rr := httptest.NewRecorder()
-				chnd.ServeHTTP(rr, req)
+				router := mux.NewRouter()
+				router.Handle("/v1/compile/{path:.+}", chnd)
+				router.ServeHTTP(rr, req)
 				exp := http.StatusOK
 				if act := rr.Code; exp != act {
 					b.Errorf("status code: expected %d, got %d", exp, act)

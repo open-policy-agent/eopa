@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	go_cmp "github.com/google/go-cmp/cmp"
+	"github.com/gorilla/mux"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/logging"
@@ -42,7 +43,7 @@ type Error struct {
 // both constrained UCAST, and SQL.
 func TestPostPartialChecks(t *testing.T) {
 	t.Parallel()
-	const defaultQuery = "data.filters.include"
+	const defaultPath = "filters/include"
 	defaultInput := map[string]any{
 		"a":      true,
 		"b":      false,
@@ -817,14 +818,13 @@ include if input.fruits.colour == input.colour
 			if tc.regoVerbatim {
 				rego = tc.rego
 			}
-			query := cmp.Or(tc.query, defaultQuery)
+			path := cmp.Or(tc.query, defaultPath)
 			input := cmp.Or(tc.input, any(defaultInput))
 			target := cmp.Or(tc.target, ucastAcceptHeader)
 
 			// second, query the compile API
 			payload := map[string]any{
 				"input":    input,
-				"query":    query,
 				"unknowns": unknowns,
 				"options": map[string]any{
 					"targetSQLTableMappings": map[string]any{
@@ -846,7 +846,7 @@ include if input.fruits.colour == input.colour
 				t.Fatalf("store policy: %v", err)
 			}
 
-			req, err := http.NewRequest("POST", "/exp/compile", bytes.NewBuffer(jsonData))
+			req, err := http.NewRequest("POST", "/v1/compile/"+path, bytes.NewBuffer(jsonData))
 			if err != nil {
 				t.Fatalf("Failed to create request: %v", err)
 			}
@@ -854,7 +854,9 @@ include if input.fruits.colour == input.colour
 			req.Header.Set("Accept", target)
 
 			rr := httptest.NewRecorder()
-			chnd.ServeHTTP(rr, req)
+			router := mux.NewRouter()
+			router.Handle("/v1/compile/{path:.+}", chnd)
+			router.ServeHTTP(rr, req)
 
 			{
 				exp := http.StatusOK

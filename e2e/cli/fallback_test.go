@@ -49,7 +49,7 @@ q if input.foo.bar = "baz"` // no builtins called
 
 	wait.ForLog(t, eopaOut, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
-	{ // Data API
+	t.Run("data api", func(t *testing.T) { // Data API
 		req, err := http.NewRequest("POST", "http://localhost:"+fmt.Sprintf("%d", eopaHTTPPort)+"/v1/data/test/p?metrics&instrument", nil)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
@@ -80,9 +80,9 @@ q if input.foo.bar = "baz"` // no builtins called
 		if _, ok := output.Metrics["histogram_eval_op_rule_index"]; !ok {
 			t.Fatalf("expected metric histogram_eval_op_rule_index, not found: %v", output.Metrics)
 		}
-	}
+	})
 
-	{ // Compile API (compat) works fine
+	t.Run("compile-api-compat", func(t *testing.T) { // Compile API (compat) works fine
 		payload := map[string]any{
 			"query": "data.test.q",
 		}
@@ -113,17 +113,15 @@ q if input.foo.bar = "baz"` // no builtins called
 		if exp, act := 1, len(output.Result.Queries); exp != act {
 			t.Fatalf("expected %v queries, got %v", exp, act)
 		}
-	}
+	})
 
-	{ // Compile API (extensions) -- returns an error
-		payload := map[string]any{
-			"query": "data.test.q",
-		}
+	t.Run("compile-api-extension", func(t *testing.T) { // Compile API (extensions) -- returns an error
+		payload := map[string]any{}
 		jsonPayload := new(bytes.Buffer)
 		if err := json.NewEncoder(jsonPayload).Encode(payload); err != nil {
 			t.Fatalf("json encode: %v", err)
 		}
-		req, err := http.NewRequest("POST", "http://localhost:"+fmt.Sprintf("%d", eopaHTTPPort)+"/v1/compile", jsonPayload)
+		req, err := http.NewRequest("POST", "http://localhost:"+fmt.Sprintf("%d", eopaHTTPPort)+"/v1/compile/test/q", jsonPayload)
 		if err != nil {
 			t.Fatalf("http request: %v", err)
 		}
@@ -149,7 +147,7 @@ q if input.foo.bar = "baz"` // no builtins called
 		if exp, act := "requested API extension unavailable in fallback mode", output.Message; exp != act {
 			t.Errorf("expected message %v, got %v", exp, act)
 		}
-	}
+	})
 }
 
 func TestRunServerFallbackFailPlugins(t *testing.T) {

@@ -83,7 +83,6 @@ var dbConfigs = map[DBType]containerConfig{
 			"POSTGRES_USER":     "testuser",
 			"POSTGRES_PASSWORD": "testpass",
 		},
-		// waitFor:     wait.ForListeningPort("5432/tcp"),
 		waitFor: wait.ForLog("database system is ready to accept connections").
 			WithOccurrence(2).
 			WithStartupTimeout(15 * time.Second),
@@ -319,11 +318,11 @@ func TestCompileHappyPathE2E(t *testing.T) {
 		t.Fatal(err)
 	}
 	our_wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
-	eopaURL := fmt.Sprintf("http://localhost:%d", eopaHTTPPort)
+	eopaURL := fmt.Sprintf("http://127.0.0.1:%d", eopaHTTPPort)
 
 	unknowns := []string{"input.fruits"}
 	var input any = map[string]any{"fav_colour": "yellow"}
-	query := `data.filters%d.include`
+	path := `filters%d/include`
 
 	mapping := map[string]any{
 		"fruits": map[string]any{
@@ -474,6 +473,8 @@ func TestCompileHappyPathE2E(t *testing.T) {
 					t.Fatalf("post policy: %v", err)
 				}
 
+				path := fmt.Sprintf(path, i)
+
 				if tt.prisma && dbType == Postgres {
 					t.Run("prisma/"+tt.name, func(t *testing.T) { // also run via our prisma contraption
 						t.Parallel()
@@ -481,7 +482,6 @@ func TestCompileHappyPathE2E(t *testing.T) {
 						// second, query the compile API
 						payload := map[string]any{
 							"input":    input,
-							"query":    fmt.Sprintf(query, i),
 							"unknowns": unknowns,
 							"options": map[string]any{
 								"targetSQLTableMappings": map[string]any{
@@ -491,7 +491,7 @@ func TestCompileHappyPathE2E(t *testing.T) {
 						}
 						// get the UCAST IR, process with @styra/ucast-prisma, and run a findMany query
 						// with that against the DB, return rows
-						rowsData := getUCASTAndRunPrisma(t, payload, config, eopaURL)
+						rowsData := getUCASTAndRunPrisma(t, path, payload, config, eopaURL)
 
 						if diff := cmp.Diff(tt.expRows, rowsData); diff != "" {
 							t.Errorf("unexpected result (-want +got):\n%s", diff)
@@ -509,7 +509,6 @@ func TestCompileHappyPathE2E(t *testing.T) {
 					mappings[string(config.dbType)] = mapping
 					payload := map[string]any{
 						"input":    input,
-						"query":    fmt.Sprintf(query, i),
 						"unknowns": unknowns,
 						"options": map[string]any{
 							"targetSQLTableMappings": mappings,
@@ -518,7 +517,7 @@ func TestCompileHappyPathE2E(t *testing.T) {
 
 					// get the SQL where clauses, and run the concatenated query against db,
 					// return rows
-					rowsData := getSQLAndRunQuery(t, payload, config, eopaURL)
+					rowsData := getSQLAndRunQuery(t, path, payload, config, eopaURL)
 
 					// finally, compare with expected!
 					if diff := cmp.Diff(tt.expRows, rowsData); diff != "" {
@@ -542,7 +541,7 @@ func TestPrometheusMetrics(t *testing.T) {
 	eopaURL := fmt.Sprintf("http://localhost:%d", eopaHTTPPort)
 
 	input := map[string]any{"fav_colour": "yellow"}
-	query := `data.filters.include`
+	path := `filters/include`
 	policy := `package filters
 # METADATA
 # scope: document
@@ -563,7 +562,6 @@ include if input.fruits.name == "banana"
 		// query the compile API
 		payload := map[string]any{
 			"input": input,
-			"query": query,
 		}
 
 		queryBytes, err := json.Marshal(payload)
@@ -574,7 +572,7 @@ include if input.fruits.name == "banana"
 		for range 3 {
 			// POST to Compile API
 			req, err = http.NewRequest("POST",
-				fmt.Sprintf("%s/v1/compile", eopaURL),
+				fmt.Sprintf("%s/v1/compile/%s", eopaURL, path),
 				strings.NewReader(string(queryBytes)))
 			if err != nil {
 				t.Fatalf("failed to create request: %v", err)
@@ -646,7 +644,7 @@ func findMetrics(t *testing.T, eopaURL string, needles ...string) []string {
 	return founds
 }
 
-func getSQLAndRunQuery(t *testing.T, payload map[string]any, config *TestConfig, eopaURL string) []fruitRow {
+func getSQLAndRunQuery(t *testing.T, path string, payload map[string]any, config *TestConfig, eopaURL string) []fruitRow {
 	t.Helper()
 	queryBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -654,7 +652,7 @@ func getSQLAndRunQuery(t *testing.T, payload map[string]any, config *TestConfig,
 	}
 
 	req, err := http.NewRequest("POST",
-		fmt.Sprintf("%s/v1/compile", eopaURL),
+		fmt.Sprintf("%s/v1/compile/%s", eopaURL, path),
 		strings.NewReader(string(queryBytes)))
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
@@ -709,7 +707,7 @@ func getSQLAndRunQuery(t *testing.T, payload map[string]any, config *TestConfig,
 	return rowsData
 }
 
-func getUCASTAndRunPrisma(t *testing.T, payload map[string]any, config *TestConfig, eopaURL string) []fruitRow {
+func getUCASTAndRunPrisma(t *testing.T, path string, payload map[string]any, config *TestConfig, eopaURL string) []fruitRow {
 	t.Helper()
 	queryBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -718,7 +716,7 @@ func getUCASTAndRunPrisma(t *testing.T, payload map[string]any, config *TestConf
 
 	// Query EOPA for UCAST IR
 	req, err := http.NewRequest("POST",
-		fmt.Sprintf("%s/v1/compile", eopaURL),
+		fmt.Sprintf("%s/v1/compile/%s", eopaURL, path),
 		strings.NewReader(string(queryBytes)))
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)

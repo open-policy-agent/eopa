@@ -148,7 +148,6 @@ type hndl struct {
 }
 
 func (h *hndl) SetManager(m *plugins.Manager) error {
-	extraRoute(m, "/v1/compile", prometheusHandle, h.ServeHTTP)
 	extraRoute(m, "/v1/compile/{path:.+}", prometheusHandle, h.ServeHTTP)
 	ctx := context.TODO()
 	txn, err := m.Store.NewTransaction(ctx, storage.WriteParams)
@@ -187,6 +186,10 @@ var unsafeBuiltinsMap = map[string]struct{}{ast.HTTPSend.Name: {}}
 
 func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	urlPath := mux.Vars(r)["path"]
+	if urlPath == "" {
+		writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, "missing required 'path' parameter"))
+		return
+	}
 
 	ctx := r.Context()
 	explainMode := getExplain(r.URL.Query()[types.ParamExplainV1], types.ExplainOffV1)
@@ -228,10 +231,11 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	comp := h.manager.GetCompiler()
+	var compAnnot *ast.Compiler
 	unknowns := request.Unknowns // always wins over annotations if provided
 	if len(unknowns) == 0 {      // check cache for unknowns
 		var errs []*ast.Error
-		unknowns, errs = h.unknowns(ctx, txn, comp, m, urlPath, request.Query)
+		compAnnot, unknowns, errs = h.unknowns(ctx, txn, comp, m, urlPath, request.Query)
 		if errs != nil {
 			writer.Error(w, http.StatusBadRequest,
 				types.NewErrorV1(types.CodeEvaluation, types.MsgEvaluationError).
@@ -243,7 +247,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	maskingRule := request.Options.MaskRule // always wins over annotations if provided
 	if maskingRule == nil {
 		var errs []*ast.Error
-		maskingRule, errs = h.maskRule(ctx, txn, comp, m, urlPath, request.Query)
+		maskingRule, errs = h.maskRule(ctx, txn, cmp.Or(compAnnot, comp), m, urlPath, request.Query)
 		if errs != nil {
 			writer.Error(w, http.StatusBadRequest,
 				types.NewErrorV1(types.CodeEvaluation, types.MsgEvaluationError).
@@ -539,50 +543,45 @@ func ShortsFromMappings(mappings map[string]any) Set[string] {
 	return shorts
 }
 
-func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, path string, query ast.Body) ([]*ast.Term, []*ast.Error) {
+func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, path string, query ast.Body) (*ast.Compiler, []*ast.Term, []*ast.Error) {
 	key := path
-	// TODO(sr): Remove this once we've removed support for /v1/compile without {path},
-	// so urlPath will be required under all circumstances.
-	if key == "" {
-		key = query.String()
-	}
 	unknowns, ok := h.unknownsCache.Get(key)
 	if ok {
 		h.counterUnknownsCache.WithLabelValues("hit").Inc()
-		return unknowns, nil
+		return comp, unknowns, nil
 	}
 	h.counterUnknownsCache.WithLabelValues("miss").Inc()
 	m.Timer(timerExtractAnnotationsUnknowns).Start()
 	if len(query) != 1 {
-		return nil, nil
+		return comp, nil, nil
 	}
 	q, ok := query[0].Terms.(*ast.Term)
 	if !ok {
-		return nil, nil
+		return comp, nil, nil
 	}
 	queryRef, ok := (*q).Value.(ast.Ref)
 	if !ok {
-		return nil, nil
+		return comp, nil, nil
 	}
 	parsedUnknowns, errs := ExtractUnknownsFromAnnotations(comp, queryRef)
 	if errs != nil {
-		return nil, errs
+		return nil, nil, errs
 	}
 	if parsedUnknowns == nil { // none found on the compiler, re-parse modules
-		comp, errs = ensureCompilerParsedAnnotations(ctx, comp, h.manager.Store, txn, h.manager.ParserOptions())
+		comp, errs = ensureCompilerParsedAnnotations(ctx, h.manager.Store, txn, h.manager.ParserOptions())
 		if errs != nil {
-			return nil, errs
+			return nil, nil, errs
 		}
 		parsedUnknowns, errs = ExtractUnknownsFromAnnotations(comp, queryRef)
 		if errs != nil {
-			return nil, errs
+			return nil, nil, errs
 		}
 	}
 	unknowns = parsedUnknowns
 	m.Timer(timerExtractAnnotationsUnknowns).Stop()
 
 	h.unknownsCache.Add(key, unknowns)
-	return unknowns, nil
+	return comp, unknowns, nil
 }
 
 func fin(w http.ResponseWriter,
@@ -666,8 +665,6 @@ func readInputCompilePostV1(comp *ast.Compiler, reqBytes []byte, urlPath string,
 			default:
 				return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "%v: %v", types.MsgParseQueryError, err)
 			}
-		} else if len(query) == 0 {
-			return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "missing required 'query' value")
 		}
 	}
 
@@ -734,7 +731,7 @@ func lookupMappings(mappings map[string]any, target, dialect string) (map[string
 	return nil, nil
 }
 
-func ensureCompilerParsedAnnotations(ctx context.Context, comp *ast.Compiler, store storage.Store, txn storage.Transaction, po ast.ParserOptions) (*ast.Compiler, []*ast.Error) {
+func ensureCompilerParsedAnnotations(ctx context.Context, store storage.Store, txn storage.Transaction, po ast.ParserOptions) (*ast.Compiler, []*ast.Error) {
 	var errs []*ast.Error
 	mods, err := store.ListPolicies(ctx, txn)
 	if err != nil {
@@ -757,12 +754,18 @@ func ensureCompilerParsedAnnotations(ctx context.Context, comp *ast.Compiler, st
 	if errs != nil {
 		return nil, errs
 	}
-	comp.WithPathConflictsCheck(storage.NonEmpty(ctx, store, txn)).
+
+	// NB(sr): If we do this with the compiler used previously, we'll have a data race.
+	// Alternatively, we could open a write txn at the beginning, but I think this is
+	// a better compromise. We can reconsider this, for example when dealing with PE
+	// performance later.
+	comp0 := ast.NewCompiler()
+	comp0.WithPathConflictsCheck(storage.NonEmpty(ctx, store, txn)).
 		Compile(modules)
-	if len(comp.Errors) > 0 {
-		return nil, comp.Errors
+	if len(comp0.Errors) > 0 {
+		return nil, comp0.Errors
 	}
-	return comp, nil
+	return comp0, nil
 }
 
 func ExtractUnknownsFromAnnotations(comp *ast.Compiler, ref ast.Ref) ([]*ast.Term, []*ast.Error) {
@@ -846,7 +849,7 @@ func (h *hndl) maskRule(ctx context.Context, txn storage.Transaction, comp *ast.
 		return parsedMaskingRule, []*ast.Error{err}
 	}
 	if parsedMaskingRule == nil { // none found on the compiler, re-parse modules
-		comp, errs := ensureCompilerParsedAnnotations(ctx, comp, h.manager.Store, txn, h.manager.ParserOptions())
+		comp, errs := ensureCompilerParsedAnnotations(ctx, h.manager.Store, txn, h.manager.ParserOptions())
 		if errs != nil {
 			return nil, errs
 		}

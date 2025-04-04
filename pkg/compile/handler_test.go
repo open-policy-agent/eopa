@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"maps"
 	"math/rand/v2"
 	"net/http"
@@ -13,6 +14,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/gorilla/mux"
+
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/logging/test"
@@ -20,6 +23,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/test/e2e"
 	"github.com/open-policy-agent/opa/v1/topdown/cache"
+
 	"github.com/styrainc/enterprise-opa-private/pkg/compile"
 )
 
@@ -56,12 +60,11 @@ func TestCompileHandlerMultiTarget(t *testing.T) {
 			"name": "acmecorp",
 		},
 	}
-	query := "data.filters.include"
+	path := "filters/include"
 	target := "application/vnd.styra.multitarget+json"
 
 	payload := map[string]any{ // NB(sr): unknowns are taken from metadata
 		"input": input,
-		"query": query,
 		"options": map[string]any{
 			"targetDialects": []string{
 				"sql+postgresql",
@@ -72,7 +75,7 @@ func TestCompileHandlerMultiTarget(t *testing.T) {
 			},
 		},
 	}
-	resp, httpResp := evalReq(t, chnd, payload, target)
+	resp, httpResp := evalReq(t, chnd, path, payload, target)
 
 	{ // check results
 		if exp, act := "WHERE ((tickets.tenant = E'2' AND users.name = E'caesar') OR (tickets.tenant = E'2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))", resp.Result.Postgres.Query; exp != act {
@@ -166,7 +169,7 @@ func TestCompileHandlerMetrics(t *testing.T) {
 			"name": "acmecorp",
 		},
 	}
-	query := "data.filters.include"
+	path := "filters/include"
 	targets := []string{
 		"application/vnd.styra.sql.postgresql+json",
 		"application/vnd.styra.ucast.prisma+json",
@@ -175,12 +178,11 @@ func TestCompileHandlerMetrics(t *testing.T) {
 	for _, target := range targets {
 		t.Run(strings.Split(target, "/")[1], func(t *testing.T) {
 			resetCaches(t, mgr.Store)
-			payload := map[string]any{ // NB(sr): unknowns are taken from metadata
+			payload := map[string]any{ // NB(sr): unknowns+mask_rule are taken from metadata
 				"input": input,
-				"query": query,
 			}
 			{ // check metrics
-				resp, _ := evalReq(t, chnd, payload, target)
+				resp, _ := evalReq(t, chnd, path, payload, target)
 				if exp, act := map[string]float64{
 					"timer_eval_constraints_ns":             0,
 					"timer_eval_mask_rule_ns":               0,
@@ -199,7 +201,7 @@ func TestCompileHandlerMetrics(t *testing.T) {
 			}
 
 			{ // Redo without resetting the cache: no extraction happens
-				resp, _ := evalReq(t, chnd, payload, target)
+				resp, _ := evalReq(t, chnd, path, payload, target)
 				if n, ok := resp.Metrics["timer_extract_annotations_unknowns_ns"]; ok {
 					t.Errorf("unexpected metric 'timer_extract_annotations_unknowns_ns': %v", n)
 				}
@@ -209,7 +211,7 @@ func TestCompileHandlerMetrics(t *testing.T) {
 			}
 
 			{ // Redo without resetting the cache: no extraction happens
-				resp, _ := evalReq(t, chnd, payload, target)
+				resp, _ := evalReq(t, chnd, path, payload, target)
 				if n, ok := resp.Metrics["timer_extract_annotations_unknowns_ns"]; ok {
 					t.Errorf("unexpected metric 'timer_extract_annotations_unknowns_ns': %v", n)
 				}
@@ -291,7 +293,7 @@ include if {
 	iqvc := cache.NewInterQueryValueCache(ctx, config)
 	mgr.SetCaches(iqc, iqvc)
 
-	query, target := "data.filters.include", "application/vnd.styra.sql.postgresql+json"
+	path, target := "filters/include", "application/vnd.styra.sql.postgresql+json"
 
 	req := map[string]any{
 		"method":                       "GET",
@@ -332,9 +334,8 @@ include if {
 		t.Run(tc.note, func(t *testing.T) {
 			payload := map[string]any{ // NB(sr): unknowns are taken from metadata
 				"input": tc.input,
-				"query": query,
 			}
-			resp, _ := evalReq(t, chnd, payload, target)
+			resp, _ := evalReq(t, chnd, path, payload, target)
 			if exp, act := "WHERE foo.col = TRUE", resp.Result.Query; exp != act {
 				t.Errorf("response: expected %v, got %v", exp, act)
 			}
@@ -360,14 +361,13 @@ include if input.fruit.cost < input.max
 	input := map[string]any{
 		"max": 1,
 	}
-	query := "data.filters.include"
+	path := "filters/include"
 	target := "application/vnd.styra.sql.postgresql+json"
 
 	payload := map[string]any{ // NB(sr): unknowns are taken from metadata
 		"input": input,
-		"query": query,
 	}
-	resp, _ := evalReq(t, chnd, payload, target)
+	resp, _ := evalReq(t, chnd, path, payload, target)
 
 	{ // check results
 		if exp, act := "WHERE fruits.name = E'apple'", resp.Result.Query; exp != act {
@@ -405,7 +405,7 @@ func TestCompileHandlerMaskingRules(t *testing.T) {
 			"name": "acmecorp",
 		},
 	}
-	query := "data.filters.include"
+	path := "filters/include"
 	target := "application/vnd.styra.sql.postgresql+json"
 
 	t.Run("mask rule from payload parameter", func(t *testing.T) {
@@ -413,12 +413,11 @@ func TestCompileHandlerMaskingRules(t *testing.T) {
 		chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
 		payload := map[string]any{ // NB(sr): unknowns are taken from metadata
 			"input": input,
-			"query": query,
 			"options": map[string]any{
 				"maskRule": "data.filters.masks",
 			},
 		}
-		resp, _ := evalReq(t, chnd, payload, target)
+		resp, _ := evalReq(t, chnd, path, payload, target)
 
 		if exp, act := "WHERE ((tickets.tenant = E'2' AND users.name = E'caesar') OR (tickets.tenant = E'2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))", resp.Result.Query; exp != act {
 			t.Fatalf("response: expected %v, got %v", exp, act)
@@ -433,9 +432,8 @@ func TestCompileHandlerMaskingRules(t *testing.T) {
 		chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
 		payload := map[string]any{
 			"input": input,
-			"query": query,
 		}
-		resp, _ := evalReq(t, chnd, payload, target)
+		resp, _ := evalReq(t, chnd, path, payload, target)
 
 		if exp, act := "WHERE ((tickets.tenant = E'2' AND users.name = E'caesar') OR (tickets.tenant = E'2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))", resp.Result.Query; exp != act {
 			t.Fatalf("response: expected %v, got %v", exp, act)
@@ -479,7 +477,7 @@ func setup(t testing.TB, rego []byte, data any) (http.Handler, *plugins.Manager)
 	return chnd, trt.Runtime.Manager
 }
 
-func evalReq(t testing.TB, h http.Handler, payload map[string]any, target string) (Response, *http.Response) {
+func evalReq(t testing.TB, h http.Handler, path string, payload map[string]any, target string) (Response, *http.Response) {
 	t.Helper()
 
 	jsonData, err := json.Marshal(payload)
@@ -489,11 +487,13 @@ func evalReq(t testing.TB, h http.Handler, payload map[string]any, target string
 
 	// CAVEAT(sr): We're using the httptest machinery to simulate a request, so the actual
 	// request path is ignored.
-	req := httptest.NewRequest("POST", "/v1/compile?metrics=true", bytes.NewBuffer(jsonData))
+	req := httptest.NewRequest("POST", fmt.Sprintf("/v1/compile/%s?metrics=true", path), bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", target)
 	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
+	router := mux.NewRouter()
+	router.Handle("/v1/compile/{path:.+}", h)
+	router.ServeHTTP(rr, req)
 	exp := http.StatusOK
 	if act := rr.Code; exp != act {
 		t.Errorf("response: %s", rr.Body.String())
