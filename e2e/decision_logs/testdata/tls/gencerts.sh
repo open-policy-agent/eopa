@@ -20,12 +20,12 @@ IP.1 = 127.0.0.1
 EOF
 
 openssl genrsa -out ca-key.pem 2048
-openssl req -x509 -new -nodes -key ca-key.pem -days 365 -out ca.pem -subj "/CN=my-ca"
+openssl req -x509 -new -nodes -key ca-key.pem -days 3650 -out ca.pem -subj "/CN=my-ca"
 
 openssl genrsa -out client-key.pem 2048
 openssl req -new -key client-key.pem -out csr.pem -subj "/CN=my-client"
-openssl x509 -req -in csr.pem -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out client-cert.pem -days 365
+openssl x509 -req -in csr.pem -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out client-cert.pem -days 3650
 
 openssl genrsa -out server-key.pem 2048
 openssl req -new -key server-key.pem -out csr.pem -subj "/CN=my-server" -config req.cnf
-openssl x509 -req -in csr.pem -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out server-cert.pem -days 365 -extensions v3_req -extfile req.cnf
+openssl x509 -req -in csr.pem -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out server-cert.pem -days 3650 -extensions v3_req -extfile req.cnf
