@@ -689,7 +689,13 @@ func readInputCompilePostV1(comp *ast.Compiler, reqBytes []byte, urlPath string,
 
 	var maskRuleRef ast.Ref
 	if request.Options.MaskRule != "" {
-		maskRuleRef, err = ast.ParseRef(request.Options.MaskRule)
+		maskPath := request.Options.MaskRule
+		if !strings.HasPrefix(request.Options.MaskRule, "data.") {
+			// If the mask_rule is not a data ref try adding package prefix from URL path.
+			dataFiltersRuleRef := stringPathToDataRef(urlPath)
+			maskPath = dataFiltersRuleRef[:len(dataFiltersRuleRef)-1].String() + "." + request.Options.MaskRule
+		}
+		maskRuleRef, err = ast.ParseRef(maskPath)
 		if err != nil {
 			hint := fuzzyRuleNameMatchHint(comp, request.Options.MaskRule)
 			return nil, nil, types.NewErrorV1(types.CodeInvalidParameter, "error(s) occurred while parsing mask_rule name: %s", hint)
@@ -888,7 +894,12 @@ func maskRuleFromAnnotationsSet(comp *ast.Compiler, as *ast.AnnotationSet, rule 
 		// If the mask_rule key is present, validate and parse it.
 		if maskRule, ok := ann.Custom["mask_rule"]; ok {
 			if s, ok := maskRule.(string); ok {
-				maskRuleRef, err := ast.ParseRef(s)
+				maskPath := s
+				if !strings.HasPrefix(s, "data.") {
+					// If the mask_rule is not a data ref try adding package prefix.
+					maskPath = rule.Module.Package.Path.String() + "." + s
+				}
+				maskRuleRef, err := ast.ParseRef(maskPath)
 				if err != nil {
 					hint := fuzzyRuleNameMatchHint(comp, s)
 					return nil, ast.NewError(invalidMaskRuleCode, ann.Loc(), "mask_rule was not a valid ref: %s", hint)

@@ -427,8 +427,46 @@ func TestCompileHandlerMaskingRules(t *testing.T) {
 			t.Fatalf("masks, (-want, +got):\n%s", diff)
 		}
 	})
+	t.Run("mask rule from payload parameter + package-local matching", func(t *testing.T) {
+		t.Parallel()
+		chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
+		payload := map[string]any{ // NB(sr): unknowns are taken from metadata
+			"input": input,
+			"options": map[string]any{
+				"maskRule": "masks",
+			},
+		}
+		resp, _ := evalReq(t, chnd, path, payload, target)
+
+		if exp, act := "WHERE ((tickets.tenant = E'2' AND users.name = E'caesar') OR (tickets.tenant = E'2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))", resp.Result.Query; exp != act {
+			t.Fatalf("response: expected %v, got %v", exp, act)
+		}
+		exp, act := map[string]any{"tickets": map[string]any{"description": map[string]any{"replace": map[string]any{"value": "***"}}}}, resp.Result.Masks
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Fatalf("masks, (-want, +got):\n%s", diff)
+		}
+	})
 	t.Run("mask rule from rule annotation", func(t *testing.T) {
 		t.Parallel()
+		chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
+		payload := map[string]any{
+			"input": input,
+		}
+		resp, _ := evalReq(t, chnd, path, payload, target)
+
+		if exp, act := "WHERE ((tickets.tenant = E'2' AND users.name = E'caesar') OR (tickets.tenant = E'2' AND tickets.assignee IS NULL AND tickets.resolved = FALSE))", resp.Result.Query; exp != act {
+			t.Fatalf("response: expected %v, got %v", exp, act)
+		}
+		exp, act := map[string]any{"tickets": map[string]any{"id": map[string]any{"replace": map[string]any{"value": "***"}}}}, resp.Result.Masks
+		if diff := cmp.Diff(exp, act); diff != "" {
+			t.Fatalf("masks, (-want, +got):\n%s", diff)
+		}
+	})
+	t.Run("mask rule from rule annotation + package-local matching", func(t *testing.T) {
+		t.Parallel()
+		// Mangle the mask_rule annotation to make it package-local:
+		benchRego := bytes.Replace(benchRego, []byte("mask_rule: data.filters.mask_from_annotation"), []byte("mask_rule: mask_from_annotation"), 1)
+
 		chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
 		payload := map[string]any{
 			"input": input,

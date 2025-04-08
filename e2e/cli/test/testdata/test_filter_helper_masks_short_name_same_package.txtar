@@ -1,0 +1,56 @@
+exec eopa test explicit_mask_map
+! stderr .
+cmp stdout exp/stdout
+
+-- explicit_mask_map/filters.rego --
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.fruits", "input.users"]
+#   mask_rule: mask
+include if input.users.name == input.username
+
+mask.users.phone.replace.value := "<phone>"
+mask.fruits.name.replace.value := "<name>"
+mask.users.name.replace.value := "<username>"
+-- explicit_mask_map/filters_test.rego --
+package filters
+
+import data.system.eopa.utils.tests.v1.filter
+
+fruits_table := [
+	{"id": 0, "name": "apple", "owner_id": "a"},
+	{"id": 1, "name": "banana", "owner_id": "a"},
+	{"id": 2, "name": "cherry", "owner_id": "b"},
+]
+
+users_table := [
+	{"id": "a", "name": "jane", "phone": "0123"},
+	{"id": "b", "name": "john", "phone": "4567"},
+]
+
+test_owner_can_see_their_fruit if {
+	filtered_and_masked := filter.helper(
+		"data.filters.include",
+		"SELECT fruits.id, fruits.name, users.name as owner, users.phone as phone FROM fruits LEFT JOIN users ON fruits.owner_id = users.id",
+		{
+			"fruits": fruits_table,
+			"users": users_table,
+		},
+		{
+			"debug": true,
+			"masking": {
+				"name": "fruits.name",
+				"owner": "users.name",
+				"phone": "users.phone",
+			},
+		},
+	) with input.username as "jane"
+	count(filtered_and_masked) == 2
+	{"id": 0, "name": "<name>", "owner": "<username>", "phone": "<phone>"} in filtered_and_masked
+	{"id": 1, "name": "<name>", "owner": "<username>", "phone": "<phone>"} in filtered_and_masked
+}
+-- exp/stdout --
+PASS: 1/1
