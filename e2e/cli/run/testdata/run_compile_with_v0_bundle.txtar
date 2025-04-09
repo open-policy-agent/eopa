@@ -1,0 +1,38 @@
+exec eopa build --bundle --v0-compatible bundle 
+! stderr .
+! stdout .
+
+[windows] ! exec eopa run --log-level error --addr :61701 --server --bundle bundle.tar.gz &eopa&
+[!windows]  exec eopa run --log-level error --addr :61701 --server --bundle bundle.tar.gz  &eopa&
+! stdout .
+! stderr .
+
+# block until the server reports health OK
+httpwait 'http://localhost:61701/health' '{}'
+
+# curl with input
+exec curl -Ss --url http://localhost:61701/v1/compile/filters/include?pretty -d '{"input": {"fav_colours": ["yellow", "green"]}}' -H 'Accept: application/vnd.styra.sql.postgresql+json'
+! stderr .
+cmp stdout exp/stdout
+
+stop eopa
+! stdout .
+! stderr .
+
+-- bundle/.manifest --
+{ "rego_version": 0 }
+-- bundle/policy.rego --
+package filters
+import future.keywords.in
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: [input.fruits]
+include { input.fruits.colour in input.fav_colours }
+-- exp/stdout --
+{
+  "result": {
+    "query": "WHERE fruits.colour IN (E'yellow', E'green')"
+  }
+}

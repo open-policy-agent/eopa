@@ -4,7 +4,6 @@ package vm
 
 import (
 	"context"
-	"fmt"
 	go_strings "strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -235,22 +234,5 @@ func maybeRaiseASTErrors(state *State, errs []*ast.Error, raise bool) error {
 		state.SetReturnValue(Unused, astErrorsToObject(state, errs...))
 		return nil
 	}
-	return aerrs{errs: errs}
-}
-
-type aerrs struct {
-	errs []*ast.Error
-}
-
-func (es aerrs) Error() string {
-	s := go_strings.Builder{}
-	if x := len(es.errs); x > 1 {
-		fmt.Fprintf(&s, "%d errors occurred during compilation:\n", x)
-	} else {
-		s.WriteString("1 error occurred during compilation:\n")
-	}
-	for i := range es.errs {
-		s.WriteString(es.errs[i].Error())
-	}
-	return s.String()
+	return compile.FromASTErrors(errs...)
 }

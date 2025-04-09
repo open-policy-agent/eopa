@@ -145,6 +145,7 @@ type hndl struct {
 	counterUnknownsCache     *prometheus.CounterVec
 	counterMaskingRulesCache *prometheus.CounterVec
 	dl                       *logs.Plugin
+	compiler                 *ast.Compiler
 }
 
 func (h *hndl) SetManager(m *plugins.Manager) error {
@@ -155,18 +156,18 @@ func (h *hndl) SetManager(m *plugins.Manager) error {
 		return fmt.Errorf("failed to create transaction: %w", err)
 	}
 	if _, err := m.Store.Register(ctx, txn, storage.TriggerConfig{
-		OnCommit: func(_ context.Context, _ storage.Transaction, evt storage.TriggerEvent) {
+		OnCommit: func(ctx context.Context, txn storage.Transaction, evt storage.TriggerEvent) {
 			if evt.PolicyChanged() {
 				h.Debug("purging unknowns cache for policy change")
 				h.unknownsCache.Purge()
 				h.maskingRulesCache.Purge()
+				if err := h.prepAnnotationSet(ctx, txn); err != nil {
+					h.Error("preparing annotation set: %s", err.Error())
+				}
 			}
 		},
 	}); err != nil {
 		return fmt.Errorf("failed to register trigger: %w", err)
-	}
-	if err := m.Store.Commit(ctx, txn); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	if pr := m.PrometheusRegister(); pr != nil {
 		if err := pr.Register(h.counterUnknownsCache); err != nil {
@@ -179,6 +180,12 @@ func (h *hndl) SetManager(m *plugins.Manager) error {
 
 	h.dl = logs.Lookup(m)
 	h.manager = m
+	if err := h.prepAnnotationSet(ctx, txn); err != nil {
+		return err
+	}
+	if err := m.Store.Commit(ctx, txn); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
 	return nil
 }
 
@@ -231,11 +238,11 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	comp := h.manager.GetCompiler()
-	var compAnnot *ast.Compiler
+
 	unknowns := request.Unknowns // always wins over annotations if provided
 	if len(unknowns) == 0 {      // check cache for unknowns
 		var errs []*ast.Error
-		compAnnot, unknowns, errs = h.unknowns(ctx, txn, comp, m, urlPath, request.Query)
+		unknowns, errs = h.unknowns(m, urlPath, request.Query)
 		if errs != nil {
 			writer.Error(w, http.StatusBadRequest,
 				types.NewErrorV1(types.CodeEvaluation, types.MsgEvaluationError).
@@ -247,7 +254,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	maskingRule := request.Options.MaskRule // always wins over annotations if provided
 	if maskingRule == nil {
 		var errs []*ast.Error
-		maskingRule, errs = h.maskRule(ctx, txn, cmp.Or(compAnnot, comp), m, urlPath, request.Query)
+		maskingRule, errs = h.maskRule(m, urlPath, request.Query)
 		if errs != nil {
 			writer.Error(w, http.StatusBadRequest,
 				types.NewErrorV1(types.CodeEvaluation, types.MsgEvaluationError).
@@ -543,45 +550,35 @@ func ShortsFromMappings(mappings map[string]any) Set[string] {
 	return shorts
 }
 
-func (h *hndl) unknowns(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, path string, query ast.Body) (*ast.Compiler, []*ast.Term, []*ast.Error) {
+func (h *hndl) unknowns(m metrics.Metrics, path string, query ast.Body) ([]*ast.Term, []*ast.Error) {
 	key := path
 	unknowns, ok := h.unknownsCache.Get(key)
 	if ok {
 		h.counterUnknownsCache.WithLabelValues("hit").Inc()
-		return comp, unknowns, nil
+		return unknowns, nil
 	}
 	h.counterUnknownsCache.WithLabelValues("miss").Inc()
 	m.Timer(timerExtractAnnotationsUnknowns).Start()
 	if len(query) != 1 {
-		return comp, nil, nil
+		return nil, nil
 	}
 	q, ok := query[0].Terms.(*ast.Term)
 	if !ok {
-		return comp, nil, nil
+		return nil, nil
 	}
 	queryRef, ok := (*q).Value.(ast.Ref)
 	if !ok {
-		return comp, nil, nil
+		return nil, nil
 	}
-	parsedUnknowns, errs := ExtractUnknownsFromAnnotations(comp, queryRef)
+	parsedUnknowns, errs := ExtractUnknownsFromAnnotations(h.compiler, queryRef)
 	if errs != nil {
-		return nil, nil, errs
-	}
-	if parsedUnknowns == nil { // none found on the compiler, re-parse modules
-		comp, errs = ensureCompilerParsedAnnotations(ctx, h.manager.Store, txn, h.manager.ParserOptions())
-		if errs != nil {
-			return nil, nil, errs
-		}
-		parsedUnknowns, errs = ExtractUnknownsFromAnnotations(comp, queryRef)
-		if errs != nil {
-			return nil, nil, errs
-		}
+		return nil, errs
 	}
 	unknowns = parsedUnknowns
 	m.Timer(timerExtractAnnotationsUnknowns).Stop()
 
 	h.unknownsCache.Add(key, unknowns)
-	return comp, unknowns, nil
+	return unknowns, nil
 }
 
 func fin(w http.ResponseWriter,
@@ -737,43 +734,6 @@ func lookupMappings(mappings map[string]any, target, dialect string) (map[string
 	return nil, nil
 }
 
-func ensureCompilerParsedAnnotations(ctx context.Context, store storage.Store, txn storage.Transaction, po ast.ParserOptions) (*ast.Compiler, []*ast.Error) {
-	var errs []*ast.Error
-	mods, err := store.ListPolicies(ctx, txn)
-	if err != nil {
-		return nil, append(errs, ast.NewError(invalidUnknownCode, nil, "failed to list policies for annotation set: %s", err))
-	}
-	po.ProcessAnnotation = true
-	modules := make(map[string]*ast.Module, len(mods))
-	for _, module := range mods {
-		rego, err := store.GetPolicy(ctx, txn, module)
-		if err != nil {
-			return nil, append(errs, ast.NewError(invalidUnknownCode, nil, "failed to read module for annotation set: %s", err))
-		}
-		m, err := ast.ParseModuleWithOpts(module, string(rego), po)
-		if err != nil {
-			errs = append(errs, ast.NewError(invalidUnknownCode, nil, "failed to parse module for annotation set: %s", err))
-			continue
-		}
-		modules[module] = m
-	}
-	if errs != nil {
-		return nil, errs
-	}
-
-	// NB(sr): If we do this with the compiler used previously, we'll have a data race.
-	// Alternatively, we could open a write txn at the beginning, but I think this is
-	// a better compromise. We can reconsider this, for example when dealing with PE
-	// performance later.
-	comp0 := ast.NewCompiler()
-	comp0.WithPathConflictsCheck(storage.NonEmpty(ctx, store, txn)).
-		Compile(modules)
-	if len(comp0.Errors) > 0 {
-		return nil, comp0.Errors
-	}
-	return comp0, nil
-}
-
 func ExtractUnknownsFromAnnotations(comp *ast.Compiler, ref ast.Ref) ([]*ast.Term, []*ast.Error) {
 	// find ast.Rule for ref
 	rules := comp.GetRulesExact(ref)
@@ -824,13 +784,8 @@ func unknownsFromAnnotationsSet(as *ast.AnnotationSet, rule *ast.Rule) ([]*ast.T
 }
 
 // Modeled after (*hndl).unknowns.
-func (h *hndl) maskRule(ctx context.Context, txn storage.Transaction, comp *ast.Compiler, m metrics.Metrics, path string, query ast.Body) (ast.Ref, []*ast.Error) {
+func (h *hndl) maskRule(m metrics.Metrics, path string, query ast.Body) (ast.Ref, []*ast.Error) {
 	key := path
-	// TODO(sr): Remove this once we've removed support for /v1/compile without {path},
-	// so urlPath will be required under all circumstances.
-	if key == "" {
-		key = query.String()
-	}
 	mr, ok := h.maskingRulesCache.Get(key)
 	if ok {
 		h.counterMaskingRulesCache.WithLabelValues("hit").Inc()
@@ -850,19 +805,9 @@ func (h *hndl) maskRule(ctx context.Context, txn storage.Transaction, comp *ast.
 	if !ok {
 		return nil, nil
 	}
-	parsedMaskingRule, err := ExtractMaskRuleRefFromAnnotations(comp, queryRef)
+	parsedMaskingRule, err := ExtractMaskRuleRefFromAnnotations(h.compiler, queryRef)
 	if err != nil {
 		return parsedMaskingRule, []*ast.Error{err}
-	}
-	if parsedMaskingRule == nil { // none found on the compiler, re-parse modules
-		comp, errs := ensureCompilerParsedAnnotations(ctx, h.manager.Store, txn, h.manager.ParserOptions())
-		if errs != nil {
-			return nil, errs
-		}
-		parsedMaskingRule, err := ExtractMaskRuleRefFromAnnotations(comp, queryRef)
-		if err != nil {
-			return parsedMaskingRule, []*ast.Error{err}
-		}
 	}
 	mr = parsedMaskingRule
 	m.Timer(timerExtractAnnotationsMask).Stop()
@@ -878,10 +823,10 @@ func ExtractMaskRuleRefFromAnnotations(comp *ast.Compiler, ref ast.Ref) (ast.Ref
 		return nil, nil
 	}
 	rule := rules[0] // rule scope doesn't make sense here, so it doesn't matter which rule we use
-	return maskRuleFromAnnotationsSet(comp, comp.GetAnnotationSet(), rule)
+	return maskRuleFromAnnotationsSet(comp.GetAnnotationSet(), comp, rule)
 }
 
-func maskRuleFromAnnotationsSet(comp *ast.Compiler, as *ast.AnnotationSet, rule *ast.Rule) (ast.Ref, *ast.Error) {
+func maskRuleFromAnnotationsSet(as *ast.AnnotationSet, comp *ast.Compiler, rule *ast.Rule) (ast.Ref, *ast.Error) {
 	if as == nil {
 		return nil, nil
 	}
@@ -1175,4 +1120,84 @@ func fuzzyRuleNameMatchHint(comp *ast.Compiler, input string) string {
 		msg = fmt.Sprintf("%s undefined, did you mean one of %v?", input, proposals)
 	}
 	return msg
+}
+
+func cloneCompiler(c *ast.Compiler) *ast.Compiler {
+	return ast.NewCompiler().
+		WithDefaultRegoVersion(c.DefaultRegoVersion()).
+		WithCapabilities(c.Capabilities())
+}
+
+func prepareAnnotations(
+	ctx context.Context,
+	comp *ast.Compiler,
+	store storage.Store,
+	txn storage.Transaction,
+	po ast.ParserOptions,
+) (*ast.Compiler, ast.Errors) {
+	var errs []*ast.Error
+	mods, err := store.ListPolicies(ctx, txn)
+	if err != nil {
+		return nil, append(errs, ast.NewError(invalidUnknownCode, nil, "failed to list policies for annotation set: %s", err))
+	}
+	po.ProcessAnnotation = true
+	po.RegoVersion = comp.DefaultRegoVersion()
+	modules := make(map[string]*ast.Module, len(mods))
+	for _, module := range mods {
+		vsn, ok := comp.Modules[module]
+		if ok { // NB(sr): I think this should be impossible. Let's try not to panic, and fall back to the default if it _does happen_.
+			po.RegoVersion = vsn.RegoVersion()
+		}
+		rego, err := store.GetPolicy(ctx, txn, module)
+		if err != nil {
+			return nil, append(errs, ast.NewError(invalidUnknownCode, nil, "failed to read module for annotation set: %s", err))
+		}
+		m, err := ast.ParseModuleWithOpts(module, string(rego), po)
+		if err != nil {
+			errs = append(errs, ast.NewError(invalidUnknownCode, nil, "failed to parse module for annotation set: %s", err))
+			continue
+		}
+		modules[module] = m
+	}
+	if errs != nil {
+		return nil, errs
+	}
+
+	comp0 := cloneCompiler(comp)
+	comp0.WithPathConflictsCheck(storage.NonEmpty(ctx, store, txn)).Compile(modules)
+	if len(comp0.Errors) > 0 {
+		return nil, comp0.Errors
+	}
+	return comp0, nil
+}
+
+func (h *hndl) prepAnnotationSet(ctx context.Context, txn storage.Transaction) error {
+	comp, errs := prepareAnnotations(ctx, h.manager.GetCompiler(), h.manager.Store, txn, h.manager.ParserOptions())
+	if len(errs) > 0 {
+		return FromASTErrors(errs...)
+	}
+	h.compiler = comp
+	return nil
+}
+
+// aerrs is a wrapper giving us an `error` from `ast.Errors`
+type aerrs struct {
+	errs []*ast.Error
+}
+
+func FromASTErrors(errs ...*ast.Error) error {
+	return &aerrs{errs}
+}
+
+func (es *aerrs) Error() string {
+	s := strings.Builder{}
+	if x := len(es.errs); x > 1 {
+		fmt.Fprintf(&s, "%d errors occurred during compilation:\n", x)
+	} else {
+		s.WriteString("1 error occurred during compilation:\n")
+	}
+	for i := range es.errs {
+		s.WriteString(es.errs[i].Error())
+	}
+	return s.String()
 }
