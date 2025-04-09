@@ -50,6 +50,9 @@ builds:
       - use_opa_fork
     ldflags: *ldflags
     hooks:
+      pre:
+        # Embeds metadata and an icon into the executable at build-time.
+        - cmd: build/gen-windows-versioninfo.sh
       post:
         # The binary is signed / timestamped when running a production release,
         # but for snapshot builds we skip it.

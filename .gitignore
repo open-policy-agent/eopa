@@ -11,3 +11,6 @@ tmp-docs/
 /base.tar
 /base-debug.tar
 /sbom-*.spdx.json
+
+# generated when building windows binary to add icon and product version
+resource.syso

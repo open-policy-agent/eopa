@@ -83,6 +83,8 @@ jobs:
         run: echo $SM_CLIENT_CERT_FILE_BASE64 | base64 --decode > bot-client-auth-cert.p12
         env:
           SM_CLIENT_CERT_FILE_BASE64: ${{ secrets.SM_CLIENT_CERT_FILE_BASE64 }}
+      - name: Install goversioninfo for Windows binary icon and version
+        run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0
       - name: Run GoReleaser
         # NOTE(sr): not calling the Makefile target here, since we've checked out a previous tag
         run: |
