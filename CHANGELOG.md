@@ -12,6 +12,31 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.39.1
+
+[![OPA v1.3.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.3.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.3.0)
+[![Regal v0.32.0](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.32.0&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.32.0)
+
+This release fixes a bug related to using Rego v0 bundles with the Compile API.
+
+Also, referencing _mask rules_ in annotations has been simplified: rules defined in the same package can now be referenced without the full prefix:
+
+```rego
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns: ["input.tickets"]
+#   mask_rule: masks # <-------- here
+default include := true         #|
+# v-------------------------------
+masks.tickets.description.replace.value := "<description>"
+```
+
+Starting from this release, our Windows binaries feature a Styra icon.
+
+
 ## v1.39.0
 
 [![OPA v1.3.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.3.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.3.0)
