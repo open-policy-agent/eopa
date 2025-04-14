@@ -47,7 +47,7 @@ jobs:
           cache-dependency-path: enterprise-opa/go.sum
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/StyraInc.insteadOf https://github.com/StyraInc
-      - uses: ko-build/setup-ko@d982fec422852203cfb2053a8ec6ad302280d04d # v0.8
+      - uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d # v0.9
       - name: Build
         run: make build
         env:
