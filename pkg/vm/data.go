@@ -770,6 +770,10 @@ func castJSON(ctx context.Context, v any) (fjson.Json, error) {
 	}
 
 	switch v := v.(type) {
+	case *any:
+		if v != nil {
+			return castJSON(ctx, *v)
+		}
 	case IterableObject:
 		obj := fjson.NewObject2(0)
 		err := v.Iter(ctx, func(k, v any) (bool, error) {
