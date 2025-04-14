@@ -29,7 +29,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.36.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.36.0
 	github.com/twmb/franz-go v1.18.1
-	github.com/twmb/franz-go/pkg/kadm v1.15.0
+	github.com/twmb/franz-go/pkg/kadm v1.16.0
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
 	modernc.org/sqlite v1.37.0
