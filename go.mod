@@ -5,7 +5,7 @@ go 1.23.6
 toolchain go1.24.1
 
 require (
-	cloud.google.com/go/storage v1.51.0
+	cloud.google.com/go/storage v1.52.0
 	git.sr.ht/~charles/graph v0.0.1
 	github.com/Jeffail/gabs/v2 v2.7.0
 	github.com/Masterminds/squirrel v1.5.4
@@ -116,11 +116,11 @@ require (
 
 require (
 	cel.dev/expr v0.19.2 // indirect
-	cloud.google.com/go v0.118.3 // indirect
+	cloud.google.com/go v0.120.0 // indirect
 	cloud.google.com/go/auth v0.16.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
-	cloud.google.com/go/iam v1.4.1 // indirect
+	cloud.google.com/go/iam v1.5.0 // indirect
 	cloud.google.com/go/monitoring v1.24.0 // indirect
 	cuelang.org/go v0.12.0 // indirect
 	dario.cat/mergo v1.0.1 // indirect
@@ -136,7 +136,7 @@ require (
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/DataDog/zstd v1.5.2 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.25.0 // indirect
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.27.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.51.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.51.0 // indirect
 	github.com/IBM/sarama v1.43.2 // indirect
@@ -370,7 +370,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/contrib/detectors/gcp v1.34.0 // indirect
+	go.opentelemetry.io/contrib/detectors/gcp v1.35.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.32.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
@@ -388,7 +388,7 @@ require (
 	golang.org/x/tools v0.31.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20250303144028-a0af3efb3deb // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250414145226-207652e42e2e // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250414145226-207652e42e2e // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
