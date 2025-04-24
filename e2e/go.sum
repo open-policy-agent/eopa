@@ -47,8 +47,8 @@ cloud.google.com/go/trace v1.11.3 h1:c+I4YFjxRQjvAhRmSsmjpASUKq88chOX854ied0K/pE
 cloud.google.com/go/trace v1.11.3/go.mod h1:pt7zCYiDSQjC9Y2oqCsh9jF4GStB/hmjrYLsxRR27q8=
 cuelabs.dev/go/oci/ociregistry v0.0.0-20241125120445-2c00c104c6e1 h1:mRwydyTyhtRX2wXS3mqYWzR2qlv6KsmoKXmlz5vInjg=
 cuelabs.dev/go/oci/ociregistry v0.0.0-20241125120445-2c00c104c6e1/go.mod h1:5A4xfTzHTXfeVJBU6RAUf+QrlfTCW+017q/QiW+sMLg=
-cuelang.org/go v0.12.0 h1:q4W5I+RtDIA27rslQyyt6sWkXX0YS9qm43+U1/3e0kU=
-cuelang.org/go v0.12.0/go.mod h1:B4+kjvGGQnbkz+GuAv1dq/R308gTkp0sO28FdMrJ2Kw=
+cuelang.org/go v0.12.1 h1:5I+zxmXim9MmiN2tqRapIqowQxABv2NKTgbOspud1Eo=
+cuelang.org/go v0.12.1/go.mod h1:B4+kjvGGQnbkz+GuAv1dq/R308gTkp0sO28FdMrJ2Kw=
 dario.cat/mergo v1.0.1 h1:Ra4+bf83h2ztPIQYNP99R6m+Y7KfnARDfID+a+vLl4s=
 dario.cat/mergo v1.0.1/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
@@ -337,8 +337,8 @@ github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/foxcpp/go-mockdns v1.1.0 h1:jI0rD8M0wuYAxL7r/ynTrCQQq0BVqfB99Vgk7DlmewI=
 github.com/foxcpp/go-mockdns v1.1.0/go.mod h1:IhLeSFGed3mJIAXPH2aiRQB+kqz7oqu8ld2qVbOu7Wk=
-github.com/fsnotify/fsnotify v1.8.0 h1:dAwr6QBTBZIkG8roQaJjGof0pp0EeF+tNV7YBP3F/8M=
-github.com/fsnotify/fsnotify v1.8.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
+github.com/fsnotify/fsnotify v1.9.0 h1:2Ml+OJNzbYCTzsxtv8vKSFD9PbJjmhYF14k/jKC7S9k=
+github.com/fsnotify/fsnotify v1.9.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
 github.com/fsouza/fake-gcs-server v1.52.1 h1:Hx3G2ZpyBzHGmW7cHURWWoTm6jM3M5fcWMIAHBYlJyc=
 github.com/fsouza/fake-gcs-server v1.52.1/go.mod h1:Paxf25VmSNMN52L+2/cVulF5fkLUA0YJIYjTGJiwf3c=
 github.com/gabriel-vasile/mimetype v1.4.7 h1:SKFKl7kD0RiPdbht0s7hFtjl489WcQ1VyPW8ZzUMYCA=
@@ -758,10 +758,10 @@ github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 h1:N/ElC8H3+5X
 github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/redis/go-redis/v9 v9.7.3 h1:YpPyAayJV+XErNsatSElgRZZVCwXX9QzkKYNvO7x0wM=
 github.com/redis/go-redis/v9 v9.7.3/go.mod h1:bGUrSggJ9X9GUmZpZNEOQKaANxSGgOEBRltRTZHSvrA=
-github.com/redpanda-data/benthos/v4 v4.47.0 h1:kIFBr7zYmoOcVgsWPgLxAcgl6gG8a8Sb8SkQuthFa6U=
-github.com/redpanda-data/benthos/v4 v4.47.0/go.mod h1:zMLG/yCfRp4YM0mrrkIAxVGGVHBM2Vt1dWTgFakMTp8=
-github.com/redpanda-data/connect/v4 v4.52.0 h1:nac9nTP4419WssS8erLFHXx8apA1X7nBMQixQl+0vD4=
-github.com/redpanda-data/connect/v4 v4.52.0/go.mod h1:aFHMRZOfn9WRLPunxEmm1SYQCmJn1LJXB9iQ2V0DbGc=
+github.com/redpanda-data/benthos/v4 v4.48.0 h1:4YCj5HRXV0wnetPDBNFp9tDMzrMdjftBoJX6mEsYVUI=
+github.com/redpanda-data/benthos/v4 v4.48.0/go.mod h1:WVs50+EHZQOIbMo32P7tdhA5KQKAe41ZSyTZvCrekUc=
+github.com/redpanda-data/connect/v4 v4.53.0 h1:P6thb2eqo7KzY3HYjnOi6TysyRMekSh4m3R5pNAOE6c=
+github.com/redpanda-data/connect/v4 v4.53.0/go.mod h1:hJE73HtXgoHqJteI1MBCSNfGNII6bl3+70T7k87jkIc=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94icq4NjY3clb7Lk8O1qJ8BdBEF8z0ibU0rE=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
 github.com/rickb777/period v1.0.9 h1:eDiQhraNsdhfHjkxUd3sfbbP8z+hJQ7jjnU1zVziK/o=

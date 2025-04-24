@@ -20,8 +20,8 @@ require (
 	github.com/microsoft/go-mssqldb v1.8.0
 	github.com/minio/minio-go/v7 v7.0.91
 	github.com/open-policy-agent/opa v1.3.0
-	github.com/redpanda-data/benthos/v4 v4.47.0
-	github.com/redpanda-data/connect/v4 v4.52.0
+	github.com/redpanda-data/benthos/v4 v4.48.0
+	github.com/redpanda-data/connect/v4 v4.53.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
 	github.com/testcontainers/testcontainers-go v0.36.0
@@ -45,7 +45,7 @@ require (
 	cloud.google.com/go/monitoring v1.24.1 // indirect
 	cloud.google.com/go/pubsub v1.47.0 // indirect
 	cloud.google.com/go/storage v1.51.0 // indirect
-	cuelang.org/go v0.12.0 // indirect
+	cuelang.org/go v0.12.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
@@ -126,7 +126,7 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/fsnotify/fsnotify v1.8.0 // indirect
+	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.7 // indirect
 	github.com/generikvault/gvalstrings v0.0.0-20180926130504-471f38f0112a // indirect
 	github.com/go-faker/faker/v4 v4.4.2 // indirect
