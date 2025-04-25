@@ -89,7 +89,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.36.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.36.0
 	github.com/twmb/franz-go v1.18.1
-	github.com/twmb/franz-go/plugin/kprom v1.2.0
+	github.com/twmb/franz-go/plugin/kprom v1.2.1
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	github.com/xdg-go/scram v1.1.2
