@@ -911,8 +911,8 @@ github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/styrainc/regal v0.32.0 h1:ZF/hrI+Y1JQThcJ0CiMCo8IqLJU3SoeNAmoJYWmulX8=
-github.com/styrainc/regal v0.32.0/go.mod h1:axt061KTz5GkNVOR8xYnB6JZIqrTxPpQb40jfb7QUcg=
+github.com/styrainc/regal v0.33.1 h1:VXlF29xpoXzxAj6JWUD+gtQleNN9cPh6rqKz1vpYqo0=
+github.com/styrainc/regal v0.33.1/go.mod h1:HqQjDT4aiQJnd8RVX+HHaMlzTyZtxcS8/CSSTlD2RME=
 github.com/styrainc/roast v0.8.1 h1:MuAzFW3YrzWWXkF8m4LLF2X9JovB3HM6wetlCG0R/bo=
 github.com/styrainc/roast v0.8.1/go.mod h1:43KebdkDzfdNe06CI/xd+x+NKrmgKdZFGDm4J0zlhgw=
 github.com/subosito/gotenv v1.6.0 h1:9NlTDc1FTs4qu0DDq7AEtTPNw6SVm7uBMsUCUjABIf8=

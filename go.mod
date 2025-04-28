@@ -77,7 +77,7 @@ require (
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.20.0
 	github.com/stretchr/testify v1.10.0
-	github.com/styrainc/regal v0.32.0
+	github.com/styrainc/regal v0.33.1
 	github.com/testcontainers/testcontainers-go v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/localstack v0.37.0
