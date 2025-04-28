@@ -1,0 +1,28 @@
+exec eopa eval -f pretty -d policy.rego -d data.json -i input.json data.eval.result
+! stderr .
+cmp stdout exp/stdout
+
+-- policy.rego --
+package eval
+
+result := rego.eval({
+	"filename": "file.rego",
+	"module": "package foo\nbar if data.one in input.animals\n",
+	"path": "foo.bar",
+	"raise_error": true,
+	"input": input
+})
+-- data.json --
+{
+	"one": "bear"
+}
+-- input.json --
+{
+	"animals": ["spider", "bear"]
+}
+-- exp/stdout --
+[
+  {
+    "result": true
+  }
+]

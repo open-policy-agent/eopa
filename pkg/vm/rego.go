@@ -148,9 +148,12 @@ func BuiltinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter fun
 			return nil, err
 		}
 
-		vm := NewVM().
-			WithExecutable(executable).
-			WithDataNamespace(bctx.Context.Value(regoEvalNamespaceContextKey{}))
+		vm := NewVM().WithExecutable(executable)
+		if dn := bctx.Context.Value(regoEvalNamespaceContextKey{}); dn != nil {
+			if dn, ok := dn.(*any); ok && dn != nil {
+				vm = vm.WithDataNamespace(*dn)
+			}
+		}
 		opts := EvalOptsFromContext(bctx.Context)
 		if input != nil {
 			i, err := ast.JSON(input.Value)
