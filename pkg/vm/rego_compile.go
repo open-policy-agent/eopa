@@ -1,5 +1,3 @@
-//go:build use_opa_fork
-
 package vm
 
 import (
@@ -46,15 +44,16 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 	target, _ := o["target"].(string)
 	mappings, _ := o["mappings"].(map[string]any)
 	maskRule, _ := o["mask_rule"].(string)
+	modules, _ := o["modules"].(map[string]any)
 
 	raise, ok := o["raise_error"].(bool)
 	if !ok { // unset, default to true like sql.send
 		raise = true
 	}
 
-	comp, ok := ast.CompilerFromContext(state.Globals.Ctx)
-	if !ok {
-		return nil
+	comp, err := getCompiler(state.Globals.Ctx, state.Globals.Metrics, modules)
+	if err != nil {
+		return err
 	}
 	queryRef := ast.MustParseRef(query)
 	parsedUnknowns, errs := compile.ExtractUnknownsFromAnnotations(comp, queryRef)
@@ -103,13 +102,13 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 	}
 
 	r := []func(*rego.Rego){
-		rego.EvalMode(ast.EvalModeTopdown), // override to ensure that rule indices are built
 		rego.Compiler(comp),
 		rego.Store(store),
 		rego.ParsedQuery(ast.NewBody(ast.NewExpr(ast.NewTerm(queryRef)))),
 		rego.NondeterministicBuiltins(true),
 		rego.UnsafeBuiltins(map[string]struct{}{ast.HTTPSend.Name: {}}),
 	}
+	r = append(r, extraRegoOpts()...)
 
 	// this ensures that the modules are compiled again, building the rule indices
 	for _, mod := range comp.Modules {
