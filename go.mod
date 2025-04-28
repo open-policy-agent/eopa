@@ -78,16 +78,16 @@ require (
 	github.com/spf13/viper v1.20.0
 	github.com/stretchr/testify v1.10.0
 	github.com/styrainc/regal v0.32.0
-	github.com/testcontainers/testcontainers-go v0.36.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.36.0
-	github.com/testcontainers/testcontainers-go/modules/localstack v0.36.0
-	github.com/testcontainers/testcontainers-go/modules/minio v0.36.0
-	github.com/testcontainers/testcontainers-go/modules/mssql v0.36.0
-	github.com/testcontainers/testcontainers-go/modules/mysql v0.36.0
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.36.0
-	github.com/testcontainers/testcontainers-go/modules/pulsar v0.36.0
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.36.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.36.0
+	github.com/testcontainers/testcontainers-go v0.37.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.37.0
+	github.com/testcontainers/testcontainers-go/modules/localstack v0.37.0
+	github.com/testcontainers/testcontainers-go/modules/minio v0.37.0
+	github.com/testcontainers/testcontainers-go/modules/mssql v0.37.0
+	github.com/testcontainers/testcontainers-go/modules/mysql v0.37.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.37.0
+	github.com/testcontainers/testcontainers-go/modules/pulsar v0.37.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.37.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.37.0
 	github.com/twmb/franz-go v1.18.1
 	github.com/twmb/franz-go/plugin/kprom v1.2.1
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
@@ -275,7 +275,7 @@ require (
 	github.com/linkedin/goavro/v2 v2.13.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20240226150601-1dcf7310316a // indirect
-	github.com/magiconair/properties v1.8.9 // indirect
+	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matoous/go-nanoid/v2 v2.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
