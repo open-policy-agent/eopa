@@ -210,7 +210,7 @@ func compileRego(bctx topdown.BuiltinContext, filename ast.String, module ast.St
 		},
 	}
 
-	compiler := compile.New().WithTarget(compile.TargetPlan).WithBundle(b).WithEntrypoints(path)
+	compiler := compile.New().WithTarget(compile.TargetPlan).WithBundle(b).WithEntrypoints(path).WithEnablePrintStatements(true)
 	if err := compiler.Build(bctx.Context); err != nil {
 		return nil, err
 	}

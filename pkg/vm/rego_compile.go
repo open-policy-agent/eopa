@@ -10,6 +10,7 @@ import (
 	opa_inmem "github.com/open-policy-agent/opa/v1/storage/inmem"
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
+	"github.com/open-policy-agent/opa/v1/topdown/print"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/compile"
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
@@ -96,7 +97,7 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 	store := opa_inmem.NewFromObject(dv.(map[string]any))
 
 	// eval masks first
-	masks, err := evalMaskingRule(state.Globals.Ctx, maskingRuleRef, store, comp, inputVal)
+	masks, err := evalMaskingRule(state.Globals.Ctx, maskingRuleRef, state.Globals.PrintHook, store, comp, inputVal)
 	if err != nil {
 		return err
 	}
@@ -124,6 +125,7 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 		rego.EvalParsedUnknowns(parsedUnknowns),
 		rego.EvalNondeterministicBuiltins(true),
 		rego.EvalParsedInput(inputVal),
+		rego.EvalPrintHook(state.Globals.PrintHook), // TODO(sr): differentiate mask and PE print()s
 	}
 
 	pq, err := prep.Partial(state.Globals.Ctx, evalOpts...)
@@ -178,7 +180,7 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 	return nil
 }
 
-func evalMaskingRule(ctx context.Context, mr ast.Ref, store storage.Store, comp *ast.Compiler, input ast.Value) (any, error) {
+func evalMaskingRule(ctx context.Context, mr ast.Ref, ph print.Hook, store storage.Store, comp *ast.Compiler, input ast.Value) (any, error) {
 	if mr == nil {
 		return nil, nil
 	}
@@ -188,7 +190,7 @@ func evalMaskingRule(ctx context.Context, mr ast.Ref, store storage.Store, comp 
 		rego.ParsedQuery(ast.NewBody(ast.NewExpr(ast.NewTerm(mr)))),
 		rego.UnsafeBuiltins(map[string]struct{}{ast.HTTPSend.Name: {}}),
 		rego.ParsedInput(input),
-		// rego.PrintHook(h.manager.PrintHook()), // TODO(sr): support print here
+		rego.PrintHook(ph),
 	}
 	rs, err := rego.New(opts...).Eval(ctx)
 	if err != nil {
