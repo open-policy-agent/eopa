@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -414,16 +415,20 @@ func (cache *intraQueryCache) PutError(key ast.Value, err error) {
 	cache.entries.Put(key, intraQueryCacheEntry{Error: err})
 }
 
+var initOnce = &sync.Once{}
+
 func Init() {
-	BuiltinMap = map[string]*ast.Builtin{}
-	for _, b := range DefaultBuiltins {
-		RegisterBuiltin(b)     // Only used for generating Enterprise OPA-specific capabilities.
-		ast.RegisterBuiltin(b) // Normal builtin registration with OPA.
-	}
-	for name, fn := range builtinFunctions {
-		topdown.RegisterBuiltinFunc(name, fn)
-	}
-	updateCaps()
+	initOnce.Do(func() {
+		BuiltinMap = map[string]*ast.Builtin{}
+		for _, b := range DefaultBuiltins {
+			RegisterBuiltin(b)     // Only used for generating Enterprise OPA-specific capabilities.
+			ast.RegisterBuiltin(b) // Normal builtin registration with OPA.
+		}
+		for name, fn := range builtinFunctions {
+			topdown.RegisterBuiltinFunc(name, fn)
+		}
+		updateCaps()
+	})
 }
 
 func enterpriseOPAExtensions(f *ast.Capabilities) {
