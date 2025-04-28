@@ -66,7 +66,7 @@ require (
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/redis/go-redis/v9 v9.7.3
-	github.com/redpanda-data/benthos/v4 v4.47.0
+	github.com/redpanda-data/benthos/v4 v4.48.0
 	github.com/sbabiv/xml2map v1.2.1
 	github.com/sijms/go-ora/v2 v2.8.24
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
@@ -122,7 +122,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	cloud.google.com/go/iam v1.5.0 // indirect
 	cloud.google.com/go/monitoring v1.24.0 // indirect
-	cuelang.org/go v0.12.0 // indirect
+	cuelang.org/go v0.12.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
@@ -206,7 +206,7 @@ require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/fgprof v0.9.5 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/fsnotify/fsnotify v1.8.0 // indirect
+	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.7 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/gdamore/tcell v1.4.0 // indirect
