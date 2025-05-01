@@ -11,6 +11,17 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.40.0
+
+[![OPA v1.4.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.4.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.4.0)
+[![Regal v0.33.1](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.33.1&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.33.1)
+
+This release contains a security fix, addressing CVE-2025-46569.
+The release also updates the embedded OPA version to [v1.4.0](https://github.com/open-policy-agent/opa/releases/tag/v1.4.0),
+and the embedded Regal version to [v0.33.1](https://github.com/StyraInc/regal/releases/tag/v0.33.1).
+
+For details on the security content of this release, please see the [OPA v1.4.0 release notes](https://github.com/open-policy-agent/opa/releases/tag/v1.4.0), and the associated [Security Advisory](https://github.com/open-policy-agent/opa/security/advisories/GHSA-6m8w-jc87-6cr7).
+
 
 ## v1.39.1
 

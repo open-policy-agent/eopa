@@ -1,5 +1,5 @@
 export GOPRIVATE=github.com/StyraInc/opa
-FORK_BRANCH := eopa-1.3.0
+FORK_BRANCH := eopa-1.4.0
 BUILD_ARGS := --tags=use_opa_fork
 
 ifdef AUTH_RELEASE

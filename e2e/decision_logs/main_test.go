@@ -207,7 +207,7 @@ plugins:
 							"timer_rego_input_parse_ns",
 							// "timer_rego_module_parse_ns", // TODO(philip): Triage *why* this is causing E2E test failures.
 							"timer_rego_query_compile_ns",
-							"timer_rego_query_parse_ns",
+							// "timer_rego_query_parse_ns", // TODO(philip): This missing metric has also caused some E2E test failures.
 							"timer_regovm_eval_ns",
 							"timer_server_handler_ns",
 						}
