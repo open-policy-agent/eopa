@@ -61,8 +61,8 @@ require (
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/olivere/elastic/v7 v7.0.32
-	github.com/open-policy-agent/opa v1.3.0
-	github.com/open-policy-agent/opa-envoy-plugin v1.3.0-envoy-1
+	github.com/open-policy-agent/opa v1.4.2
+	github.com/open-policy-agent/opa-envoy-plugin v1.4.2-envoy
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/redis/go-redis/v9 v9.8.0
