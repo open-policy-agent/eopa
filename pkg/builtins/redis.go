@@ -3,6 +3,7 @@ package builtins
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -288,7 +289,6 @@ func builtinredisQuery(bctx topdown.BuiltinContext, operands []*ast.Term, iter f
 	} else {
 		m["results"], err = getRedisResult(cmd)
 		if err != nil {
-
 			// NOTE: It's not clear to me that this case can
 			// actually occur in practice. I'm not sure what it
 			// would mean semantically for executing a command to
@@ -304,7 +304,20 @@ func builtinredisQuery(bctx topdown.BuiltinContext, operands []*ast.Term, iter f
 				return err
 			}
 		}
-
+		// Note(philip): Rego Sets are sorted, but Redis Sets are unsorted. For
+		// commands returning unordered sets, we sort the string slice of
+		// results to emulate what Rego would do.
+		switch strings.ToLower(command) {
+		case "sdiff", "sinter", "smembers", "sunion":
+			if strSlice, ok := m["results"].([]string); ok {
+				items := make([]*ast.Term, 0, len(strSlice))
+				slices.Sort(strSlice)
+				for _, item := range strSlice {
+					items = append(items, ast.StringTerm(item))
+				}
+				m["results"] = ast.NewArray(items...)
+			}
+		}
 	}
 
 	responseObj, err := ast.InterfaceToValue(m)
@@ -317,7 +330,6 @@ func builtinredisQuery(bctx topdown.BuiltinContext, operands []*ast.Term, iter f
 	}
 
 	return iter(ast.NewTerm(responseObj))
-
 }
 
 func init() {
