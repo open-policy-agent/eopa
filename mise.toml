@@ -1,0 +1,4 @@
+# Note(philip): Only used in CI to enable the .go-version file for mise.
+
+[settings]
+idiomatic_version_file_enable_tools = ["go"]
