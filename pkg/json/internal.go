@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/OneOfOne/xxhash"
+	"github.com/cespare/xxhash/v2"
 )
 
 const (
@@ -94,8 +94,8 @@ type arrayReader interface {
 // key names to indices. This builds on the assumption a typical JSON collection holds a small number of different kinds of objects (in terms
 // of property names inside).
 type encodingCache struct {
-	objectTypes map[uint32][]encodingCacheObjectType
-	strings     map[uint32][]encodingCacheStringType
+	objectTypes map[uint64][]encodingCacheObjectType
+	strings     map[uint64][]encodingCacheStringType
 	numbers     map[string]int32
 }
 
@@ -110,13 +110,13 @@ type encodingCacheStringType struct {
 }
 
 func newEncodingCache() *encodingCache {
-	return &encodingCache{objectTypes: make(map[uint32][]encodingCacheObjectType), strings: make(map[uint32][]encodingCacheStringType), numbers: make(map[string]int32)}
+	return &encodingCache{objectTypes: make(map[uint64][]encodingCacheObjectType), strings: make(map[uint64][]encodingCacheStringType), numbers: make(map[string]int32)}
 }
 
 func (c *encodingCache) CacheObjectType(typeName []objectEntry, offset int32) int32 {
-	h := uint32(0)
+	h := uint64(0)
 	for i := 0; i < len(typeName); i++ {
-		h += xxhash.ChecksumString32(typeName[i].name)
+		h += xxhash.Sum64String(typeName[i].name)
 	}
 
 	objects, ok := c.objectTypes[h]
@@ -147,7 +147,7 @@ func (c *encodingCache) CacheObjectType(typeName []objectEntry, offset int32) in
 }
 
 func (c *encodingCache) CacheString(str string, offset int32) int32 {
-	h := xxhash.ChecksumString32(str)
+	h := xxhash.Sum64String(str)
 
 	strings, ok := c.strings[h]
 	if ok {

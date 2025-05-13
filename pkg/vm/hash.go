@@ -7,7 +7,7 @@ import (
 	"math"
 	"unsafe"
 
-	"github.com/cespare/xxhash"
+	"github.com/cespare/xxhash/v2"
 
 	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
 )

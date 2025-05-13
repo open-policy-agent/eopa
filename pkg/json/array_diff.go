@@ -3,7 +3,7 @@ package json
 import (
 	"fmt"
 
-	"github.com/OneOfOne/xxhash"
+	"github.com/cespare/xxhash/v2"
 )
 
 // TODO: scan the output for gaps (unidentified source values): if the gap between identified values equals to the gap between identified values in source, assume patching.
@@ -268,7 +268,7 @@ func (h *hashCache) Hash(offset int64) (uint64, error) {
 		return hash, nil
 	}
 
-	hasher := xxhash.New64()
+	hasher := xxhash.New()
 
 	err := h.hash(offset, hasher)
 	if err != nil {
@@ -280,7 +280,7 @@ func (h *hashCache) Hash(offset int64) (uint64, error) {
 	return hasher.Sum64(), nil
 }
 
-func (h *hashCache) hash(offset int64, hasher *xxhash.XXHash64) error {
+func (h *hashCache) hash(offset int64, hasher *xxhash.Digest) error {
 	t, err := resolveType(h.content, offset)
 	if err != nil {
 		return err
