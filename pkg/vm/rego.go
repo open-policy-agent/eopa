@@ -57,12 +57,15 @@ var (
 		ast.StringTerm("filename"),
 		ast.StringTerm("input"),
 		ast.StringTerm("module"),
+		modulesKey,
 		ast.StringTerm("path"),
 		ast.StringTerm("raise_error"),
 		ast.StringTerm("version"),
 	)
 
-	requiredKeys = ast.NewSet(ast.StringTerm("module"), ast.StringTerm("path"))
+	requiredKeys = ast.NewSet(ast.StringTerm("path"))
+
+	modulesKey = ast.StringTerm("modules")
 )
 
 func BuiltinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter func(*ast.Term) error) error {
@@ -109,6 +112,14 @@ func BuiltinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter fun
 		return err
 	}
 
+	var modules *ast.Term
+	// 'module' overrides 'modules'
+	if module != "" {
+		modules = ast.ObjectTerm([2]*ast.Term{ast.NewTerm(filename), ast.StringTerm(string(module))})
+	} else {
+		modules = obj.Get(modulesKey)
+	}
+
 	version, err := getRequestStringWithDefault(obj, "version")
 	if err != nil {
 		return err
@@ -126,7 +137,7 @@ func BuiltinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter fun
 
 	key := ast.NewObject(
 		[2]*ast.Term{ast.StringTerm("filename"), ast.NewTerm(filename)},
-		[2]*ast.Term{ast.StringTerm("module"), ast.NewTerm(module)},
+		[2]*ast.Term{ast.StringTerm("modules"), modules},
 		[2]*ast.Term{ast.StringTerm("version"), ast.NewTerm(version)},
 		[2]*ast.Term{ast.StringTerm("path"), ast.NewTerm(path)},
 	)
@@ -143,7 +154,7 @@ func BuiltinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter fun
 
 	result, err := func() (ast.Value, error) {
 		spath := sp.String()[1:]
-		executable, err := compileRego(bctx, filename, module, spath, key, interQueryCacheEnabled, ttl)
+		executable, err := compileRego(bctx, modules.Value.(ast.Object), spath, key, interQueryCacheEnabled, ttl)
 		if err != nil {
 			return nil, err
 		}
@@ -186,7 +197,7 @@ func BuiltinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter fun
 	return iter(ast.NewTerm(result))
 }
 
-func compileRego(bctx topdown.BuiltinContext, filename ast.String, module ast.String, path string, key ast.Object, interQueryCacheEnabled bool, ttl time.Duration) (Executable, error) {
+func compileRego(bctx topdown.BuiltinContext, modules ast.Object, path string, key ast.Object, interQueryCacheEnabled bool, ttl time.Duration) (Executable, error) {
 	executable, ok, err := checkCompilationCaches(bctx, key, interQueryCacheEnabled)
 	if err != nil {
 		return nil, err
@@ -194,23 +205,27 @@ func compileRego(bctx topdown.BuiltinContext, filename ast.String, module ast.St
 		return executable, nil
 	}
 
-	parsed, err := ast.ParseModule(string(filename), string(module))
-	if err != nil {
+	b := bundle.Bundle{Modules: make([]bundle.ModuleFile, 0, modules.Len())}
+	if err := modules.Iter(func(id *ast.Term, mod *ast.Term) error {
+		filename := string(id.Value.(ast.String))
+		module := string(mod.Value.(ast.String))
+		parsed, err := ast.ParseModule(filename, module)
+		if err != nil {
+			return err
+		}
+		b.Modules = append(b.Modules,
+			bundle.ModuleFile{
+				URL:    "/" + filename,
+				Path:   filename,
+				Raw:    []byte(module),
+				Parsed: parsed,
+			})
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 
-	b := &bundle.Bundle{
-		Modules: []bundle.ModuleFile{
-			{
-				URL:    "/",
-				Path:   "/",
-				Raw:    []byte(module),
-				Parsed: parsed,
-			},
-		},
-	}
-
-	compiler := compile.New().WithTarget(compile.TargetPlan).WithBundle(b).WithEntrypoints(path).WithEnablePrintStatements(true)
+	compiler := compile.New().WithTarget(compile.TargetPlan).WithBundle(&b).WithEntrypoints(path).WithEnablePrintStatements(true)
 	if err := compiler.Build(bctx.Context); err != nil {
 		return nil, err
 	}
@@ -347,7 +362,9 @@ func getIntraQueryCache(bctx topdown.BuiltinContext) *intraQueryCache {
 	raw, ok := bctx.Cache.Get(regoEvalBuiltinCacheKey)
 	if !ok {
 		c := newIntraQueryCache()
-		bctx.Cache.Put(regoEvalBuiltinCacheKey, c)
+		if bctx.Cache != nil {
+			bctx.Cache.Put(regoEvalBuiltinCacheKey, c)
+		}
 		return c
 	}
 

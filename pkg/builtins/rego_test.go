@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/bundle"
 	"github.com/open-policy-agent/opa/v1/compile"
@@ -37,7 +38,7 @@ func TestRegoEval(t *testing.T) {
 			note:                "missing parameter(s)",
 			source:              `p := rego.eval({})`,
 			result:              "",
-			error:               `eval_type_error: rego.eval: operand 1 missing required request parameters(s): {"module", "path"}`,
+			error:               `eval_type_error: rego.eval: operand 1 missing required request parameters(s): {"path"}`,
 			doNotResetCache:     false,
 			time:                now,
 			interQueryCacheHits: 0,
@@ -198,8 +199,8 @@ func executeRego(tb testing.TB, interQueryCache cache.InterQueryCache, module st
 		StrictBuiltinErrors:    true,
 	})
 	if expectedError != "" {
-		if expectedError != err.Error() {
-			tb.Fatalf("unexpected error: %v", err)
+		if diff := cmp.Diff(expectedError, err.Error()); diff != "" {
+			tb.Fatalf("unexpected error: (-want, +got)\n%s", diff)
 		}
 
 		return

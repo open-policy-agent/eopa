@@ -289,7 +289,9 @@ func getIntraQueryCache(bctx topdown.BuiltinContext, cacheKey interface{}) *intr
 	raw, ok := bctx.Cache.Get(cacheKey)
 	if !ok {
 		c := newIntraQueryCache()
-		bctx.Cache.Put(cacheKey, c)
+		if bctx.Cache != nil {
+			bctx.Cache.Put(cacheKey, c)
+		}
 		return c
 	}
 
