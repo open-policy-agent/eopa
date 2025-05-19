@@ -27,6 +27,7 @@ import (
 	opa_envoy "github.com/open-policy-agent/opa-envoy-plugin/plugin"
 
 	"github.com/styrainc/enterprise-opa-private/internal/license"
+	"github.com/styrainc/enterprise-opa-private/pkg/batchquery"
 	"github.com/styrainc/enterprise-opa-private/pkg/compile"
 	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
@@ -73,6 +74,8 @@ func initRun(opa *cobra.Command, brand string, lic *license.Checker, lparams *li
 				server.CompileAPIExtensionErrorStatus = http.StatusNotImplemented
 				server.CompileAPIExtensionErrorCode = "license-required"
 				server.CompileAPIExtensionErrorMessage = "requested API extension unavailable in fallback mode"
+				batchQueryHndlr := batchquery.Handler(nil)
+				server.ManagerHooks = []server.ManagerHook{batchQueryHndlr.SetManager}
 
 				c.SilenceErrors = false
 				runtime.RegisterGatherers(map[string]func(context.Context) (any, error){
@@ -403,6 +406,10 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	}
 	compileHndlr := compile.Handler(rt.Manager.Logger())
 	if err := compileHndlr.SetManager(rt.Manager); err != nil {
+		return nil, err
+	}
+	batchQueryHndlr := batchquery.Handler(rt.Manager.Logger())
+	if err := batchQueryHndlr.SetManager(rt.Manager); err != nil {
 		return nil, err
 	}
 
