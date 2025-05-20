@@ -174,6 +174,9 @@ func BuiltinRegoEval(bctx topdown.BuiltinContext, operands []*ast.Term, iter fun
 
 			opts.Input = &i
 		}
+		if opts.Cache == nil {
+			opts.Cache = builtins.Cache{}
+		}
 		return vm.Eval(bctx.Context, spath, opts)
 	}()
 

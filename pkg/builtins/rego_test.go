@@ -3,6 +3,9 @@ package builtins
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -58,14 +61,24 @@ func TestRegoEval(t *testing.T) {
 			note: "intra-query query cache",
 			source: `p = [ resp1, resp2 ] if {
 			     rego.eval({"module": "package foo.bar\nx := true", "path": "foo.bar.x"}, resp1)
-                             rego.eval({"module": "package foo.bar\nx := true", "path": "foo.bar.x"}, resp2) # cached
-                        }`,
+                 rego.eval({"module": "package foo.bar\nx := true", "path": "foo.bar.x"}, resp2) # cached
+            }`,
 			result:              `{{"result": {"p": [{{"result": true}}, {{"result": true}}]}}}`,
 			error:               "",
 			doNotResetCache:     false,
 			time:                now,
 			interQueryCacheHits: 0,
 			intraQueryCacheHits: 1, // Second compilation is cached,
+		},
+		{
+			note:                "intra-query query cache, inner eval",
+			source:              fmt.Sprintf(`p := rego.eval({"module": "package foo.bar\nx if { \"admin\" in http.send({\"url\": \"%s\",\"method\":\"GET\"}).body.alice }", "path": "foo.bar.x"})`, testserver.URL),
+			result:              `{{"result": {"p": {{"result": true}}}}}`,
+			error:               "",
+			doNotResetCache:     false,
+			time:                now,
+			interQueryCacheHits: 0,
+			intraQueryCacheHits: 0,
 		},
 		{
 			note:                "inter-query query cache warmup (default duration)",
@@ -221,3 +234,20 @@ func executeRego(tb testing.TB, interQueryCache cache.InterQueryCache, module st
 		tb.Fatalf("got %v hits, wanted %v\n", hits, expectedIntraQueryCacheHits)
 	}
 }
+
+func srv(f func(http.ResponseWriter, *http.Request) error) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := f(w, r); err != nil {
+			w.WriteHeader(500)
+			fmt.Fprintln(w, err.Error())
+		}
+	}))
+}
+
+var testserver = srv(func(w http.ResponseWriter, _ *http.Request) error {
+	w.Header().Add("content-type", "application/json")
+	return json.NewEncoder(w).Encode(map[string]any{
+		"alice": []string{"admin"},
+		"bob":   []string{"tester", "reader"},
+	})
+})
