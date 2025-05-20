@@ -18,7 +18,7 @@ require (
 	github.com/hashicorp/vault/api v1.16.0
 	github.com/lib/pq v1.10.9
 	github.com/microsoft/go-mssqldb v1.8.1
-	github.com/minio/minio-go/v7 v7.0.91
+	github.com/minio/minio-go/v7 v7.0.92
 	github.com/open-policy-agent/opa v1.4.2
 	github.com/redpanda-data/benthos/v4 v4.48.0
 	github.com/redpanda-data/connect/v4 v4.53.0
@@ -227,6 +227,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/parquet-go/parquet-go v0.25.0 // indirect
+	github.com/philhofer/fwd v1.1.3-0.20240916144458-20a13a1f6b7c // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
@@ -262,6 +263,7 @@ require (
 	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.2 // indirect
 	github.com/tilinna/z85 v1.0.0 // indirect
+	github.com/tinylib/msgp v1.3.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.13 // indirect
 	github.com/tklauser/numcpus v0.7.0 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.11.2 // indirect
