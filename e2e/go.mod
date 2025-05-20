@@ -17,7 +17,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hashicorp/vault/api v1.16.0
 	github.com/lib/pq v1.10.9
-	github.com/microsoft/go-mssqldb v1.8.0
+	github.com/microsoft/go-mssqldb v1.8.1
 	github.com/minio/minio-go/v7 v7.0.91
 	github.com/open-policy-agent/opa v1.4.2
 	github.com/redpanda-data/benthos/v4 v4.48.0
