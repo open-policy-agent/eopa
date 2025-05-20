@@ -142,7 +142,7 @@ func TestOverlapBundleOverlappingRoots(t *testing.T) {
 
 // The bundle used here declares the root "data.kafka", a prefix of "data.kafka.messages"
 func TestOverlapBundlePrefixRoot(t *testing.T) {
-	config := fmt.Sprintf(config("prefix", testserver.URL, "127.0.0.1:9191"))
+	config := config("prefix", testserver.URL, "127.0.0.1:9191")
 	eopa, eopaOut := eopaRun(t, config, "", eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)

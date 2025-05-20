@@ -68,7 +68,7 @@ func TestDiscovery(t *testing.T) {
 		},
 	} {
 		t.Run(tc.note, func(t *testing.T) {
-			config := fmt.Sprintf(config(tc.bundle, testserver.URL))
+			config := config(tc.bundle, testserver.URL)
 			eopa, eopaOut := eopaRun(t, config, eopaHTTPPort)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
