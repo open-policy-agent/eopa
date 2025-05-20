@@ -105,7 +105,7 @@ require (
 	golang.org/x/sync v0.14.0
 	golang.org/x/term v0.32.0
 	google.golang.org/api v0.233.0
-	google.golang.org/grpc v1.72.0
+	google.golang.org/grpc v1.72.1
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/h2non/gock.v1 v1.1.2
 	modernc.org/sqlite v1.37.0
