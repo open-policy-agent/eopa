@@ -1,8 +1,6 @@
 module github.com/styrainc/enterprise-opa-private
 
-go 1.23.8
-
-toolchain go1.24.1
+go 1.24.1
 
 require (
 	cloud.google.com/go/storage v1.54.0
@@ -64,7 +62,7 @@ require (
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/redis/go-redis/v9 v9.8.0
-	github.com/redpanda-data/benthos/v4 v4.48.0
+	github.com/redpanda-data/benthos/v4 v4.51.0
 	github.com/sbabiv/xml2map v1.2.1
 	github.com/sijms/go-ora/v2 v2.8.24
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
@@ -330,8 +328,8 @@ require (
 	github.com/quipo/dependencysolver v0.0.0-20170801134659-2b009cb4ddcc // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/rickb777/period v1.0.9 // indirect
-	github.com/rickb777/plural v1.4.2 // indirect
+	github.com/rickb777/period v1.0.12 // indirect
+	github.com/rickb777/plural v1.4.3 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rs/xid v1.6.0 // indirect
@@ -387,7 +385,7 @@ require (
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
-	golang.org/x/tools v0.31.0 // indirect
+	golang.org/x/tools v0.32.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20250303144028-a0af3efb3deb // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250505200425-f936aa4a68b2 // indirect
