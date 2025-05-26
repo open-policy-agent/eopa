@@ -84,7 +84,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/pulsar v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.37.0
-	github.com/twmb/franz-go v1.19.3
+	github.com/twmb/franz-go v1.19.4
 	github.com/twmb/franz-go/plugin/kprom v1.2.1
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
