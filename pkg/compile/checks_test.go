@@ -625,9 +625,9 @@ foo if input.fruits.colour`,
 			},
 		},
 		{
-			note: "support module: default rule",
+			note: "support module: default rule that is not false",
 			rego: `include if other
-default other := false
+default other := 100
 other if input.fruits.price > 100
 `,
 			errors: []Error{
