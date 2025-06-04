@@ -17,7 +17,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/microsoft/go-mssqldb v1.8.2
 	github.com/minio/minio-go/v7 v7.0.92
-	github.com/open-policy-agent/opa v1.5.0
+	github.com/open-policy-agent/opa v1.5.1
 	github.com/redpanda-data/benthos/v4 v4.52.0
 	github.com/redpanda-data/connect/v4 v4.55.1
 	github.com/rogpeppe/go-internal v1.14.1
@@ -316,7 +316,7 @@ require (
 	google.golang.org/genproto v0.0.0-20250505200425-f936aa4a68b2 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250519155744-55703ea1f237 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250519155744-55703ea1f237 // indirect
-	google.golang.org/grpc v1.72.1 // indirect
+	google.golang.org/grpc v1.72.2 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
@@ -328,4 +328,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v1.4.1-0.20250531193642-51e0556c9b3b
+replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v1.4.1-0.20250604093119-ab0460efc2d2

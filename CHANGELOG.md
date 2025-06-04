@@ -12,6 +12,15 @@ In iteration-heavy policies, the speedups can be dramatic.
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
 
+## v1.41.1
+
+[![OPA v1.5.1](https://openpolicyagent.org/badge/v1.5.1)](https://github.com/open-policy-agent/opa/releases/tag/v1.5.1)
+[![Regal v0.33.1](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.33.1&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.33.1)
+
+This bugfix release updates the embedded OPA version to [v1.5.1](https://github.com/open-policy-agent/opa/releases/tag/v1.5.1).
+It's only relevant to users explicitly selecting the `rego` target (i.e. OPA's evaluation engine) in `eopa eval`, or using fallback mode.
+
+
 ## v1.41.0
 
 [![OPA v1.5.0](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.5.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.5.0)
