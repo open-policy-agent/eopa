@@ -26,7 +26,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.37.0
-	github.com/twmb/franz-go v1.19.4
+	github.com/twmb/franz-go v1.19.5
 	github.com/twmb/franz-go/pkg/kadm v1.16.0
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
