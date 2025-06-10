@@ -16,6 +16,11 @@ type BatchDataRequestV1 struct {
 	CommonInput *any            `json:"common_input,omitempty"`
 }
 
+type BatchDataRequestV1Unparsed struct {
+	Inputs      map[string]*json.RawMessage `json:"inputs"` // Parsing of the inputs is deferred.
+	CommonInput *any                        `json:"common_input,omitempty"`
+}
+
 // Note(philip): This is a bit of a hack to ensure we only get the 2x intended
 // types embedded in the BatchDataResponse struct.
 type BatchDataRespType interface {
@@ -24,20 +29,20 @@ type BatchDataRespType interface {
 
 // BatchDataResponseV1 models the response message for batched Data API read operations.
 type BatchDataResponseV1 struct {
-	BatchDecisionID string                       `json:"batch_decision_id,omitempty"`
 	Metrics         types.MetricsV1              `json:"metrics,omitempty"`
 	Responses       map[string]BatchDataRespType `json:"responses,omitempty"`
 	Warning         *types.Warning               `json:"warning,omitempty"`
+	BatchDecisionID string                       `json:"batch_decision_id,omitempty"`
 }
 
 // Note(philip): We have to do custom JSON unmarshalling here to work around the fact that our response representation is not perfect.
 func (bdr *BatchDataResponseV1) UnmarshalJSON(b []byte) error {
 	var out BatchDataResponseV1
 	type PartialSerdesBatchResponse struct {
-		BatchDecisionID string                      `json:"batch_decision_id,omitempty"`
 		Metrics         types.MetricsV1             `json:"metrics,omitempty"`
 		Responses       map[string]*json.RawMessage `json:"responses,omitempty"`
 		Warning         *types.Warning              `json:"warning,omitempty"`
+		BatchDecisionID string                      `json:"batch_decision_id,omitempty"` // Note(philip): Placed last for alignment / GC scanning reasons.
 	}
 	var resp PartialSerdesBatchResponse
 	if err := json.Unmarshal(b, &resp); err != nil {
@@ -83,9 +88,9 @@ func (r DataResponseWithHTTPCodeV1) GetHTTPStatusCode() string {
 }
 
 type ErrorResponseWithHTTPCodeV1 struct {
-	types.ErrorV1
 	DecisionID     string `json:"decision_id,omitempty"`
 	HTTPStatusCode string `json:"http_status_code,omitempty"`
+	types.ErrorV1
 }
 
 func (r ErrorResponseWithHTTPCodeV1) GetHTTPStatusCode() string {

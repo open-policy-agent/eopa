@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/gorilla/mux"
 	lru "github.com/hashicorp/golang-lru/v2"
@@ -28,7 +28,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/server/writer"
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/topdown"
-	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 	"github.com/open-policy-agent/opa/v1/topdown/lineage"
 	"github.com/open-policy-agent/opa/v1/tracing"
 	"github.com/open-policy-agent/opa/v1/version"
@@ -46,6 +45,7 @@ type BatchQueryHandler interface {
 	http.Handler
 	GetManager() *plugins.Manager
 	SetManager(*plugins.Manager) error
+	WithLicensedMode(bool) BatchQueryHandler
 	WithDecisionIDFactory(func() string) BatchQueryHandler
 	WithDecisionLogger(logger func(context.Context, *server.Info) error) BatchQueryHandler
 }
@@ -63,6 +63,7 @@ func Handler(l logging.Logger) BatchQueryHandler {
 }
 
 type hndl struct {
+	licensedMode bool
 	logging.Logger
 	manager                *plugins.Manager
 	preparedEvalQueryCache *lru.Cache[string, *rego.PreparedEvalQuery]
@@ -99,6 +100,15 @@ func (h *hndl) SetManager(m *plugins.Manager) error {
 	return nil
 }
 
+func (h *hndl) SetLicensedMode(licensed bool) {
+	h.licensedMode = licensed
+}
+
+func (h *hndl) WithLicensedMode(licensed bool) BatchQueryHandler {
+	h.licensedMode = licensed
+	return h
+}
+
 func (h *hndl) GetDistributedTracingOpts() *tracing.Options {
 	return h.distributedTracingOpts
 }
@@ -122,9 +132,6 @@ func (h *hndl) WithDecisionIDFactory(f func() string) BatchQueryHandler {
 	return h
 }
 
-// Note(philip): This function will increase cache pressure on the query caching
-// system, which is why I bumped the entries limit.
-
 // Note(philip): Because metrics.Metrics cannot share/edit/inherit from other
 // metrics objects, we have a weird situation here where the individual eval
 // metrics may have zeroed fields, because the only valid measure exists at
@@ -135,8 +142,6 @@ func (h *hndl) WithDecisionIDFactory(f func() string) BatchQueryHandler {
 // their own separate per-query metrics objects, which are reported on each
 // query's results object.
 func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// func (s *Server) v1BatchDataPost(w http.ResponseWriter, r *http.Request) {
-
 	m := metrics.New()
 	m.Timer(metrics.ServerHandler).Start()
 
@@ -155,7 +160,11 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	m.Timer(metrics.RegoInputParse).Start()
 
-	inputs, goInputs, err := readInputBatchPostV1(r)
+	maxProcs := runtime.GOMAXPROCS(0)
+	// Extract slice-of-slices for keys and values from the input. Each
+	// sub-slice represents a chunk of work for one of the worker goroutines in
+	// the worker pool.
+	commonInputIf, keys, ifValues, err := readInputBatchPostV1(r, maxProcs)
 	if err != nil {
 		writer.ErrorString(w, http.StatusBadRequest, types.CodeInvalidParameter, err)
 		return
@@ -163,32 +172,18 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	m.Timer(metrics.RegoInputParse).Stop()
 
-	// ----------------------------------------------------------------------------------------------------------------------
-
-	// The sorted keys list allows us to drive both deterministic Decision ID
-	// generation, and also deterministic write target indices for the worker
-	// goroutines, later in this function.
-	sortedKeys := make([]string, 0, len(inputs))
-	for k := range inputs {
-		sortedKeys = append(sortedKeys, k)
+	numInputs := 0
+	for _, ks := range keys {
+		numInputs += len(ks)
 	}
-	sort.Strings(sortedKeys)
-
-	// Write targets for the goroutines. Sometimes we'll have some wasted
-	// memory, but it'll be reclaimed quickly in most cases.
-	results := make([]*DataResponseWithHTTPCodeV1, len(sortedKeys))
-	errs := make([]*ErrorResponseWithHTTPCodeV1, len(sortedKeys))
-
-	// Note(philip): While queries may complete in arbitrary order, their
-	// decision IDs are generated in a deterministic order, based on the sorted
-	// order of the keys used to ID each unique query. This makes testing
-	// easier, since the decision IDs in the results will be deterministic.
-	queryDecisionIDs := make(map[string]string, len(inputs))
-	for _, k := range sortedKeys {
-		queryDecisionIDs[k] = h.generateDecisionID()
+	output := BatchDataResponseV1{
+		BatchDecisionID: batchDecisionID,
+		Responses:       make(map[string]BatchDataRespType, numInputs), // Prealloc destination.
 	}
 
+	// Setup work for the worker pool that should be done at "global" scope.
 	var preparedQuery *rego.PreparedEvalQuery
+	var globalSharedEvalParams evalSingleParams
 	{
 		txn, err := h.manager.Store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext()})
 		if err != nil {
@@ -196,7 +191,16 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer h.manager.Store.Abort(ctx, txn)
-		if preparedQuery, err = h.ensurePreparedEvalQueryIsCached(ctx, txn, &evalSingleParams{
+
+		// Initialize the eval params we'll be using later.
+		legacyRevision, br, err := getRevisions(ctx, h.manager.Store, txn)
+		if err != nil {
+			writer.ErrorAuto(w, err)
+			return
+		}
+		logger := h.getDecisionLogger(legacyRevision, br)
+
+		globalSharedEvalParams = evalSingleParams{
 			URLPath:                urlPath,
 			ExplainMode:            explainMode,
 			IncludeInstrumentation: includeInstrumentation,
@@ -205,129 +209,164 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			M:                      m,
 			IncludeMetrics:         includeMetrics,
 			Pretty:                 formatPretty,
-		}); err != nil {
+			LegacyRevision:         legacyRevision,
+			BundleRevisions:        br,
+			DecisionLogger:         logger,
+		}
+		if preparedQuery, err = h.ensurePreparedEvalQueryIsCached(ctx, txn, &globalSharedEvalParams); err != nil {
 			writer.ErrorAuto(w, err)
 			return
 		}
 	}
 
+	// -----------------------------------------------------------------------
+	// Spawn work group, do the work, and fill out the results.
+
+	// Workers each get a slice of input values to work with. These will match
+	// up later with slices of keys for reassembling into the output.
+	responseChunks := make([][]BatchDataRespType, len(keys))
+	var resultsCounter, errCounter atomic.Int32
+
 	// Start a limited-size worker pool to avoid goroutine startup/sync overheads.
-	// Workers pull jobs from the input slice until they run out of work to do.
+	// Workers pull inputs from their slice until they run out of work to do.
 	var wg sync.WaitGroup
-	maxProcs := runtime.GOMAXPROCS(0)
 	poolCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(context.Cause(poolCtx)) // Needed to prevent possible context leak.
-	wg.Add(maxProcs)
-	{
-		// We launch all of the queries in parallel, and fill out the appropriate
-		// indices in the write target slices. The writes look a little funky
-		// because we want the write target slices to have pointers-to-structs, for
-		// easy nil-checking later on.
-		for i := range maxProcs {
-			go func() {
-				canceller := topdown.NewCancel()
-				exit := make(chan struct{})
-				defer close(exit)
-				go waitForDone(ctx, exit, func() {
-					canceller.Cancel()
-				})
-				// We use a strided access pattern: each goroutine works on
-				// every Nth work item, resulting in a roughly even distribution
-				// of jobs across workers.
-				for idx := i; idx < len(sortedKeys); idx += maxProcs {
-					k := sortedKeys[idx]
-					v := inputs[k]
-					perQueryMetrics := metrics.New()
-					rDest := &(results[idx])
-					eDest := &(errs[idx])
-					// Note(philip): We rely here on concurrent, read-only map accesses
-					// being safe.
-					decisionID := queryDecisionIDs[k]
 
-					ctx := logging.WithDecisionID(r.Context(), decisionID)
-					ctx = logging.WithBatchDecisionID(ctx, batchDecisionID)
-					annotateSpan(ctx, decisionID)
+	for i, vs := range ifValues {
+		wg.Add(1)
+		go func(values []any, index int) {
+			canceller := topdown.NewCancel()
+			exit := make(chan struct{})
+			defer close(exit)
+			go waitForDone(ctx, exit, func() {
+				canceller.Cancel()
+			})
+			resultCount, errCount := int32(0), int32(0)
+			outputs := make([]BatchDataRespType, 0, len(values))
+			// Copy global params, then update in the loop for each eval.
+			params := globalSharedEvalParams
 
-					perQueryMetrics.Timer(metrics.ServerHandler).Start()
-					defer perQueryMetrics.Timer(metrics.ServerHandler).Stop()
+			// The job loop for each worker:
+			for _, v := range values {
+				perQueryMetrics := metrics.New()
+				decisionID := h.generateDecisionID()
 
-					select {
-					case <-poolCtx.Done():
-						*eDest = &ErrorResponseWithHTTPCodeV1{
-							DecisionID:     decisionID,
-							HTTPStatusCode: "500",
+				// Update params for this eval.
+				params.DecisionID = decisionID
+				params.M = perQueryMetrics
+				params.ExternalCancel = canceller
+
+				ctx := logging.WithDecisionID(r.Context(), decisionID)
+				ctx = logging.WithBatchDecisionID(ctx, batchDecisionID)
+				annotateSpan(ctx, decisionID)
+
+				// Note(philip): We can't simply `defer` the timer stop
+				// call, or else they'll all keep running until the
+				// goroutine function exits! This led to weirdly increasing
+				// individual eval timer stats in older versions of the
+				// Batch Query API.
+				perQueryMetrics.Timer(metrics.ServerHandler).Start()
+
+				select {
+				case <-poolCtx.Done():
+					outputs = append(outputs, &ErrorResponseWithHTTPCodeV1{
+						DecisionID: decisionID,
+						ErrorV1: types.ErrorV1{
+							Code:    types.CodeInternal,
+							Message: poolCtx.Err().Error(),
+						},
+					})
+					perQueryMetrics.Timer(metrics.ServerHandler).Stop()
+					errCount++
+					cancel(err) // Note(philip): This is the only time cancel should be called inside the goroutine.
+					continue
+				default:
+					// Create a new read transaction on the store.
+					// Note(philip): We can't defer the transaction aborts, or
+					// else they may stack up until the goroutine function exits.
+					txn, err := h.manager.Store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext()})
+					if err != nil {
+						outputs = append(outputs, &ErrorResponseWithHTTPCodeV1{
+							DecisionID: decisionID,
 							ErrorV1: types.ErrorV1{
 								Code:    types.CodeInternal,
-								Message: poolCtx.Err().Error(),
+								Message: err.Error(),
 							},
-						}
-						cancel(err)
+						})
+						perQueryMetrics.Timer(metrics.ServerHandler).Stop()
+						errCount++
 						continue
-					default:
-						// Create a new read transaction on the store.
-						txn, err := h.manager.Store.NewTransaction(ctx, storage.TransactionParams{Context: storage.NewContext()})
-						if err != nil {
-							*eDest = &ErrorResponseWithHTTPCodeV1{
-								DecisionID:     decisionID,
-								HTTPStatusCode: "500",
-								ErrorV1: types.ErrorV1{
-									Code:    types.CodeInternal,
-									Message: err.Error(),
-								},
-							}
-							continue
-						}
-						defer h.manager.Store.Abort(ctx, txn)
+					}
 
-						// Create global metric if it doesn't already exist.
-						m.Counter(metrics.ServerQueryCacheHit)
+					// Create global metric if it doesn't already exist.
+					m.Counter(metrics.ServerQueryCacheHit)
 
-						// Build up parameters for the eval.
-						params := evalSingleParams{
-							DecisionID:             decisionID,
-							URLPath:                urlPath,
-							ExplainMode:            explainMode,
-							IncludeInstrumentation: includeInstrumentation,
-							Provenance:             provenance,
-							StrictBuiltinErrors:    strictBuiltinErrors,
-							GoInput:                goInputs[k],
-							M:                      perQueryMetrics,
-							IncludeMetrics:         includeMetrics,
-							Pretty:                 formatPretty,
-							ExternalCancel:         canceller,
-						}
-
-						result, err := h.evalInputSinglePreparedQuery(ctx, txn, v, &params, preparedQuery)
-						if err != nil {
-							*eDest = &ErrorResponseWithHTTPCodeV1{
-								DecisionID:     decisionID,
-								HTTPStatusCode: "500",
-								ErrorV1: types.ErrorV1{
-									Code:    types.CodeInternal,
-									Message: err.Error(),
-								},
-							}
-							continue
-						}
-
-						// Unwrap cache hit counter, then add hits metric to global metric.
-						if cacheHit, ok := (*result).Metrics[metrics.ServerQueryCacheHit]; ok {
-							if counter, ok := cacheHit.(metrics.Counter); ok {
-								if counterValue, ok := counter.Value().(uint64); ok && counterValue > 0 {
-									m.Counter(metrics.ServerQueryCacheHit).Incr()
-								}
-							}
-						}
-						*rDest = &DataResponseWithHTTPCodeV1{
-							HTTPStatusCode: "200",
-							DataResponseV1: *result,
+					// Only merge if both common_input and the input are objects.
+					inputIf := v
+					if mCommon, ok := asMap(commonInputIf); ok {
+						if mInput, ok := asMap(v); ok {
+							inputIf = mergeMaps(mCommon, mInput)
 						}
 					}
+					params.GoInput = &inputIf
+					// Only bother with ast.Value conversion if we're in fallback mode.
+					if !h.licensedMode {
+						inputASTValue, err := ast.InterfaceToValue(inputIf)
+						if err != nil {
+							outputs = append(outputs, &ErrorResponseWithHTTPCodeV1{
+								DecisionID: decisionID,
+								ErrorV1: types.ErrorV1{
+									Code:    types.CodeInternal,
+									Message: err.Error(),
+								},
+							})
+							h.manager.Store.Abort(ctx, txn)
+							perQueryMetrics.Timer(metrics.ServerHandler).Stop()
+							errCount++
+							continue
+						}
+						params.ASTInput = inputASTValue
+					}
+					result, err := h.evalInputSinglePreparedQuery(ctx, txn, &params, preparedQuery)
+					if err != nil {
+						outputs = append(outputs, &ErrorResponseWithHTTPCodeV1{
+							DecisionID: decisionID,
+							ErrorV1: types.ErrorV1{
+								Code:    types.CodeInternal,
+								Message: err.Error(),
+							},
+						})
+						h.manager.Store.Abort(ctx, txn)
+						perQueryMetrics.Timer(metrics.ServerHandler).Stop()
+						errCount++
+						continue
+					}
+
+					// Unwrap cache hit counter, then add hits metric to global metric.
+					if cacheHit, ok := (*result).Metrics[metrics.ServerQueryCacheHit]; ok {
+						if counter, ok := cacheHit.(metrics.Counter); ok {
+							if counterValue, ok := counter.Value().(uint64); ok && counterValue > 0 {
+								m.Counter(metrics.ServerQueryCacheHit).Incr()
+							}
+						}
+					}
+					outputs = append(outputs, &DataResponseWithHTTPCodeV1{
+						DataResponseV1: *result,
+					})
+					h.manager.Store.Abort(ctx, txn)
+					perQueryMetrics.Timer(metrics.ServerHandler).Stop()
+					resultCount++
 				}
-				// When we're done processing all items for this goroutine, bump the counter.
-				wg.Done()
-			}()
-		}
+			}
+			// Insert results into the output chunks slice.
+			// Note(philip): Because each goroutine gets a disjoint index, we shouldn't need locking here.
+			responseChunks[index] = outputs
+			resultsCounter.Add(resultCount)
+			errCounter.Add(errCount)
+			// When we're done processing all items for this goroutine, bump the workgroup's counter.
+			wg.Done()
+		}(vs, i)
 	}
 
 	// Note(philip): This block *should* never trigger unless something is
@@ -338,41 +377,34 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Populate maps with non-nil results.
-	errMap := map[string]ErrorResponseWithHTTPCodeV1{}
-	resultMap := map[string]DataResponseWithHTTPCodeV1{}
-	for i := range results {
-		if errs[i] != nil {
-			errMap[sortedKeys[i]] = *errs[i]
-		}
-		if results[i] != nil {
-			resultMap[sortedKeys[i]] = *results[i]
-		}
-	}
+	// -----------------------------------------------------------------------
+	// Reassemble the unordered results into the final destination map.
 
-	// Golang is silly, and forces us to collate everything together at the end.
-	responses := make(map[string]BatchDataRespType, len(inputs))
-	for k, v := range resultMap {
-		if len(errMap) == 0 {
-			v.HTTPStatusCode = ""
+	resultsCount := resultsCounter.Load()
+	errCount := errCounter.Load()
+
+	// Note(philip): I originally wanted to use iterators here, but
+	// range-over-func still seems to generate extra allocs, as of Go 1.24.
+	for i := range keys {
+		ks, vs := keys[i], responseChunks[i]
+		for j := range ks {
+			k, v := ks[j], vs[j]
+			// Only add status codes in the "Mixed Results" case.
+			if errCount != 0 && resultsCount != 0 {
+				switch r := v.(type) {
+				case *DataResponseWithHTTPCodeV1:
+					r.HTTPStatusCode = "200"
+				case *ErrorResponseWithHTTPCodeV1:
+					r.HTTPStatusCode = "500"
+				}
+			}
+			output.Responses[k] = v
 		}
-		responses[k] = v
-	}
-	for k, v := range errMap {
-		if len(resultMap) == 0 {
-			v.HTTPStatusCode = ""
-		}
-		responses[k] = v
 	}
 
 	m.Timer(metrics.ServerHandler).Stop()
 
-	output := BatchDataResponseV1{
-		BatchDecisionID: batchDecisionID,
-		Responses:       responses,
-	}
-
-	if inputs == nil {
+	if numInputs == 0 && keys == nil {
 		output.Warning = types.NewWarning(types.CodeAPIUsageWarn, MsgInputsKeyMissing)
 	}
 
@@ -383,13 +415,13 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Handle the response after all evals completed.
 	switch {
 	// All succeeded.
-	case len(errMap) == 0 && len(resultMap) > 0:
+	case errCount == 0 && resultsCount > 0:
 		writer.JSONOK(w, output, formatPretty)
 	// Some succeeded, some failed.
-	case len(errMap) > 0 && len(resultMap) > 0:
+	case errCount > 0 && resultsCount > 0:
 		writer.JSON(w, 207, output, formatPretty)
 	// All failed.
-	case len(errMap) > 0 && len(resultMap) == 0:
+	case errCount > 0 && resultsCount == 0:
 		writer.JSON(w, 500, output, formatPretty)
 	// No inputs / all other cases:
 	default:
@@ -404,11 +436,15 @@ type evalSingleParams struct {
 	IncludeInstrumentation bool
 	Provenance             bool
 	StrictBuiltinErrors    bool
-	GoInput                *any
-	M                      metrics.Metrics
 	IncludeMetrics         bool
 	Pretty                 bool
+	ASTInput               ast.Value
+	GoInput                *any
+	M                      metrics.Metrics
 	ExternalCancel         topdown.Cancel
+	LegacyRevision         string
+	BundleRevisions        map[string]server.BundleInfo
+	DecisionLogger         decisionLogger
 }
 
 // Borrowed wholesale from `rego/rego.go`:
@@ -426,17 +462,10 @@ func waitForDone(ctx context.Context, exit chan struct{}, f func()) {
 // the prepared query isn't in the cache, it is rebuilt from scratch, and
 // inserted into the cache.
 func (h *hndl) ensurePreparedEvalQueryIsCached(ctx context.Context, txn storage.Transaction, params *evalSingleParams) (*rego.PreparedEvalQuery, error) {
-	legacyRevision, br, err := getRevisions(ctx, h.manager.Store, txn)
-	if err != nil {
-		return nil, err
-	}
-
-	var ndbCache builtins.NDBCache
+	// var ndbCache builtins.NDBCache
 	// if s.ndbCacheEnabled {
 	// 	ndbCache = builtins.NDBCache{}
 	// }
-
-	ctx, logger := h.getDecisionLogger(ctx, legacyRevision, br)
 
 	var buf *topdown.BufferTracer
 
@@ -466,14 +495,13 @@ func (h *hndl) ensurePreparedEvalQueryIsCached(ctx context.Context, txn storage.
 
 		rego, err := h.makeRego(ctx, params.StrictBuiltinErrors, txn, nil, params.URLPath, params.M, params.IncludeInstrumentation, buf, opts)
 		if err != nil {
-			// dlog?
-			_ = logger.Log(ctx, txn, params.URLPath, "", nil, nil, nil, ndbCache, err, params.M)
+			_ = params.DecisionLogger.Log(ctx, txn, params.URLPath, "", nil, nil, nil, nil, err, params.M)
 			return nil, err
 		}
 
 		pq, err := rego.PrepareForEval(ctx)
 		if err != nil {
-			_ = logger.Log(ctx, txn, params.URLPath, "", nil, nil, nil, ndbCache, err, params.M)
+			_ = params.DecisionLogger.Log(ctx, txn, params.URLPath, "", nil, nil, nil, nil, err, params.M)
 			return nil, err
 		}
 		preparedQuery = &pq
@@ -484,21 +512,13 @@ func (h *hndl) ensurePreparedEvalQueryIsCached(ctx context.Context, txn storage.
 
 // Takes a prepared query, and runs it through eval. Meant to be used with the
 // Batch Query API, but may have other uses.
-func (h *hndl) evalInputSinglePreparedQuery(ctx context.Context, txn storage.Transaction, input ast.Value, params *evalSingleParams, pq *rego.PreparedEvalQuery) (*types.DataResponseV1, error) {
-	legacyRevision, br, err := getRevisions(ctx, h.manager.Store, txn)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, logger := h.getDecisionLogger(ctx, legacyRevision, br)
-
-	var ndbCache builtins.NDBCache
+func (h *hndl) evalInputSinglePreparedQuery(ctx context.Context, txn storage.Transaction, params *evalSingleParams, pq *rego.PreparedEvalQuery) (*types.DataResponseV1, error) {
+	// var ndbCache builtins.NDBCache
 	// if s.ndbCacheEnabled {
 	// 	ndbCache = builtins.NDBCache{}
 	// }
 
 	var buf *topdown.BufferTracer
-
 	if params.ExplainMode != types.ExplainOffV1 {
 		buf = topdown.NewBufferTracer()
 	}
@@ -507,15 +527,28 @@ func (h *hndl) evalInputSinglePreparedQuery(ctx context.Context, txn storage.Tra
 	// logic, because we have the prepared query as a method parameter.
 	preparedQuery := pq
 
-	evalOpts := []rego.EvalOption{
+	evalOpts := make([]rego.EvalOption, 0, 7)
+	evalOpts = append(evalOpts, []rego.EvalOption{
 		rego.EvalTransaction(txn),
-		rego.EvalParsedInput(input),
 		rego.EvalMetrics(params.M),
 		rego.EvalQueryTracer(buf),
 		// rego.EvalInterQueryBuiltinCache(s.interQueryBuiltinCache),
 		rego.EvalInstrument(params.IncludeInstrumentation),
-		rego.EvalNDBuiltinCache(ndbCache),
+		// rego.EvalNDBuiltinCache(ndbCache),
 		rego.EvalExternalCancel(params.ExternalCancel),
+	}...)
+
+	// Only feed in the AST representation if it's provided.
+	if params.ASTInput != nil {
+		evalOpts = append(evalOpts, rego.EvalParsedInput(params.ASTInput))
+	} else {
+		// Unwrap the *any if it's non-nil.
+		var input any
+		input = params.GoInput
+		if params.GoInput != nil {
+			input = *params.GoInput
+		}
+		evalOpts = append(evalOpts, rego.EvalInput(input))
 	}
 
 	rs, err := preparedQuery.Eval(
@@ -523,11 +556,17 @@ func (h *hndl) evalInputSinglePreparedQuery(ctx context.Context, txn storage.Tra
 		evalOpts...,
 	)
 
+	// OPA's metrics use restartable timers. We stop this timer to accumulate
+	// the time passed so far, then restart it to allow the caller to accurately
+	// track overall time passing for the handler. This means decision logs will
+	// report time spent up to the end of evaluation, but metrics for the
+	// request as a whole will tell a more holistic story for each eval.
 	params.M.Timer(metrics.ServerHandler).Stop()
+	params.M.Timer(metrics.ServerHandler).Start()
 
 	// Handle results.
 	if err != nil {
-		_ = logger.Log(ctx, txn, params.URLPath, "", params.GoInput, input, nil, ndbCache, err, params.M)
+		_ = params.DecisionLogger.Log(ctx, txn, params.URLPath, "", params.GoInput, params.ASTInput, nil, nil, err, params.M)
 		return nil, err
 	}
 
@@ -535,7 +574,7 @@ func (h *hndl) evalInputSinglePreparedQuery(ctx context.Context, txn storage.Tra
 		DecisionID: params.DecisionID,
 	}
 
-	if input == nil {
+	if params.ASTInput == nil && params.GoInput == nil {
 		result.Warning = types.NewWarning(types.CodeAPIUsageWarn, types.MsgInputKeyMissing)
 	}
 
@@ -544,7 +583,7 @@ func (h *hndl) evalInputSinglePreparedQuery(ctx context.Context, txn storage.Tra
 	}
 
 	if params.Provenance {
-		result.Provenance = h.getProvenance(legacyRevision, br)
+		result.Provenance = h.getProvenance(params.LegacyRevision, params.BundleRevisions)
 	}
 
 	if len(rs) == 0 {
@@ -554,7 +593,7 @@ func (h *hndl) evalInputSinglePreparedQuery(ctx context.Context, txn storage.Tra
 				return nil, err
 			}
 		}
-		if err = logger.Log(ctx, txn, params.URLPath, "", params.GoInput, input, result.Result, ndbCache, nil, params.M); err != nil {
+		if err = params.DecisionLogger.Log(ctx, txn, params.URLPath, "", params.GoInput, params.ASTInput, result.Result, nil, nil, params.M); err != nil {
 			return nil, err
 		}
 		return &result, nil
@@ -567,7 +606,7 @@ func (h *hndl) evalInputSinglePreparedQuery(ctx context.Context, txn storage.Tra
 		result.Explanation = h.getExplainResponse(params.ExplainMode, *buf, params.Pretty)
 	}
 
-	if err := logger.Log(ctx, txn, params.URLPath, "", params.GoInput, input, result.Result, ndbCache, nil, params.M); err != nil {
+	if err := params.DecisionLogger.Log(ctx, txn, params.URLPath, "", params.GoInput, params.ASTInput, result.Result, nil, nil, params.M); err != nil {
 		return nil, err
 	}
 
@@ -741,8 +780,8 @@ func stringPathToRef(s string) (r ast.Ref) {
 	if len(s) == 0 {
 		return r
 	}
-	p := strings.Split(s, "/")
-	for _, x := range p {
+	p := strings.SplitSeq(s, "/")
+	for x := range p {
 		if x == "" {
 			continue
 		}
@@ -759,7 +798,10 @@ func stringPathToRef(s string) (r ast.Ref) {
 	return r
 }
 
-func (h *hndl) getDecisionLogger(ctx context.Context, legacyRevision string, revisions map[string]server.BundleInfo) (context.Context, decisionLogger) {
+// Note(philip): This used to take a context.Context parameter, for intermediate
+// results. Since that code path was removed, I've also trimmed out the extra
+// parameter.
+func (h *hndl) getDecisionLogger(legacyRevision string, revisions map[string]server.BundleInfo) decisionLogger {
 	// if intermediateResultsEnabled {
 	// 	ctx = context.WithValue(ctx, IntermediateResultsContextKey{}, make(map[string]interface{}))
 	// }
@@ -777,5 +819,5 @@ func (h *hndl) getDecisionLogger(ctx context.Context, legacyRevision string, rev
 		logger.logger = h.dl.Log
 	}
 
-	return ctx, logger
+	return logger
 }

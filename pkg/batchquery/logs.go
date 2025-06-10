@@ -24,14 +24,12 @@ const decisionLogType = "eopa.styra.com/batch"
 
 type decisionLogger struct {
 	revisions map[string]server.BundleInfo
-	revision  string // Deprecated: Use `revisions` instead.
 	logger    func(context.Context, *server.Info) error
+	revision  string // Deprecated: Use `revisions` instead.
 }
 
 func (l decisionLogger) Log(ctx context.Context, txn storage.Transaction, path string, query string, goInput *interface{}, astInput ast.Value, goResults *interface{}, ndbCache builtins.NDBCache, err error, m metrics.Metrics) error {
-	// TODO: See if we could remove the maps.Copy, and just use a shallow maps.Clone here instead?
-	bundles := make(map[string]server.BundleInfo, len(l.revisions))
-	maps.Copy(bundles, l.revisions)
+	bundles := maps.Clone(l.revisions)
 
 	rctx := logging.RequestContext{}
 	if r, ok := logging.FromContext(ctx); ok {

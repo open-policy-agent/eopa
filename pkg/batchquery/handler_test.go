@@ -157,11 +157,11 @@ func TestBatchDataV1(t *testing.T) {
 		}},
 		{"post batch data api usage warning", []byte(testMod1), []tr{
 			{http.MethodPost, "/test", "", 200, `{
-			"warning": {
-				"code": "api_usage_warning",
-				"message": "'inputs' key missing from the request"
-			}
-		}`},
+				"warning": {
+					"code": "api_usage_warning",
+					"message": "'inputs' key missing from the request"
+				}
+			}`},
 			{http.MethodPost, "/test", `{"inputs": {}}`, 200, `{}`},
 		}},
 	}

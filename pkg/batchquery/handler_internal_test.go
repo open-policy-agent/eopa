@@ -384,22 +384,37 @@ func TestServerUsesAuthorizerParsedBody(t *testing.T) {
 			}
 
 			// Check that v1 reader function behaves correctly.
-			inpBatch, goInpBatch, err := readInputBatchPostV1(reqBatch.WithContext(ctx))
+			// The numWorkers parameter choice is arbitrary.
+			commonInp, inpKeys, inpValues, err := readInputBatchPostV1(reqBatch.WithContext(ctx), 2)
 			if err != nil {
 				t.Fatal(err)
+			}
+
+			// Mimic the conversion steps done in the handler.
+			numInputs := 0
+			for _, ks := range inpKeys {
+				numInputs += len(ks)
+			}
+			actBatch := make(map[string]ast.Value, numInputs)
+			for i := range inpKeys {
+				ks, vs := inpKeys[i], inpValues[i]
+				for j := range ks {
+					k, v := ks[j], vs[j]
+					inputIf := v
+					if mCommon, ok := asMap(commonInp); ok {
+						if mInput, ok := asMap(v); ok {
+							inputIf = mergeMaps(mCommon, mInput)
+						}
+					}
+					actBatch[k] = ast.MustInterfaceToValue(inputIf)
+				}
 			}
 
 			expBatch := tc.ExpResult
 
 			for k, v := range expBatch {
-				if v.Compare(inpBatch[k]) != 0 {
-					t.Fatalf("expected %v but got %v", expBatch[k], inpBatch[k])
-				}
-			}
-
-			for k, v := range expBatch {
-				if v.Compare(ast.MustInterfaceToValue(goInpBatch[k])) != 0 {
-					t.Fatalf("expected %v but got %v", expBatch[k], goInpBatch[k])
+				if v.Compare(actBatch[k]) != 0 {
+					t.Fatalf("expected %v but got %v", expBatch[k], actBatch[k])
 				}
 			}
 		})

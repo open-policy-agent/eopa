@@ -408,7 +408,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	if err := compileHndlr.SetManager(rt.Manager); err != nil {
 		return nil, err
 	}
-	batchQueryHndlr := batchquery.Handler(rt.Manager.Logger())
+	batchQueryHndlr := batchquery.Handler(rt.Manager.Logger()).WithLicensedMode(true)
 	if err := batchQueryHndlr.SetManager(rt.Manager); err != nil {
 		return nil, err
 	}
