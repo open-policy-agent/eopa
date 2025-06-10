@@ -64,7 +64,7 @@ require (
 	github.com/redis/go-redis/v9 v9.9.0
 	github.com/redpanda-data/benthos/v4 v4.52.0
 	github.com/sbabiv/xml2map v1.2.1
-	github.com/sijms/go-ora/v2 v2.8.24
+	github.com/sijms/go-ora/v2 v2.9.0
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/snowflakedb/gosnowflake v1.14.1
