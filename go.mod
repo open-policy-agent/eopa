@@ -106,7 +106,7 @@ require (
 	google.golang.org/grpc v1.73.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/h2non/gock.v1 v1.1.2
-	modernc.org/sqlite v1.37.1
+	modernc.org/sqlite v1.38.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -402,7 +402,7 @@ require (
 	k8s.io/client-go v0.32.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/utils v0.0.0-20250321185631-1f6e0b77f77e // indirect
-	modernc.org/libc v1.65.7 // indirect
+	modernc.org/libc v1.65.10 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
