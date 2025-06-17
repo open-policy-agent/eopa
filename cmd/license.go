@@ -34,6 +34,7 @@ func LicenseCmd(lic *license.Checker, lparams *license.LicenseParams) *cobra.Com
 	c := &cobra.Command{
 		Use:   "license",
 		Short: "License status",
+		Long:  "View details about an Enterprise OPA license key or token.",
 		RunE: func(c *cobra.Command, _ []string) error {
 			c.SilenceErrors = true
 			c.SilenceUsage = true

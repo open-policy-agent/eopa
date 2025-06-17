@@ -40,6 +40,11 @@ func addLicenseFallbackFlags(c *cobra.Command) {
 	c.Flags().Bool("no-license-fallback", false, "Don't fall back to OPA-mode when no license provided.")
 }
 
+func addDiscoveryLicenseFlags(c *cobra.Command) {
+	c.Flags().Bool("no-discovery-license-check", false, "Disable discovery-based licensing check.")
+	c.Flags().Int("license-discovery-timeout", 30, "Timeout (in seconds) for discovery-based licensing check.")
+}
+
 func addInstructionLimitFlag(c *cobra.Command, instrLimit *int64) {
 	c.Flags().Int64Var(instrLimit, "instruction-limit", 100_000_000, "set instruction limit for VM")
 }
@@ -300,6 +305,7 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 		case "run":
 			addLicenseFlags(c, lparams)
 			addLicenseFallbackFlags(c)
+			addDiscoveryLicenseFlags(c)
 			addInstructionLimitFlag(c, &instructionLimit)
 			addOptimizationFlagsAndDescription(c, &optLevel, &enableOptPassFlags, &disableOptPassFlags)
 			root.AddCommand(initRun(c, brand, lic, lparams)) // wrap OPA run

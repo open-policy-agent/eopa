@@ -11,6 +11,13 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+### Automatic Licensing with Styra DAS
+
+Enterprise OPA now automatically enters licensed mode when connected to a [Styra DAS](https://www.styra.com/styra-das/) instance.
+This should allow for easier setup and deployment of Enterprise OPA for Styra customers.
+
+If Styra DAS is not available, Enterprise OPA will fall back to its existing license key system.
+
 
 ## v1.41.1
 
