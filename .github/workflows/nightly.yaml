@@ -206,6 +206,8 @@ jobs:
           go-version: ${{ steps.go_version.outputs.go_version }}
       - name: setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+      - name: Install goversioninfo for Windows binary icon and version
+        run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@9c156ee8a17a598857849441385a2041ef570552 # v6.3.0
         with:
