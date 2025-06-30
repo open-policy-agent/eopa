@@ -19,7 +19,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.94
 	github.com/open-policy-agent/opa v1.5.1
 	github.com/redpanda-data/benthos/v4 v4.53.0
-	github.com/redpanda-data/connect/v4 v4.58.2
+	github.com/redpanda-data/connect/v4 v4.59.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
 	github.com/testcontainers/testcontainers-go v0.37.0
@@ -248,7 +248,7 @@ require (
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/quipo/dependencysolver v0.0.0-20170801134659-2b009cb4ddcc // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
-	github.com/redis/go-redis/v9 v9.10.0 // indirect
+	github.com/redis/go-redis/v9 v9.11.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rickb777/period v1.0.15 // indirect
 	github.com/rickb777/plural v1.4.4 // indirect
