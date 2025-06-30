@@ -219,7 +219,7 @@ func TestEKM(t *testing.T) {
 					}}`)},
 				Services: []byte(`{"acmecorp": {"credentials": {"bearer": {"token": "bear"} } } }`),
 			}
-			e := NewEKM(nil)
+			e := NewEKM()
 			e.SetLogger(logging.New())
 			cnf, err := e.OnConfig(context.Background(), &conf)
 			if err != nil {
@@ -242,7 +242,7 @@ func TestEKM(t *testing.T) {
 					}}`)},
 				Keys: []byte(`{"jwt_signing": {"key": "test"} }`),
 			}
-			e := NewEKM(nil)
+			e := NewEKM()
 			e.SetLogger(logging.New())
 			cnf, err := e.OnConfig(context.Background(), &conf)
 			if err != nil {
@@ -263,7 +263,7 @@ func TestEKM(t *testing.T) {
 					}}`)},
 				Services: []byte(`{"acmecorp": {"url": "${vault(kv/data/acmecorp:data/url)}", "credentials": {"bearer": {"token": "${vault(kv/data/acmecorp/bearer:data/token)}"} } } }`),
 			}
-			e := NewEKM(nil)
+			e := NewEKM()
 			e.SetLogger(logging.New())
 			cnf, err := e.OnConfig(context.Background(), &conf)
 			if err != nil {
@@ -283,7 +283,7 @@ func TestEKM(t *testing.T) {
 					}}`)},
 				Keys: []byte(`{"jwt_signing": {"key": "${vault(kv/data/sign:data/private_key)}"} }`),
 			}
-			e := NewEKM(nil)
+			e := NewEKM()
 			e.SetLogger(logging.New())
 			cnf, err := e.OnConfig(context.Background(), &conf)
 			if err != nil {
@@ -304,7 +304,8 @@ func TestEKM(t *testing.T) {
 				// full replacement (sasl_password)
 				// single substring replacement (sasl_username)
 				// multiple substring replacement (sasl_mechanism) -- unlikely, but let's support it
-				Plugins: map[string]json.RawMessage{"data": []byte(`{"kafka.messages": {
+				Plugins: map[string]json.RawMessage{
+					"data": []byte(`{"kafka.messages": {
 					  "urls": ["kafka.broker:9092"],
 					  "sasl_mechanism": "${vault(kv/data/kafka/sasl:data/scram)}-sha-${vault(kv/data/kafka/sasl:data/bits)}",
 					  "sasl_username": "${vault(kv/data/kafka/sasl:data/username)}@styra.com",
@@ -319,9 +320,10 @@ func TestEKM(t *testing.T) {
 					          }
 					        }
 						]
-					}`)},
+					}`),
+				},
 			}
-			e := NewEKM(nil)
+			e := NewEKM()
 			e.SetLogger(logging.New())
 			cnf, err := e.OnConfig(context.Background(), &conf)
 			if err != nil {
@@ -355,7 +357,7 @@ func TestEKM(t *testing.T) {
 					  }
 					}}`)},
 		}
-		e := NewEKM(nil)
+		e := NewEKM()
 		e.SetLogger(logging.New())
 		_, err := e.OnConfig(context.Background(), &conf)
 		if err != nil {

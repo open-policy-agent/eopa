@@ -3,7 +3,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/util"
 	opa_version "github.com/open-policy-agent/opa/v1/version"
 
-	"github.com/styrainc/enterprise-opa-private/internal/license"
 	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
 	"github.com/styrainc/enterprise-opa-private/internal/version"
 	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
@@ -31,18 +29,26 @@ const brand = "Enterprise OPA"
 // while others actually define a --data flag.
 const dataKey = "data"
 
-func addLicenseFlags(c *cobra.Command, licenseParams *license.LicenseParams) {
-	c.Flags().StringVar(&licenseParams.Key, "license-key", "", "Location of file containing EOPA_LICENSE_KEY")
-	c.Flags().StringVar(&licenseParams.Token, "license-token", "", "Location of file containing EOPA_LICENSE_TOKEN")
+func addLicenseFlags(c *cobra.Command) {
+	c.Flags().String("license-key", "", "Location of file containing EOPA_LICENSE_KEY")
+	c.Flags().String("license-token", "", "Location of file containing EOPA_LICENSE_TOKEN")
+
+	c.Flags().MarkDeprecated("license-key", "deprecated flag")
+	c.Flags().MarkDeprecated("license-token", "deprecated flag")
 }
 
 func addLicenseFallbackFlags(c *cobra.Command) {
 	c.Flags().Bool("no-license-fallback", false, "Don't fall back to OPA-mode when no license provided.")
+
+	c.Flags().MarkDeprecated("no-license-fallback", "deprecated flag")
 }
 
 func addDiscoveryLicenseFlags(c *cobra.Command) {
 	c.Flags().Bool("no-discovery-license-check", false, "Disable discovery-based licensing check.")
 	c.Flags().Int("license-discovery-timeout", 30, "Timeout (in seconds) for discovery-based licensing check.")
+
+	c.Flags().MarkDeprecated("no-discovery-license-check", "deprecated flag")
+	c.Flags().MarkDeprecated("license-discovery-timeout", "deprecated flag")
 }
 
 func addInstructionLimitFlag(c *cobra.Command, instrLimit *int64) {
@@ -93,7 +99,7 @@ The following flags control specific optimizations:
 `
 }
 
-func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
+func EnterpriseOPACommand() *cobra.Command {
 	var instructionLimit int64
 	var optLevel int64
 	var enableOptPassFlags, disableOptPassFlags iropt.OptimizationPassFlags
@@ -105,8 +111,6 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 	// It's really only meant for debugging license trouble.
 	logLevel := util.NewEnumFlag("info", []string{"debug", "info", "error"})
 	logFormat := util.NewEnumFlag("json", []string{"json", "json-pretty"})
-
-	lparams := license.NewLicenseParams()
 
 	// NOTE(sr): viper supports a bunch of config file formats, but let's decide
 	//           which formats we'd like to support, not just take them all as-is.
@@ -147,15 +151,6 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 			switch cmd.CalledAs() {
 
 			case "eval":
-				if lic == nil {
-					return nil
-				}
-
-				lvl, _ := internal_logging.GetLevel(logLevel.String())
-				format := internal_logging.GetFormatter(logFormat.String(), "")
-				lic.SetFormatter(format)
-				lic.SetLevel(lvl)
-
 				logger, err := getLogger(logLevel.String(), logFormat.String(), "")
 				if err != nil {
 					return err
@@ -197,20 +192,7 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 					}
 				}
 
-				// do the license validate and activate asynchronously; so user doesn't have to wait
-				go func() {
-					if err := lic.ValidateLicense(cmd.Context(), lparams); err != nil {
-						fmt.Fprintf(os.Stderr, "invalid license: %v\n", err)
-						os.Exit(3)
-					}
-				}()
-
 			case "test":
-				lvl, _ := internal_logging.GetLevel(logLevel.String())
-				format := internal_logging.GetFormatter(logFormat.String(), "")
-				lic.SetFormatter(format)
-				lic.SetLevel(lvl)
-
 				logger, err := getLogger(logLevel.String(), logFormat.String(), "")
 				if err != nil {
 					return err
@@ -260,11 +242,6 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 				}
 
 			case "run":
-				lvl, _ := internal_logging.GetLevel(logLevel.String())
-				format := internal_logging.GetFormatter(logFormat.String(), "")
-				lic.SetFormatter(format)
-				lic.SetLevel(lvl)
-
 				logger, err := getLogger(logLevel.String(), logFormat.String(), "")
 				if err != nil {
 					return err
@@ -303,14 +280,14 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 	for _, c := range opa.Commands() {
 		switch c.Name() {
 		case "run":
-			addLicenseFlags(c, lparams)
+			addLicenseFlags(c)
 			addLicenseFallbackFlags(c)
 			addDiscoveryLicenseFlags(c)
 			addInstructionLimitFlag(c, &instructionLimit)
 			addOptimizationFlagsAndDescription(c, &optLevel, &enableOptPassFlags, &disableOptPassFlags)
-			root.AddCommand(initRun(c, brand, lic, lparams)) // wrap OPA run
+			root.AddCommand(initRun(c, brand)) // wrap OPA run
 		case "eval":
-			addLicenseFlags(c, lparams)
+			addLicenseFlags(c)
 			addInstructionLimitFlag(c, &instructionLimit)
 			addOptimizationFlagsAndDescription(c, &optLevel, &enableOptPassFlags, &disableOptPassFlags)
 
@@ -320,7 +297,7 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 			root.AddCommand(setDefaults(c))
 
 		case "test":
-			addLicenseFlags(c, lparams)
+			addLicenseFlags(c)
 
 			c.Flags().VarP(logLevel, "log-level", "l", "set log level")
 			c.Flags().Var(logFormat, "log-format", "set log format") // NOTE(sr): we don't support "text" here
@@ -332,11 +309,11 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 			root.AddCommand(setDefaults(c))
 
 		case "exec":
-			addLicenseFlags(c, lparams)
+			addLicenseFlags(c)
 			addLicenseFallbackFlags(c)
 			addInstructionLimitFlag(c, &instructionLimit)
 			addOptimizationFlagsAndDescription(c, &optLevel, &enableOptPassFlags, &disableOptPassFlags)
-			root.AddCommand(initExec(c, lic, lparams)) // wrap OPA exec
+			root.AddCommand(initExec(c)) // wrap OPA exec
 		case "version":
 			root.AddCommand(initVersion()) // override version
 		default:
@@ -352,8 +329,8 @@ func EnterpriseOPACommand(lic *license.Checker) *cobra.Command {
 	root.AddCommand(loginCmd(cfg, paths))
 	root.AddCommand(pullCmd(cfg, paths))
 
-	licenseCmd := LicenseCmd(lic, lparams)
-	addLicenseFlags(licenseCmd, lparams)
+	licenseCmd := LicenseCmd()
+	addLicenseFlags(licenseCmd)
 	root.AddCommand(licenseCmd)
 	return root
 }

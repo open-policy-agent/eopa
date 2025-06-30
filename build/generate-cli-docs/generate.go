@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra/doc"
 
 	eopaCmd "github.com/styrainc/enterprise-opa-private/cmd"
-	"github.com/styrainc/enterprise-opa-private/internal/license"
 )
 
 const fileHeader = `---
@@ -33,7 +32,7 @@ func main() {
 	}
 	out := os.Args[1]
 
-	command := eopaCmd.EnterpriseOPACommand(license.NewChecker())
+	command := eopaCmd.EnterpriseOPACommand()
 	command.Use = "eopa [command]"
 	command.DisableAutoGenTag = true
 
@@ -90,7 +89,7 @@ func main() {
 	}
 
 	withHeader := fmt.Sprintf("%s%s", fileHeader, strings.Join(document, ""))
-	err = os.WriteFile(filepath.Join(out, "cli.md"), []byte(withHeader), 0755)
+	err = os.WriteFile(filepath.Join(out, "cli.md"), []byte(withHeader), 0o755)
 	if err != nil {
 		log.Fatal(err)
 	}

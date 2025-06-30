@@ -1,0 +1,3 @@
+exec eopa pull
+stderr '^Command "pull" is deprecated'
+! stdout .

@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -58,7 +60,7 @@ type results struct {
 }
 
 func TestExecSuccessWithBuiltin(t *testing.T) {
-	args := []string{"exec", "--log-level", "debug", "--decision", "/test/p", "--no-license-fallback"} // need to append input
+	args := []string{"exec", "--log-level", "debug", "--decision", "/test/p"} // need to append input
 	policy := `package test
 import future.keywords
 q := sql.send({}) # checking that the bundle can be read if it uses a builtin
@@ -108,7 +110,7 @@ bundles:
 //  2. the rego vm was used for evaluationg, since the decision log's metrics contain
 //     the metrics you don't get from topdown.
 func TestExecSuccessWithPlugin(t *testing.T) {
-	args := []string{"exec", "--log-level", "debug", "--decision", "/test/p", "--no-license-fallback"} // need to append input
+	args := []string{"exec", "--log-level", "debug", "--decision", "/test/p"} // need to append input
 	policy := `package test
 import future.keywords
 p if input.foo.bar == "quz"
@@ -227,4 +229,63 @@ func tempFile(t *testing.T, in any) string {
 		t.Fatalf("close input.json: %v", err)
 	}
 	return inputPath
+}
+
+func eopaEvalQuery(query string) *exec.Cmd {
+	return exec.Command(binary(), "eval", "-fpretty", query)
+}
+
+func filter(in []string) []string {
+	out := []string{}
+	for i := range in {
+		if !strings.HasPrefix(in[i], "EOPA") {
+			out = append(out, in[i])
+		}
+	}
+	return out
+}
+
+func eopaSansEnv(t *testing.T, policy, config string, args ...string) (*exec.Cmd, *bytes.Buffer) {
+	return eopaFilterEnv(t, policy, config, filter, args...)
+}
+
+func eopaCmd(t *testing.T, policy, config string, args ...string) (*exec.Cmd, *bytes.Buffer) {
+	return eopaFilterEnv(t, policy, config, nil, args...)
+}
+
+func eopaFilterEnv(t *testing.T, policy, config string, f func([]string) []string, args ...string) (*exec.Cmd, *bytes.Buffer) {
+	buf := bytes.Buffer{}
+	dir := t.TempDir()
+	if config != "" {
+		configPath := filepath.Join(dir, "config.yml")
+		if err := os.WriteFile(configPath, []byte(config), 0x777); err != nil {
+			t.Fatalf("write config: %v", err)
+		}
+		args = append(args, "--config-file", configPath)
+	}
+	if policy != "" {
+		policyPath := filepath.Join(dir, "eval.rego")
+		if err := os.WriteFile(policyPath, []byte(policy), 0x777); err != nil {
+			t.Fatalf("write policy: %v", err)
+		}
+		args = append(args, policyPath)
+	}
+	eopa := exec.Command(binary(), args...)
+	if f != nil {
+		eopa.Env = f(eopa.Env)
+	}
+	eopa.Stderr = &buf
+
+	t.Cleanup(func() {
+		if eopa.Process == nil {
+			return
+		}
+		_ = eopa.Process.Signal(os.Interrupt)
+		eopa.Wait()
+		if testing.Verbose() && t.Failed() {
+			t.Logf("eopa output:\n%s", buf.String())
+		}
+	})
+
+	return eopa, &buf
 }

@@ -1,17 +1,8 @@
 package cmd
 
 import (
-	"context"
-	"fmt"
-	"net/url"
-	"os"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	"github.com/open-policy-agent/opa/v1/logging"
-
-	"github.com/styrainc/enterprise-opa-private/pkg/pull"
 )
 
 // targetDir says where to pull libraries to
@@ -24,10 +15,7 @@ const (
 // force makes the pull command write to libraries even when it exists
 const force = "force"
 
-func pullCmd(config *viper.Viper, paths []string) *cobra.Command {
-	var logger logging.Logger
-	var err error
-
+func pullCmd(_ *viper.Viper, _ []string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "pull",
 		Example: `
@@ -54,62 +42,10 @@ Remove files that aren't expected in the target directory:
 
     eopa pull --force
 `,
-		Short: "Pull libraries from DAS instance",
-		PreRunE: func(c *cobra.Command, _ []string) error {
-			bindDASFlags(config, c)
-			c.SilenceUsage = true
-
-			lvl, _ := c.Flags().GetString(logLevel)
-			format, _ := c.Flags().GetString("log-format")
-			logger, err = getLogger(lvl, format, "")
-			if err != nil {
-				return err
-			}
-
-			path, _ := c.Flags().GetString(styraConfig)
-			return readConfig(path, config, paths, logger)
-		},
-		RunE: func(c *cobra.Command, _ []string) error {
-			ctx, cancel := context.WithCancel(c.Context())
-			defer cancel()
-
-			u0 := config.GetString(dasURL)
-			if u0 == "" {
-				return fmt.Errorf("URL not provided: use .styra.yaml or pass `--url`")
-			}
-			u, err := url.Parse(u0)
-			if err != nil {
-				return fmt.Errorf("invalid URL %s: %w", u0, err)
-			}
-			if u.Scheme != "https" && u.Scheme != "http" {
-				return fmt.Errorf("invalid URL %s: scheme must be http[s]", u0)
-			}
-
-			f, _ := c.Flags().GetString(secretFile)
-			sf := sessionFile(f != "", config)
-
-			t, _ := c.Flags().GetString(targetDir)
-			st := toAbs(t != "", config, targetDir, targetDirDefault)
-
-			opts := []pull.Opt{
-				pull.APIToken(os.Getenv(apiTokenEnvVar)),
-				pull.SessionFile(sf),
-				pull.URL(u),
-				pull.Logger(logger),
-				pull.TargetDir(st),
-				pull.Force(config.GetBool(force)),
-			}
-
-			return pull.Start(ctx, opts...)
-		},
-		PostRunE: func(*cobra.Command, []string) error {
-			// NOTE(sr): if the config file location was passed via
-			// --styra-config, then it has to exist -- that's checked
-			// before. Hence it cannot be generated, either.
-			if config.ConfigFileUsed() != "" { // config exists, don't do anything
-				return nil
-			}
-			return writeConfig(config, logger)
+		Short:      "Pull libraries from DAS instance",
+		Deprecated: "Command no longer used in Enterprise OPA",
+		RunE: func(*cobra.Command, []string) error {
+			return nil
 		},
 	}
 

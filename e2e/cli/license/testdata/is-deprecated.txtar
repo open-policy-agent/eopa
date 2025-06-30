@@ -1,0 +1,3 @@
+exec eopa license
+stderr '^Command "license" is deprecated'
+! stdout .

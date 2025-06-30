@@ -20,7 +20,7 @@ func DefaultOptions() sdk.Options {
 	rego_vm.SetDefault(true)
 	builtins.Init()
 
-	ekmHook := ekm.NewEKM(nil)
+	ekmHook := ekm.NewEKM()
 	ekmHook.SetLogger(logging.NewNoOpLogger())
 
 	return sdk.Options{

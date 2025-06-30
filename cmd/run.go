@@ -15,10 +15,8 @@ import (
 	"go.opentelemetry.io/otel"
 
 	bundleApi "github.com/open-policy-agent/opa/v1/bundle"
-	"github.com/open-policy-agent/opa/v1/config"
 	"github.com/open-policy-agent/opa/v1/hooks"
 	"github.com/open-policy-agent/opa/v1/keys"
-	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/plugins"
 	"github.com/open-policy-agent/opa/v1/plugins/discovery"
 	"github.com/open-policy-agent/opa/v1/runtime"
@@ -26,8 +24,6 @@ import (
 
 	opa_envoy "github.com/open-policy-agent/opa-envoy-plugin/plugin"
 
-	configLoader "github.com/styrainc/enterprise-opa-private/internal/config"
-	"github.com/styrainc/enterprise-opa-private/internal/license"
 	"github.com/styrainc/enterprise-opa-private/pkg/batchquery"
 	"github.com/styrainc/enterprise-opa-private/pkg/compile"
 	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
@@ -45,8 +41,7 @@ import (
 const defaultBindAddress = "localhost:8181"
 
 // Run provides the CLI entrypoint for the `run` subcommand
-func initRun(opa *cobra.Command, brand string, lic *license.Checker, lparams *license.LicenseParams) *cobra.Command {
-	fallback := opa.RunE
+func initRun(opa *cobra.Command, brand string) *cobra.Command {
 	// Only override Run, so we keep the args and usage texts
 	opa.RunE = func(c *cobra.Command, args []string) error {
 		c.SilenceErrors = true
@@ -58,50 +53,10 @@ func initRun(opa *cobra.Command, brand string, lic *license.Checker, lparams *li
 			panic(err)
 		}
 		params.rt.Brand = brand
-		logger, err := getLogger(params.rt.Logging.Level, params.rt.Logging.Format, params.rt.Logging.TimestampFormat)
-		if err != nil {
-			return err
-		}
 
-		// Discovery license check.
-		var discoLicenseOK bool
-		noDiscoCheck, _ := c.Flags().GetBool("no-discovery-license-check")
-		timeoutSeconds, _ := c.Flags().GetInt("license-discovery-timeout")
-		if !noDiscoCheck {
-			discoLicenseOK, err = discoveryLicenseCheck(c.Context(), params.rt, logger, time.Duration(timeoutSeconds)*time.Second)
-			if err != nil {
-				logger.Warn(err.Error())
-			}
-		} else {
-			logger.Debug("Skipping discovery-based license checks.")
-		}
-		if !discoLicenseOK || err != nil {
-			// Normal Keygen-based license checks.
-			strict, _ := c.Flags().GetBool("no-license-fallback")
-			if !strict { // validate license synchronously
-				if err := lic.ValidateLicense(ctx, lparams); err != nil {
-
-					logger.Warn(err.Error())
-					logger.Warn("Switching to OPA mode. Enterprise OPA functionality will be disabled.")
-
-					batchQueryHndlr := batchquery.Handler(nil)
-					server.ManagerHooks = []server.ManagerHook{batchQueryHndlr.SetManager}
-
-					c.SilenceErrors = false
-					return fallback(c, args)
-				}
-			} else { // do the license validate and activate asynchronously
-				go func() {
-					if err := lic.ValidateLicenseWithRetry(c.Context(), lparams); err != nil {
-						fmt.Fprintln(os.Stderr, err.Error())
-						os.Exit(license.ErrorExitCode)
-					}
-				}()
-			}
-		}
-
+		// Note(philip): Removed license checks here.
 		enableEOPAOnly()
-		rt, err := initRuntime(ctx, params, args, lic)
+		rt, err := initRuntime(ctx, params, args)
 		if err != nil {
 			fmt.Println("run error:", err)
 			return err
@@ -287,7 +242,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 }
 
 // initRuntime is taken from OPA's cmd/run.go
-func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *license.Checker) (*runtime.Runtime, error) {
+func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*runtime.Runtime, error) {
 	authenticationSchemes := map[string]server.AuthenticationScheme{
 		"token": server.AuthenticationToken,
 		"tls":   server.AuthenticationTLS,
@@ -366,7 +321,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	bundleApi.RegisterActivator("_enterprise_opa", a)
 	params.rt.BundleActivatorPlugin = "_enterprise_opa"
 
-	ekmHook := ekm.NewEKM(lic)
+	ekmHook := ekm.NewEKM()
 	previewHook := preview.NewHook()
 	evalCacheHook := vm.NewCacheHook()
 	compileHook := compile.NewHook()
@@ -380,7 +335,6 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	}
 
 	params.rt.Logger = logger
-	lic.SetLogger(logger)
 	ekmHook.SetLogger(logger)
 
 	params.rt.ExtraDiscoveryOpts = []func(*discovery.Discovery){
@@ -466,88 +420,4 @@ func buildVerificationConfig(pubKey, pubKeyID, alg, scope string, excludeFiles [
 	}
 	bs, err := bundleApi.NewVerificationConfig(map[string]*keys.Config{pubKeyID: keyConfig}, pubKeyID, scope, excludeFiles), nil
 	return bs, err
-}
-
-// DiscoDASLicenseHook checks if a discovery bundle was provided by DAS, by looking for a magic key/value pair.
-type DiscoDASLicenseHook struct {
-	LicenseValid bool
-	Done         chan struct{}
-}
-
-// When we get a discovery config with the `"eopa": {"license": "key"}` style of field present, consider EOPA licensed.
-// Note(philip): This hook should ONLY ever be used in the "extra discovery" pass.
-func (d *DiscoDASLicenseHook) OnConfigDiscovery(_ context.Context, conf *config.Config) (*config.Config, error) {
-	if conf.EOPA != nil {
-		if conf.EOPA.License != nil {
-			d.LicenseValid = len(*conf.EOPA.License) > 0 // Any string present for this field is considered "valid".
-		}
-	}
-	d.Done <- struct{}{}
-	return conf, nil
-}
-
-// Compile-time interface assertion.
-var _ hooks.ConfigDiscoveryHook = &DiscoDASLicenseHook{}
-
-// Discovery auto-licensing check. Early-exits if discovery is not configured.
-// Returns a tuple (isLicensed, error)
-func discoveryLicenseCheck(ctx context.Context, params runtime.Params, logger logging.Logger, timeout time.Duration) (bool, error) {
-	// We vendor an OPA-internal package, to mimic exactly how they load up the config file with overloads.
-	config, err := configLoader.Load(params.ConfigFile, params.ConfigOverrides, params.ConfigOverrideFiles)
-	if err != nil {
-		return false, fmt.Errorf("config error: %w", err)
-	}
-
-	// Isolated, one-off manager instance. Logging is disabled, otherwise we the
-	// status and decison logging plugins will spew a bunch of logs about
-	// request failures and context cancellations that are 100% expected here.
-	mgr, err := plugins.New(config, "double-disco", storage.New(),
-		plugins.Logger(logging.NewNoOpLogger()),
-		plugins.WithEnableTelemetry(false),
-		plugins.GracefulShutdownPeriod(0))
-	if err != nil {
-		return false, err
-	}
-
-	// Bail out early! Missing discovery config means this check doesn't need to proceed.
-	if mgr.Config.Discovery == nil {
-		logger.Debug("Discovery not configured. Skipping discovery license check.")
-		return false, nil
-	}
-	logger.Info("Starting discovery license check.")
-
-	licenseHook := &DiscoDASLicenseHook{LicenseValid: false, Done: make(chan struct{})}
-	disco, err := discovery.New(mgr, discovery.Hooks(hooks.New(licenseHook)))
-	if err != nil {
-		return false, err
-	}
-
-	// Attempt to do a discovery fetch with timeout.
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	logger.Debug("Starting discovery plugin.")
-	if err := disco.Start(ctx); err != nil {
-		return false, err
-	}
-
-	// If discovery is successful, the hook will fire. Otherwise, the timeout will save us.
-	logger.Debug("Waiting %d seconds for discovery to complete.", int64(timeout.Seconds()))
-	select {
-	case <-ctx.Done():
-		logger.Debug("Canceling discovery due to timeout.")
-	case <-licenseHook.Done:
-	}
-
-	// Stop the plugin and manager, hopefully cleaning up any spawned goroutines.
-	logger.Debug("Stopping discovery plugin.")
-	disco.Stop(ctx)
-	mgr.Stop(ctx)
-
-	if licenseHook.LicenseValid {
-		logger.Info("Discovery license check successful.")
-		return true, nil
-	}
-
-	logger.Warn("Discovery license check failed.")
-	return false, nil
 }
