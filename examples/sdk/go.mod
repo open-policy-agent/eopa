@@ -4,7 +4,7 @@ go 1.24.3
 
 toolchain go1.24.4
 
-require github.com/open-policy-agent/opa v1.5.1
+require github.com/open-policy-agent/opa v1.6.0
 
 require (
 	github.com/hashicorp/vault/api v1.20.0

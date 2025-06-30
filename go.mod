@@ -57,7 +57,7 @@ require (
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/olivere/elastic/v7 v7.0.32
-	github.com/open-policy-agent/opa v1.5.1
+	github.com/open-policy-agent/opa v1.6.0
 	github.com/open-policy-agent/opa-envoy-plugin v1.5.1-envoy
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/prometheus/client_golang v1.22.0
@@ -73,7 +73,7 @@ require (
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
-	github.com/styrainc/regal v0.34.1
+	github.com/styrainc/regal v0.35.1
 	github.com/testcontainers/testcontainers-go v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/localstack v0.37.0
@@ -347,7 +347,7 @@ require (
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.5.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/styrainc/roast v0.10.0 // indirect
+	github.com/styrainc/roast v0.15.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.2 // indirect
 	github.com/tilinna/z85 v1.0.0 // indirect

@@ -117,8 +117,6 @@ github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 h1:f+oWsMOmNPc8J
 github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8/go.mod h1:wcDNUvekVysuuOpQKo3191zZyTpiI6se1N1ULghS0sw=
 github.com/golang/protobuf v1.3.1/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.3.4/go.mod h1:vzj43D7+SQXF/4pzW/hwtAqwc6iTitCiVSaWz5lYuqw=
-github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
-github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
 github.com/google/flatbuffers v25.2.10+incompatible h1:F3vclr7C3HpB1k9mxCGRMXq6FdUalZ6H/pNX4FP1v0Q=
 github.com/google/flatbuffers v25.2.10+incompatible/go.mod h1:1AeVuKshWv4vARoZatz6mlQ0JxURH0Kv5+zNeJKJCa8=
 github.com/google/go-cmp v0.3.1/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
@@ -209,8 +207,8 @@ github.com/olekukonko/tablewriter v0.0.5 h1:P2Ga83D34wi1o9J6Wh1mRuqd4mF/x/lgBS7N
 github.com/olekukonko/tablewriter v0.0.5/go.mod h1:hPp6KlRPjbx+hW8ykQs1w3UBbZlj6HuIJcUGPhkA7kY=
 github.com/onsi/gomega v1.34.1 h1:EUMJIKUjM8sKjYbtxQI9A4z2o+rruxnzNvpknOXie6k=
 github.com/onsi/gomega v1.34.1/go.mod h1:kU1QgUvBDLXBJq618Xvm2LUX6rSAfRaFRTcdOeDLwwY=
-github.com/open-policy-agent/opa v1.5.1 h1:LTxxBJusMVjfs67W4FoRcnMfXADIGFMzpqnfk6D08Cg=
-github.com/open-policy-agent/opa v1.5.1/go.mod h1:bYbS7u+uhTI+cxHQIpzvr5hxX0hV7urWtY+38ZtjMgk=
+github.com/open-policy-agent/opa v1.6.0 h1:/S/cnNQJ2MUMNzizHPbisTWBHowmLkPrugY5jjkPlRQ=
+github.com/open-policy-agent/opa v1.6.0/go.mod h1:zFmw4P+W62+CWGYRDDswfVYSCnPo6oYaktQnfIaRFC4=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJwooC2xJA040=
@@ -276,10 +274,10 @@ github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/styrainc/regal v0.34.1 h1:raOR30iTI38c4MFxW0LpG0p0jTtQcIp/OtFjUn+Adic=
-github.com/styrainc/regal v0.34.1/go.mod h1:85wnQGlKcZmVyCqI1feZMLIT0Zds8feN3g1Pvf0Dxsc=
-github.com/styrainc/roast v0.10.0 h1:mD0HLezVC35qnZLa8tQYq3EFkcGxAJSddP+dBPU+7o4=
-github.com/styrainc/roast v0.10.0/go.mod h1:75o0XHVEbDZp456w5EzDCf3ve5tm1YrJu1SHW+NRnLg=
+github.com/styrainc/regal v0.35.1 h1:3WZqPtKEbfxx1IWLkQ1OHhTpP4Nx3v/Zd+cuoBecd7I=
+github.com/styrainc/regal v0.35.1/go.mod h1:1hCkmFTWMPqzqgYsbWbaRDlXIMupI6qkcSg4LYSd16E=
+github.com/styrainc/roast v0.15.0 h1:cEjm6AfIPp0Z6fTVHK+kW5pWevekmZ69H4XlEcXrTRk=
+github.com/styrainc/roast v0.15.0/go.mod h1:jQH3mOwoaOHrwgtj5B91dOHlfWaEE+lgLV6H+UAaYGo=
 github.com/tchap/go-patricia/v2 v2.3.2 h1:xTHFutuitO2zqKAQ5rCROYgUb7Or/+IC3fts9/Yc7nM=
 github.com/tchap/go-patricia/v2 v2.3.2/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
 github.com/vektah/gqlparser/v2 v2.5.28 h1:bIulcl3LF69ba6EiZVGD88y4MkM+Jxrf3P2MX8xLRkY=

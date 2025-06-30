@@ -6,7 +6,7 @@ toolchain go1.24.4
 
 require (
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
-	github.com/styrainc/regal v0.34.1
+	github.com/styrainc/regal v0.35.1
 )
 
 require (
@@ -70,7 +70,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
-	github.com/open-policy-agent/opa v1.5.1 // indirect
+	github.com/open-policy-agent/opa v1.6.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/owenrumney/go-sarif/v2 v2.3.3 // indirect
@@ -91,7 +91,7 @@ require (
 	github.com/sourcegraph/jsonrpc2 v0.2.1 // indirect
 	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
-	github.com/styrainc/roast v0.10.0 // indirect
+	github.com/styrainc/roast v0.15.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.2 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.28 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect

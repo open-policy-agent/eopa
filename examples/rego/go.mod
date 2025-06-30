@@ -3,7 +3,7 @@ module github.com/styrainc/eopa-examples-rego
 go 1.24.3
 
 require (
-	github.com/open-policy-agent/opa v1.5.1
+	github.com/open-policy-agent/opa v1.6.0
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
 )
 
