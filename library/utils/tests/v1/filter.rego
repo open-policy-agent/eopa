@@ -5,7 +5,7 @@
 package system.eopa.utils.tests.v1
 
 filter.helper(query, select, tables, opts) := masked if {
-	db := object.get(opts, "db", ":memory:")
+	[db, in_mem] := table_name(query, select, tables, opts)
 	debug := object.get(opts, "debug", false)
 	setup_tables(debug, db, tables)
 
@@ -20,7 +20,16 @@ filter.helper(query, select, tables, opts) := masked if {
 	print_debug(debug, "list response: %v", [results])
 	masked := mask_rows(results, conditions, opts)
 	print_debug(debug, "masked response: %v", [masked])
-	drop_tables(debug, db, tables)
+	drop_tables(debug, in_mem, db, tables)
+}
+
+table_name(query, select, tables, opts) := [opts.db, false] if true
+
+else := [random_memory_table(query, select, tables, opts), true]
+
+random_memory_table(query, select, tables, opts) := db if {
+	key := sprintf("%v%v%v%v", [query, select, tables, opts])
+	db := sprintf("file:%s?mode=memory", [uuid.rfc4122(key)])
 }
 
 setup_tables(debug, db, tables) if {
@@ -52,13 +61,12 @@ to_val(x) := sprintf("'%v'", [x]) if is_string(x)
 
 else := sprintf("%v", [x])
 
-drop_tables(debug, db, tables) if {
+drop_tables(debug, true, db, tables) if {
 	some name, _ in tables
 	drop_table(debug, db, name)
-}
+} else := true
 
 drop_table(debug, db, name) := sql.send(sql_query(debug, db, q)) if {
-	db == ":memory:"
 	q := sprintf("DROP TABLE %s", [name])
 } else := true
 
@@ -97,9 +105,11 @@ mask_rows(rows, conditions, opts) := results if {
 	warn_if_duplicate_column_names_in_rules(rows, rules, mapping)
 	results := [mask_row(row, rules, mapping) | some row in rows]
 }
+
 else := rows
 
 default warn_if_duplicate_column_names_in_rules(_, _, _) := true
+
 warn_if_duplicate_column_names_in_rules(rows, rules, mapping) if {
 	row := rows[0] # they all share their keys
 	some key, _ in row
@@ -120,10 +130,10 @@ maybe_masked(key, val, rules) := val if count(rules) > 1 # WARN already issued
 
 maybe_masked(_, val, set()) := val
 
-matching_rules(key, rules, mapping) := { rules[table][col] |
+matching_rules(key, rules, mapping) := {rules[table][col] |
 	# explicit match
 	[table, col] := split(mapping[key], ".")
-} | { rules[_][key] | # regal ignore:prefer-some-in-iteration
+} | {rules[_][key] | # regal ignore:prefer-some-in-iteration
 	# best guess by column name only if there is no mapping provided
 	not key in object.keys(mapping)
 }

@@ -39,7 +39,7 @@ test_owner_can_see_their_fruit if {
 		"data.filters.include",
 		"SELECT fruits.name FROM fruits",
 		{"fruits": fruits_table},
-		{"debug": true, "db": "file:mem1?mode=memory"},
+		{"debug": true},
 	) with input.fruit_prefix as "APP"
 		with input.fruit_suffix as "ANA"
 		with input.fruit_infix as "RR"
@@ -51,7 +51,7 @@ test_owner_can_see_their_fruit_lowercase if {
 		"data.filters.include",
 		"SELECT fruits.name FROM fruits",
 		{"fruits": fruits_table},
-		{"debug": true, "db": "file:mem2?mode=memory"},
+		{"debug": true},
 	) with input.fruit_prefix as "app"
 		with input.fruit_suffix as "ana"
 		with input.fruit_infix as "rr"

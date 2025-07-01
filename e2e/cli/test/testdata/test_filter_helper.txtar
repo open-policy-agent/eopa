@@ -7,8 +7,8 @@ cmp stdout exp/stdout
 exec eopa test -v .
 ! stderr .
 stdout '^data.filters.test_owner_can_see_their_fruit: PASS'
-stdout '^  executing query CREATE TABLE fruits \(id ANY, name ANY, owner_id ANY\) against :memory:'
-stdout '^  executing query DROP TABLE users against :memory:'
+stdout '^  executing query CREATE TABLE fruits \(id ANY, name ANY, owner_id ANY\) against file:'
+stdout '^  executing query DROP TABLE users against file:'
 stdout '^PASS: 1/1'
 
 -- filters.rego --
