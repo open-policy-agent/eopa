@@ -109,7 +109,6 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 		rego.NondeterministicBuiltins(true),
 		rego.UnsafeBuiltins(map[string]struct{}{ast.HTTPSend.Name: {}}),
 	}
-	r = append(r, extraRegoOpts()...)
 
 	// this ensures that the modules are compiled again, building the rule indices
 	for _, mod := range comp.Modules {

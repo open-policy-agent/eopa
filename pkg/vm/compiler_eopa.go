@@ -8,18 +8,28 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/metrics"
-	"github.com/open-policy-agent/opa/v1/rego"
 )
 
-func getCompiler(ctx context.Context, _ metrics.Metrics, _ map[string]any) (*ast.Compiler, error) {
-	if c, ok := ast.CompilerFromContext(ctx); ok {
-		return c, nil
+func getCompiler(ctx context.Context, m metrics.Metrics, _ map[string]any) (*ast.Compiler, error) {
+	c, ok := ast.CompilerFromContext(ctx)
+	if !ok {
+		return nil, errors.New("expected compiler")
 	}
-	return nil, errors.New("expected compiler")
-}
 
-func extraRegoOpts() []func(*rego.Rego) {
-	return []func(*rego.Rego){
-		rego.EvalMode(ast.EvalModeTopdown),
+	comp := ast.NewCompiler().
+		WithEnablePrintStatements(true).
+		WithUseTypeCheckAnnotations(true).
+		WithEvalMode(ast.EvalModeTopdown).
+		WithDefaultRegoVersion(ast.DefaultRegoVersion).
+		WithMetrics(m)
+
+	// NB(sr): This looks funny, but the first thing Compile()
+	// does is copy the modules. No need to copy them ourselves
+	// before passing them.
+	comp.Compile(c.Modules)
+
+	if len(comp.Errors) > 0 {
+		return nil, comp.Errors
 	}
+	return comp, nil
 }

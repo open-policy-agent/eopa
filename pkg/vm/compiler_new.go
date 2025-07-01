@@ -7,7 +7,6 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/metrics"
-	"github.com/open-policy-agent/opa/v1/rego"
 )
 
 func getCompiler(ctx context.Context, m metrics.Metrics, modules map[string]any) (*ast.Compiler, error) {
@@ -16,10 +15,9 @@ func getCompiler(ctx context.Context, m metrics.Metrics, modules map[string]any)
 		// WithBuiltins(r.builtinDecls).
 		// WithCapabilities(r.capabilities). // TODO
 		WithEnablePrintStatements(true).
-		// WithStrict(true).
 		WithUseTypeCheckAnnotations(true).
 		WithEvalMode(ast.EvalModeTopdown).
-		WithDefaultRegoVersion(ast.RegoV1).
+		WithDefaultRegoVersion(ast.DefaultRegoVersion).
 		WithMetrics(m)
 
 	mods := make(map[string]*ast.Module, len(modules))
@@ -37,8 +35,4 @@ func getCompiler(ctx context.Context, m metrics.Metrics, modules map[string]any)
 		return nil, comp.Errors
 	}
 	return comp, nil
-}
-
-func extraRegoOpts() []func(*rego.Rego) {
-	return nil
 }
