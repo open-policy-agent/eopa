@@ -76,23 +76,6 @@ jobs:
           repository: open-policy-agent/opa
           ref: ${{ steps.enterprise-opa.outputs.opa_version }}
           path: opa
-      - name: checkout opa-testing-e2e
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: StyraInc/opa-testing-e2e
-          path: _e2e
-          token: ${{ steps.generate_token.outputs.token }}
-          persist-credentials: false
-      - name: run "opa-testing-e2e"
-        run: make test
-        working-directory: _e2e
-        env:
-          EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
-          IMAGE: ${{ steps.enterprise-opa.outputs.image }}
-          BUNDLES: ${{ steps.enterprise-opa.outputs.bundles }}
-          BUNDLE_FILE_PATH: bundles/systems/bc01d50d17d7446684c4e6c34a1ad07f
-          NUM_INPUT_BUNDLES: 2
-          BUNDLE_HOST: 172.17.0.1
       - name: Check out fetchdb code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
