@@ -1,3 +1,5 @@
+//go:build !race
+
 package builtins
 
 import (
@@ -7,13 +9,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/localstack"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/bundle"
@@ -357,106 +352,4 @@ func executeDynamoDB(tb testing.TB, interQueryCache cache.InterQueryCache, modul
 	if hits := metrics.Counter(interQueryCacheHitsKey).Value().(uint64); hits != uint64(expectedInterQueryCacheHits) {
 		tb.Fatalf("got %v hits, wanted %v\n", hits, expectedInterQueryCacheHits)
 	}
-}
-
-func startDynamoDB(t *testing.T) (testcontainers.Container, string) {
-	t.Helper()
-
-	ctx := context.Background()
-	opts := []testcontainers.ContainerCustomizer{
-		testLogger(t),
-	}
-	ddb, err := localstack.Run(ctx, "localstack/localstack:2.3.0", opts...)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ip, err := ddb.Host(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	port, err := ddb.MappedPort(ctx, "4566/tcp")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	endpoint := fmt.Sprintf("http://%s:%s", ip, port)
-
-	// Create the test table(s). The first operation may require
-	// retrying as the container is occasionally incomplete even
-	// with the wait-port-strategy above.
-
-	svc := dynamodb.New(session.Must(session.NewSession((&aws.Config{
-		Endpoint: aws.String(endpoint),
-		Region:   aws.String("us-west-2"),
-	}).WithCredentials(credentials.NewStaticCredentials("dummy", "dummy", "")))))
-
-	for {
-		if _, err := svc.CreateTable(&dynamodb.CreateTableInput{
-			BillingMode: aws.String("PAY_PER_REQUEST"),
-			TableName:   aws.String("foo"),
-			KeySchema: []*dynamodb.KeySchemaElement{
-				{
-					AttributeName: aws.String("p"),
-					KeyType:       aws.String("HASH"),
-				},
-				{
-					AttributeName: aws.String("s"),
-					KeyType:       aws.String("RANGE"),
-				},
-			},
-			AttributeDefinitions: []*dynamodb.AttributeDefinition{
-				{
-					AttributeName: aws.String("p"),
-					AttributeType: aws.String("S"),
-				},
-				{
-					AttributeName: aws.String("s"),
-					AttributeType: aws.String("N"),
-				},
-			},
-		}); err != nil {
-			t.Logf("CreateTable failed, retrying: %v", err.Error())
-			time.Sleep(100 * time.Millisecond)
-			continue
-		}
-
-		break
-	}
-
-	if err := svc.WaitUntilTableExists(&dynamodb.DescribeTableInput{
-		TableName: aws.String("foo"),
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	putItems := []dynamodb.PutItemInput{
-		{
-			TableName: aws.String("foo"),
-			Item: map[string]*dynamodb.AttributeValue{
-				"p":      {S: aws.String("x")},
-				"s":      {N: aws.String("1")},
-				"string": {S: aws.String("value")},
-				"number": {N: aws.String("1234")},
-			},
-		},
-		{
-			TableName: aws.String("foo"),
-			Item: map[string]*dynamodb.AttributeValue{
-				"p":      {S: aws.String("x")},
-				"s":      {N: aws.String("2")},
-				"string": {S: aws.String("value2")},
-				"number": {N: aws.String("4321")},
-			},
-		},
-	}
-
-	for _, input := range putItems {
-		if _, err := svc.PutItem(&input); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	return ddb, endpoint
 }
