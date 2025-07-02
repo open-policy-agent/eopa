@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -365,6 +366,15 @@ func assertMetricsExist(t *testing.T, metrics types.MetricsV1, expected []string
 	}
 }
 
+type counter struct {
+	i atomic.Int32
+}
+
+func (c *counter) Next() string {
+	n := c.i.Add(1)
+	return strconv.Itoa(int(n))
+}
+
 func TestDecisionIDs(t *testing.T) {
 	t.Parallel()
 
@@ -373,7 +383,7 @@ func TestDecisionIDs(t *testing.T) {
 	p = true if { true }
 	p = false if { true }`
 
-	ctr := 0
+	ctr := &counter{}
 	ids := []string{}
 	idsMutex := sync.Mutex{}
 
@@ -414,10 +424,7 @@ func TestDecisionIDs(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.note, func(t *testing.T) {
 			bqhnd, _ := setup(t, tc.rego, map[string]any{}, nil, nil)
-			bqhnd = bqhnd.(batchquery.BatchQueryHandler).WithDecisionIDFactory(func() string {
-				ctr++
-				return strconv.Itoa(ctr)
-			}).WithDecisionLogger(func(_ context.Context, info *server.Info) error {
+			bqhnd = bqhnd.(batchquery.BatchQueryHandler).WithDecisionIDFactory(ctr.Next).WithDecisionLogger(func(_ context.Context, info *server.Info) error {
 				idsMutex.Lock()
 				defer idsMutex.Unlock()
 				ids = append(ids, info.DecisionID)
