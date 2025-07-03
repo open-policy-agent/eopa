@@ -103,8 +103,9 @@ p := rand.intn("x", 2) if numbers.range(1, 2)`), // only one of the builtins is 
 func TestStorageTransactionRead(t *testing.T) {
 	ctx := context.Background()
 	for n, tc := range map[string]opa_storage.Store{
-		"opa_inmem":    opa_inmem.New(),
-		"eopa_storage": storage.New(),
+		"opa_inmem":     opa_inmem.New(),
+		"opa_inmem_ast": opa_inmem.NewWithOpts(opa_inmem.OptReturnASTValuesOnRead(true)),
+		"eopa_storage":  storage.New(),
 	} {
 		t.Run(n, func(t *testing.T) {
 			store := tc

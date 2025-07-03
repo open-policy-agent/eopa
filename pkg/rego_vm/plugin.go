@@ -115,7 +115,7 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 
 	input := ectx.RawInput()
 	if p := ectx.ParsedInput(); p != nil {
-		i := interface{}(p)
+		i := any(p)
 		input = &i
 	}
 
@@ -142,6 +142,15 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		if err != nil {
 			return nil, err
 		}
+
+		switch x0 := x.(type) { // If the OPA store we're given returns AST objects, convert these
+		case ast.Object:
+			x, err = ast.ValueToInterface(x0, nil)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		y, err := bjson.New(x)
 		if err != nil {
 			return nil, err
