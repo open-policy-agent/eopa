@@ -3,6 +3,7 @@ package aws
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/url"
 	"sort"
@@ -265,6 +266,7 @@ output:
 				Advanced().
 				Default("5s"),
 			service.NewBatchPolicyField(s3oFieldBatching),
+			service.NewTLSToggledField("tls"),
 		).
 		Fields(config.SessionFields()...)
 }
@@ -294,6 +296,7 @@ type amazonS3Writer struct {
 	conf     s3oConfig
 	uploader *manager.Uploader
 	log      *service.Logger
+	tlsConf  *tls.Config
 }
 
 func newAmazonS3Writer(conf s3oConfig, mgr *service.Resources) (*amazonS3Writer, error) {
@@ -301,6 +304,7 @@ func newAmazonS3Writer(conf s3oConfig, mgr *service.Resources) (*amazonS3Writer,
 		conf: conf,
 		log:  mgr.Logger(),
 	}
+
 	return a, nil
 }
 
