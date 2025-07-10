@@ -3,6 +3,7 @@ package decisionlogs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -66,8 +67,22 @@ func init() {
 }
 
 type stream struct {
-	*service.Stream
-	prod service.MessageHandlerFunc
+	stream *service.Stream
+	prod   service.MessageHandlerFunc
+}
+
+func (s *stream) Run(ctx context.Context) error {
+	if s.stream != nil {
+		return s.stream.Run(ctx)
+	}
+	return errors.New("stream not ready")
+}
+
+func (s *stream) Stop(ctx context.Context) error {
+	if s.stream != nil {
+		return s.stream.Stop(ctx)
+	}
+	return nil
 }
 
 func (s *stream) Consume(ctx context.Context, msg map[string]any) error {
@@ -134,7 +149,7 @@ func newStream(ctx context.Context, buf fmt.Stringer, out output, r0 *registerer
 		}
 	}
 
-	st.Stream, err = builder.Build()
+	st.stream, err = builder.Build()
 	if err != nil {
 		return nil, err
 	}
