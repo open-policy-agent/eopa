@@ -160,12 +160,6 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		v = v.WithDataNamespace(txn)
 	}
 
-	// TODO(sr): Upstream this rego.EvalContext addition.
-	var qt []topdown.QueryTracer
-	if ectx, ok := any(ectx).(interface{ QueryTracers() []topdown.QueryTracer }); ok {
-		qt = ectx.QueryTracers()
-	}
-
 	result, err := v.Eval(ctx, "eval", vm.EvalOpts{
 		Metrics:                     ectx.Metrics(),
 		Input:                       input,
@@ -179,11 +173,11 @@ func (t *vme) Eval(ctx context.Context, ectx *rego.EvalContext, rt ast.Value) (a
 		PrintHook:                   ectx.PrintHook(),
 		StrictBuiltinErrors:         ectx.StrictBuiltinErrors(),
 		Capabilities:                ectx.Capabilities(),
-		TracingOpts:                 tracingOpts(ectx),
+		TracingOpts:                 ectx.TracingOpts(),
 		Limits:                      limits,
 		BuiltinFuncs:                t.builtinFuncs,
-		ExternalCancel:              getExternalCancel(ectx),
-		QueryTracers:                qt,
+		ExternalCancel:              ectx.ExternalCancel(),
+		QueryTracers:                ectx.QueryTracers(),
 	})
 	ectx.Metrics().Timer(evalTimer).Stop()
 	if err != nil {
