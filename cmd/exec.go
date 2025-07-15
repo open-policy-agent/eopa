@@ -41,10 +41,11 @@ func initExec(opa *cobra.Command, lic *license.Checker, lparams *license.License
 			}()
 		}
 
-		sdk.DefaultOptions = eopa_sdk.DefaultOptions()
 		e := ekm.NewEKM(lic)
 		e.SetLogger(logging.NewNoOpLogger())
-		sdk.DefaultOptions.Hooks = hooks.New(e)
+		sdkDefaultOptions := eopa_sdk.DefaultOptions()
+		sdkDefaultOptions.Hooks = hooks.New(e)
+		sdk.SetDefaultOptions(sdkDefaultOptions)
 		enableEOPAOnly()
 		return fallback(c, args)
 	}
