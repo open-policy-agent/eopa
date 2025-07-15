@@ -40,7 +40,6 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
 	"github.com/styrainc/enterprise-opa-private/pkg/preview"
 	"github.com/styrainc/enterprise-opa-private/pkg/storage"
-	"github.com/styrainc/enterprise-opa-private/pkg/telemetry"
 	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 )
 
@@ -96,11 +95,6 @@ func initRun(opa *cobra.Command, brand string, lic *license.Checker, lparams *li
 					server.ManagerHooks = []server.ManagerHook{batchQueryHndlr.SetManager}
 
 					c.SilenceErrors = false
-					runtime.RegisterGatherers(map[string]func(context.Context) (any, error){
-						"opa_fallback": func(context.Context) (any, error) {
-							return true, nil
-						},
-					})
 					return fallback(c, args)
 				}
 			} else { // do the license validate and activate asynchronously
@@ -381,9 +375,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 
 	ekmHook := ekm.NewEKM(lic)
 	previewHook := preview.NewHook()
-	datasourceTelemetryHook := telemetry.NewDatasourceTelemetryHook()
 	evalCacheHook := vm.NewCacheHook()
-	hs := hooks.New(ekmHook, previewHook, evalCacheHook, datasourceTelemetryHook)
+	hs := hooks.New(ekmHook, previewHook, evalCacheHook)
 
 	params.rt.Hooks = hs
 
@@ -396,22 +389,6 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	params.rt.Logger = logger
 	lic.SetLogger(logger)
 	ekmHook.SetLogger(logger)
-
-	params.rt.TelemetryGatherers = map[string]func(context.Context) (any, error){
-		"license": func(context.Context) (any, error) {
-			return lic.ID(), nil
-		},
-		"bundles":     telemetry.GatherBundleData,
-		"datasources": telemetry.GatherDatasources,
-		// NOTE(sr): If we've reached this, we're not in fallback mode. So there's
-		//           no need to add the fallback telemetry gatherer here.
-	}
-	if lic.ID() == "" {
-		params.rt.TelemetryGatherers["discovery_license"] = func(context.Context) (any, error) {
-			return true, nil
-		}
-	}
-	runtime.RegisterGatherers(params.rt.TelemetryGatherers)
 
 	params.rt.ExtraDiscoveryOpts = []func(*discovery.Discovery){
 		discovery.Factories(map[string]plugins.Factory{
@@ -448,11 +425,6 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	if tp := rt.Manager.TracerProvider(); tp != nil {
 		otel.SetTracerProvider(tp)
 	}
-
-	disco := discovery.Lookup(rt.Manager)
-	telemetry.Setup(rt.Manager, disco)
-
-	signalTelemetry(rt.Manager)
 
 	return rt, nil
 }

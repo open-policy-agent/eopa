@@ -1,8 +1,0 @@
-services:
-  acmecorp:
-    url: ${EOPA_BUNDLE_SERVER}
-
-discovery:
-  service: acmecorp
-  resource: discovery.tar.gz
-

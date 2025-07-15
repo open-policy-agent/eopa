@@ -1,8 +1,0 @@
-services:
-  acmecorp:
-    url: ${EOPA_BUNDLE_SERVER}
-
-bundles:
-  test:
-    service: acmecorp
-    resource: bundle.bjson.tar.gz

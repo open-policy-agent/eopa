@@ -14,11 +14,6 @@ import (
 // the passed byte slice. If the byte slice is a vanilla bundle's content, it'll
 // be converted.
 func BjsonFromBinary(bs []byte) (b bjson.Json, err error) {
-	b, _, err = MaybeBjsonFromBinary(bs)
-	return
-}
-
-func MaybeBjsonFromBinary(bs []byte) (b bjson.Json, isBJSON bool, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if s, ok := r.(string); ok {
@@ -30,24 +25,23 @@ func MaybeBjsonFromBinary(bs []byte) (b bjson.Json, isBJSON bool, err error) {
 	}()
 
 	if len(bs) == 0 {
-		return nil, false, io.EOF
+		return nil, io.EOF
 	}
 
 	if bjson.IsBJson(bs) { // tab (bjson.typeObjectThin)
 		b, err = bjson.NewFromBinary(bs)
-		return b, true, err
+		return b, err
 	}
 
 	if bjson.IsJSON(bs) {
 		b, err = bjson.NewDecoder(bytes.NewReader(bs)).Decode()
-		return b, false, err
+		return b, err
 	}
 
 	// lastly, try yaml
 	nbs, err := yaml.YAMLToJSON(bs)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
-	b, err = bjson.NewDecoder(bytes.NewReader(nbs)).Decode()
-	return b, false, err
+	return bjson.NewDecoder(bytes.NewReader(nbs)).Decode()
 }

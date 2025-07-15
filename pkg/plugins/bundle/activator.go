@@ -9,12 +9,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/url"
 	"path/filepath"
 	"strings"
 
 	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-	"github.com/styrainc/enterprise-opa-private/pkg/telemetry"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	bundleApi "github.com/open-policy-agent/opa/v1/bundle"
@@ -390,17 +390,13 @@ func activateBundles(opts *bundleApi.ActivateOpts) error {
 	// bundleApi.Raw content for OPA bundles with their EOPA BJSON equivalents.
 	// This saves re-processing the data multiple times down the line,
 	// noticeably in (*inmem.store).Truncate.
-	for name, b := range snapshotBundles {
+	for _, b := range snapshotBundles {
 		for idx, item := range b.Raw {
 			path := filepath.ToSlash(item.Path)
 			if filepath.Base(path) == "data.json" {
-				val, isBJSON, err := MaybeBjsonFromBinary(item.Value)
+				val, err := BjsonFromBinary(item.Value)
 				if err != nil {
 					return err
-				}
-
-				if isBJSON {
-					telemetry.SetBJSON(name)
 				}
 
 				bs, err := bjson.Marshal(val)
@@ -418,8 +414,7 @@ func activateBundles(opts *bundleApi.ActivateOpts) error {
 			path := filepath.ToSlash(item.Path)
 
 			if filepath.Base(path) == "data.json" {
-				// Note(philip): This will *always* be a BJSON type by this point.
-				val, _, err := MaybeBjsonFromBinary(item.Value)
+				val, err := BjsonFromBinary(item.Value)
 				if err != nil {
 					return err
 				}
@@ -456,13 +451,9 @@ func activateBundles(opts *bundleApi.ActivateOpts) error {
 	}
 
 	// Compile the modules all at once to avoid having to re-do work.
-	remainingAndExtra := make(map[string]*ast.Module)
-	for name, mod := range remaining {
-		remainingAndExtra[name] = mod
-	}
-	for name, mod := range opts.ExtraModules {
-		remainingAndExtra[name] = mod
-	}
+	remainingAndExtra := make(map[string]*ast.Module, len(remaining)+len(opts.ExtraModules))
+	maps.Copy(remainingAndExtra, remaining)
+	maps.Copy(remainingAndExtra, opts.ExtraModules)
 
 	err = compileModules(opts.Compiler, opts.Metrics, snapshotBundles, remainingAndExtra, false)
 	if err != nil {
