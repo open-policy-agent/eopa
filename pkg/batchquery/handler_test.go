@@ -621,8 +621,6 @@ func wrapHandlerDecodingLimits(handler http.Handler, manager *plugins.Manager) (
 func wrapHandlerAuthz(handler http.Handler, manager *plugins.Manager, scheme server.AuthorizationScheme) http.Handler {
 	switch scheme {
 	case server.AuthorizationBasic:
-		iqc, iqvc := manager.GetCaches()
-
 		handler = authorizer.NewBasic(
 			handler,
 			manager.GetCompiler,
@@ -631,8 +629,7 @@ func wrapHandlerAuthz(handler http.Handler, manager *plugins.Manager, scheme ser
 			authorizer.Decision(manager.Config.DefaultAuthorizationDecisionRef),
 			authorizer.PrintHook(manager.PrintHook()),
 			authorizer.EnablePrintStatements(manager.EnablePrintStatements()),
-			authorizer.InterQueryCache(iqc),
-			authorizer.InterQueryValueCache(iqvc))
+		)
 
 		// Ignored, since this wrapper is for tests only. If metrics tests die, then we add it back
 		// if bqhnd.metrics != nil {
