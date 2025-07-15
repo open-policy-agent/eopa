@@ -376,7 +376,8 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	ekmHook := ekm.NewEKM(lic)
 	previewHook := preview.NewHook()
 	evalCacheHook := vm.NewCacheHook()
-	hs := hooks.New(ekmHook, previewHook, evalCacheHook)
+	compileHook := compile.NewHook()
+	hs := hooks.New(ekmHook, previewHook, evalCacheHook, compileHook)
 
 	params.rt.Hooks = hs
 
@@ -405,7 +406,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	if err != nil {
 		return nil, err
 	}
-	compileHndlr := compile.Handler(rt.Manager.Logger())
+	compileHndlr := compile.Handler(rt.Manager.Logger(), compileHook.InterQueryCache, compileHook.InterQueryValueCache)
 	if err := compileHndlr.SetManager(rt.Manager); err != nil {
 		return nil, err
 	}

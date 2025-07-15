@@ -29,7 +29,7 @@ var roles = func() any {
 
 func BenchmarkCompileHandler(b *testing.B) {
 	b.ReportAllocs()
-	chnd, _ := setup(b, benchRego, roles)
+	chnd, _, _, _ := setup(b, benchRego, roles)
 
 	input := map[string]any{
 		"user": "caesar",

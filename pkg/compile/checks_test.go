@@ -18,6 +18,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/logging/test"
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/test/e2e"
+	topdown_cache "github.com/open-policy-agent/opa/v1/topdown/cache"
+
 	"github.com/styrainc/enterprise-opa-private/pkg/compile"
 )
 
@@ -62,7 +64,10 @@ func TestPostPartialChecks(t *testing.T) {
 	t.Cleanup(trt.Cancel)
 
 	trt.Runtime.Manager.Info = ast.MustParseTerm(`{"foo": "bar", "fox": 100}`)
-	chnd := compile.Handler(l)
+	config, _ := topdown_cache.ParseCachingConfig(nil)
+	iqc := topdown_cache.NewInterQueryCache(config)
+	iqvc := topdown_cache.NewInterQueryValueCache(context.Background(), config)
+	chnd := compile.Handler(l, iqc, iqvc)
 	if err := chnd.SetManager(trt.Runtime.Manager); err != nil {
 		t.Fatalf("set manager: %v", err)
 	}

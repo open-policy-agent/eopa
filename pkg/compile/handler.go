@@ -27,6 +27,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/server/writer"
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/topdown"
+	topdown_cache "github.com/open-policy-agent/opa/v1/topdown/cache"
 	"github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/internal/levenshtein"
@@ -119,7 +120,7 @@ type CompileHandler interface {
 	SetManager(*plugins.Manager) error
 }
 
-func Handler(l logging.Logger) CompileHandler {
+func Handler(l logging.Logger, iqc topdown_cache.InterQueryCache, iqvc topdown_cache.InterQueryValueCache) CompileHandler {
 	cu, _ := lru.New[string, []*ast.Term](unknownsCacheSize)
 	mu, _ := lru.New[string, ast.Ref](maskingRuleCacheSize)
 	return &hndl{
@@ -134,6 +135,8 @@ func Handler(l logging.Logger) CompileHandler {
 			Name: "eopa_compile_handler_masking_rules_cache_lookups_total",
 			Help: "The number of lookups in the masking rules cache (label \"status\" indicates hit or miss)",
 		}, []string{"status"}),
+		iqc:  iqc,
+		iqvc: iqvc,
 	}
 }
 
@@ -146,10 +149,12 @@ type hndl struct {
 	counterMaskingRulesCache *prometheus.CounterVec
 	dl                       *logs.Plugin
 	compiler                 *ast.Compiler
+	iqc                      topdown_cache.InterQueryCache
+	iqvc                     topdown_cache.InterQueryValueCache
 }
 
 func (h *hndl) SetManager(m *plugins.Manager) error {
-	extraRoute(m, "/v1/compile/{path:.+}", prometheusHandle, h.ServeHTTP)
+	m.ExtraRoute("/v1/compile/{path:.+}", prometheusHandle, h.ServeHTTP)
 	ctx := context.TODO()
 	txn, err := m.Store.NewTransaction(ctx, storage.WriteParams)
 	if err != nil {
@@ -266,7 +271,6 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var maskResultValue ast.Value
 
 	if maskingRule != nil {
-		iqc, iqvc := getCaches(h.manager)
 		m.Timer(timerEvalMaskRule).Start()
 
 		opts := []func(*rego.Rego){
@@ -278,8 +282,8 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			rego.Metrics(m),
 			rego.Runtime(h.manager.Info),
 			rego.UnsafeBuiltins(unsafeBuiltinsMap),
-			rego.InterQueryBuiltinCache(iqc),
-			rego.InterQueryBuiltinValueCache(iqvc),
+			rego.InterQueryBuiltinCache(h.iqc),
+			rego.InterQueryBuiltinValueCache(h.iqvc),
 			rego.PrintHook(h.manager.PrintHook()),
 			// rego.QueryTracer(tracer),
 			// rego.DistributedTracingOpts(s.distributedTracingOpts), // Not available in EOPA's handler.
@@ -323,8 +327,6 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		orig.Options.NondeterministicBuiltins,
 	)
 
-	iqc, iqvc := getCaches(h.manager)
-
 	opts := []func(*rego.Rego){
 		rego.Compiler(comp),
 		rego.Store(h.manager.Store),
@@ -337,8 +339,8 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rego.NondeterministicBuiltins(orig.Options.NondeterministicBuiltins),
 		rego.Runtime(h.manager.Info),
 		rego.UnsafeBuiltins(unsafeBuiltinsMap),
-		rego.InterQueryBuiltinCache(iqc),
-		rego.InterQueryBuiltinValueCache(iqvc),
+		rego.InterQueryBuiltinCache(h.iqc),
+		rego.InterQueryBuiltinValueCache(h.iqvc),
 		rego.PrintHook(h.manager.PrintHook()),
 	}
 
@@ -365,8 +367,8 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rego.EvalParsedUnknowns(unknowns),
 		rego.EvalPrintHook(h.manager.PrintHook()),
 		rego.EvalNondeterministicBuiltins(orig.Options.NondeterministicBuiltins),
-		rego.EvalInterQueryBuiltinCache(iqc),
-		rego.EvalInterQueryBuiltinValueCache(iqvc),
+		rego.EvalInterQueryBuiltinCache(h.iqc),
+		rego.EvalInterQueryBuiltinValueCache(h.iqvc),
 		rego.EvalQueryTracer(&qt),
 		rego.EvalRuleIndexing(false),
 	)

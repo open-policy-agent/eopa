@@ -22,7 +22,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/plugins"
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/test/e2e"
-	"github.com/open-policy-agent/opa/v1/topdown/cache"
+	topdown_cache "github.com/open-policy-agent/opa/v1/topdown/cache"
 
 	"github.com/styrainc/enterprise-opa-private/pkg/compile"
 )
@@ -51,7 +51,7 @@ func TestCompileHandlerMultiTarget(t *testing.T) {
 	if err := json.Unmarshal(rolesJSON, &roles); err != nil {
 		t.Fatalf("unmarshal roles: %v", err)
 	}
-	chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
+	chnd, _, _, _ := setup(t, benchRego, map[string]any{"roles": roles})
 
 	input := map[string]any{
 		"user": "caesar",
@@ -160,7 +160,7 @@ func TestCompileHandlerMetrics(t *testing.T) {
 	if err := json.Unmarshal(rolesJSON, &roles); err != nil {
 		t.Fatalf("unmarshal roles: %v", err)
 	}
-	chnd, mgr := setup(t, benchRego, map[string]any{"roles": roles})
+	chnd, _, _, mgr := setup(t, benchRego, map[string]any{"roles": roles})
 
 	input := map[string]any{
 		"user": "caesar",
@@ -231,12 +231,12 @@ func compareMetrics(exp, act map[string]float64) bool {
 	})
 }
 
-type cf func(testing.TB, cache.InterQueryCache, cache.InterQueryValueCache)
+type cf func(testing.TB, topdown_cache.InterQueryCache, topdown_cache.InterQueryValueCache)
 
 func checks(fs ...cf) []cf { return fs }
 
 func CHasEntry(key ast.Value) cf {
-	return func(t testing.TB, iqc cache.InterQueryCache, _ cache.InterQueryValueCache) {
+	return func(t testing.TB, iqc topdown_cache.InterQueryCache, _ topdown_cache.InterQueryValueCache) {
 		t.Helper()
 		if _, ok := iqc.Get(key); !ok {
 			t.Fatalf("unexpected miss: %s", key)
@@ -245,7 +245,7 @@ func CHasEntry(key ast.Value) cf {
 }
 
 func CHasNoEntry(key ast.Value) cf {
-	return func(t testing.TB, iqc cache.InterQueryCache, _ cache.InterQueryValueCache) {
+	return func(t testing.TB, iqc topdown_cache.InterQueryCache, _ topdown_cache.InterQueryValueCache) {
 		t.Helper()
 		if val, ok := iqc.Get(key); ok {
 			t.Fatalf("unexpected hit: %s -> %v", key, val)
@@ -254,7 +254,7 @@ func CHasNoEntry(key ast.Value) cf {
 }
 
 func VCHasEntry(key ast.Value) cf {
-	return func(t testing.TB, _ cache.InterQueryCache, iqvc cache.InterQueryValueCache) {
+	return func(t testing.TB, _ topdown_cache.InterQueryCache, iqvc topdown_cache.InterQueryValueCache) {
 		t.Helper()
 		if _, ok := iqvc.Get(key); !ok {
 			t.Fatalf("unexpected miss: %s", key)
@@ -263,7 +263,7 @@ func VCHasEntry(key ast.Value) cf {
 }
 
 func VCHasNoEntry(key ast.Value) cf {
-	return func(t testing.TB, _ cache.InterQueryCache, iqvc cache.InterQueryValueCache) {
+	return func(t testing.TB, _ topdown_cache.InterQueryCache, iqvc topdown_cache.InterQueryValueCache) {
 		t.Helper()
 		if val, ok := iqvc.Get(key); ok {
 			t.Fatalf("unexpected hit: %s -> %v", key, val)
@@ -273,7 +273,6 @@ func VCHasNoEntry(key ast.Value) cf {
 
 func TestCompileHandlerCaches(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
 	policy := `package filters
 # METADATA
 # scope: document
@@ -287,11 +286,7 @@ include if {
 	input.foo.col == regex.match("^foo$", input.bar)
 }
 `
-	chnd, mgr := setup(t, []byte(policy), map[string]any{})
-	config, _ := cache.ParseCachingConfig(nil)
-	iqc := cache.NewInterQueryCache(config)
-	iqvc := cache.NewInterQueryValueCache(ctx, config)
-	mgr.SetCaches(iqc, iqvc)
+	chnd, iqc, iqvc, _ := setup(t, []byte(policy), map[string]any{})
 
 	path, target := "filters/include", "application/vnd.styra.sql.postgresql+json"
 
@@ -357,7 +352,7 @@ func TestCompileHandlerHints(t *testing.T) {
 include if input.fruits.name == "apple"
 include if input.fruit.cost < input.max
 `
-	chnd, _ := setup(t, []byte(typoRego), map[string]any{})
+	chnd, _, _, _ := setup(t, []byte(typoRego), map[string]any{})
 	input := map[string]any{
 		"max": 1,
 	}
@@ -410,7 +405,7 @@ func TestCompileHandlerMaskingRules(t *testing.T) {
 
 	t.Run("mask rule from payload parameter", func(t *testing.T) {
 		t.Parallel()
-		chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
+		chnd, _, _, _ := setup(t, benchRego, map[string]any{"roles": roles})
 		payload := map[string]any{ // NB(sr): unknowns are taken from metadata
 			"input": input,
 			"options": map[string]any{
@@ -429,7 +424,7 @@ func TestCompileHandlerMaskingRules(t *testing.T) {
 	})
 	t.Run("mask rule from payload parameter + package-local matching", func(t *testing.T) {
 		t.Parallel()
-		chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
+		chnd, _, _, _ := setup(t, benchRego, map[string]any{"roles": roles})
 		payload := map[string]any{ // NB(sr): unknowns are taken from metadata
 			"input": input,
 			"options": map[string]any{
@@ -448,7 +443,7 @@ func TestCompileHandlerMaskingRules(t *testing.T) {
 	})
 	t.Run("mask rule from rule annotation", func(t *testing.T) {
 		t.Parallel()
-		chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
+		chnd, _, _, _ := setup(t, benchRego, map[string]any{"roles": roles})
 		payload := map[string]any{
 			"input": input,
 		}
@@ -467,7 +462,7 @@ func TestCompileHandlerMaskingRules(t *testing.T) {
 		// Mangle the mask_rule annotation to make it package-local:
 		benchRego := bytes.Replace(benchRego, []byte("mask_rule: data.filters.mask_from_annotation"), []byte("mask_rule: mask_from_annotation"), 1)
 
-		chnd, _ := setup(t, benchRego, map[string]any{"roles": roles})
+		chnd, _, _, _ := setup(t, benchRego, map[string]any{"roles": roles})
 		payload := map[string]any{
 			"input": input,
 		}
@@ -483,7 +478,7 @@ func TestCompileHandlerMaskingRules(t *testing.T) {
 	})
 }
 
-func setup(t testing.TB, rego []byte, data any) (http.Handler, *plugins.Manager) {
+func setup(t testing.TB, rego []byte, data any) (http.Handler, topdown_cache.InterQueryCache, topdown_cache.InterQueryValueCache, *plugins.Manager) {
 	ctx := context.Background()
 	l := test.New()
 	l.SetLevel(logging.Debug)
@@ -507,12 +502,15 @@ func setup(t testing.TB, rego []byte, data any) (http.Handler, *plugins.Manager)
 	}
 
 	trt.Runtime.Manager.Info = ast.MustParseTerm(`{"foo": "bar", "fox": 100}`)
-	chnd := compile.Handler(l)
+	config, _ := topdown_cache.ParseCachingConfig(nil)
+	iqc := topdown_cache.NewInterQueryCache(config)
+	iqvc := topdown_cache.NewInterQueryValueCache(ctx, config)
+	chnd := compile.Handler(l, iqc, iqvc)
 	if err := chnd.SetManager(trt.Runtime.Manager); err != nil {
 		t.Fatalf("set manager: %v", err)
 	}
 
-	return chnd, trt.Runtime.Manager
+	return chnd, iqc, iqvc, trt.Runtime.Manager
 }
 
 func evalReq(t testing.TB, h http.Handler, path string, payload map[string]any, target string) (Response, *http.Response) {
