@@ -7,5 +7,5 @@ import (
 )
 
 func RegisterActivator() {
-	bundleApi.RegisterBundleActivator(&CustomActivator{})
+	bundleApi.RegisterActivator("_enterprise_opa", &CustomActivator{})
 }

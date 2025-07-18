@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	bundle.RegisterStore(New)
+	bundle.RegisterStoreFunc(New)
 }
 
 func New2(ctx context.Context, logger logging.Logger, prom prometheus.Registerer, config []byte, id string) (storage.Store, error) {
