@@ -54,7 +54,7 @@ require (
 	github.com/mithrandie/csvq-driver v1.7.0
 	github.com/mithrandie/go-text v1.6.0
 	github.com/neo4j/neo4j-go-driver/v5 v5.28.1
-	github.com/oapi-codegen/runtime v1.1.1
+	github.com/oapi-codegen/runtime v1.1.2
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/olivere/elastic/v7 v7.0.32
 	github.com/open-policy-agent/opa v1.6.0
