@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gorilla/mux"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -154,7 +153,8 @@ type hndl struct {
 }
 
 func (h *hndl) SetManager(m *plugins.Manager) error {
-	m.ExtraRoute("/v1/compile/{path:.+}", prometheusHandle, h.ServeHTTP)
+	m.ExtraRoute("POST /v1/compile/{path...}", prometheusHandle, h.ServeHTTP)
+	m.ExtraRoute("GET /v1/compile/{path...}", prometheusHandle, h.ServeHTTP)
 	ctx := context.TODO()
 	txn, err := m.Store.NewTransaction(ctx, storage.WriteParams)
 	if err != nil {
@@ -197,7 +197,7 @@ func (h *hndl) SetManager(m *plugins.Manager) error {
 var unsafeBuiltinsMap = map[string]struct{}{ast.HTTPSend.Name: {}}
 
 func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	urlPath := mux.Vars(r)["path"]
+	urlPath := r.PathValue("path")
 	if urlPath == "" {
 		writer.Error(w, http.StatusBadRequest, types.NewErrorV1(types.CodeInvalidParameter, "missing required 'path' parameter"))
 		return

@@ -67,12 +67,16 @@ func TestMethods(t *testing.T) {
 		t.Run(tc.method, func(t *testing.T) {
 			ctx := context.Background()
 			manager := pluginMgr(ctx, t, testPolicy, testData)
-			manager.Start(ctx)
 			NewHook().Init(manager)
+			router := http.NewServeMux()
+			for path, m := range manager.ExtraRoutes() {
+				router.Handle(path, m.HandlerFunc)
+			}
+			_ = manager.Start(ctx)
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(tc.method, "/v0/preview/test", nil)
-			manager.GetRouter().ServeHTTP(w, r)
+			router.ServeHTTP(w, r)
 
 			if w.Code != tc.code {
 				t.Fatalf("Expected http status %d but received %d", tc.code, w.Code)
@@ -85,8 +89,11 @@ func TestHttpIO(t *testing.T) {
 	ctx := context.Background()
 	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
-	router := manager.GetRouter()
 	NewHook().Init(manager)
+	router := http.NewServeMux()
+	for path, m := range manager.ExtraRoutes() {
+		router.Handle(path, m.HandlerFunc)
+	}
 
 	testCases := []struct {
 		name     string
@@ -204,8 +211,11 @@ func TestInstrumentationMetrics(t *testing.T) {
 	ctx := context.Background()
 	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
-	router := manager.GetRouter()
 	NewHook().Init(manager)
+	router := http.NewServeMux()
+	for path, m := range manager.ExtraRoutes() {
+		router.Handle(path, m.HandlerFunc)
+	}
 
 	testCases := []struct {
 		name string
@@ -313,8 +323,11 @@ func TestProvenance(t *testing.T) {
 	ctx := context.Background()
 	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
-	router := manager.GetRouter()
 	NewHook().Init(manager)
+	router := http.NewServeMux()
+	for path, m := range manager.ExtraRoutes() {
+		router.Handle(path, m.HandlerFunc)
+	}
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/v0/preview/test?provenance", nil)
@@ -343,10 +356,10 @@ func TestProvenanceWithBundleData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not create storage transaction to write bundle data: %v", err)
 	}
-	err = manager.Store.Write(ctx, txn, storage.AddOp, storage.MustParsePath("/system"), map[string]interface{}{
-		"bundles": map[string]interface{}{
-			expectedBundle: map[string]interface{}{
-				"manifest": map[string]interface{}{
+	err = manager.Store.Write(ctx, txn, storage.AddOp, storage.MustParsePath("/system"), map[string]any{
+		"bundles": map[string]any{
+			expectedBundle: map[string]any{
+				"manifest": map[string]any{
 					"revision": expectedRevision,
 				},
 			},
@@ -361,12 +374,14 @@ func TestProvenanceWithBundleData(t *testing.T) {
 	}
 
 	manager.Start(ctx)
-	router := manager.GetRouter()
 	NewHook().Init(manager)
+	router := http.NewServeMux()
+	for path, m := range manager.ExtraRoutes() {
+		router.Handle(path, m.HandlerFunc)
+	}
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/v0/preview/test?provenance", nil)
-
 	router.ServeHTTP(w, r)
 
 	if w.Code != http.StatusOK {
@@ -404,8 +419,11 @@ func TestPrint(t *testing.T) {
 	ctx := context.Background()
 	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
-	router := manager.GetRouter()
 	NewHook().Init(manager)
+	router := http.NewServeMux()
+	for path, m := range manager.ExtraRoutes() {
+		router.Handle(path, m.HandlerFunc)
+	}
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/v0/preview/test?print=", bytes.NewBufferString(`{"input": {"test": "input data"}}`))
@@ -431,8 +449,11 @@ func TestSandbox(t *testing.T) {
 	ctx := context.Background()
 	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
-	router := manager.GetRouter()
 	NewHook().Init(manager)
+	router := http.NewServeMux()
+	for path, m := range manager.ExtraRoutes() {
+		router.Handle(path, m.HandlerFunc)
+	}
 
 	body := bytes.NewBufferString(`{
 		"data": {
@@ -470,8 +491,11 @@ func TestStrictBuiltinErrors(t *testing.T) {
 	ctx := context.Background()
 	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
-	router := manager.GetRouter()
 	NewHook().Init(manager)
+	router := http.NewServeMux()
+	for path, m := range manager.ExtraRoutes() {
+		router.Handle(path, m.HandlerFunc)
+	}
 
 	body := `{
 		"rego_modules": {
@@ -502,8 +526,11 @@ func TestPrettyReturn(t *testing.T) {
 	ctx := context.Background()
 	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
-	router := manager.GetRouter()
 	NewHook().Init(manager)
+	router := http.NewServeMux()
+	for path, m := range manager.ExtraRoutes() {
+		router.Handle(path, m.HandlerFunc)
+	}
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/v0/preview/test", nil)
@@ -548,8 +575,11 @@ func TestBodyFormat(t *testing.T) {
 	ctx := context.Background()
 	manager := pluginMgr(ctx, t, testPolicy, testData)
 	manager.Start(ctx)
-	router := manager.GetRouter()
 	NewHook().Init(manager)
+	router := http.NewServeMux()
+	for path, m := range manager.ExtraRoutes() {
+		router.Handle(path, m.HandlerFunc)
+	}
 
 	expected := map[string]any{"direct": true, "existingData": "preloaded data", "inputData": "input data"}
 

@@ -3,7 +3,6 @@ package preview
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/open-policy-agent/opa/v1/config"
@@ -30,8 +29,13 @@ func NewHook() *PreviewHook {
 }
 
 func (p *PreviewHook) Init(m *plugins.Manager) {
-	m.GetRouter().Handle(httpPrefix, p).Methods(http.MethodPost)
-	m.GetRouter().Handle(fmt.Sprintf("%s/{path:.+}", httpPrefix), p).Methods(http.MethodPost)
+	m.ExtraRoute(httpPrefix, metricName, p.ServeHTTP)
+	m.ExtraRoute(httpPrefix+"/{path...}", metricName, p.ServeHTTP)
+	for _, meth := range []string{http.MethodGet, http.MethodPut, http.MethodPatch, http.MethodDelete} {
+		m.ExtraRoute(meth+"/v0/preview/{path...}", metricName, func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		})
+	}
 	p.manager = m
 }
 

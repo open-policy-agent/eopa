@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/gorilla/mux"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/logging"
@@ -35,11 +34,11 @@ type Response struct {
 	Result struct {
 		Query    any   `json:"query,omitempty"`
 		Masks    any   `json:"masks,omitempty"`
-		UCAST    Query `json:"ucast,omitempty"`
-		Postgres Query `json:"postgresql,omitempty"`
-		MySQL    Query `json:"mysql,omitempty"`
-		MSSQL    Query `json:"sqlserver,omitempty"`
-		SQLite   Query `json:"sqlite,omitempty"`
+		UCAST    Query `json:"ucast"` // NB: omitempty has no effect on nested struct fields (so the linter tells me)
+		Postgres Query `json:"postgresql"`
+		MySQL    Query `json:"mysql"`
+		MSSQL    Query `json:"sqlserver"`
+		SQLite   Query `json:"sqlite"`
 	} `json:"result"`
 	Metrics map[string]float64 `json:"metrics"`
 	Hints   []map[string]any   `json:"hints"`
@@ -527,8 +526,8 @@ func evalReq(t testing.TB, h http.Handler, path string, payload map[string]any, 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", target)
 	rr := httptest.NewRecorder()
-	router := mux.NewRouter()
-	router.Handle("/v1/compile/{path:.+}", h)
+	router := http.NewServeMux()
+	router.Handle("POST /v1/compile/{path...}", h)
 	router.ServeHTTP(rr, req)
 	exp := http.StatusOK
 	if act := rr.Code; exp != act {

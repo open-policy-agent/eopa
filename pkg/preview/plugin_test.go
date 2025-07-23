@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/gorilla/mux"
 	"github.com/open-policy-agent/opa/v1/config"
 	"github.com/open-policy-agent/opa/v1/plugins"
 	"github.com/open-policy-agent/opa/v1/storage"
@@ -70,6 +69,10 @@ func TestConfig(t *testing.T) {
 
 			hook := NewHook()
 			hook.Init(manager)
+			router := http.NewServeMux()
+			for path, m := range manager.ExtraRoutes() {
+				router.Handle(path, m.HandlerFunc)
+			}
 			if tc.config != "" {
 				hook.OnConfig(ctx, &config.Config{
 					Extra: map[string]json.RawMessage{
@@ -80,7 +83,7 @@ func TestConfig(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodPost, "/v0/preview/test", nil)
-			manager.GetRouter().ServeHTTP(w, r)
+			router.ServeHTTP(w, r)
 
 			if w.Code != tc.code {
 				t.Fatalf("expected http status %d but received %d", tc.code, w.Code)
@@ -117,11 +120,6 @@ func TestReconfigure(t *testing.T) {
 			},
 		}),
 	)
-	router := manager.GetRouter()
-	err := manager.Start(ctx)
-	if err != nil {
-		t.Fatalf("Unable to start plugin manager: %v", err)
-	}
 
 	hook := NewHook()
 	hook.Init(manager)
@@ -130,6 +128,14 @@ func TestReconfigure(t *testing.T) {
 			"preview": []byte(`{"enabled": true}`),
 		},
 	})
+	router := http.NewServeMux()
+	for path, m := range manager.ExtraRoutes() {
+		router.Handle(path, m.HandlerFunc)
+	}
+	err := manager.Start(ctx)
+	if err != nil {
+		t.Fatalf("Unable to start plugin manager: %v", err)
+	}
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/v0/preview/test", nil)
@@ -167,9 +173,8 @@ func TestReconfigure(t *testing.T) {
 
 func pluginMgr(ctx context.Context, t *testing.T, seedPolicies map[string]string, seedData bjson.Json) *plugins.Manager {
 	t.Helper()
-	mux := mux.NewRouter()
 	opts := []func(*plugins.Manager){
-		plugins.WithRouter(mux),
+		plugins.WithRouter(http.NewServeMux()),
 		plugins.EnablePrintStatements(true),
 	}
 	var store storage.Store

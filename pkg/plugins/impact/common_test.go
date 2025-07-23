@@ -4,8 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gorilla/mux"
-
 	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/plugins"
 	"github.com/open-policy-agent/opa/v1/plugins/discovery"
@@ -18,9 +16,7 @@ import (
 func pluginMgr(t *testing.T, config string) *plugins.Manager {
 	t.Helper()
 	h := topdown.NewPrintHook(os.Stderr)
-	mux := mux.NewRouter()
 	opts := []func(*plugins.Manager){
-		plugins.WithRouter(mux),
 		plugins.PrintHook(h),
 		plugins.EnablePrintStatements(true),
 	}

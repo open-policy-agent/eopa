@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/gorilla/mux"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/metrics"
 	opaTypes "github.com/open-policy-agent/opa/v1/server/types"
@@ -18,8 +17,12 @@ import (
 	"github.com/styrainc/enterprise-opa-private/pkg/preview/types"
 )
 
-// httpPrefix is the root HTTP API path where the preview behavior is available
-const httpPrefix = "/v0/preview"
+const (
+	// httpPrefix is the root HTTP API path where the preview behavior is available
+	httpPrefix = "POST /v0/preview"
+	// metricName is the identifier our routes use for prometheums metrics
+	metricName = "v0/preview"
+)
 
 // ServeHTTP exposes the ability to run preview requests. The API is based primarily
 // off of OPAs v1DataPost method mixing in parts of the DAS data API.
@@ -37,8 +40,7 @@ func (p *PreviewHook) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: Add OTEL support?
 
 	// Parse Query Args
-	vars := mux.Vars(r)
-	urlPath := vars["path"]
+	urlPath := r.PathValue("path")
 	includeInstrumentation := boolParam(r.URL, opaTypes.ParamInstrumentV1, true)
 	includeMetrics := boolParam(r.URL, opaTypes.ParamMetricsV1, true)
 	provenance := boolParam(r.URL, opaTypes.ParamProvenanceV1, true)

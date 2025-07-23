@@ -19,7 +19,9 @@ func Factory() plugins.Factory {
 	return &factory{}
 }
 
-func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
+func (factory) New(m *plugins.Manager, config any) plugins.Plugin {
+	m.ExtraMiddleware(HTTPMiddleware)
+
 	m.UpdatePluginStatus(Name, &plugins.Status{State: plugins.StateNotReady})
 	c := config.(Config)
 	p := &Impact{
@@ -30,10 +32,11 @@ func (factory) New(m *plugins.Manager, config interface{}) plugins.Plugin {
 	if l := logs.Lookup(m); l != nil && c.DecisionLogs {
 		p.dl = l
 	}
+	m.ExtraRoute(httpPrefix, metricName, p.ServeHTTP)
 	return p
 }
 
-func (factory) Validate(_ *plugins.Manager, config []byte) (interface{}, error) {
+func (factory) Validate(_ *plugins.Manager, config []byte) (any, error) {
 	parsedConfig := Config{}
 	if err := util.Unmarshal(config, &parsedConfig); err != nil {
 		return nil, err

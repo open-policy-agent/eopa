@@ -130,8 +130,6 @@ func (i *Impact) sample(reqPath string, query *ast.Expr) bool {
 }
 
 func (i *Impact) Start(ctx context.Context) error {
-	i.manager.GetRouter().Handle(httpPrefix, i)
-
 	// TODO(sr): think, benchmark, guess MaxGoroutines?
 	i.workers = pool.New().WithMaxGoroutines(runtime.NumCPU())
 

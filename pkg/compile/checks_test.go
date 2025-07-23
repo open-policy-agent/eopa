@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	go_cmp "github.com/google/go-cmp/cmp"
-	"github.com/gorilla/mux"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/logging"
@@ -859,8 +858,8 @@ include if input.fruits.colour == input.colour
 			req.Header.Set("Accept", target)
 
 			rr := httptest.NewRecorder()
-			router := mux.NewRouter()
-			router.Handle("/v1/compile/{path:.+}", chnd)
+			router := http.NewServeMux()
+			router.Handle("POST /v1/compile/{path...}", chnd)
 			router.ServeHTTP(rr, req)
 
 			{

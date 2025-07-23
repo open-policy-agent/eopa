@@ -10,7 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/gorilla/mux"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/attribute"
@@ -79,8 +78,8 @@ func (h *hndl) GetManager() *plugins.Manager {
 }
 
 func (h *hndl) SetManager(m *plugins.Manager) error {
-	extraRoute(m, "/v1/batch/data/{path:.+}", PrometheusHandle, h.ServeHTTP)
-	extraRoute(m, "/v1/batch/data", PrometheusHandle, h.ServeHTTP)
+	m.ExtraRoute("POST /v1/batch/data/{path...}", PrometheusHandle, h.ServeHTTP)
+	m.ExtraRoute("POST /v1/batch/data", PrometheusHandle, h.ServeHTTP)
 	if pr := m.PrometheusRegister(); pr != nil {
 		if err := pr.Register(h.counterPEQCache); err != nil {
 			return err
@@ -149,8 +148,7 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := logging.WithBatchDecisionID(r.Context(), batchDecisionID)
 	annotateSpan(ctx, batchDecisionID)
 
-	vars := mux.Vars(r)
-	urlPath := vars["path"]
+	urlPath := r.PathValue("path")
 	explainMode := getExplain(r.URL.Query()[types.ParamExplainV1], types.ExplainOffV1)
 	includeInstrumentation := getBoolParam(r.URL, types.ParamInstrumentV1, true)
 	provenance := getBoolParam(r.URL, types.ParamProvenanceV1, true)

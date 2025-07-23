@@ -9,8 +9,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/gorilla/mux"
 )
 
 //go:embed testdata/bench_filters.rego
@@ -58,13 +56,13 @@ func BenchmarkCompileHandler(b *testing.B) {
 			}
 			b.ResetTimer()
 
-			for range b.N {
+			for b.Loop() {
 				req := httptest.NewRequest("POST", fmt.Sprintf("/v1/compile/%s", path), bytes.NewBuffer(jsonData))
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Accept", target)
 				rr := httptest.NewRecorder()
-				router := mux.NewRouter()
-				router.Handle("/v1/compile/{path:.+}", chnd)
+				router := http.NewServeMux()
+				router.Handle("POST /v1/compile/{path...}", chnd)
 				router.ServeHTTP(rr, req)
 				exp := http.StatusOK
 				if act := rr.Code; exp != act {

@@ -15,7 +15,10 @@ import (
 	"github.com/open-policy-agent/opa/v1/loader"
 )
 
-const httpPrefix = "/v0/impact"
+const (
+	httpPrefix = "POST /v0/impact"
+	metricName = "v0/impact"
+)
 
 type httpError struct {
 	Error string `json:"error"`

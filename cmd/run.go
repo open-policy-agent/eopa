@@ -11,7 +11,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"go.opentelemetry.io/otel"
@@ -385,7 +384,6 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 	if err != nil {
 		return nil, err
 	}
-	params.rt.Router = loadRouter()
 
 	params.rt.Logger = logger
 	lic.SetLogger(logger)
@@ -461,12 +459,6 @@ func loadCertPool(tlsCACertFile string) (*x509.CertPool, error) {
 		return nil, fmt.Errorf("failed to parse CA cert %q", tlsCACertFile)
 	}
 	return pool, nil
-}
-
-func loadRouter() *mux.Router {
-	m := mux.NewRouter()
-	m.Use(impact.HTTPMiddleware)
-	return m
 }
 
 func buildVerificationConfig(pubKey, pubKeyID, alg, scope string, excludeFiles []string) (*bundleApi.VerificationConfig, error) {

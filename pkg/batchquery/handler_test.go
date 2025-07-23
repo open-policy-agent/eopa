@@ -19,7 +19,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/gorilla/mux"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/config"
 	"github.com/open-policy-agent/opa/v1/logging"
@@ -592,10 +591,10 @@ func evalReqMachinery(t testing.TB, h http.Handler, path string, payload []byte,
 		req.Header.Set(k, v)
 	}
 	rr := httptest.NewRecorder()
-	router := mux.NewRouter()
 	// Mimic how the ExtraRoute calls will assign paths upsteam in the OPA server.
-	router.Handle("/v1/batch/data/{path:.+}", h)
-	router.Handle("/v1/batch/data", h)
+	router := http.NewServeMux()
+	router.Handle("POST /v1/batch/data/{path...}", h)
+	router.Handle("POST /v1/batch/data", h)
 	router.ServeHTTP(rr, req)
 
 	return rr
