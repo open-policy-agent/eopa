@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -85,11 +84,6 @@ func initRun(opa *cobra.Command, brand string, lic *license.Checker, lparams *li
 					logger.Warn(err.Error())
 					logger.Warn("Switching to OPA mode. Enterprise OPA functionality will be disabled.")
 
-					// setup known header so Compile API fallback code can react accordingly
-					server.CompileAPIExtensionAcceptHeaders = compile.CompileAPIKnownHeaders()
-					server.CompileAPIExtensionErrorStatus = http.StatusNotImplemented
-					server.CompileAPIExtensionErrorCode = "license-required"
-					server.CompileAPIExtensionErrorMessage = "requested API extension unavailable in fallback mode"
 					batchQueryHndlr := batchquery.Handler(nil)
 					server.ManagerHooks = []server.ManagerHook{batchQueryHndlr.SetManager}
 

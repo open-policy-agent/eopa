@@ -114,40 +114,6 @@ q if input.foo.bar = "baz"` // no builtins called
 			t.Fatalf("expected %v queries, got %v", exp, act)
 		}
 	})
-
-	t.Run("compile-api-extension", func(t *testing.T) { // Compile API (extensions) -- returns an error
-		payload := map[string]any{}
-		jsonPayload := new(bytes.Buffer)
-		if err := json.NewEncoder(jsonPayload).Encode(payload); err != nil {
-			t.Fatalf("json encode: %v", err)
-		}
-		req, err := http.NewRequest("POST", "http://localhost:"+fmt.Sprintf("%d", eopaHTTPPort)+"/v1/compile/test/q", jsonPayload)
-		if err != nil {
-			t.Fatalf("http request: %v", err)
-		}
-		req.Header.Set("Accept", "application/vnd.styra.sql.mysql+json")
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer resp.Body.Close()
-		if exp, act := http.StatusNotImplemented, resp.StatusCode; exp != act {
-			t.Fatalf("expected status %d, got %d", exp, act)
-		}
-		output := struct {
-			Code    string
-			Message string
-		}{}
-		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
-			t.Fatal(err)
-		}
-		if exp, act := "license-required", output.Code; exp != act {
-			t.Errorf("expected code %v, got %v", exp, act)
-		}
-		if exp, act := "requested API extension unavailable in fallback mode", output.Message; exp != act {
-			t.Errorf("expected message %v, got %v", exp, act)
-		}
-	})
 }
 
 func TestRunServerFallbackFailPlugins(t *testing.T) {
