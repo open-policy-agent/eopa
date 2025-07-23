@@ -99,7 +99,7 @@ type CompileRequestV1 struct {
 		Mappings                 map[string]any `json:"targetSQLTableMappings,omitempty"`
 		TargetDialects           []string       `json:"targetDialects,omitempty"`
 		MaskRule                 string         `json:"maskRule,omitempty"`
-	} `json:"options,omitempty"`
+	} `json:"options"`
 }
 
 type CompileResponseV1 struct {
