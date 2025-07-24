@@ -424,7 +424,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string, lic *
 
 func startRuntime(ctx context.Context, rt *runtime.Runtime, serverMode bool) error {
 	if serverMode {
-		return rt.StartServer(ctx)
+		return rt.Serve(ctx)
 	}
 	return rt.StartREPL(ctx)
 }
