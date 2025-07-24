@@ -99,14 +99,14 @@ require (
 	golang.org/x/sync v0.16.0
 	golang.org/x/term v0.33.0
 	google.golang.org/api v0.242.0
-	google.golang.org/grpc v1.73.0
+	google.golang.org/grpc v1.74.2
 	google.golang.org/protobuf v1.36.6
 	modernc.org/sqlite v1.38.0
 	sigs.k8s.io/yaml v1.5.0
 )
 
 require (
-	cel.dev/expr v0.23.0 // indirect
+	cel.dev/expr v0.24.0 // indirect
 	cloud.google.com/go v0.121.1 // indirect
 	cloud.google.com/go/auth v0.16.2 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
@@ -167,7 +167,7 @@ require (
 	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
-	github.com/cncf/xds/go v0.0.0-20250326154945-ae57f3c0d45f // indirect
+	github.com/cncf/xds/go v0.0.0-20250501225837-2ac532fd4443 // indirect
 	github.com/cockroachdb/apd/v3 v3.2.1 // indirect
 	github.com/containerd/containerd/v2 v2.1.1 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
