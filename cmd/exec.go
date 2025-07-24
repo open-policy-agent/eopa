@@ -20,7 +20,6 @@ func initExec(opa *cobra.Command) *cobra.Command {
 		c.SilenceUsage = true
 
 		// Note(philip): Removed license checks here.
-		sdk.DefaultOptions = eopa_sdk.DefaultOptions()
 		e := ekm.NewEKM()
 		e.SetLogger(logging.NewNoOpLogger())
 		sdkDefaultOptions := eopa_sdk.DefaultOptions()

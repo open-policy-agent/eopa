@@ -333,4 +333,4 @@ require (
 	sigs.k8s.io/yaml v1.5.0 // indirect
 )
 
-replace github.com/open-policy-agent/opa => github.com/StyraInc/opa v1.6.1-0.20250724113854-8989a8e13f05
+replace github.com/open-policy-agent/opa => github.com/open-policy-agent/opa v1.6.1-0.20250724094909-d0c0ae9730b1

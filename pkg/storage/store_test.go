@@ -245,7 +245,6 @@ func TestStoreDisk(t *testing.T) {
 	config := config.Config{
 		Storage: &struct {
 			Disk json.RawMessage `json:"disk,omitempty"`
-			SQL  json.RawMessage `json:"sql,omitempty"`
 		}{
 			Disk: json.RawMessage(fmt.Sprintf(`{"directory": "%s", "partitions": ["/a/*", "/b/c/*/*"]}`, t.TempDir())),
 		},
