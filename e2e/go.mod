@@ -17,7 +17,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/microsoft/go-mssqldb v1.9.2
 	github.com/minio/minio-go/v7 v7.0.95
-	github.com/open-policy-agent/opa v1.6.0
+	github.com/open-policy-agent/opa v1.6.1-0.20250724094909-d0c0ae9730b1
 	github.com/redpanda-data/benthos/v4 v4.53.1
 	github.com/redpanda-data/connect/v4 v4.60.1
 	github.com/rogpeppe/go-internal v1.14.1
@@ -332,5 +332,3 @@ require (
 	oras.land/oras-go/v2 v2.6.0 // indirect
 	sigs.k8s.io/yaml v1.5.0 // indirect
 )
-
-replace github.com/open-policy-agent/opa => github.com/open-policy-agent/opa v1.6.1-0.20250724094909-d0c0ae9730b1

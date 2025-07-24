@@ -54,7 +54,7 @@ require (
 	github.com/oapi-codegen/runtime v1.1.2
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/olivere/elastic/v7 v7.0.32
-	github.com/open-policy-agent/opa v1.6.0
+	github.com/open-policy-agent/opa v1.6.1-0.20250724094909-d0c0ae9730b1
 	github.com/open-policy-agent/opa-envoy-plugin v1.6.0-envoy-2
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/prometheus/client_golang v1.22.0
@@ -409,5 +409,3 @@ require (
 //   https://github.com/99designs/keyring/issues/103
 // We're using the Jeffail/keyring fork that removes the misbehaving godbus parts.
 replace github.com/99designs/keyring => github.com/Jeffail/keyring v1.2.3
-
-replace github.com/open-policy-agent/opa => github.com/open-policy-agent/opa v1.6.1-0.20250724094909-d0c0ae9730b1

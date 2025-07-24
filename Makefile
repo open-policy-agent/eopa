@@ -1,5 +1,3 @@
-export GOPRIVATE=github.com/open-policy-agent/opa
-FORK_BRANCH := main
 BUILD_ARGS := --tags=use_opa_fork
 
 ifdef AUTH_RELEASE
@@ -166,12 +164,12 @@ fuzz:
 	go test $(BUILD_ARGS)  ./pkg/json -fuzz FuzzDecode -fuzztime ${FUZZ_TIME} -v -run '^$$'
 
 update:
-	go mod edit -replace github.com/open-policy-agent/opa=github.com/open-policy-agent/opa@${FORK_BRANCH}
+	go get github.com/open-policy-agent/opa@main
 	go mod tidy
 
 update-e2e:
 	cd e2e \
-		&& go mod edit -replace github.com/open-policy-agent/opa=github.com/open-policy-agent/opa@${FORK_BRANCH} \
+		&& go get github.com/open-policy-agent/opa@main \
 		&& go mod tidy
 
 update-examples:
