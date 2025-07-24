@@ -80,6 +80,12 @@ func (h *hndl) GetManager() *plugins.Manager {
 func (h *hndl) SetManager(m *plugins.Manager) error {
 	m.ExtraRoute("POST /v1/batch/data/{path...}", PrometheusHandle, h.ServeHTTP)
 	m.ExtraRoute("POST /v1/batch/data", PrometheusHandle, h.ServeHTTP)
+	m.ExtraAuthorizerRoute(func(method string, path []any) bool {
+		s0 := path[0].(string)
+		s1 := path[1].(string)
+		s2 := path[2].(string)
+		return method == "POST" && s0 == "v1" && s1 == "batch" && s2 == "data"
+	})
 	if pr := m.PrometheusRegister(); pr != nil {
 		if err := pr.Register(h.counterPEQCache); err != nil {
 			return err

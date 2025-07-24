@@ -628,6 +628,7 @@ func wrapHandlerAuthz(handler http.Handler, manager *plugins.Manager, scheme ser
 			authorizer.Decision(manager.Config.DefaultAuthorizationDecisionRef),
 			authorizer.PrintHook(manager.PrintHook()),
 			authorizer.EnablePrintStatements(manager.EnablePrintStatements()),
+			authorizer.URLPathExpectsBodyFunc(manager.ExtraAuthorizerRoutes()),
 		)
 
 		// Ignored, since this wrapper is for tests only. If metrics tests die, then we add it back
