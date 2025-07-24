@@ -63,13 +63,16 @@ func OptionsFromConfig(ctx context.Context, raw []byte, id string) (*Options, er
 		return nil, err
 	}
 
-	// TODO(sr): the "SQL" config key doesn't exist in upstream OPA yet
-	if parsedConfig.Storage == nil || len(parsedConfig.Storage.SQL) == 0 {
+	var cfgRaw []byte
+	if parsedConfig.Extra != nil {
+		cfgRaw = parsedConfig.Extra["sql"]
+	}
+	if len(cfgRaw) == 0 {
 		return nil, nil
 	}
 
 	var c cfg
-	if err := util.Unmarshal(parsedConfig.Storage.SQL, &c); err != nil {
+	if err := util.Unmarshal(cfgRaw, &c); err != nil {
 		return nil, err
 	}
 

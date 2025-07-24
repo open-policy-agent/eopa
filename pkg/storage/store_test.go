@@ -258,12 +258,8 @@ func TestStoreDisk(t *testing.T) {
 
 func TestStoreSQL(t *testing.T) {
 	ctx := context.Background()
-	config := config.Config{
-		Storage: &struct {
-			Disk json.RawMessage `json:"disk,omitempty"`
-			SQL  json.RawMessage `json:"sql,omitempty"`
-		}{
-			SQL: json.RawMessage(`{
+	config := map[string]json.RawMessage{
+		"sql": json.RawMessage(`{
 "driver": "sqlite",
 "data_source_name": "file::memory:?cache=shared",
 "tables": [
@@ -272,7 +268,6 @@ func TestStoreSQL(t *testing.T) {
 ]
 }
 `),
-		},
 	}
 
 	_, err := New2(ctx, logging.NewNoOpLogger(), nil, util.MustMarshalJSON(config), "id")
