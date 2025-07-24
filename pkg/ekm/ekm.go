@@ -70,11 +70,7 @@ func (e *EKM) OnConfigDiscovery(ctx context.Context, conf *config.Config) (*conf
 }
 
 func (e *EKM) OnConfig(ctx context.Context, conf *config.Config) (*config.Config, error) {
-	c, err := e.onConfig(ctx, conf)
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
+	return e.onConfig(ctx, conf)
 }
 
 func (e *EKM) onConfig(ctx context.Context, conf *config.Config) (*config.Config, error) {
