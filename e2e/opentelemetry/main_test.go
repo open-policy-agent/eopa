@@ -162,10 +162,6 @@ func loadEnterpriseOPA(t *testing.T, config, policy string, httpPort int) (*exec
 	eopa := exec.Command(binary(), append(args, policyPath)...)
 	eopa.Stderr = &stderr
 	eopa.Stdout = &stdout
-	eopa.Env = append(eopa.Environ(),
-		"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
-		"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
-	)
 
 	t.Cleanup(func() {
 		if eopa.Process == nil {

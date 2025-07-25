@@ -930,8 +930,6 @@ func loadEnterpriseOPA(t *testing.T, config, policy string, httpPort int, opts .
 	eopa.Stderr = &stderr
 	eopa.Stdout = &stdout
 	eopa.Env = append(eopa.Environ(),
-		"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
-		"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
 		"OPA_DECISIONS_INTERMEDIATE_RESULTS=VALUE",
 	)
 

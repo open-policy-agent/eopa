@@ -69,7 +69,7 @@ func TestDiscovery(t *testing.T) {
 	} {
 		t.Run(tc.note, func(t *testing.T) {
 			config := config(tc.bundle, testserver.URL)
-			eopa, eopaOut := eopaRun(t, config, eopaHTTPPort, true)
+			eopa, eopaOut := eopaRun(t, config, eopaHTTPPort)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
@@ -96,7 +96,7 @@ func TestDiscovery(t *testing.T) {
 	}
 }
 
-func eopaRun(t *testing.T, config string, httpPort int, includeEnv bool) (*exec.Cmd, *bytes.Buffer) {
+func eopaRun(t *testing.T, config string, httpPort int) (*exec.Cmd, *bytes.Buffer) {
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
 	args := []string{
@@ -115,12 +115,6 @@ func eopaRun(t *testing.T, config string, httpPort int, includeEnv bool) (*exec.
 	}
 	eopa := exec.Command(binary(), args...)
 	eopa.Stderr = &buf
-	if includeEnv {
-		eopa.Env = append(eopa.Environ(),
-			"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
-			"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
-		)
-	}
 
 	t.Cleanup(func() {
 		if eopa.Process == nil {
