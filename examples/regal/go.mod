@@ -1,11 +1,11 @@
-module github.com/styrainc/enterprise-opa-private/examples/regal
+module github.com/open-policy-agent/eopa/examples/regal
 
 go 1.24.3
 
 toolchain go1.24.4
 
 require (
-	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
+	github.com/open-policy-agent/eopa v0.0.0-00010101000000-000000000000
 	github.com/styrainc/regal v0.35.1
 )
 
@@ -123,4 +123,4 @@ require (
 	sigs.k8s.io/yaml v1.5.0 // indirect
 )
 
-replace github.com/styrainc/enterprise-opa-private => ../../
+replace github.com/open-policy-agent/eopa => ../../
