@@ -1,12 +1,12 @@
-# Styra Enterprise OPA Private
+# EOPA
 
 ![OPA v1.4.0](https://openpolicyagent.org/badge/v1.4.0)
 [![Regal v0.33.1](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.33.1&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.33.1)
 
 ## Github Source and Project
 
-- [Enterprise OPA Dev Board](https://github.com/orgs/StyraInc/projects/4/views/1)
-- [enterprise-opa-private](https://github.com/StyraInc/enterprise-opa-private)
+- [EOPA Dev Board](https://github.com/orgs/StyraInc/projects/4/views/1)
+- [eopa](https://github.com/open-policy-agent/eopa)
 - [opa](https://github.com/StyraInc/opa)
 - [enterprise-opa](https://github.com/StyraInc/enterprise-opa)
 
@@ -117,7 +117,7 @@ Then we update the reference in Enterprise OPA:
 2. Update `eopa-xx` in the `update` target of the Makefile
 3. Run `make update && make update-e2e && make update-examples`.
 4. Bump the OPA version number in the `README.md` badge at the top
-5. Commit the changes and push a PR to `github.com/StyraInc/enterprise-opa-private`.
+5. Commit the changes and push a PR to `github.com/open-policy-agent/eopa`.
 
 ### Can't build locally: private github repo
 
@@ -190,7 +190,7 @@ Set up the following environment variables, and perform a `make release`:
 You can safely ignore the error, or set up Quill as described above.
 
 ```
-  ⨯ release failed after 5s error=post hook failed: failed to run 'quill sign-and-notarize /Users/kevin/src/github.com/styrainc/enterprise-opa-private/dist/darwin-build_darwin_amd64_v1/eopa -vv': exit status 1
+  ⨯ release failed after 5s error=post hook failed: failed to run 'quill sign-and-notarize /Users/kevin/src/github.com/open-policy-agent/eopa/dist/darwin-build_darwin_amd64_v1/eopa -vv': exit status 1
 make: *** [release] Error 1
 ```
 

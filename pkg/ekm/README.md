@@ -30,7 +30,3 @@ vault read secret/data/license
 ```shell
 eopa --config-file testdata/ekm.yaml run -s -l debug
 ```
-
-# Links
-
-https://github.com/styrainc/enterprise-opa-private/issues/415

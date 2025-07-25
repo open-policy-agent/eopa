@@ -232,7 +232,7 @@ jobs:
           # Temporarily disable error propagation
           set +e
 
-          go test -p 1 --tags=use_opa_fork,e2e github.com/styrainc/enterprise-opa-private/e2e/${{ matrix.package }} -v -count=1 2> >(tee "$STDERR_FILE" >&2)
+          go test -p 1 --tags=use_opa_fork,e2e github.com/open-policy-agent/eopa/e2e/${{ matrix.package }} -v -count=1 2> >(tee "$STDERR_FILE" >&2)
           TEST_EXIT_CODE=$?
 
           # # Re-enable error propagation
@@ -422,8 +422,8 @@ jobs:
           name: image-debug
       - name: load images
         run: |
-          skopeo copy docker-archive:local.tar docker-daemon:ko.local/enterprise-opa-private:edge
-          skopeo copy docker-archive:local-debug.tar docker-daemon:ko.local/enterprise-opa-private:edge-debug
+          skopeo copy docker-archive:local.tar docker-daemon:ko.local/eopa:edge
+          skopeo copy docker-archive:local-debug.tar docker-daemon:ko.local/eopa:edge-debug
       - name: docker build based on image
         run: |
           docker build -t test .

@@ -14,8 +14,8 @@ builds:
     tags:
     ldflags: &ldflags
       - -s
-      - -X github.com/styrainc/enterprise-opa-private/internal/version.Version={{.Env.EOPA_VERSION}}
-      - -X github.com/styrainc/enterprise-opa-private/internal/version.Hostname=github.actions.local
+      - -X github.com/open-policy-agent/eopa/internal/version.Version={{.Env.EOPA_VERSION}}
+      - -X github.com/open-policy-agent/eopa/internal/version.Hostname=github.actions.local
       - -X github.com/open-policy-agent/opa/internal/report.ExternalServiceURL={{.Env.EOPA_TELEMETRY_URL}}
   - id: darwin-build
     goos:
@@ -82,16 +82,16 @@ changelog:
 
 release:
   github:
-    owner: StyraInc
-    name: enterprise-opa
+    owner: open-policy-agent
+    name: eopa
 
 brews:
   - repository:
-      owner: StyraInc
+      owner: open-policy-agent
       name: homebrew-packages
       token: "{{ .Env.TAP_GITHUB_TOKEN }}"
     url_template: >-
-      https://github.com/StyraInc/enterprise-opa/releases/download/{{ .Tag }}/{{ .ProjectName }}_{{- title .Os }}_
+      https://github.com/open-policy-agent/eopa/releases/download/{{ .Tag }}/{{ .ProjectName }}_{{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
