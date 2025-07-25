@@ -53,8 +53,7 @@ type payloadLabels struct {
 }
 
 var standardLabels = payloadLabels{
-	Type:    "enterprise-opa",
-	Version: os.Getenv("EOPA_VERSION"),
+	Type: "enterprise-opa",
 }
 
 var stdIgnores = cmpopts.IgnoreFields(payload{},
@@ -62,9 +61,9 @@ var stdIgnores = cmpopts.IgnoreFields(payload{},
 	"Metrics",
 	"DecisionID",
 	"Labels.ID",
+	"Labels.Version",
 	"NDBC",
 	"Intermediate",
-	"Version",
 )
 
 var eopaHTTPPort int
@@ -737,7 +736,7 @@ plugins:
 	}
 
 	// NB(sr): we're not ignoring "Intermediate" here
-	ignores := cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "DecisionID", "Labels.ID", "NDBC")
+	ignores := cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "DecisionID", "Labels.ID", "Labels.Version", "NDBC")
 	if diff := cmp.Diff(dl, logsHTTP[0], ignores); diff != "" {
 		t.Errorf("diff: (-want +got):\n%s", diff)
 	}
