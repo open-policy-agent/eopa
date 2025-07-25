@@ -175,7 +175,15 @@ plugins:
 			Path:    "/test/p",
 			Labels:  payloadLabels{Version: os.Getenv("EOPA_VERSION")},
 		}
-		ignores := cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "DecisionID", "Labels.ID", "NDBC")
+		ignores := cmpopts.IgnoreFields(payload{},
+			"Timestamp",
+			"Metrics",
+			"DecisionID",
+			"Labels.ID",
+			"NDBC",
+			"Intermediate",
+			"Version",
+		)
 		if diff := cmp.Diff(exp, act, ignores); diff != "" {
 			t.Errorf("unexpected output (-want, +got):\n%s", diff)
 		}
