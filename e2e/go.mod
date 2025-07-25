@@ -19,7 +19,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/open-policy-agent/opa v1.6.1-0.20250725185617-9a73de98f70f
 	github.com/redpanda-data/benthos/v4 v4.53.1
-	github.com/redpanda-data/connect/v4 v4.60.1
+	github.com/redpanda-data/connect/v4 v4.61.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
 	github.com/testcontainers/testcontainers-go v0.38.0
