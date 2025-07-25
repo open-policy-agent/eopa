@@ -12,7 +12,6 @@ builds:
       - amd64
       - arm64
     tags:
-      - use_opa_fork
     ldflags: &ldflags
       - -s
       - -X github.com/styrainc/enterprise-opa-private/internal/version.Version={{.Env.EOPA_VERSION}}
@@ -25,7 +24,6 @@ builds:
       - amd64
       - arm64
     tags:
-      - use_opa_fork
     ldflags: *ldflags
     hooks:
       post:
@@ -47,7 +45,6 @@ builds:
     goarch:
       - amd64
     tags:
-      - use_opa_fork
     ldflags: *ldflags
     hooks:
       pre:
