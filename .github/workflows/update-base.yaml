@@ -19,31 +19,21 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: |
-          echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
-          echo "GITHUB_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
-      - name: Build & Publish OCI
-        id: apko
-        uses: chainguard-images/actions/apko-publish@711a62d32118ee565db9c24249fc90011bdd7eb4
-        with:
-          config: apko.yaml
-          archs: x86_64,aarch64
-          tag: ghcr.io/styrainc/eopa-base:latest
-      - name: Build & Publish OCI (Debug)
-        id: apko-debug
-        uses: chainguard-images/actions/apko-publish@711a62d32118ee565db9c24249fc90011bdd7eb4
-        with:
-          config: apko-debug.yaml
-          archs: x86_64,aarch64
-          tag: ghcr.io/styrainc/eopa-debug:latest
+      # - name: Build & Publish OCI
+      #   id: apko
+      #   uses: chainguard-images/actions/apko-publish@711a62d32118ee565db9c24249fc90011bdd7eb4
+      #   with:
+      #     config: apko.yaml
+      #     archs: x86_64,aarch64
+      #     tag: ghcr.io/styrainc/eopa-base:latest # TODO
+      # - name: Build & Publish OCI (Debug)
+      #   id: apko-debug
+      #   uses: chainguard-images/actions/apko-publish@711a62d32118ee565db9c24249fc90011bdd7eb4
+      #   with:
+      #     config: apko-debug.yaml
+      #     archs: x86_64,aarch64
+      #     tag: ghcr.io/styrainc/eopa-debug:latest # TODO

@@ -34,14 +34,6 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # v2.2.0
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -95,8 +87,8 @@ jobs:
         working-directory: enterprise-opa
         env:
           HOSTNAME: github.actions.local
-          TAP_GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
-          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          TAP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_NOTES: ../release-notes.md
           EOPA_TELEMETRY_URL: https://load-telemetry.corp.styra.com
       - name: Upload binary artifact
