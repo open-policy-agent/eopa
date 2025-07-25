@@ -14,6 +14,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/server"
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 	"github.com/open-policy-agent/opa/v1/topdown/cache"
@@ -376,6 +377,21 @@ func (vm *VM) Eval(ctx context.Context, name string, opts EvalOpts) (ast.Value, 
 	}
 
 	return nil, ErrQueryNotFound
+}
+
+func getIntermediateResults(ctx context.Context) map[string]any {
+	// Result is recorded into context in statements call.Execute.
+	v := ctx.Value(server.IntermediateResultsContextKey{})
+	if v == nil {
+		return nil
+	}
+
+	m, ok := v.(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	return m
 }
 
 func (vm *VM) runtime(ctx context.Context, v any) (*ast.Term, error) {

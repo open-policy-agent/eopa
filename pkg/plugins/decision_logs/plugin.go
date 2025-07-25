@@ -10,8 +10,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/plugins"
 	"github.com/open-policy-agent/opa/v1/plugins/logs"
 	"github.com/open-policy-agent/opa/v1/storage"
-
-	"github.com/styrainc/enterprise-opa-private/pkg/compile"
 )
 
 const DLPluginName = "eopa_dl" // OPA DL plugin
@@ -148,10 +146,10 @@ func (p *Logger) Log(ctx context.Context, e logs.EventV1) error {
 	if e.Error != nil {
 		ev["error"] = e.Error
 	}
-	if cc := compile.Custom(e); len(cc) > 0 {
+	if cc := e.Custom; len(cc) > 0 {
 		ev["custom"] = cc
 	}
-	if ir, ok := intermediateResults(e); ok {
+	if ir := e.IntermediateResults; ir != nil {
 		ev["intermediate_results"] = ir
 	}
 	return p.stream.Consume(ctx, ev)

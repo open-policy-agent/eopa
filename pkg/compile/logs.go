@@ -88,13 +88,13 @@ func dlog(ctx context.Context,
 		Results: result,
 		Path:    path,
 		Query:   orig.Query,
+		Custom: map[string]any{
+			"options":   orig.Options,
+			"unknowns":  unknowns,
+			"type":      decisionLogType,
+			"mask_rule": maskRule,
+		},
 	}
-	addCustom(map[string]any{
-		"options":   orig.Options,
-		"unknowns":  unknowns,
-		"type":      decisionLogType,
-		"mask_rule": maskRule,
-	}, info)
 	return info, nil
 }
 

@@ -61,10 +61,9 @@ func (l decisionLogger) Log(ctx context.Context, txn storage.Transaction, path s
 		Error:              err,
 		Metrics:            m,
 		RequestID:          rctx.ReqID,
-	}
-	addCustom(map[string]any{
-		"type": decisionLogType,
-	}, info)
+		Custom: map[string]any{
+			"type": decisionLogType,
+		}}
 
 	if ndbCache != nil {
 		x, err := ast.JSON(ndbCache.AsValue())
