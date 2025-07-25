@@ -7,8 +7,7 @@
 
 - [EOPA Dev Board](https://github.com/orgs/StyraInc/projects/4/views/1)
 - [eopa](https://github.com/open-policy-agent/eopa)
-- [opa](https://github.com/StyraInc/opa)
-- [enterprise-opa](https://github.com/StyraInc/enterprise-opa)
+- [opa](https://github.com/open-policy-agent/opa)
 
 ## Build
 
@@ -92,48 +91,6 @@ While this repository tracks the code required to build Styra Enterprise OPA, so
  - Terraform Rules for Alerts [[Link](https://github.com/StyraInc/platform-terraform/blob/main/newrelic/alerts/load_alerts.tf)]: Any monitoring config changes made through the NewRelic UI will be automatically overwritten with whatever Terraform is told to provision. To make lasting changes to alerting, change them in the Terraform configs.
 
 ## FAQ
-
-### How can I update the `eopa` branch of the github.com/StyraInc/opa fork?
-
-- `make update && make update-e2e && make update-examples`
-
-### How do I update OPA in Enterprise OPA?
-
-Let's assume an update from OPA 0.49.0 to 0.50.0:
-
-First, we update the fork:
-
-1. push `main` from `github.com/open-policy-agent/opa` to the fork `github.com/StyraInc/opa`
-2. push the latest version tag (v0.50.0) from `github.com/open-policy-agent/opa` to the fork (NB: the post-tag action on the fork always fails)
-3. checkout the previous fork branch, e.g. `eopa-0.49`
-4. `git rebase v0.50.0` -- rebase on top of the latest release tag
-5. name the branch `eopa-0.50` and push it to the fork `github.com/StyraInc/opa`
-
-Then we update the reference in Enterprise OPA:
-
-1. Update it in `go.mod`: `GOPRIVATE=github.com/StyraInc go get github.com/open-policy-agent/opa@v0.50.0` (NB: this has no consequences except for version-tag bookkeeping)
-   - You will need to do this step for the `e2e/` folder as well, since it's dependencies are managed as a separate Go workspace.
-   - This step should also be repeated for each subfolder under `examples/`, along with a `go mod tidy` run for each example.
-2. Update `eopa-xx` in the `update` target of the Makefile
-3. Run `make update && make update-e2e && make update-examples`.
-4. Bump the OPA version number in the `README.md` badge at the top
-5. Commit the changes and push a PR to `github.com/open-policy-agent/eopa`.
-
-### Can't build locally: private github repo
-
-````
-go: errors parsing go.mod:
-/Users/stephan/Sources/StyraInc/enterprise-opa/go.mod:89: replace github.com/StyraInc/opa: version "eopa" invalid: git ls-remote -q origin in /Users/stephan/go/pkg/mod/cache/vcs/39c7f8258aa43a0e71284d9afa9390ab62dcf0466b0baf3bc3feef290c1fe63d: exit status 128:
-	fatal: could not read Username for 'https://github.com': terminal prompts disabled
-Confirm the import path was entered correctly.
-If this is a private repository, see https://golang.org/doc/faq#git_https for additional information.
-````
-
-Adding this snippet to your .gitconfig should help:
-```
-[url "ssh://git@github.com/"]
-	insteadOf = https://github.com/
-```
 
 ### Run 'eopa' documentation locally
 
