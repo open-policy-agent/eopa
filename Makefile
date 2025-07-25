@@ -1,4 +1,4 @@
-BUILD_ARGS := --tags=use_opa_fork
+BUILD_ARGS :=
 
 ifdef AUTH_RELEASE
 NEWEST := $(shell git tag -l --sort -version:refname | head -n 1)

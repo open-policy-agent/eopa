@@ -700,8 +700,8 @@ github.com/olekukonko/tablewriter v0.0.5 h1:P2Ga83D34wi1o9J6Wh1mRuqd4mF/x/lgBS7N
 github.com/olekukonko/tablewriter v0.0.5/go.mod h1:hPp6KlRPjbx+hW8ykQs1w3UBbZlj6HuIJcUGPhkA7kY=
 github.com/onsi/gomega v1.34.1 h1:EUMJIKUjM8sKjYbtxQI9A4z2o+rruxnzNvpknOXie6k=
 github.com/onsi/gomega v1.34.1/go.mod h1:kU1QgUvBDLXBJq618Xvm2LUX6rSAfRaFRTcdOeDLwwY=
-github.com/open-policy-agent/opa v1.6.1-0.20250724094909-d0c0ae9730b1 h1:h+o5ILH5A+1InGFcxfIXq8qfmQTbp09YH3l2ijdRhNE=
-github.com/open-policy-agent/opa v1.6.1-0.20250724094909-d0c0ae9730b1/go.mod h1:MDkJQL+rGlYoardbnBIaPNfOZDb+v/7mTzzesRFT010=
+github.com/open-policy-agent/opa v1.6.1-0.20250725185617-9a73de98f70f h1:kLKNNxDJjDcdO6nuPx7CItxlVqSnMCntEiF42cTr9q8=
+github.com/open-policy-agent/opa v1.6.1-0.20250725185617-9a73de98f70f/go.mod h1:MDkJQL+rGlYoardbnBIaPNfOZDb+v/7mTzzesRFT010=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJwooC2xJA040=
