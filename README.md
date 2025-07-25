@@ -3,12 +3,6 @@
 ![OPA v1.4.0](https://openpolicyagent.org/badge/v1.4.0)
 [![Regal v0.33.1](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.33.1&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.33.1)
 
-## Github Source and Project
-
-- [EOPA Dev Board](https://github.com/orgs/StyraInc/projects/4/views/1)
-- [eopa](https://github.com/open-policy-agent/eopa)
-- [opa](https://github.com/open-policy-agent/opa)
-
 ## Build
 
 ### Prerequisites:
@@ -64,31 +58,6 @@ Build with `make build`, run with `make run`, publish with `make push`.
 - `make update`/`make update-e2e`/`make update-examples`: update module configuration
 - `make test`: run unittests
 - `make check`: run linter
-
-## Supporting services
-
-While this repository tracks the code required to build Styra Enterprise OPA, some additional services have been built to help with the free trial, telemetry, and other "supporting" tasks.
-
-### Free Trial services
-
- - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/eopa-trial-generator)] :: `eopa-trial-generator`: Generates licenses for each free trial signup.
-   - `kubectl` context: `kubectl config use-context eopa-trial-generator-prod`
- - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/eopa-trial-activation-tracker)] :: `eopa-trial-activation-tracker`: Pushes first-time license activation events to Marketo.
-   - `kubectl` context: `kubectl config use-context eopa-trial-generator-prod` (Same group as the `-generator` service.)
- - Concourse job [[source](https://github.com/StyraInc/concourse-defs/tree/main/eopa/licenses-reaper)] :: `eopa/licenses-reaper`: Weekly job to remove expired trial licenses from Keygen.sh.
-
-### Telemetry services
-
- - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/eopa-telemetry)] :: `eopa-telemetry`: Enterpriser OPA version of the "OPA Telemetry" service.
-   - `kubectl` context: `kubectl config use-context eopa-telemetry-prod`
- - `fetchdb` service [[source](https://github.com/StyraInc/fetchdb/tree/main/services/eopa-telemetry-dashboard)] :: `eopa-telemetry-dashboard`: Enterprise OPA version of the "OPA Telemetry Dashboard" service.
-   - `kubectl` context: `kubectl config use-context eopa-telemetry-prod`
-   - Dashboard URL: https://ops-prod.k8s.styra.com/v1/service/eopa-telemetry-dashboard.eopa-telemetry:8080/
-
-### Monitoring
-
- - NewRelic Dashboard [[Link](https://one.newrelic.com/dashboards/detail/MzU5NDA4OHxWSVp8REFTSEJPQVJEfGRhOjMxNTUwNjQ?account=3594088&state=0e224a3f-d3cc-492f-a8c6-fb2fd1caa0e0)]: `Enterprise OPA Health`: Tracks the key metrics / status of all `eopa-trial-*` and `eopa-telemetry*` services.
- - Terraform Rules for Alerts [[Link](https://github.com/StyraInc/platform-terraform/blob/main/newrelic/alerts/load_alerts.tf)]: Any monitoring config changes made through the NewRelic UI will be automatically overwritten with whatever Terraform is told to provision. To make lasting changes to alerting, change them in the Terraform configs.
 
 ## FAQ
 
