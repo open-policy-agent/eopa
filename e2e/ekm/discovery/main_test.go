@@ -201,9 +201,6 @@ func startVaultServer(t *testing.T, ctx context.Context) *testcontainervault.Vau
 	if err := setKey(vlogical, "kv/data/acmecorp:data/url", map[string]any{"url": testserver.URL}); err != nil {
 		t.Fatal(err)
 	}
-	if err := setKey(vlogical, "kv/data/license:data/key", map[string]any{"key": os.Getenv("EOPA_LICENSE_KEY")}); err != nil {
-		t.Fatal(err)
-	}
 	dat, err := os.ReadFile("testdata/public_key.pem")
 	if err != nil {
 		t.Fatal(err)
@@ -241,10 +238,6 @@ func eopaRun(t *testing.T, httpPort int, config []byte) (*exec.Cmd, *bytes.Buffe
 	eopa := exec.Command(binary(), args...)
 	eopa.Stderr = &buf
 	eopa.Stdout = &std
-	eopa.Env = append(eopa.Environ(),
-		"EOPA_LICENSE_TOKEN="+os.Getenv("EOPA_LICENSE_TOKEN"),
-		"EOPA_LICENSE_KEY="+os.Getenv("EOPA_LICENSE_KEY"),
-	)
 
 	t.Cleanup(func() {
 		if eopa.Process == nil {

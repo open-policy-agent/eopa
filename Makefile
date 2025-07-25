@@ -92,7 +92,7 @@ build-debug: base-image-debug
 
 # build and run local ko-build container (no tags)
 run: build-local
-	docker run -e EOPA_LICENSE_TOKEN -e EOPA_LICENSE_KEY -p 8181:8181 -v $$(pwd):/cwd -w /cwd ko.local/enterprise-opa-private:edge run --server --log-level debug
+	docker run -p 8181:8181 -v $$(pwd):/cwd -w /cwd ko.local/enterprise-opa-private:edge run --server --log-level debug
 
 # build local container image (tagged)
 build-local:

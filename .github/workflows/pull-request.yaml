@@ -257,7 +257,6 @@ jobs:
         env:
           BINARY: ${{ steps.enterprise-opa.outputs.binary }}
           EOPA_VERSION: ${{ steps.eopa-version.outputs.version }}
-          EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
           # credentials for data.git plugin
           GIT_GITHUB_TOKEN: ${{ secrets.E2E_GIT_GITHUB_TOKEN }}
           GIT_AZURE_TOKEN: ${{ secrets.E2E_GIT_AZURE_TOKEN }}
@@ -486,7 +485,6 @@ jobs:
       - run: make test
         working-directory: e2e/cli
         env:
-          EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}
           IMAGE: ${{ steps.enterprise-opa.outputs.image }}
 
   performance-related:
