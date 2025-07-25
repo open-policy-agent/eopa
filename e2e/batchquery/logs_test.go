@@ -62,11 +62,20 @@ type payloadLabels struct {
 }
 
 var standardLabels = payloadLabels{
-	Type:    "enterprise-opa",
-	Version: os.Getenv("EOPA_VERSION"),
+	Type: "enterprise-opa",
 }
 
-var stdIgnores = cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "BatchDecisionID", "DecisionID", "ID", "Labels.ID", "NDBC", "Intermediate")
+var stdIgnores = cmpopts.IgnoreFields(payload{},
+	"Timestamp",
+	"Metrics",
+	"BatchDecisionID",
+	"DecisionID",
+	"ID",
+	"Labels.ID",
+	"Labels.Version",
+	"NDBC",
+	"Intermediate",
+)
 
 func TestDecisionLogsBatchQueryAPIResult(t *testing.T) {
 	policy := `

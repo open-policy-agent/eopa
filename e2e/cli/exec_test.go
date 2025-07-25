@@ -173,9 +173,16 @@ plugins:
 			Input:   map[string]any{"foo": map[string]any{"bar": "quz"}},
 			Result:  true,
 			Path:    "/test/p",
-			Labels:  payloadLabels{Version: os.Getenv("EOPA_VERSION")},
+			Labels:  payloadLabels{},
 		}
-		ignores := cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "DecisionID", "Labels.ID", "NDBC")
+		ignores := cmpopts.IgnoreFields(payload{},
+			"Timestamp",
+			"Metrics",
+			"DecisionID",
+			"Labels.ID",
+			"Labels.Version",
+			"NDBC",
+		)
 		if diff := cmp.Diff(exp, act, ignores); diff != "" {
 			t.Errorf("unexpected output (-want, +got):\n%s", diff)
 		}

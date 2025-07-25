@@ -37,21 +37,11 @@ jobs:
           sudo apt clean
           docker image ls -aq | xargs -r docker rmi
           df -h
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
-      - name: Setup github api token
-        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Install tools
         uses: jdx/mise-action@bfb9fa0b029db830a8c570757cee683df207a6c5 # v2.4.0
         env:
-          GITHUB_TOKEN: ${{ env.GH_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: golangci-lint
         uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8.0.0
         with:
@@ -106,16 +96,6 @@ jobs:
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
-      - name: Setup github api token
-        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # v2.2.0
       - name: checkout Enterprise OPA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -174,14 +154,6 @@ jobs:
         run: ../build/github-actions/gen-go-test-job-matrix.sh
         env:
           TAGS: use_opa_fork,e2e
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # v2.2.0
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -189,9 +161,7 @@ jobs:
           fetch-depth: 0
       - uses: jdx/mise-action@bfb9fa0b029db830a8c570757cee683df207a6c5 # v2.4.0
         env:
-          GITHUB_TOKEN: ${{ env.GH_API_TOKEN }}
-      - name: Setup github api token
-        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Run go mod tidy
         working-directory: e2e
         run: go mod tidy
@@ -226,14 +196,6 @@ jobs:
           sudo apt clean
           docker image ls -aq | xargs -r docker rmi
           df -h
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # v2.2.0
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -241,9 +203,7 @@ jobs:
           fetch-depth: 0
       - uses: jdx/mise-action@bfb9fa0b029db830a8c570757cee683df207a6c5 # v2.4.0
         env:
-          GITHUB_TOKEN: ${{ env.GH_API_TOKEN }}
-      - name: Setup github api token
-        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Download binary tarball
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -318,14 +278,6 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -369,14 +321,6 @@ jobs:
           sudo apt clean
           docker image ls -aq | xargs -r docker rmi
           df -h
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -384,7 +328,7 @@ jobs:
       - name: Install tools
         uses: jdx/mise-action@bfb9fa0b029db830a8c570757cee683df207a6c5 # v2.4.0
         env:
-          GITHUB_TOKEN: ${{ env.GH_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup github api token
         run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Check for base image changes (apko.yaml, apko-debug.yaml)
@@ -429,14 +373,6 @@ jobs:
           sudo apt clean
           docker image ls -aq | xargs -r docker rmi
           df -h
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # v2.2.0
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -448,8 +384,6 @@ jobs:
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ steps.go_version.outputs.go_version }}
-      - name: Setup github api token
-        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@9c156ee8a17a598857849441385a2041ef570552 # v6.3.0
         with:
@@ -458,7 +392,7 @@ jobs:
         run: make release-single
         env:
           HOSTNAME: github.actions.local
-          GITHUB_TOKEN: ${{ env.GH_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EOPA_TELEMETRY_URL: http://127.0.0.1:9191
       - name: Upload binary tarball
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -473,14 +407,6 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: install skopeo
@@ -517,14 +443,6 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Download binary tarball
@@ -556,14 +474,6 @@ jobs:
           sudo apt clean
           docker image ls -aq | xargs -r docker rmi
           df -h
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Download image tarball
@@ -595,16 +505,6 @@ jobs:
           sudo apt clean
           docker image ls -aq | xargs -r docker rmi
           df -h
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
-      - name: Setup github api token
-        run: git config --global url.https://git:$GH_API_TOKEN@github.com/StyraInc.insteadOf https://github.com/StyraInc
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           path: enterprise-opa
@@ -626,7 +526,7 @@ jobs:
           INPUT_CHECKS: true
           INPUT_CHECKS_CONFIG: enterprise-opa/gobenchdata-checks.yml
           INPUT_PUBLISH_BRANCH: benchmarks
-          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         timeout-minutes: 20
 
   cross-build:
@@ -655,22 +555,12 @@ jobs:
           sudo apt clean
           docker image ls -aq | xargs -r docker rmi
           df -h
-      - name: Generate GitHub App Token
-        id: generate_token
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
-        with:
-          app_id: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_ID }}
-          private_key: ${{ secrets.PLATFORM_AUTOMATION_GH_APP_PEM_KEY }}
-      - name: Override GH Token Env Var
-        run: echo "GH_API_TOKEN=${{ steps.generate_token.outputs.token }}" >> $GITHUB_ENV
-      - name: setup github api token
-        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Install tools
         uses: jdx/mise-action@bfb9fa0b029db830a8c570757cee683df207a6c5 # v2.4.0
         env:
-          GITHUB_TOKEN: ${{ env.GH_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: bb build/cross-build
         env:
           OUTPUTDIR: bins/
@@ -728,5 +618,3 @@ jobs:
         with:
           babashka-version: 1.12.197
       - run: bb bins/cross-run
-        env:
-          EOPA_LICENSE_TOKEN: ${{ secrets.STYRA_LOAD_LICENSE_TOKEN }}

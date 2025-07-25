@@ -43,7 +43,8 @@ RELEASE_NOTES ?= "release-notes.md"
 EXAMPLES := $(wildcard examples/*)
 
 # EOPA_VERSION: strip 'v' from tag
-export EOPA_VERSION := $(shell git describe --abbrev=0 --tags | sed s/^v//)
+# TODO(sr): Go back to this when we go back to pushing tags: $(shell git describe --abbrev=0 --tags | sed s/^v//)
+export EOPA_VERSION := 0.0.1
 VERSION := $(EOPA_VERSION)$(shell ./build/get-plugin-rev.sh)
 export OPA_VERSION := $(shell ./build/get-opa-version.sh)
 HOSTNAME ?= $(shell hostname -f)

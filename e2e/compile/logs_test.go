@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -42,11 +41,18 @@ type payloadLabels struct {
 }
 
 var standardLabels = payloadLabels{
-	Type:    "enterprise-opa",
-	Version: os.Getenv("EOPA_VERSION"),
+	Type: "enterprise-opa",
 }
 
-var stdIgnores = cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "DecisionID", "Labels.ID", "NDBC", "Intermediate")
+var stdIgnores = cmpopts.IgnoreFields(payload{},
+	"Timestamp",
+	"Metrics",
+	"DecisionID",
+	"Labels.ID",
+	"Labels.Version",
+	"NDBC",
+	"Intermediate",
+)
 
 func TestDecisionLogsCompileAPIResult(t *testing.T) {
 	policy := `
