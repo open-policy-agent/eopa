@@ -1,5 +1,3 @@
-//go:build use_opa_fork
-
 package decisionlogs
 
 import "github.com/open-policy-agent/opa/v1/plugins/logs"

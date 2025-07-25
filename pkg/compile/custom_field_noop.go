@@ -1,5 +1,3 @@
-//go:build !use_opa_fork
-
 package compile
 
 import (
