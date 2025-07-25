@@ -7,9 +7,6 @@ on:
         description: "Tag to release"
         required: true
 
-env:
-  GOPRIVATE: github.com/StyraInc/opa
-
 jobs:
   prereqs:
     name: Prereqs
