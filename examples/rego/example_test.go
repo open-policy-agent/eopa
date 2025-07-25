@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
-	"github.com/styrainc/enterprise-opa-private/pkg/storage"
+	"github.com/open-policy-agent/eopa/pkg/rego_vm"
+	"github.com/open-policy-agent/eopa/pkg/storage"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/metrics"

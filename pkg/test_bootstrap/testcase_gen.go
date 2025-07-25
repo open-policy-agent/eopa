@@ -12,8 +12,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/dependencies"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/internal/edittree"
-	"github.com/styrainc/enterprise-opa-private/pkg/internal/levenshtein"
+	"github.com/open-policy-agent/eopa/pkg/internal/edittree"
+	"github.com/open-policy-agent/eopa/pkg/internal/levenshtein"
 )
 
 // Note(philip): We use a custom interface type + sorting logic for improved

@@ -23,9 +23,9 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/util"
 
-	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	common "github.com/open-policy-agent/eopa/pkg/internal/goleak"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data"
+	inmem "github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 func TestMain(m *testing.M) {

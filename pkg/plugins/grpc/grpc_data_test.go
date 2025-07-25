@@ -18,10 +18,10 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/util"
 
-	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-	grpc_plugin "github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
-	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
+	bjson "github.com/open-policy-agent/eopa/pkg/json"
+	grpc_plugin "github.com/open-policy-agent/eopa/pkg/plugins/grpc"
+	inmem "github.com/open-policy-agent/eopa/pkg/storage"
+	datav1 "github.com/open-policy-agent/eopa/proto/gen/go/eopa/data/v1"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

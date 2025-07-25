@@ -24,8 +24,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/util"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data"
+	inmem "github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 const username, password = "root", "password"

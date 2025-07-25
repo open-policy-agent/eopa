@@ -12,7 +12,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/plugins/logs"
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 
-	"github.com/styrainc/enterprise-opa-private/internal/version"
+	"github.com/open-policy-agent/eopa/internal/version"
 )
 
 func isConfig(exp Config) func(testing.TB, any, error) {

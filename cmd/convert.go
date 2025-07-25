@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/convert"
+	"github.com/open-policy-agent/eopa/pkg/convert"
 )
 
 func Convert() *cobra.Command {

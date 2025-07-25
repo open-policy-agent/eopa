@@ -7,7 +7,7 @@ import (
 	gostrings "strings"
 	"time"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/builtins/rego"
+	"github.com/open-policy-agent/eopa/pkg/builtins/rego"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/bundle"

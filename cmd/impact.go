@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/lia"
+	"github.com/open-policy-agent/eopa/pkg/lia"
 )
 
 func liaCtl() *cobra.Command {

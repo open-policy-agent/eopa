@@ -7,8 +7,8 @@ import (
 
 	"github.com/rogpeppe/go-internal/testscript"
 
-	"github.com/styrainc/enterprise-opa-private/e2e/cli/license/testdata"
-	"github.com/styrainc/enterprise-opa-private/e2e/utils"
+	"github.com/open-policy-agent/eopa/e2e/cli/license/testdata"
+	"github.com/open-policy-agent/eopa/e2e/utils"
 )
 
 func TestLicense(t *testing.T) {

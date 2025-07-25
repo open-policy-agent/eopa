@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/styrainc/enterprise-opa-private/internal/version"
+	"github.com/open-policy-agent/eopa/internal/version"
 )
 
 type Config struct {

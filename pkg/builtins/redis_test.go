@@ -15,7 +15,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/metrics"
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 	"github.com/open-policy-agent/opa/v1/topdown/cache"
-	"github.com/styrainc/enterprise-opa-private/pkg/vm"
+	"github.com/open-policy-agent/eopa/pkg/vm"
 
 	"github.com/redis/go-redis/v9"
 

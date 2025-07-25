@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
+	"github.com/open-policy-agent/eopa/pkg/plugins/impact"
 )
 
 func TestHTTPEndpointErrors(t *testing.T) {

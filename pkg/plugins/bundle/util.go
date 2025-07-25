@@ -7,7 +7,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	bjson "github.com/open-policy-agent/eopa/pkg/json"
 )
 
 // BjsonFromBinary returns a bjson.Json instance (on success) that was read from

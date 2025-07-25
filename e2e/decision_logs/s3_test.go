@@ -21,7 +21,7 @@ import (
 	tc_log "github.com/testcontainers/testcontainers-go/log"
 	tc_wait "github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/styrainc/enterprise-opa-private/e2e/wait"
+	"github.com/open-policy-agent/eopa/e2e/wait"
 )
 
 const (

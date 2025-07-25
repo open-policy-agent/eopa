@@ -18,7 +18,7 @@ import (
 	"github.com/redpanda-data/benthos/v4/public/bloblang"
 	"github.com/redpanda-data/benthos/v4/public/service"
 
-	"github.com/styrainc/enterprise-opa-private/internal/benthos/impl/aws/config"
+	"github.com/open-policy-agent/eopa/internal/benthos/impl/aws/config"
 )
 
 const (

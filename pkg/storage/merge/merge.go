@@ -7,7 +7,7 @@
 package merge
 
 import (
-	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	bjson "github.com/open-policy-agent/eopa/pkg/json"
 )
 
 // InterfaceMaps returns the result of merging a and b. If a and b cannot be

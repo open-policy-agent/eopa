@@ -14,7 +14,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/server/writer"
 	"github.com/open-policy-agent/opa/v1/util"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/preview/types"
+	"github.com/open-policy-agent/eopa/pkg/preview/types"
 )
 
 const (

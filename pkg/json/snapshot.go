@@ -15,7 +15,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/json/internal/utils"
+	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
 )
 
 // testTime is for unit tests to control the time.

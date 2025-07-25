@@ -12,7 +12,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/logging"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/test_bootstrap"
+	"github.com/open-policy-agent/eopa/pkg/test_bootstrap"
 )
 
 // Sub-command for automated test stub/mock generation.

@@ -22,17 +22,17 @@ import (
 
 	opa_envoy "github.com/open-policy-agent/opa-envoy-plugin/plugin"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/batchquery"
-	"github.com/styrainc/enterprise-opa-private/pkg/compile"
-	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
-	dl "github.com/styrainc/enterprise-opa-private/pkg/plugins/decision_logs"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
-	"github.com/styrainc/enterprise-opa-private/pkg/preview"
-	"github.com/styrainc/enterprise-opa-private/pkg/storage"
-	"github.com/styrainc/enterprise-opa-private/pkg/vm"
+	"github.com/open-policy-agent/eopa/pkg/batchquery"
+	"github.com/open-policy-agent/eopa/pkg/compile"
+	"github.com/open-policy-agent/eopa/pkg/ekm"
+	"github.com/open-policy-agent/eopa/pkg/plugins/bundle"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data"
+	dl "github.com/open-policy-agent/eopa/pkg/plugins/decision_logs"
+	"github.com/open-policy-agent/eopa/pkg/plugins/grpc"
+	"github.com/open-policy-agent/eopa/pkg/plugins/impact"
+	"github.com/open-policy-agent/eopa/pkg/preview"
+	"github.com/open-policy-agent/eopa/pkg/storage"
+	"github.com/open-policy-agent/eopa/pkg/vm"
 )
 
 // default bind address if --addr (-a) was not provided in CLI args

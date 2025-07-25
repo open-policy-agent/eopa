@@ -8,9 +8,9 @@ import (
 	"github.com/open-policy-agent/opa/v1/util"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
+	"github.com/open-policy-agent/eopa/pkg/builtins"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/transform"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/utils"
 )
 
 type factory struct{}

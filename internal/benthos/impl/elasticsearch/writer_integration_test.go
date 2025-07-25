@@ -17,7 +17,7 @@ import (
 	"github.com/redpanda-data/benthos/v4/public/service"
 	"github.com/redpanda-data/benthos/v4/public/service/integration"
 
-	"github.com/styrainc/enterprise-opa-private/internal/benthos/impl/elasticsearch"
+	"github.com/open-policy-agent/eopa/internal/benthos/impl/elasticsearch"
 )
 
 func outputFromConf(t testing.TB, confStr string, args ...any) *elasticsearch.Output {

@@ -24,9 +24,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
-	"github.com/styrainc/enterprise-opa-private/pkg/storage/merge"
+	bjson "github.com/open-policy-agent/eopa/pkg/json"
+	"github.com/open-policy-agent/eopa/pkg/plugins/bundle"
+	"github.com/open-policy-agent/eopa/pkg/storage/merge"
 
 	"github.com/open-policy-agent/opa/v1/storage"
 )

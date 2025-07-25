@@ -17,8 +17,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 	"github.com/open-policy-agent/opa/v1/version"
-	"github.com/styrainc/enterprise-opa-private/pkg/json"
-	"github.com/styrainc/enterprise-opa-private/pkg/preview/types"
+	"github.com/open-policy-agent/eopa/pkg/json"
+	"github.com/open-policy-agent/eopa/pkg/preview/types"
 )
 
 // WASMResolverOpts is a preview option which adds any defined WASM resolvers to

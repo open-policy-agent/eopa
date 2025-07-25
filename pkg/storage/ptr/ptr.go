@@ -8,8 +8,8 @@ package ptr
 import (
 	"strconv"
 
-	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-	"github.com/styrainc/enterprise-opa-private/pkg/storage/errors"
+	bjson "github.com/open-policy-agent/eopa/pkg/json"
+	"github.com/open-policy-agent/eopa/pkg/storage/errors"
 
 	"github.com/open-policy-agent/opa/v1/storage"
 )

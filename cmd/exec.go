@@ -7,8 +7,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/sdk"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
-	eopa_sdk "github.com/styrainc/enterprise-opa-private/pkg/sdk"
+	"github.com/open-policy-agent/eopa/pkg/ekm"
+	eopa_sdk "github.com/open-policy-agent/eopa/pkg/sdk"
 )
 
 // Run provides the CLI entrypoint for the `exec` subcommand

@@ -9,8 +9,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/plugins/discovery"
 	"github.com/open-policy-agent/opa/v1/topdown"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	"github.com/open-policy-agent/eopa/pkg/plugins/impact"
+	inmem "github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 func pluginMgr(t *testing.T, config string) *plugins.Manager {

@@ -21,10 +21,10 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/util"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/ldap"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/ldap/mocks"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/ldap"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/ldap/mocks"
+	inmem "github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 var (

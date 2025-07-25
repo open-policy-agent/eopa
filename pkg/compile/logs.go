@@ -11,7 +11,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/server"
 	"github.com/open-policy-agent/opa/v1/storage"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
+	"github.com/open-policy-agent/eopa/pkg/plugins/bundle"
 )
 
 // decisionLogType is injected under custom.type in the DL entry

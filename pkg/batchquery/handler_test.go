@@ -33,7 +33,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/test/e2e"
 	"github.com/open-policy-agent/opa/v1/util"
-	"github.com/styrainc/enterprise-opa-private/pkg/batchquery"
+	"github.com/open-policy-agent/eopa/pkg/batchquery"
 )
 
 type tr struct {

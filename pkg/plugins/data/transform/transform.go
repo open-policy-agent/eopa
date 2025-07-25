@@ -12,7 +12,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/topdown"
 
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	inmem "github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 type Rego struct {

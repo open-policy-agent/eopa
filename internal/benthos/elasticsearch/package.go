@@ -2,5 +2,5 @@ package elasticsearch
 
 import (
 	// Bring in the internal plugin definitions.
-	_ "github.com/styrainc/enterprise-opa-private/internal/benthos/impl/elasticsearch"
+	_ "github.com/open-policy-agent/eopa/internal/benthos/impl/elasticsearch"
 )

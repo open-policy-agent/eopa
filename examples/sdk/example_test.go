@@ -20,7 +20,7 @@ import (
 	"github.com/open-policy-agent/opa/sdk"
 	"github.com/open-policy-agent/opa/storage"
 
-	load_sdk "github.com/styrainc/enterprise-opa-private/pkg/sdk"
+	load_sdk "github.com/open-policy-agent/eopa/pkg/sdk"
 )
 
 func ExampleDataPlugin() {

@@ -51,11 +51,11 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/reflection"
 
-	internal_logging "github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc/internal/logging"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc/internal/uuid"
-	bulkv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/bulk/v1"
-	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
-	policyv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
+	internal_logging "github.com/open-policy-agent/eopa/pkg/plugins/grpc/internal/logging"
+	"github.com/open-policy-agent/eopa/pkg/plugins/grpc/internal/uuid"
+	bulkv1 "github.com/open-policy-agent/eopa/proto/gen/go/eopa/bulk/v1"
+	datav1 "github.com/open-policy-agent/eopa/proto/gen/go/eopa/data/v1"
+	policyv1 "github.com/open-policy-agent/eopa/proto/gen/go/eopa/policy/v1"
 )
 
 // AuthenticationScheme enumerates the supported authentication schemes. The

@@ -9,7 +9,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/topdown"
 
-	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	fjson "github.com/open-policy-agent/eopa/pkg/json"
 )
 
 func isUndefinedType(v Value) bool {

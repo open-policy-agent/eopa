@@ -23,8 +23,8 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	testcontainervault "github.com/testcontainers/testcontainers-go/modules/vault"
 
-	"github.com/styrainc/enterprise-opa-private/e2e/utils"
-	"github.com/styrainc/enterprise-opa-private/e2e/wait"
+	"github.com/open-policy-agent/eopa/e2e/utils"
+	"github.com/open-policy-agent/eopa/e2e/wait"
 )
 
 const (

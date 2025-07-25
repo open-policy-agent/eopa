@@ -10,11 +10,11 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/iropt"
-	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-	_ "github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle" // register bjson extension
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
-	"github.com/styrainc/enterprise-opa-private/pkg/vm"
+	"github.com/open-policy-agent/eopa/pkg/iropt"
+	bjson "github.com/open-policy-agent/eopa/pkg/json"
+	_ "github.com/open-policy-agent/eopa/pkg/plugins/bundle" // register bjson extension
+	"github.com/open-policy-agent/eopa/pkg/plugins/impact"
+	"github.com/open-policy-agent/eopa/pkg/vm"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/ir"

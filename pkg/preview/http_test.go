@@ -12,7 +12,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/open-policy-agent/opa/v1/storage"
-	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	bjson "github.com/open-policy-agent/eopa/pkg/json"
 )
 
 var testPolicy = map[string]string{

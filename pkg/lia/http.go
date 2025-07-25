@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/utils"
 )
 
 func (r *rec) client() (*http.Client, error) {

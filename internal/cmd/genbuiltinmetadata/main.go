@@ -14,7 +14,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/types"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
+	"github.com/open-policy-agent/eopa/pkg/builtins"
 )
 
 func main() {

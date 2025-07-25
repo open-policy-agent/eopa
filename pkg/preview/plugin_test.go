@@ -11,8 +11,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/config"
 	"github.com/open-policy-agent/opa/v1/plugins"
 	"github.com/open-policy-agent/opa/v1/storage"
-	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-	eopaStorage "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	bjson "github.com/open-policy-agent/eopa/pkg/json"
+	eopaStorage "github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 func TestConfig(t *testing.T) {

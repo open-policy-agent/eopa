@@ -19,8 +19,8 @@ import (
 
 	sdk_test "github.com/open-policy-agent/opa/v1/sdk/test"
 
-	"github.com/styrainc/enterprise-opa-private/e2e/utils"
-	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
+	"github.com/open-policy-agent/eopa/e2e/utils"
+	"github.com/open-policy-agent/eopa/pkg/builtins"
 )
 
 var (

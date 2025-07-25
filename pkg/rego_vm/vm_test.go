@@ -13,9 +13,9 @@ import (
 	"github.com/open-policy-agent/opa/v1/compile"
 	"github.com/open-policy-agent/opa/v1/ir"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/iropt"
-	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-	"github.com/styrainc/enterprise-opa-private/pkg/vm"
+	"github.com/open-policy-agent/eopa/pkg/iropt"
+	bjson "github.com/open-policy-agent/eopa/pkg/json"
+	"github.com/open-policy-agent/eopa/pkg/vm"
 )
 
 func setup(tb testing.TB, b *bundle.Bundle, query string) ir.Policy {

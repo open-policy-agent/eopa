@@ -5,7 +5,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/storage"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/vm"
+	"github.com/open-policy-agent/eopa/pkg/vm"
 )
 
 // PreviewTransaction abstracts over two potential transactions within a PreviewStore

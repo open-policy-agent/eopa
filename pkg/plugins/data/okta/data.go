@@ -17,8 +17,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/plugins"
 	"github.com/open-policy-agent/opa/v1/storage"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/types"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/transform"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/types"
 )
 
 const (

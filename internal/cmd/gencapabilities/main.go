@@ -10,7 +10,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
+	"github.com/open-policy-agent/eopa/pkg/builtins"
 )
 
 // used by go-generate to create capabilities.json file

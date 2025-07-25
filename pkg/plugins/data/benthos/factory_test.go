@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	inmem "github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 func TestBenthosLint(t *testing.T) {

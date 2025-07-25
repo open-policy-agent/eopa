@@ -16,7 +16,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/util"
 
-	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm" // important! use VM for rego.Eval below
+	_ "github.com/open-policy-agent/eopa/pkg/rego_vm" // important! use VM for rego.Eval below
 )
 
 func TestKafkaData(t *testing.T) {

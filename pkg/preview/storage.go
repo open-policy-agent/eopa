@@ -7,9 +7,9 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/storage"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/json"
-	eopaStorage "github.com/styrainc/enterprise-opa-private/pkg/storage"
-	storageErrors "github.com/styrainc/enterprise-opa-private/pkg/storage/errors"
+	"github.com/open-policy-agent/eopa/pkg/json"
+	eopaStorage "github.com/open-policy-agent/eopa/pkg/storage"
+	storageErrors "github.com/open-policy-agent/eopa/pkg/storage/errors"
 )
 
 // PreviewStorage sits over top of two possible store.Store instances: a

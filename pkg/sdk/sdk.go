@@ -5,12 +5,12 @@ import (
 	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/sdk"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
-	"github.com/styrainc/enterprise-opa-private/pkg/ekm"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins"
-	_ "github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle" // Register .json extension
-	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
-	"github.com/styrainc/enterprise-opa-private/pkg/storage"
+	"github.com/open-policy-agent/eopa/pkg/builtins"
+	"github.com/open-policy-agent/eopa/pkg/ekm"
+	"github.com/open-policy-agent/eopa/pkg/plugins"
+	_ "github.com/open-policy-agent/eopa/pkg/plugins/bundle" // Register .json extension
+	"github.com/open-policy-agent/eopa/pkg/rego_vm"
+	"github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 // DefaultOptions returns an sdk.Options struct initialized with the values

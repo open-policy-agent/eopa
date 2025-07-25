@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/json/internal/utils"
+	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
 )
 
 func TestBlob(t *testing.T) {

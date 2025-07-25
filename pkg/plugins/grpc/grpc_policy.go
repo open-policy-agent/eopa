@@ -7,7 +7,7 @@ import (
 	"io"
 	"runtime"
 
-	policyv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
+	policyv1 "github.com/open-policy-agent/eopa/proto/gen/go/eopa/policy/v1"
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"

@@ -13,8 +13,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/metrics"
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 
-	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
+	common "github.com/open-policy-agent/eopa/pkg/internal/goleak"
+	"github.com/open-policy-agent/eopa/pkg/plugins/impact"
 )
 
 func TestStop(t *testing.T) {
