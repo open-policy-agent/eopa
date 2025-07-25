@@ -57,7 +57,15 @@ var standardLabels = payloadLabels{
 	Version: os.Getenv("EOPA_VERSION"),
 }
 
-var stdIgnores = cmpopts.IgnoreFields(payload{}, "Timestamp", "Metrics", "DecisionID", "Labels.ID", "NDBC", "Intermediate")
+var stdIgnores = cmpopts.IgnoreFields(payload{},
+	"Timestamp",
+	"Metrics",
+	"DecisionID",
+	"Labels.ID",
+	"NDBC",
+	"Intermediate",
+	"Version",
+)
 
 var eopaHTTPPort int
 
