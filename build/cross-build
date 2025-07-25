@@ -25,8 +25,6 @@
   (fs/create-dirs outputdir)
   (run! build-test testpkgs)
   (fs/copy "build/cross-run" outputdir)
-  (build-mock "syncmock")
-  (build-mock "loginmock")
   (if build-release? (build-bin)))
 
 (when (= *file* (System/getProperty "babashka.file"))
