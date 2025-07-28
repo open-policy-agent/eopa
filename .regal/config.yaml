@@ -18,6 +18,8 @@ rules:
   imports:
     implicit-future-keywords:
       level: ignore
+    unresolved-reference:
+      level: ignore
   style:
     external-reference:
       ignore:
