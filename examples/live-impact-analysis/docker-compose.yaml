@@ -1,0 +1,22 @@
+version: '3'
+services:
+  benthos: # generate API requests
+    image: jeffail/benthos:latest
+    volumes:
+    - "./benthos.yaml:/benthos.yaml"
+
+  enterprise-opa:
+    image: ghcr.io/styrainc/enterprise-opa:latest
+    ports:
+    - "8181:8181"
+    command:
+    - "run"
+    - "--server"
+    - "--addr=0.0.0.0:8181"
+    - "--log-level=debug"
+    - "--config-file=/data/enterprise-opa-conf.yaml"
+    - "/data/policy.rego"
+    environment:
+      EOPA_LICENSE_KEY: ${EOPA_LICENSE_KEY}
+    volumes:
+    - "./:/data"

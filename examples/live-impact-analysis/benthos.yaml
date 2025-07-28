@@ -1,0 +1,23 @@
+input:
+  generate:
+    mapping: |
+      root.input.username = match random_int(seed:timestamp_unix_nano(), max:2) {
+        0 => "alice",
+        1 => "admin",
+        2 => "tester",
+      }
+      root.input.path = match random_int(seed:timestamp_unix_nano(), max:2) {
+        0 => "/data/alice",
+        1 => "/data/tester",
+        2 => "/data",
+      }
+      root.input.method = match random_int(seed:timestamp_unix_nano(), max:2) {
+        0 => "GET",
+        1 => "POST",
+        2 => "DELETE",
+      }
+    interval: 10ms
+output:
+  http_client:
+    url: "http://enterprise-opa:8181/v1/data/authz/allow"
+    verb: POST

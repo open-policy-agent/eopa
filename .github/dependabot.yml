@@ -26,6 +26,14 @@ updates:
       e2e/prisma:
         patterns:
           - "*"
+  - package-ecosystem: "npm"
+    directory: "/examples/grpc-typescript"
+    schedule:
+      interval: "weekly"
+    groups: # group all deps
+      examples/grpc-typescript:
+        patterns:
+          - "*"
   - package-ecosystem: github-actions
     directory: /
     schedule:

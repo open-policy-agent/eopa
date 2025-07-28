@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  kafka:
+    image: docker.io/bitnami/kafka:latest
+    ports:
+      - "9091:9091"
+      - "9092:9092"
+    environment:
+      - BITNAMI_DEBUG=yes
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_CFG_LISTENERS=INTERNAL://kafka:9091,EXTERNAL://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT
+      - KAFKA_CFG_ADVERTISED_LISTENERS=EXTERNAL://127.0.0.1:9092,INTERNAL://kafka:9091
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@127.0.0.1:9093
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server kafka:9091 --topic logs --create --if-not-exists"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  dl-sink:
+    image: jeffail/benthos:latest
+    ports:
+      - "4195:4195"
+    volumes:
+      -  "./benthos-dl.yml:/benthos.yaml"
+  kafka-log:
+    image: edenhill/kcat:1.7.1
+    command: "-C -b kafka:9091 -t logs -E"
+    depends_on:
+      kafka:
+        condition: service_healthy

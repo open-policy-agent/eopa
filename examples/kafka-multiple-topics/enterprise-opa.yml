@@ -1,0 +1,12 @@
+# enterprise-opa-conf.yaml
+plugins:
+  data:
+    kafka.messages:
+      type: kafka
+      urls:
+        - 127.0.0.1:19092
+      topics:
+        - users
+        - groups
+        - rest
+      rego_transform: "data.transform.transform"

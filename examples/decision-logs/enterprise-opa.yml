@@ -1,0 +1,27 @@
+services:
+- name: dl
+  url: http://127.0.0.1:4195/post
+decision_logs:
+  plugin: eopa_dl
+  drop_decision: /demo/drop
+  mask_decision: /demo/mask
+plugins:
+  eopa_dl:
+    buffer:
+      type: memory
+    output:
+    - type: console
+    - type: kafka
+      urls:
+      - 127.0.0.1:9092
+      topic: logs
+    - type: service
+      service: dl
+    - type: splunk
+      url: http://127.0.0.1:4195/post/plain
+      token: secret
+      batching:
+        at_period: 3s
+        compress: true
+      tls:
+        skip_cert_verify: true

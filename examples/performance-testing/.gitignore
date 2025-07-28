@@ -1,0 +1,5 @@
+!*.tar.gz
+bundle/*
+queries
+*.html
+*.log

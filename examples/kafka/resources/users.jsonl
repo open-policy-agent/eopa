@@ -1,0 +1,3 @@
+{"id": "d9eccc5c", "name": "Alice", "roles": ["developer", "reports-reader"]}
+{"id": "5c0ba07e", "name": "Bob", "roles": ["reports-admin"]}
+{"id": "413adc7a", "name": "Eve", "roles": ["database-reader", "database-writer"]}
