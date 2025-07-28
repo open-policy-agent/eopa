@@ -8,7 +8,7 @@ replace github.com/open-policy-agent/eopa => ../
 
 require (
 	github.com/docker/go-connections v0.5.0
-	github.com/fsouza/fake-gcs-server v1.52.1
+	github.com/fsouza/fake-gcs-server v1.52.2
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/google/go-cmp v0.7.0
@@ -19,7 +19,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/open-policy-agent/opa v1.6.1-0.20250725185617-9a73de98f70f
 	github.com/redpanda-data/benthos/v4 v4.53.1
-	github.com/redpanda-data/connect/v4 v4.60.1
+	github.com/redpanda-data/connect/v4 v4.61.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/open-policy-agent/eopa v0.0.0-00010101000000-000000000000
 	github.com/testcontainers/testcontainers-go v0.38.0
@@ -27,10 +27,10 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.38.0
 	github.com/twmb/franz-go v1.19.5
-	github.com/twmb/franz-go/pkg/kadm v1.16.0
+	github.com/twmb/franz-go/pkg/kadm v1.16.1
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
-	golang.org/x/exp v0.0.0-20250531010427-b6e5de432a8b
-	modernc.org/sqlite v1.38.0
+	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
+	modernc.org/sqlite v1.38.1
 )
 
 require (
@@ -326,7 +326,7 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	modernc.org/libc v1.65.10 // indirect
+	modernc.org/libc v1.66.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 	oras.land/oras-go/v2 v2.6.0 // indirect
