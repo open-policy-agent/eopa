@@ -152,7 +152,7 @@ jobs:
         working-directory: e2e
         run: ../build/github-actions/gen-go-test-job-matrix.sh
         env:
-          TAGS: use_opa_fork,e2e
+          TAGS: e2e
       - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # v2.2.0
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -231,7 +231,7 @@ jobs:
           # Temporarily disable error propagation
           set +e
 
-          go test -p 1 --tags=use_opa_fork,e2e github.com/open-policy-agent/eopa/e2e/${{ matrix.package }} -v -count=1 2> >(tee "$STDERR_FILE" >&2)
+          go test -p 1 --tags=e2e github.com/open-policy-agent/eopa/e2e/${{ matrix.package }} -v -count=1 2> >(tee "$STDERR_FILE" >&2)
           TEST_EXIT_CODE=$?
 
           # # Re-enable error propagation
@@ -512,7 +512,7 @@ jobs:
         if: ${{ github.ref != 'refs/heads/main' && github.actor != 'dependabot[bot]' }}
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
-          INPUT_GO_TEST_FLAGS: -tags use_opa_fork -timeout=10m
+          INPUT_GO_TEST_FLAGS: -timeout=10m
           INPUT_GO_TEST_PKGS: ./pkg/...
           INPUT_SUBDIRECTORY: eopa
           INPUT_CHECKS: true

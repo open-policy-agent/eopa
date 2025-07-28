@@ -1,7 +1,4 @@
 version: "2"
-run:
-  build-tags:
-    - use_opa_fork
 linters:
   default: none
   enable:
