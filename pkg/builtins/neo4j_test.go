@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-policy-agent/eopa/pkg/vm"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/bundle"
 	"github.com/open-policy-agent/opa/v1/compile"
@@ -15,7 +16,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/metrics"
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 	"github.com/open-policy-agent/opa/v1/topdown/cache"
-	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 

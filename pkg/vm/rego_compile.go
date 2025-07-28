@@ -14,8 +14,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/compile"
-	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	"github.com/open-policy-agent/eopa/pkg/compile"
+	fjson "github.com/open-policy-agent/eopa/pkg/json"
 )
 
 func regoCompileBuiltin(outer, state *State, args []Value) error {

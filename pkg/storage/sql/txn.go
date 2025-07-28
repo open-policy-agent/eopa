@@ -11,7 +11,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/util"
 
-	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	fjson "github.com/open-policy-agent/eopa/pkg/json"
 )
 
 const (

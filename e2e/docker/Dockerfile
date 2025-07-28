@@ -1,6 +1,6 @@
 # We need the debug image here because "RUN eopa version" needs
 # a shell of some sort.
-FROM ko.local/enterprise-opa-private:edge-debug AS builder
+FROM ko.local/eopa:edge-debug AS builder
 RUN eopa version
 RUN /bin/eopa version
 RUN opa version
@@ -24,8 +24,8 @@ RUN opa version
 
 # test that we can copy eopa from the non-debug image
 FROM alpine:latest
-COPY --from=ko.local/enterprise-opa-private:edge /bin/eopa /bin/opa /opa /ko-app/enterprise-opa-private /bin/
+COPY --from=ko.local/eopa:edge /bin/eopa /bin/opa /opa /ko-app/eopa /bin/
 # to ensure that "builder" is built
 COPY --from=builder /bin/opa /tmp/
 RUN diff /bin/eopa /bin/opa
-RUN diff /bin/eopa /bin/enterprise-opa-private
+RUN diff /bin/eopa /bin/eopa

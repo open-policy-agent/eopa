@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/styrainc/enterprise-opa-private/e2e/wait"
+	"github.com/open-policy-agent/eopa/e2e/wait"
 )
 
 func TestRunWithoutTelemetry(t *testing.T) {

@@ -15,7 +15,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/util"
 
-	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	bjson "github.com/open-policy-agent/eopa/pkg/json"
 )
 
 type (

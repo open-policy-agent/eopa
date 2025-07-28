@@ -1,4 +1,4 @@
-module github.com/styrainc/enterprise-opa-private
+module github.com/open-policy-agent/eopa
 
 go 1.24.3
 

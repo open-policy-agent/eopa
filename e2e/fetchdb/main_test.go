@@ -14,7 +14,7 @@ import (
 )
 
 var exceptions = []string{
-	// These three are instances of https://github.com/styrainc/enterprise-opa-private/issues/117
+	// These three are instances of https://github.com/open-policy-agent/eopa/issues/117
 	"data.library.v1.kubernetes.admission.workload.test_v1.test_validate_image_signature_with_cosign_item_error",
 	"data.library.v1.kubernetes.admission.workload.test_v1.test_validate_image_signature_with_cosign_systemError",
 	"data.library.v1.kubernetes.admission.workload.test_v1.test_validate_image_signature_with_cosign_HTTP_non_200_response",

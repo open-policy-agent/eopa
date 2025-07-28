@@ -19,6 +19,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/open-policy-agent/eopa/pkg/batchquery"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/config"
 	"github.com/open-policy-agent/opa/v1/logging"
@@ -33,7 +34,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/test/e2e"
 	"github.com/open-policy-agent/opa/v1/util"
-	"github.com/styrainc/enterprise-opa-private/pkg/batchquery"
 )
 
 type tr struct {

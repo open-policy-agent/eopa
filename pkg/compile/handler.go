@@ -29,7 +29,7 @@ import (
 	topdown_cache "github.com/open-policy-agent/opa/v1/topdown/cache"
 	"github.com/open-policy-agent/opa/v1/util"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/internal/levenshtein"
+	"github.com/open-policy-agent/eopa/pkg/internal/levenshtein"
 )
 
 const (

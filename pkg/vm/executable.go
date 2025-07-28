@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	fjson "github.com/open-policy-agent/eopa/pkg/json"
 )
 
 const (

@@ -11,8 +11,8 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/transform"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/utils"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/transform"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/utils"
 )
 
 type factory struct{}

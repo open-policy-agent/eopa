@@ -13,9 +13,9 @@ import (
 	"github.com/open-policy-agent/opa/v1/plugins"
 	"github.com/open-policy-agent/opa/v1/storage"
 
-	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	common "github.com/open-policy-agent/eopa/pkg/internal/goleak"
+	"github.com/open-policy-agent/eopa/pkg/plugins/grpc"
+	inmem "github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 func TestValidate(t *testing.T) {

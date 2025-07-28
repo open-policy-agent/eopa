@@ -21,9 +21,9 @@ import (
 	tc_log "github.com/testcontainers/testcontainers-go/log"
 	tc_wait "github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/styrainc/enterprise-opa-private/e2e/retry"
-	"github.com/styrainc/enterprise-opa-private/e2e/utils"
-	"github.com/styrainc/enterprise-opa-private/e2e/wait"
+	"github.com/open-policy-agent/eopa/e2e/retry"
+	"github.com/open-policy-agent/eopa/e2e/utils"
+	"github.com/open-policy-agent/eopa/e2e/wait"
 )
 
 var eopaHTTPPort int

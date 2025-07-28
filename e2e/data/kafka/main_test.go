@@ -28,8 +28,8 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/plugin/kslog"
 
-	"github.com/styrainc/enterprise-opa-private/e2e/utils"
-	"github.com/styrainc/enterprise-opa-private/e2e/wait"
+	"github.com/open-policy-agent/eopa/e2e/utils"
+	"github.com/open-policy-agent/eopa/e2e/wait"
 )
 
 // number of messages to produce

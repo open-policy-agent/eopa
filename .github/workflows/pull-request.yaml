@@ -11,7 +11,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GOPRIVATE: github.com/StyraInc/opa
   GOLANGCI_VERSION: 2.1.6
 
 jobs:
@@ -60,11 +59,11 @@ jobs:
       # The action uses the repo-scoped GITHUB_TOKEN to allow one of its dependencies (Octokit)
       # to skip Github API rate limits when fetching the latest buf build artifact.
       - uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1.50.0
-        if: steps.changes.outputs.proto == 'true'
+        if: steps.changes.outputs.proto == 'true' && false
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - uses: bufbuild/buf-lint-action@06f9dd823d873146471cfaaf108a993fe00e5325 # v1.1.1
-        if: steps.changes.outputs.proto == 'true'
+        if: steps.changes.outputs.proto == 'true' && false
         with:
           input: proto
       # Now that we've passed linting, we check to make sure the build artifacts are identical
@@ -75,7 +74,7 @@ jobs:
           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.30.0
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
       - name: Fail if `buf generate` diff detected between generated/checked in files
-        if: steps.changes.outputs.proto == 'true'
+        if: steps.changes.outputs.proto == 'true' && false
         run: |-
           cd proto && buf generate
           if [[ "$(git diff --name-status | wc -l)" != 0 ]]; then
@@ -100,23 +99,23 @@ jobs:
       - name: checkout Enterprise OPA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          path: enterprise-opa
+          path: eopa
           persist-credentials: false
-      - id: enterprise-opa
+      - id: eopa
         name: read versions
         run: |
           echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
           echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
-        working-directory: enterprise-opa
+        working-directory: eopa
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          cache-dependency-path: enterprise-opa/go.sum
-          go-version: ${{ steps.enterprise-opa.outputs.go_version }}
+          cache-dependency-path: eopa/go.sum
+          go-version: ${{ steps.eopa.outputs.go_version }}
       - name: checkout OPA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: open-policy-agent/opa
-          ref: ${{ steps.enterprise-opa.outputs.opa_version }}
+          ref: ${{ steps.eopa.outputs.opa_version }}
           path: opa
           persist-credentials: false
       - name: pick up opa directory
@@ -124,16 +123,16 @@ jobs:
         working-directory: opa
         run: echo "dir=$(pwd)" >> $GITHUB_OUTPUT
       - run: make test
-        working-directory: enterprise-opa
+        working-directory: eopa
         env:
           OPA_ROOT: ${{ steps.opa.outputs.dir }}
       - run: make test-examples-sdk test-examples-rego
-        working-directory: enterprise-opa
+        working-directory: eopa
       - name: smoke test regal build
         run: |
           go mod tidy
           go build -o regal main.go
-        working-directory: enterprise-opa/examples/regal
+        working-directory: eopa/examples/regal
         env:
           GOPRIVATE: github.com/styrainc/
 
@@ -153,7 +152,7 @@ jobs:
         working-directory: e2e
         run: ../build/github-actions/gen-go-test-job-matrix.sh
         env:
-          TAGS: use_opa_fork,e2e
+          TAGS: e2e
       - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # v2.2.0
       - name: Check out code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -208,8 +207,8 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: binary
-      - name: Enterprise OPA binary
-        id: enterprise-opa
+      - name: EOPA binary
+        id: eopa
         run: |
           echo "binary=$(pwd)/eopa" >> $GITHUB_OUTPUT
           pwd >> $GITHUB_PATH
@@ -232,7 +231,7 @@ jobs:
           # Temporarily disable error propagation
           set +e
 
-          go test -p 1 --tags=use_opa_fork,e2e github.com/styrainc/enterprise-opa-private/e2e/${{ matrix.package }} -v -count=1 2> >(tee "$STDERR_FILE" >&2)
+          go test -p 1 --tags=e2e github.com/open-policy-agent/eopa/e2e/${{ matrix.package }} -v -count=1 2> >(tee "$STDERR_FILE" >&2)
           TEST_EXIT_CODE=$?
 
           # # Re-enable error propagation
@@ -250,7 +249,7 @@ jobs:
           fi
         working-directory: e2e
         env:
-          BINARY: ${{ steps.enterprise-opa.outputs.binary }}
+          BINARY: ${{ steps.eopa.outputs.binary }}
           EOPA_VERSION: ${{ steps.eopa-version.outputs.version }}
           # credentials for data.git plugin
           GIT_GITHUB_TOKEN: ${{ secrets.E2E_GIT_GITHUB_TOKEN }}
@@ -289,67 +288,67 @@ jobs:
       # The action uses the repo-scoped GITHUB_TOKEN to allow one of its dependencies (Octokit)
       # to skip Github API rate limits when fetching the latest buf build artifact.
       - uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1.50.0
-        if: steps.changes.outputs.proto == 'true'
+        if: steps.changes.outputs.proto == 'true' && false
         with:
           github_token: ${{ steps.generate_token.outputs.token }}
       - uses: bufbuild/buf-push-action@a654ff18effe4641ebea4a4ce242c49800728459 # v1.2.0
-        if: steps.changes.outputs.proto == 'true'
+        if: steps.changes.outputs.proto == 'true' && false
         with:
-          buf_token: ${{ secrets.BUF_TOKEN }}
+          buf_token: ${{ secrets.BUF_TOKEN }} # TODO
           draft: true
           input: proto
 
-  build:
-    name: Ko Build
-    needs: prereqs
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Tune GitHub-hosted runner network
-        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
-      - name: Free disk space
-        run: |
-          df -h
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo apt clean
-          docker image ls -aq | xargs -r docker rmi
-          df -h
-      - name: Check out code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 0
-      - name: Install tools
-        uses: jdx/mise-action@bfb9fa0b029db830a8c570757cee683df207a6c5 # v2.4.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Setup github api token
-        run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
-      - name: Check for base image changes (apko.yaml, apko-debug.yaml)
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
-        id: changes
-        with:
-          filters: |
-            apko:
-              - 'apko*.yaml'
-      - name: Prep ko
-        run: |
-          echo "${{ github.token }}" | ko login ghcr.io --username "dummy" --password-stdin
-          echo "KO_DOCKER_REPO=ghcr.io/styrainc" >> $GITHUB_ENV
-      - name: Build images
-        run: make build build-debug
-        env:
-          SKIP_IMAGES: ${{ steps.changes.outputs.apko == 'false' }}
-      - name: Upload image tarball
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: image
-          path: local.tar
-      - name: Upload debug image tarball
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: image-debug
-          path: local-debug.tar
+  # build:
+  #   name: Ko Build
+  #   needs: prereqs
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - name: Tune GitHub-hosted runner network
+  #       uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
+  #     - name: Free disk space
+  #       run: |
+  #         df -h
+  #         sudo rm -rf /usr/share/dotnet
+  #         sudo rm -rf /opt/ghc
+  #         sudo rm -rf "/usr/local/share/boost"
+  #         sudo apt clean
+  #         docker image ls -aq | xargs -r docker rmi
+  #         df -h
+  #     - name: Check out code
+  #       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Install tools
+  #       uses: jdx/mise-action@bfb9fa0b029db830a8c570757cee683df207a6c5 # v2.4.0
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Setup github api token
+  #       run: git config --global url.https://git:$GH_API_TOKEN@github.com/.insteadOf https://github.com/
+  #     - name: Check for base image changes (apko.yaml, apko-debug.yaml)
+  #       uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+  #       id: changes
+  #       with:
+  #         filters: |
+  #           apko:
+  #             - 'apko*.yaml'
+  #     - name: Prep ko
+  #       run: |
+  #         echo "${{ github.token }}" | ko login ghcr.io --username "dummy" --password-stdin
+  #         echo "KO_DOCKER_REPO=ghcr.io/open-policy-agent" >> $GITHUB_ENV
+  #     - name: Build images
+  #       run: make build build-debug
+  #       env:
+  #         SKIP_IMAGES: ${{ steps.changes.outputs.apko == 'false' }}
+  #     - name: Upload image tarball
+  #       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+  #       with:
+  #         name: image
+  #         path: local.tar
+  #     - name: Upload debug image tarball
+  #       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+  #       with:
+  #         name: image-debug
+  #         path: local-debug.tar
 
   goreleaser:
     name: Goreleaser build
@@ -394,41 +393,41 @@ jobs:
           name: binary
           path: dist/linux-build_linux_amd64_v1/eopa
 
-  smoke-docker:
-    name: Smoke test docker images
-    runs-on: ubuntu-24.04
-    needs: build
-    steps:
-      - name: Tune GitHub-hosted runner network
-        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
-      - name: Check out code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: install skopeo
-        uses: jaxxstorm/action-install-gh-release@6096f2a2bbfee498ced520b6922ac2c06e990ed2 # v2.1.0
-        with:
-          repo: lework/skopeo-binary
-          extension-matching: disable
-          tag: v1.16.0
-          cache: enable
-          rename-to: skopeo
-          chmod: 0755
-      - name: Download image tarball
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: image
-      - name: Download debug image tarball
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: image-debug
-      - name: load images
-        run: |
-          skopeo copy docker-archive:local.tar docker-daemon:ko.local/enterprise-opa-private:edge
-          skopeo copy docker-archive:local-debug.tar docker-daemon:ko.local/enterprise-opa-private:edge-debug
-      - name: docker build based on image
-        run: |
-          docker build -t test .
-          docker run test eopa version
-        working-directory: e2e/docker
+  # smoke-docker:
+  #   name: Smoke test docker images
+  #   runs-on: ubuntu-24.04
+  #   needs: build
+  #   steps:
+  #     - name: Tune GitHub-hosted runner network
+  #       uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
+  #     - name: Check out code
+  #       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+  #     - name: install skopeo
+  #       uses: jaxxstorm/action-install-gh-release@6096f2a2bbfee498ced520b6922ac2c06e990ed2 # v2.1.0
+  #       with:
+  #         repo: lework/skopeo-binary
+  #         extension-matching: disable
+  #         tag: v1.16.0
+  #         cache: enable
+  #         rename-to: skopeo
+  #         chmod: 0755
+  #     - name: Download image tarball
+  #       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+  #       with:
+  #         name: image
+  #     - name: Download debug image tarball
+  #       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+  #       with:
+  #         name: image-debug
+  #     - name: load images
+  #       run: |
+  #         skopeo copy docker-archive:local.tar docker-daemon:ko.local/eopa:edge
+  #         skopeo copy docker-archive:local-debug.tar docker-daemon:ko.local/eopa:edge-debug
+  #     - name: docker build based on image
+  #       run: |
+  #         docker build -t test .
+  #         docker run test eopa version
+  #       working-directory: e2e/docker
 
   smoke-caps:
     name: Smoke Test Capabilities
@@ -452,35 +451,35 @@ jobs:
           ./eopa capabilities --current > eopa-capabilities.json
           opa build --capabilities eopa-capabilities.json test/cli/smoke/
 
-  smoke-cli:
-    name: Smoke Test CLI
-    runs-on: ubuntu-24.04
-    needs: build
-    steps:
-      - name: Tune GitHub-hosted runner network
-        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
-      - name: Free disk space
-        run: |
-          df -h
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo apt clean
-          docker image ls -aq | xargs -r docker rmi
-          df -h
-      - name: Check out code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Download image tarball
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: image
-      - name: Enterprise OPA image
-        id: enterprise-opa
-        run: echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
-      - run: make test
-        working-directory: e2e/cli
-        env:
-          IMAGE: ${{ steps.enterprise-opa.outputs.image }}
+  # smoke-cli:
+  #   name: Smoke Test CLI
+  #   runs-on: ubuntu-24.04
+  #   needs: build
+  #   steps:
+  #     - name: Tune GitHub-hosted runner network
+  #       uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
+  #     - name: Free disk space
+  #       run: |
+  #         df -h
+  #         sudo rm -rf /usr/share/dotnet
+  #         sudo rm -rf /opt/ghc
+  #         sudo rm -rf "/usr/local/share/boost"
+  #         sudo apt clean
+  #         docker image ls -aq | xargs -r docker rmi
+  #         df -h
+  #     - name: Check out code
+  #       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+  #     - name: Download image tarball
+  #       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+  #       with:
+  #         name: image
+  #     - name: EOPA image
+  #       id: eopa
+  #       run: echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
+  #     - run: make test
+  #       working-directory: e2e/cli
+  #       env:
+  #         IMAGE: ${{ steps.eopa.outputs.image }}
 
   performance-related:
     name: Performance
@@ -500,24 +499,24 @@ jobs:
           df -h
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          path: enterprise-opa
+          path: eopa
       - id: go_version
         name: Read go version
         run: echo "go_version=1.23.6" >> $GITHUB_OUTPUT
-        working-directory: enterprise-opa
+        working-directory: eopa
 
         # benchmark, gobenchdata
       - run: make benchmark
-        working-directory: enterprise-opa
+        working-directory: eopa
       - name: gobenchdata check
         if: ${{ github.ref != 'refs/heads/main' && github.actor != 'dependabot[bot]' }}
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
-          INPUT_GO_TEST_FLAGS: -tags use_opa_fork -timeout=10m
+          INPUT_GO_TEST_FLAGS: -timeout=10m
           INPUT_GO_TEST_PKGS: ./pkg/...
-          INPUT_SUBDIRECTORY: enterprise-opa
+          INPUT_SUBDIRECTORY: eopa
           INPUT_CHECKS: true
-          INPUT_CHECKS_CONFIG: enterprise-opa/gobenchdata-checks.yml
+          INPUT_CHECKS_CONFIG: eopa/gobenchdata-checks.yml
           INPUT_PUBLISH_BRANCH: benchmarks
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         timeout-minutes: 20

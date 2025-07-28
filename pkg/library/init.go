@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	embedded "github.com/styrainc/enterprise-opa-private/library"
+	embedded "github.com/open-policy-agent/eopa/library"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 )

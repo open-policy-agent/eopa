@@ -29,8 +29,8 @@ import (
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/styrainc/enterprise-opa-private/e2e/utils"
-	"github.com/styrainc/enterprise-opa-private/e2e/wait"
+	"github.com/open-policy-agent/eopa/e2e/utils"
+	"github.com/open-policy-agent/eopa/e2e/wait"
 )
 
 const (

@@ -15,7 +15,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 	"github.com/open-policy-agent/opa/v1/topdown/cache"
 
-	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
+	fjson "github.com/open-policy-agent/eopa/pkg/json"
 )
 
 func jsonUnmarshalBuiltin(state *State, args []Value) error {

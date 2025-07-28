@@ -8,7 +8,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/topdown"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/compile"
+	"github.com/open-policy-agent/eopa/pkg/compile"
 )
 
 func evtFromExpr(e string) topdown.Event {

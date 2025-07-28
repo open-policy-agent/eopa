@@ -12,9 +12,9 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"go.uber.org/goleak"
 
-	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/kafka"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	common "github.com/open-policy-agent/eopa/pkg/internal/goleak"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/kafka"
+	inmem "github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 func TestKafkaReconfigure(t *testing.T) {

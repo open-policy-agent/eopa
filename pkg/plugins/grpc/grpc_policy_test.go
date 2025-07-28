@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
-	policyv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
+	datav1 "github.com/open-policy-agent/eopa/proto/gen/go/eopa/data/v1"
+	policyv1 "github.com/open-policy-agent/eopa/proto/gen/go/eopa/policy/v1"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

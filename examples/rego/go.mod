@@ -3,8 +3,8 @@ module github.com/styrainc/eopa-examples-rego
 go 1.24.3
 
 require (
+	github.com/open-policy-agent/eopa v0.0.0-00010101000000-000000000000
 	github.com/open-policy-agent/opa v1.6.1-0.20250725185617-9a73de98f70f
-	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -79,4 +79,4 @@ require (
 	sigs.k8s.io/yaml v1.5.0 // indirect
 )
 
-replace github.com/styrainc/enterprise-opa-private => ../../
+replace github.com/open-policy-agent/eopa => ../../

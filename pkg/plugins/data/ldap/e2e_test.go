@@ -16,7 +16,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/storage"
 
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	inmem "github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 const (

@@ -19,7 +19,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/plugins/rest"
 	"github.com/open-policy-agent/opa/v1/tracing"
 	"github.com/open-policy-agent/opa/v1/util"
-	"github.com/styrainc/enterprise-opa-private/internal/config/strvals"
+
+	"github.com/open-policy-agent/eopa/internal/config/strvals"
 )
 
 // ServiceOptions stores the options passed to ParseServicesConfig

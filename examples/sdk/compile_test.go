@@ -6,7 +6,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/topdown/cache"
-	"github.com/styrainc/enterprise-opa-private/pkg/compile"
+	"github.com/open-policy-agent/eopa/pkg/compile"
 )
 
 // TestCompile ensures that the compile package can be used with OSS OPA.

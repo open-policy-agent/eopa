@@ -19,8 +19,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
-	"github.com/styrainc/enterprise-opa-private/e2e/utils"
-	"github.com/styrainc/enterprise-opa-private/e2e/wait"
+	"github.com/open-policy-agent/eopa/e2e/utils"
+	"github.com/open-policy-agent/eopa/e2e/wait"
 )
 
 var eopaHTTPPort int
@@ -62,7 +62,7 @@ type payloadLabels struct {
 }
 
 var standardLabels = payloadLabels{
-	Type: "enterprise-opa",
+	Type: "eopa",
 }
 
 var stdIgnores = cmpopts.IgnoreFields(payload{},

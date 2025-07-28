@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	internal "github.com/styrainc/enterprise-opa-private/pkg/json/internal/json"
-	"github.com/styrainc/enterprise-opa-private/pkg/json/internal/utils"
+	internal "github.com/open-policy-agent/eopa/pkg/json/internal/json"
+	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 )

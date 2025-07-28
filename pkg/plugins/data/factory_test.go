@@ -18,15 +18,15 @@ import (
 	"github.com/open-policy-agent/opa/v1/plugins"
 	"github.com/open-policy-agent/opa/v1/storage"
 
-	common "github.com/styrainc/enterprise-opa-private/pkg/internal/goleak"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/git"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/http"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/kafka"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/ldap"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/okta"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data/s3"
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	common "github.com/open-policy-agent/eopa/pkg/internal/goleak"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/git"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/http"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/kafka"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/ldap"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/okta"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data/s3"
+	inmem "github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 func isConfig[T any](tb testing.TB, pluginType string, path string, exp T) func(testing.TB, any, error) {

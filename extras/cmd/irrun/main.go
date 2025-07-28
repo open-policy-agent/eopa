@@ -12,16 +12,16 @@ import (
 	"log"
 	"os"
 
+	eopa_builtins "github.com/open-policy-agent/eopa/pkg/builtins"
+	eopa_storage "github.com/open-policy-agent/eopa/pkg/storage"
+	"github.com/open-policy-agent/eopa/pkg/vm"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/ir"
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
-	eopa_builtins "github.com/styrainc/enterprise-opa-private/pkg/builtins"
-	eopa_storage "github.com/styrainc/enterprise-opa-private/pkg/storage"
-	"github.com/styrainc/enterprise-opa-private/pkg/vm"
 
-	_ "github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle" // register bjson extension
+	_ "github.com/open-policy-agent/eopa/pkg/plugins/bundle" // register bjson extension
 )
 
 const (

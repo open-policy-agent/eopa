@@ -7,8 +7,8 @@ import (
 
 	"github.com/rogpeppe/go-internal/testscript"
 
-	"github.com/styrainc/enterprise-opa-private/e2e/cli/eval/testdata"
-	"github.com/styrainc/enterprise-opa-private/e2e/utils"
+	"github.com/open-policy-agent/eopa/e2e/cli/eval/testdata"
+	"github.com/open-policy-agent/eopa/e2e/utils"
 )
 
 func TestEval(t *testing.T) {

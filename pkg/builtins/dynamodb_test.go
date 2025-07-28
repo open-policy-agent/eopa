@@ -18,7 +18,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 	"github.com/open-policy-agent/opa/v1/topdown/cache"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/vm"
+	"github.com/open-policy-agent/eopa/pkg/vm"
 )
 
 func TestDynamoDBGet(t *testing.T) {

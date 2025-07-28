@@ -1,10 +1,10 @@
-module github.com/styrainc/enterprise-opa-private/e2e
+module github.com/open-policy-agent/eopa/e2e
 
 go 1.24.3
 
 godebug x509negativeserial=1 // mssql docker container: https://github.com/microsoft/mssql-docker/issues/895
 
-replace github.com/styrainc/enterprise-opa-private => ../
+replace github.com/open-policy-agent/eopa => ../
 
 require (
 	github.com/docker/go-connections v0.5.0
@@ -21,7 +21,7 @@ require (
 	github.com/redpanda-data/benthos/v4 v4.53.1
 	github.com/redpanda-data/connect/v4 v4.60.1
 	github.com/rogpeppe/go-internal v1.14.1
-	github.com/styrainc/enterprise-opa-private v0.0.0-00010101000000-000000000000
+	github.com/open-policy-agent/eopa v0.0.0-00010101000000-000000000000
 	github.com/testcontainers/testcontainers-go v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.38.0

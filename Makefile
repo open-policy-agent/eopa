@@ -20,8 +20,8 @@ endif
 
 KO_DEBUG_BASE_IMAGE_LOCAL := ko.local/kobase:debug
 KO_BASE_IMAGE_LOCAL := ko.local/kobase:base
-KO_DEBUG_BASE_IMAGE := ghcr.io/styrainc/eopa-debug:latest
-KO_BASE_IMAGE := ghcr.io/styrainc/eopa-base:latest
+KO_DEBUG_BASE_IMAGE := ghcr.io/open-policy-agent/eopa-debug:latest
+KO_BASE_IMAGE := ghcr.io/open-policy-agent/eopa-base:latest
 
 ifeq ($(SKIP_IMAGES), true)
 	KO_DEBUG_BASE_IMAGE_LOCAL_REF := $(KO_DEBUG_BASE_IMAGE)
@@ -33,8 +33,8 @@ endif
 
 # all images are pushed into the public repo
 # only release images are tagged "latest"
-export KO_DOCKER_REPO=ghcr.io/styrainc/enterprise-opa
-KO_BUILD := ko build . --image-label org.opencontainers.image.source=https://github.com/StyraInc/enterprise-opa
+export KO_DOCKER_REPO=ghcr.io/open-policy-agent/eopa
+KO_BUILD := ko build . --image-label org.opencontainers.image.source=https://github.com/open-policy-agent/eopa
 KO_BUILD_DEPLOY := $(KO_BUILD) --bare --platform=linux/amd64,linux/arm64
 
 BUILD_DIR := $(shell echo `pwd`)
@@ -49,9 +49,9 @@ VERSION := $(EOPA_VERSION)$(shell ./build/get-plugin-rev.sh)
 export OPA_VERSION := $(shell ./build/get-opa-version.sh)
 HOSTNAME ?= $(shell hostname -f)
 
-VERSION_LDFLAGS := -X=github.com/styrainc/enterprise-opa-private/internal/version.Version=$(EOPA_VERSION)
+VERSION_LDFLAGS := -X=github.com/open-policy-agent/eopa/internal/version.Version=$(EOPA_VERSION)
 TELEMETRY_LDFLAGS := -X=github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=$(EOPA_TELEMETRY_URL)
-HOSTNAME_LDFLAGS := -X=github.com/styrainc/enterprise-opa-private/internal/version.Hostname=$(HOSTNAME)
+HOSTNAME_LDFLAGS := -X=github.com/open-policy-agent/eopa/internal/version.Hostname=$(HOSTNAME)
 # goreleaser reads this via .goreleaser.yaml
 export EOPA_TELEMETRY_URL ?= https://load-telemetry.corp.styra.com
 
@@ -92,17 +92,17 @@ build-debug: base-image-debug
 
 # build and run local ko-build container (no tags)
 run: build-local
-	docker run -p 8181:8181 -v $$(pwd):/cwd -w /cwd ko.local/enterprise-opa-private:edge run --server --log-level debug
+	docker run -p 8181:8181 -v $$(pwd):/cwd -w /cwd ko.local/eopa:edge run --server --log-level debug
 
 # build local container image (tagged)
 build-local:
 	KO_DEFAULTBASEIMAGE=$(KO_BASE_IMAGE_LOCAL_REF) $(KO_BUILD) --push=false --tarball=local.tar --platform "linux/$(ARCH)"
-	skopeo copy docker-archive:local.tar docker-daemon:ko.local/enterprise-opa-private:edge
+	skopeo copy docker-archive:local.tar docker-daemon:ko.local/eopa:edge
 
 # build container.
-# execute: docker run -it --rm --entrypoint sh ko.local/enterprise-opa-private:edge-debug
+# execute: docker run -it --rm --entrypoint sh ko.local/eopa:edge-debug
 build-local-debug: build-debug
-	skopeo copy docker-archive:local-debug.tar docker-daemon:ko.local/enterprise-opa-private:edge-debug
+	skopeo copy docker-archive:local-debug.tar docker-daemon:ko.local/eopa:edge-debug
 
 deploy-ci: push
 push: # HERE the base image needs to be multi-arch!
@@ -141,7 +141,7 @@ test:
 
 test-examples-%:
 	cd examples/$* && \
-	  GOPRIVATE=github.com/styrainc/enterprise-opa-private go mod tidy && \
+	  GOPRIVATE=github.com/open-policy-agent/eopa go mod tidy && \
 	  go test -vet=off .
 
 test-race:

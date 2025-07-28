@@ -19,8 +19,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown/cache"
 	"github.com/open-policy-agent/opa/v1/types"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
-	"github.com/styrainc/enterprise-opa-private/pkg/storage"
+	"github.com/open-policy-agent/eopa/pkg/rego_vm"
+	"github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 // For EOPA, this test is twofold:

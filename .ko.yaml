@@ -1,11 +1,8 @@
 builds:
-- id: main
-  env:
-  - GOPRIVATE=github.com/StyraInc/opa
-  flags:
-  - -buildmode=exe
-  - -tags=use_opa_fork
-  ldflags:
-  - -X github.com/styrainc/enterprise-opa-private/internal/version.Version={{.Env.EOPA_VERSION}}
-  - -X github.com/styrainc/enterprise-opa-private/internal/version.Hostname=github.actions.local
-  - -X github.com/open-policy-agent/opa/internal/report.ExternalServiceURL={{.Env.EOPA_TELEMETRY_URL}}
+  - id: main
+    flags:
+      - -buildmode=exe
+    ldflags:
+      - -X github.com/open-policy-agent/eopa/internal/version.Version={{.Env.EOPA_VERSION}}
+      - -X github.com/open-policy-agent/eopa/internal/version.Hostname=github.actions.local
+      - -X github.com/open-policy-agent/opa/internal/report.ExternalServiceURL={{.Env.EOPA_TELEMETRY_URL}}

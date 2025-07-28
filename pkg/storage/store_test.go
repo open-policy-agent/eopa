@@ -12,8 +12,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/util"
 	"github.com/prometheus/client_golang/prometheus"
 
-	fjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-	"github.com/styrainc/enterprise-opa-private/pkg/storage/inmem"
+	fjson "github.com/open-policy-agent/eopa/pkg/json"
+	"github.com/open-policy-agent/eopa/pkg/storage/inmem"
 )
 
 var (

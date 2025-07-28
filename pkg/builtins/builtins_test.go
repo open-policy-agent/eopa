@@ -8,9 +8,10 @@ import (
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/types"
-	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
-	"github.com/styrainc/enterprise-opa-private/pkg/library"
-	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
+
+	"github.com/open-policy-agent/eopa/pkg/builtins"
+	"github.com/open-policy-agent/eopa/pkg/library"
+	"github.com/open-policy-agent/eopa/pkg/rego_vm"
 )
 
 func TestMain(m *testing.M) {

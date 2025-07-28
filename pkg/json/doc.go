@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/json/internal/utils"
+	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
 )
 
 type Kind uint

@@ -12,12 +12,12 @@ import (
 	"github.com/open-policy-agent/opa/v1/util"
 	opa_version "github.com/open-policy-agent/opa/v1/version"
 
-	internal_logging "github.com/styrainc/enterprise-opa-private/internal/logging"
-	"github.com/styrainc/enterprise-opa-private/internal/version"
-	"github.com/styrainc/enterprise-opa-private/pkg/builtins"
-	"github.com/styrainc/enterprise-opa-private/pkg/iropt"
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/bundle"
-	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
+	internal_logging "github.com/open-policy-agent/eopa/internal/logging"
+	"github.com/open-policy-agent/eopa/internal/version"
+	"github.com/open-policy-agent/eopa/pkg/builtins"
+	"github.com/open-policy-agent/eopa/pkg/iropt"
+	"github.com/open-policy-agent/eopa/pkg/plugins/bundle"
+	"github.com/open-policy-agent/eopa/pkg/rego_vm"
 )
 
 const brand = "Enterprise OPA"

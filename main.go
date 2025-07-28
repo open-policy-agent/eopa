@@ -7,10 +7,10 @@ import (
 
 	"github.com/open-policy-agent/opa/cmd"
 
-	_ "github.com/styrainc/enterprise-opa-private/capabilities"
-	eopaCmd "github.com/styrainc/enterprise-opa-private/cmd"
-	"github.com/styrainc/enterprise-opa-private/pkg/library"
-	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
+	_ "github.com/open-policy-agent/eopa/capabilities"
+	eopaCmd "github.com/open-policy-agent/eopa/cmd"
+	"github.com/open-policy-agent/eopa/pkg/library"
+	_ "github.com/open-policy-agent/eopa/pkg/rego_vm"
 )
 
 func main() {

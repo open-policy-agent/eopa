@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/json/internal/utils"
+	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
 )
 
 // deltaPatch transforms a JSON patch to a delta to apply over a snapshot or merges the JSON patch to an existing delta.

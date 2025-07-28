@@ -28,8 +28,8 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"golang.org/x/exp/maps"
 
-	"github.com/styrainc/enterprise-opa-private/e2e/utils"
-	"github.com/styrainc/enterprise-opa-private/e2e/wait"
+	"github.com/open-policy-agent/eopa/e2e/utils"
+	"github.com/open-policy-agent/eopa/e2e/wait"
 )
 
 type payload struct {
@@ -53,7 +53,7 @@ type payloadLabels struct {
 }
 
 var standardLabels = payloadLabels{
-	Type: "enterprise-opa",
+	Type: "eopa",
 }
 
 var stdIgnores = cmpopts.IgnoreFields(payload{},
@@ -222,7 +222,7 @@ plugins:
 						if diff := cmp.Diff(exp, act, cmpopts.SortSlices(func(a, b string) bool { return a < b })); diff != "" {
 							t.Errorf("unexpected log[0] metrics: (-want +got):\n%s", diff)
 						}
-						// Was: https://github.com/styrainc/enterprise-opa-private/issues/625
+						// Was: https://github.com/open-policy-agent/eopa/issues/625
 						if act := logs[0].Metrics["timer_server_handler_ns"]; act == 0 {
 							t.Error("expected timer_server_handler_ns > 0")
 						}
@@ -569,7 +569,7 @@ plugins:
 	}
 }
 
-var ua = regexp.MustCompile(`^Enterprise OPA/([0-9]+\.[0-9]+\.[0-9]+) Open Policy Agent/[0-9.]+ \([a-z]+, [a-z0-9-_]+\)$`)
+var ua = regexp.MustCompile(`^EOPA/([0-9]+\.[0-9]+\.[0-9]+) Open Policy Agent/[0-9.]+ \([a-z]+, [a-z0-9-_]+\)$`)
 
 func expectedUA(u string) bool {
 	return ua.MatchString(u)

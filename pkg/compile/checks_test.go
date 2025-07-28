@@ -19,7 +19,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/test/e2e"
 	topdown_cache "github.com/open-policy-agent/opa/v1/topdown/cache"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/compile"
+	"github.com/open-policy-agent/eopa/pkg/compile"
 )
 
 const (

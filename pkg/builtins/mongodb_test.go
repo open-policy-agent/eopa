@@ -23,7 +23,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/vm"
+	"github.com/open-policy-agent/eopa/pkg/vm"
 )
 
 func TestMongoDBFind(t *testing.T) {

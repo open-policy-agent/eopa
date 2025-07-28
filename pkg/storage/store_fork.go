@@ -10,8 +10,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage/disk"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/storage/inmem"
-	"github.com/styrainc/enterprise-opa-private/pkg/storage/sql"
+	"github.com/open-policy-agent/eopa/pkg/storage/inmem"
+	"github.com/open-policy-agent/eopa/pkg/storage/sql"
 )
 
 func init() {

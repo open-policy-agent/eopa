@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"strings"
 
-	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
+	bjson "github.com/open-policy-agent/eopa/pkg/json"
+	datav1 "github.com/open-policy-agent/eopa/proto/gen/go/eopa/data/v1"
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"

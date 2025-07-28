@@ -8,7 +8,8 @@ import (
 	"os"
 
 	"github.com/open-policy-agent/opa/v1/plugins"
-	ftime "github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc/utils"
+
+	ftime "github.com/open-policy-agent/eopa/pkg/plugins/grpc/utils"
 )
 
 func (s *Server) getCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {

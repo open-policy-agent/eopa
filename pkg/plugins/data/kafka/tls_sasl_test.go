@@ -21,9 +21,9 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/topdown"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
-	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm" // important! use VM for rego.Eval below
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data"
+	_ "github.com/open-policy-agent/eopa/pkg/rego_vm" // important! use VM for rego.Eval below
+	inmem "github.com/open-policy-agent/eopa/pkg/storage"
 )
 
 const (

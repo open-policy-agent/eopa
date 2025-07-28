@@ -9,8 +9,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"golang.org/x/sync/errgroup"
 
-	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-	bulkv1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/bulk/v1"
+	bjson "github.com/open-policy-agent/eopa/pkg/json"
+	bulkv1 "github.com/open-policy-agent/eopa/proto/gen/go/eopa/bulk/v1"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

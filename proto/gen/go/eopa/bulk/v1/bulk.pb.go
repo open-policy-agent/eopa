@@ -21,8 +21,8 @@
 package bulkv1
 
 import (
-	v11 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
-	v1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/policy/v1"
+	v11 "github.com/open-policy-agent/eopa/proto/gen/go/eopa/data/v1"
+	v1 "github.com/open-policy-agent/eopa/proto/gen/go/eopa/policy/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	anypb "google.golang.org/protobuf/types/known/anypb"

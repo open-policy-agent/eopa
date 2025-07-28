@@ -16,7 +16,7 @@ import (
 
 	"github.com/redpanda-data/benthos/v4/public/service"
 
-	"github.com/styrainc/enterprise-opa-private/internal/benthos/impl/sql"
+	"github.com/open-policy-agent/eopa/internal/benthos/impl/sql"
 
 	_ "github.com/redpanda-data/benthos/v4/public/components/pure" // basics
 	_ "modernc.org/sqlite"                                         // SQLite support

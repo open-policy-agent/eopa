@@ -14,7 +14,7 @@ import (
 
 	"github.com/ghodss/yaml"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/internal/strvals"
+	"github.com/open-policy-agent/eopa/pkg/internal/strvals"
 
 	"github.com/open-policy-agent/opa/v1/keys"
 	"github.com/open-policy-agent/opa/v1/logging"

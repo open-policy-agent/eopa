@@ -8,9 +8,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/open-policy-agent/opa/v1/ir"
 	"github.com/spf13/cobra"
-	"github.com/styrainc/enterprise-opa-private/pkg/iropt"
+
+	"github.com/open-policy-agent/eopa/pkg/iropt"
+	"github.com/open-policy-agent/opa/v1/ir"
 )
 
 func addOptimizationFlagsAndDescription(c *cobra.Command, optLevel *int64, optEnableFlags, optDisableFlags *iropt.OptimizationPassFlags) {

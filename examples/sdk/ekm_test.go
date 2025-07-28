@@ -10,7 +10,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/sdk"
 	"github.com/open-policy-agent/opa/v1/storage"
 
-	load_sdk "github.com/styrainc/enterprise-opa-private/pkg/sdk"
+	load_sdk "github.com/open-policy-agent/eopa/pkg/sdk"
 
 	// These dependencies are only for demonstration purposes
 	hcvault "github.com/hashicorp/vault/api"

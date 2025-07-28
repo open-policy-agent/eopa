@@ -22,7 +22,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/open-policy-agent/opa/v1/topdown/cache"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
+	"github.com/open-policy-agent/eopa/pkg/rego_vm"
 )
 
 func TestPostgresEnvSend(t *testing.T) {

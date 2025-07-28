@@ -9,17 +9,17 @@ contents:
     - tzdata
 
 paths:
-  - path: /ko-app/enterprise-opa-private # https://github.com/chainguard-dev/apko/issues/1270
+  - path: /ko-app/eopa # https://github.com/chainguard-dev/apko/issues/1270
     type: empty-file
   - path: /bin/eopa
     type: symlink
-    source: /ko-app/enterprise-opa-private
+    source: /ko-app/eopa
   - path: /bin/opa
     type: symlink
-    source: /ko-app/enterprise-opa-private
+    source: /ko-app/eopa
   - path: /opa
     type: symlink
-    source: /ko-app/enterprise-opa-private
+    source: /ko-app/eopa
 
 archs:
   - x86_64

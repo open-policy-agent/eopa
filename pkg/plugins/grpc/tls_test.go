@@ -21,10 +21,10 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/util"
 
-	bjson "github.com/styrainc/enterprise-opa-private/pkg/json"
-	_ "github.com/styrainc/enterprise-opa-private/pkg/rego_vm" // important! use VM for rego.Eval below
-	inmem "github.com/styrainc/enterprise-opa-private/pkg/storage"
-	datav1 "github.com/styrainc/enterprise-opa-private/proto/gen/go/eopa/data/v1"
+	bjson "github.com/open-policy-agent/eopa/pkg/json"
+	_ "github.com/open-policy-agent/eopa/pkg/rego_vm" // important! use VM for rego.Eval below
+	inmem "github.com/open-policy-agent/eopa/pkg/storage"
+	datav1 "github.com/open-policy-agent/eopa/proto/gen/go/eopa/data/v1"
 )
 
 const (

@@ -5,10 +5,10 @@ import (
 
 	opa_envoy "github.com/open-policy-agent/opa-envoy-plugin/plugin"
 
-	"github.com/styrainc/enterprise-opa-private/pkg/plugins/data"
-	dl "github.com/styrainc/enterprise-opa-private/pkg/plugins/decision_logs"
-	// "github.com/styrainc/enterprise-opa-private/pkg/plugins/grpc"
-	// "github.com/styrainc/enterprise-opa-private/pkg/plugins/impact"
+	"github.com/open-policy-agent/eopa/pkg/plugins/data"
+	dl "github.com/open-policy-agent/eopa/pkg/plugins/decision_logs"
+	// "github.com/open-policy-agent/eopa/pkg/plugins/grpc"
+	// "github.com/open-policy-agent/eopa/pkg/plugins/impact"
 )
 
 func All() map[string]plugins.Factory {
