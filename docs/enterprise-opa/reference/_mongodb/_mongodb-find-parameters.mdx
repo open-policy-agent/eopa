@@ -1,0 +1,50 @@
+<!-- markdownlint-disable MD041 -->
+<!-- markdownlint-disable MD044 -->
+<table>
+  <thead>
+    <tr>
+      <th>Parameter</th>
+      <th>Type</th>
+      <th>Required</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>database</code></td>
+      <td>String</td>
+      <td>Yes</td>
+      <td></td>
+      <td>The name of the database.</td>
+    </tr>
+    <tr>
+      <td><code>collection</code></td>
+      <td>String</td><td>Yes</td>
+      <td></td>
+      <td>The name of the collection in the database to fetch from.</td>
+    </tr>
+    <tr>
+      <td><code>filter</code></td>
+      <td>Object</td>
+      <td>Yes</td>
+      <td></td>
+      <!-- markdownlint-disable MD044 -->
+      <td>The document describing query conditions for the operation. <a href="https://www.mongodb.com/docs/manual/reference/method/db.collection.find/">More Details</a></td>
+      <!-- markdownlint-enable MD044 -->
+    </tr>
+    <tr>
+      <td><code>{props.options_name}</code></td>
+      <td>Object</td>
+      <td>No</td>
+      <td></td>
+      <!-- markdownlint-disable MD044 -->
+      <td>The document describing extra query options. <a href="https://www.mongodb.com/docs/manual/reference/method/db.collection.find/" target="_blank" rel="noopener noreferrer">More Details</a></td>
+      <!-- markdownlint-enable MD044 -->
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-disable MD044 -->
+<!-- See https://GitHub.com/facebook/docusaurus/issues/6072#issuecomment-989516658 for why it's gotta be like this. TODO: Rewrite when HTTPS://GitHub.com/facebook/docusaurus/issues/4029 is published. -->
+<!-- markdownlint-enable MD044 -->
