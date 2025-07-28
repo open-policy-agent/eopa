@@ -5,57 +5,32 @@ updates:
     directory: /
     schedule:
       interval: daily
-    groups:
-      aws-sdk:
+    groups: # group all deps
+      build:
         patterns:
-          - "github.com/aws/aws-sdk-go-v2/*"
-          - "github.com/aws/aws-sdk-go-v2"
-          - "github.com/aws/aws-sdk-go"
-      go.opentelemetry.io:
-        patterns:
-          - "go.opentelemetry.io/*"
-      vault:
-        patterns:
-          - "github.com/hashicorp/vault/*"
-      testcontainers:
-        patterns:
-          - "github.com/testcontainers/*"
-      redpanda:
-        patterns:
-          - "github.com/redpanda-data/*"
-      franz-go:
-        patterns:
-          - "github.com/twmb/*"
+          - "*"
   - package-ecosystem: gomod
     open-pull-requests-limit: 10
     directory: /e2e
     schedule:
       interval: daily
-    groups:
-      go.opentelemetry.io:
+    groups: # group all deps
+      e2e:
         patterns:
-          - "go.opentelemetry.io/*"
-      vault:
-        patterns:
-          - "github.com/hashicorp/vault/*"
-      testcontainers:
-        patterns:
-          - "github.com/testcontainers/*"
-      redpanda:
-        patterns:
-          - "github.com/redpanda-data/*"
-      franz-go:
-        patterns:
-          - "github.com/twmb/*"
+          - "*"
   - package-ecosystem: npm
     directory: /e2e/prisma
     schedule:
       interval: daily
     groups: # group all deps
-      dev:
+      e2e/prisma:
         patterns:
           - "*"
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: daily
+    groups: # group all deps
+      actions:
+        patterns:
+          - "*"
