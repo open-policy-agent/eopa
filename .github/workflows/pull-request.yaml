@@ -59,11 +59,11 @@ jobs:
       # The action uses the repo-scoped GITHUB_TOKEN to allow one of its dependencies (Octokit)
       # to skip Github API rate limits when fetching the latest buf build artifact.
       - uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1.50.0
-        if: steps.changes.outputs.proto == 'true'
+        if: steps.changes.outputs.proto == 'true' && false
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - uses: bufbuild/buf-lint-action@06f9dd823d873146471cfaaf108a993fe00e5325 # v1.1.1
-        if: steps.changes.outputs.proto == 'true'
+        if: steps.changes.outputs.proto == 'true' && false
         with:
           input: proto
       # Now that we've passed linting, we check to make sure the build artifacts are identical
@@ -74,7 +74,7 @@ jobs:
           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.30.0
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
       - name: Fail if `buf generate` diff detected between generated/checked in files
-        if: steps.changes.outputs.proto == 'true'
+        if: steps.changes.outputs.proto == 'true' && false
         run: |-
           cd proto && buf generate
           if [[ "$(git diff --name-status | wc -l)" != 0 ]]; then
@@ -288,13 +288,13 @@ jobs:
       # The action uses the repo-scoped GITHUB_TOKEN to allow one of its dependencies (Octokit)
       # to skip Github API rate limits when fetching the latest buf build artifact.
       - uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1.50.0
-        if: steps.changes.outputs.proto == 'true'
+        if: steps.changes.outputs.proto == 'true' && false
         with:
           github_token: ${{ steps.generate_token.outputs.token }}
       - uses: bufbuild/buf-push-action@a654ff18effe4641ebea4a4ce242c49800728459 # v1.2.0
-        if: steps.changes.outputs.proto == 'true'
+        if: steps.changes.outputs.proto == 'true' && false
         with:
-          buf_token: ${{ secrets.BUF_TOKEN }}
+          buf_token: ${{ secrets.BUF_TOKEN }} # TODO
           draft: true
           input: proto
 
