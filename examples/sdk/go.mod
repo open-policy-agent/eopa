@@ -8,7 +8,7 @@ require github.com/open-policy-agent/opa v1.6.1-0.20250725185617-9a73de98f70f
 
 require (
 	github.com/hashicorp/vault/api v1.20.0
-	github.com/styrainc/open-policy-agent/eopa v0.0.0-00010101000000-000000000000
+	github.com/open-policy-agent/eopa v0.0.0-00010101000000-000000000000
 	github.com/testcontainers/testcontainers-go v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.38.0
 )
