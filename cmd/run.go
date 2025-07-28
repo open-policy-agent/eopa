@@ -234,7 +234,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 		return nil, err
 	}
 	p.rt.DiagnosticAddrs = &d
-	p.rt.ConfigOverrides = append(p.rt.ConfigOverrides, "labels.type=enterprise-opa")
+	p.rt.ConfigOverrides = append(p.rt.ConfigOverrides, "labels.type=eopa")
 
 	return &p, nil
 }

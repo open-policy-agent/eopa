@@ -41,7 +41,7 @@ type payloadLabels struct {
 }
 
 var standardLabels = payloadLabels{
-	Type: "enterprise-opa",
+	Type: "eopa",
 }
 
 var stdIgnores = cmpopts.IgnoreFields(payload{},

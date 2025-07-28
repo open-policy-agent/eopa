@@ -15,7 +15,7 @@ import (
 
 // used by go-generate to create capabilities.json file
 func main() {
-	// hook Enterprise OPA capabilities extensions callback
+	// hook EOPA capabilities extensions callback
 	builtins.Init()
 	f := ast.CapabilitiesForThisVersion()
 

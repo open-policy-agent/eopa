@@ -33,7 +33,7 @@ endif
 
 # all images are pushed into the public repo
 # only release images are tagged "latest"
-export KO_DOCKER_REPO=ghcr.io/open-policy-agent/enterprise-opa
+export KO_DOCKER_REPO=ghcr.io/open-policy-agent/eopa
 KO_BUILD := ko build . --image-label org.opencontainers.image.source=https://github.com/open-policy-agent/eopa
 KO_BUILD_DEPLOY := $(KO_BUILD) --bare --platform=linux/amd64,linux/arm64
 

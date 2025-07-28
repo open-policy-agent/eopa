@@ -12,5 +12,5 @@ import (
 var Version = "dev"
 
 func UserAgent() string {
-	return fmt.Sprintf("Enterprise OPA/%s Open Policy Agent/%s (%s, %s)", Version, opa_version.Version, runtime.GOOS, runtime.GOARCH)
+	return fmt.Sprintf("EOPA/%s Open Policy Agent/%s (%s, %s)", Version, opa_version.Version, runtime.GOOS, runtime.GOARCH)
 }

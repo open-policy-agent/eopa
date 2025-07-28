@@ -76,7 +76,7 @@ manually:
 	eopa login --read-token
 `,
 		Short:      "Sign-in to DAS instance",
-		Deprecated: "Command no longer used in Enterprise OPA",
+		Deprecated: "Command no longer used in EOPA",
 		RunE: func(*cobra.Command, []string) error {
 			return nil
 		},

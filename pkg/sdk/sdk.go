@@ -14,8 +14,8 @@ import (
 )
 
 // DefaultOptions returns an sdk.Options struct initialized with the values
-// required to use Enterprise OPA's features. Typically, you would add your
-// specific config to its Config field.
+// required to use EOPA's features. Typically, you would add your specific
+// config to its Config field.
 func DefaultOptions() sdk.Options {
 	rego_vm.SetDefault(true)
 	builtins.Init()

@@ -99,23 +99,23 @@ jobs:
       - name: checkout Enterprise OPA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          path: enterprise-opa
+          path: eopa
           persist-credentials: false
-      - id: enterprise-opa
+      - id: eopa
         name: read versions
         run: |
           echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
           echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
-        working-directory: enterprise-opa
+        working-directory: eopa
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          cache-dependency-path: enterprise-opa/go.sum
-          go-version: ${{ steps.enterprise-opa.outputs.go_version }}
+          cache-dependency-path: eopa/go.sum
+          go-version: ${{ steps.eopa.outputs.go_version }}
       - name: checkout OPA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: open-policy-agent/opa
-          ref: ${{ steps.enterprise-opa.outputs.opa_version }}
+          ref: ${{ steps.eopa.outputs.opa_version }}
           path: opa
           persist-credentials: false
       - name: pick up opa directory
@@ -123,16 +123,16 @@ jobs:
         working-directory: opa
         run: echo "dir=$(pwd)" >> $GITHUB_OUTPUT
       - run: make test
-        working-directory: enterprise-opa
+        working-directory: eopa
         env:
           OPA_ROOT: ${{ steps.opa.outputs.dir }}
       - run: make test-examples-sdk test-examples-rego
-        working-directory: enterprise-opa
+        working-directory: eopa
       - name: smoke test regal build
         run: |
           go mod tidy
           go build -o regal main.go
-        working-directory: enterprise-opa/examples/regal
+        working-directory: eopa/examples/regal
         env:
           GOPRIVATE: github.com/styrainc/
 
@@ -207,8 +207,8 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: binary
-      - name: Enterprise OPA binary
-        id: enterprise-opa
+      - name: EOPA binary
+        id: eopa
         run: |
           echo "binary=$(pwd)/eopa" >> $GITHUB_OUTPUT
           pwd >> $GITHUB_PATH
@@ -249,7 +249,7 @@ jobs:
           fi
         working-directory: e2e
         env:
-          BINARY: ${{ steps.enterprise-opa.outputs.binary }}
+          BINARY: ${{ steps.eopa.outputs.binary }}
           EOPA_VERSION: ${{ steps.eopa-version.outputs.version }}
           # credentials for data.git plugin
           GIT_GITHUB_TOKEN: ${{ secrets.E2E_GIT_GITHUB_TOKEN }}
@@ -499,24 +499,24 @@ jobs:
           df -h
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          path: enterprise-opa
+          path: eopa
       - id: go_version
         name: Read go version
         run: echo "go_version=1.23.6" >> $GITHUB_OUTPUT
-        working-directory: enterprise-opa
+        working-directory: eopa
 
         # benchmark, gobenchdata
       - run: make benchmark
-        working-directory: enterprise-opa
+        working-directory: eopa
       - name: gobenchdata check
         if: ${{ github.ref != 'refs/heads/main' && github.actor != 'dependabot[bot]' }}
         run: go run go.bobheadxi.dev/gobenchdata@v1 action
         env:
           INPUT_GO_TEST_FLAGS: -tags use_opa_fork -timeout=10m
           INPUT_GO_TEST_PKGS: ./pkg/...
-          INPUT_SUBDIRECTORY: enterprise-opa
+          INPUT_SUBDIRECTORY: eopa
           INPUT_CHECKS: true
-          INPUT_CHECKS_CONFIG: enterprise-opa/gobenchdata-checks.yml
+          INPUT_CHECKS_CONFIG: eopa/gobenchdata-checks.yml
           INPUT_PUBLISH_BRANCH: benchmarks
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         timeout-minutes: 20

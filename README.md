@@ -128,7 +128,7 @@ We have seen two different causes of failure so far for Quill signing and notari
  - The Apple notarization service itself is down.
    - Resolution: Check the Apple Developer [System Status](https://developer.apple.com/system-status/) page for outages. If there's an outage, just wait until the service comes back up, and then re-run the job.
 
-## Release Enterprise OPA
+## Release EOPA
 
 Setting the tag version will trigger the .github/workflows/push-tags.yaml action; which will publish 'eopa' release and 'enterprise-opa' containers to https://github.com/StyraInc/enterprise-opa
 

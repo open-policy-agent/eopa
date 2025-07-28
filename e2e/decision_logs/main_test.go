@@ -53,7 +53,7 @@ type payloadLabels struct {
 }
 
 var standardLabels = payloadLabels{
-	Type: "enterprise-opa",
+	Type: "eopa",
 }
 
 var stdIgnores = cmpopts.IgnoreFields(payload{},
@@ -569,7 +569,7 @@ plugins:
 	}
 }
 
-var ua = regexp.MustCompile(`^Enterprise OPA/([0-9]+\.[0-9]+\.[0-9]+) Open Policy Agent/[0-9.]+ \([a-z]+, [a-z0-9-_]+\)$`)
+var ua = regexp.MustCompile(`^EOPA/([0-9]+\.[0-9]+\.[0-9]+) Open Policy Agent/[0-9.]+ \([a-z]+, [a-z0-9-_]+\)$`)
 
 func expectedUA(u string) bool {
 	return ua.MatchString(u)
