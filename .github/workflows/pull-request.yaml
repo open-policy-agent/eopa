@@ -480,45 +480,45 @@ jobs:
         env:
           IMAGE: ${{ steps.eopa.outputs.image }}
 
-  performance-related:
-    name: Performance
-    needs: prereqs
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Tune GitHub-hosted runner network
-        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
-      - name: Free disk space
-        run: |
-          df -h
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo apt clean
-          docker image ls -aq | xargs -r docker rmi
-          df -h
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          path: eopa
-      - id: go_version
-        name: Read go version
-        run: echo "go_version=1.23.6" >> $GITHUB_OUTPUT
-        working-directory: eopa
+  # performance-related:
+  #   name: Performance
+  #   needs: prereqs
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - name: Tune GitHub-hosted runner network
+  #       uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
+  #     - name: Free disk space
+  #       run: |
+  #         df -h
+  #         sudo rm -rf /usr/share/dotnet
+  #         sudo rm -rf /opt/ghc
+  #         sudo rm -rf "/usr/local/share/boost"
+  #         sudo apt clean
+  #         docker image ls -aq | xargs -r docker rmi
+  #         df -h
+  #     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+  #       with:
+  #         path: eopa
+  #     - id: go_version
+  #       name: Read go version
+  #       run: echo "go_version=1.23.6" >> $GITHUB_OUTPUT
+  #       working-directory: eopa
 
-        # benchmark, gobenchdata
-      - run: make benchmark
-        working-directory: eopa
-      - name: gobenchdata check
-        if: ${{ github.ref != 'refs/heads/main' && github.actor != 'dependabot[bot]' }}
-        run: go run go.bobheadxi.dev/gobenchdata@v1 action
-        env:
-          INPUT_GO_TEST_FLAGS: -timeout=10m
-          INPUT_GO_TEST_PKGS: ./pkg/...
-          INPUT_SUBDIRECTORY: eopa
-          INPUT_CHECKS: true
-          INPUT_CHECKS_CONFIG: eopa/gobenchdata-checks.yml
-          INPUT_PUBLISH_BRANCH: benchmarks
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        timeout-minutes: 20
+  #       # benchmark, gobenchdata
+  #     - run: make benchmark
+  #       working-directory: eopa
+  #     - name: gobenchdata check
+  #       if: ${{ github.ref != 'refs/heads/main' && github.actor != 'dependabot[bot]' }}
+  #       run: go run go.bobheadxi.dev/gobenchdata@v1 action
+  #       env:
+  #         INPUT_GO_TEST_FLAGS: -timeout=10m
+  #         INPUT_GO_TEST_PKGS: ./pkg/...
+  #         INPUT_SUBDIRECTORY: eopa
+  #         INPUT_CHECKS: true
+  #         INPUT_CHECKS_CONFIG: eopa/gobenchdata-checks.yml
+  #         INPUT_PUBLISH_BRANCH: benchmarks
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       timeout-minutes: 20
 
   cross-build:
     runs-on: ubuntu-24.04
