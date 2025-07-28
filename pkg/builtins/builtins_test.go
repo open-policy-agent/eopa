@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/types"
+
 	"github.com/open-policy-agent/eopa/pkg/builtins"
 	"github.com/open-policy-agent/eopa/pkg/library"
 	"github.com/open-policy-agent/eopa/pkg/rego_vm"

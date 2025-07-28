@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/open-policy-agent/opa/v1/plugins"
+
 	ftime "github.com/open-policy-agent/eopa/pkg/plugins/grpc/utils"
 )
 

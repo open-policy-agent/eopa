@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/open-policy-agent/opa/v1/ir"
 	"github.com/open-policy-agent/eopa/pkg/iropt"
+	"github.com/open-policy-agent/opa/v1/ir"
 )
 
 func TestEmptyLoopReplacement(t *testing.T) {

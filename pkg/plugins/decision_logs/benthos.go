@@ -8,19 +8,18 @@ import (
 	"strings"
 	"sync"
 
-	_ "github.com/redpanda-data/benthos/v4/public/components/io"        // file/stdout cache/output
-	_ "github.com/redpanda-data/benthos/v4/public/components/pure"      // basics
 	_ "github.com/open-policy-agent/eopa/internal/benthos/aws" // aws_s3
 	_ "github.com/open-policy-agent/eopa/internal/benthos/elasticsearch"
 	_ "github.com/open-policy-agent/eopa/internal/benthos/gcp" // gcp_cloud_storage
 	_ "github.com/open-policy-agent/eopa/internal/benthos/kafka"
 	_ "github.com/open-policy-agent/eopa/internal/benthos/otlp"     // OpenTelemetry
 	_ "github.com/open-policy-agent/eopa/internal/benthos/sql/base" // SQL internals
-	_ "modernc.org/sqlite"                                                   // SQLite support
-
+	_ "github.com/redpanda-data/benthos/v4/public/components/io"    // file/stdout cache/output
+	_ "github.com/redpanda-data/benthos/v4/public/components/pure"  // basics
 	"github.com/redpanda-data/benthos/v4/public/service"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
+	_ "modernc.org/sqlite" // SQLite support
 
 	"github.com/open-policy-agent/opa/v1/logging"
 )

@@ -12,14 +12,14 @@ import (
 	"log"
 	"os"
 
+	eopa_builtins "github.com/open-policy-agent/eopa/pkg/builtins"
+	eopa_storage "github.com/open-policy-agent/eopa/pkg/storage"
+	"github.com/open-policy-agent/eopa/pkg/vm"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/ir"
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
-	eopa_builtins "github.com/open-policy-agent/eopa/pkg/builtins"
-	eopa_storage "github.com/open-policy-agent/eopa/pkg/storage"
-	"github.com/open-policy-agent/eopa/pkg/vm"
 
 	_ "github.com/open-policy-agent/eopa/pkg/plugins/bundle" // register bjson extension
 )

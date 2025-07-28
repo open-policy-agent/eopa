@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/open-policy-agent/opa/v1/storage"
 	bjson "github.com/open-policy-agent/eopa/pkg/json"
+	"github.com/open-policy-agent/opa/v1/storage"
 )
 
 var testPolicy = map[string]string{

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/open-policy-agent/eopa/internal/benthos/pulsar"
 	_ "github.com/redpanda-data/benthos/v4/public/components/pure" // tracer "none"
 	"github.com/redpanda-data/benthos/v4/public/service"
-	_ "github.com/open-policy-agent/eopa/internal/benthos/pulsar"
 
 	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/plugins"

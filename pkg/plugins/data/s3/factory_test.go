@@ -3,8 +3,8 @@ package s3
 import (
 	"testing"
 
-	"github.com/open-policy-agent/opa/v1/plugins"
 	inmem "github.com/open-policy-agent/eopa/pkg/storage"
+	"github.com/open-policy-agent/opa/v1/plugins"
 )
 
 func TestS3ConfigEndpoint(t *testing.T) {

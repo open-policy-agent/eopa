@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/open-policy-agent/opa/v1/storage"
 	bjson "github.com/open-policy-agent/eopa/pkg/json"
 	eopaStorage "github.com/open-policy-agent/eopa/pkg/storage"
 	"github.com/open-policy-agent/eopa/pkg/vm"
+	"github.com/open-policy-agent/opa/v1/storage"
 )
 
 func TestStorageGet(t *testing.T) {

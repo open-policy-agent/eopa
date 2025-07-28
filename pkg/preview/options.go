@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/open-policy-agent/eopa/pkg/json"
+	"github.com/open-policy-agent/eopa/pkg/preview/types"
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/bundle"
 	"github.com/open-policy-agent/opa/v1/plugins"
@@ -17,8 +19,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 	"github.com/open-policy-agent/opa/v1/version"
-	"github.com/open-policy-agent/eopa/pkg/json"
-	"github.com/open-policy-agent/eopa/pkg/preview/types"
 )
 
 // WASMResolverOpts is a preview option which adds any defined WASM resolvers to

@@ -19,6 +19,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/plugins/rest"
 	"github.com/open-policy-agent/opa/v1/tracing"
 	"github.com/open-policy-agent/opa/v1/util"
+
 	"github.com/open-policy-agent/eopa/internal/config/strvals"
 )
 
