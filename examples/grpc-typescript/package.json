@@ -1,7 +1,7 @@
 {
   "name": "grpc-typescript",
   "version": "0.0.1",
-  "description": "Example for using Enterprise OPA's gRPC API from TypeScript",
+  "description": "Example for using EOPA's gRPC API from TypeScript",
   "type": "module",
   "main": "index.js",
   "scripts": {

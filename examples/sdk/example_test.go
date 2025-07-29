@@ -15,17 +15,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open-policy-agent/opa/logging"
-	"github.com/open-policy-agent/opa/metrics"
-	"github.com/open-policy-agent/opa/sdk"
-	"github.com/open-policy-agent/opa/storage"
+	"github.com/open-policy-agent/opa/v1/logging"
+	"github.com/open-policy-agent/opa/v1/metrics"
+	"github.com/open-policy-agent/opa/v1/sdk"
+	"github.com/open-policy-agent/opa/v1/storage"
 
-	load_sdk "github.com/open-policy-agent/eopa/pkg/sdk"
+	eopa_sdk "github.com/open-policy-agent/eopa/pkg/sdk"
 )
 
 func ExampleDataPlugin() {
 	ctx := context.Background()
-	opts := load_sdk.DefaultOptions()
+	opts := eopa_sdk.DefaultOptions()
 	opts.Config = strings.NewReader(fmt.Sprintf(`
 plugins:
   data:
@@ -37,8 +37,7 @@ plugins:
 	store := opts.Store
 	if err := storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
 		return store.UpsertPolicy(ctx, txn, "example", []byte(`package example
-import future.keywords.if
-import future.keywords.in
+import rego.v1
 
 default allow := false
 allow if "admin" in data.roles[input.user]
@@ -76,7 +75,7 @@ allow if "admin" in data.roles[input.user]
 func ExampleSQLSend() {
 	// NOTE: We're using the sqlite database from https://docs.styra.com/load/tutorials/abac-with-sql
 	ctx := context.Background()
-	opts := load_sdk.DefaultOptions()
+	opts := eopa_sdk.DefaultOptions()
 	o, err := sdk.New(ctx, opts)
 	if err != nil {
 		panic(err)
@@ -85,6 +84,9 @@ func ExampleSQLSend() {
 	store := opts.Store
 	if err := storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
 		return store.UpsertPolicy(ctx, txn, "example", []byte(`package example
+
+import rego.v1
+
 query := sql.send({
         "driver": "sqlite",
         "data_source_name": "file:testdata/company.db",
@@ -113,7 +115,7 @@ query := sql.send({
 
 func ExampleDecisionLogsPlugin() {
 	ctx := context.Background()
-	opts := load_sdk.DefaultOptions()
+	opts := eopa_sdk.DefaultOptions()
 	opts.Config = strings.NewReader(fmt.Sprintf(`
 decision_logs:
   plugin: eopa_dl
@@ -129,7 +131,7 @@ plugins:
 	store := opts.Store
 	if err := storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
 		return store.UpsertPolicy(ctx, txn, "example", []byte(`package example
-import future.keywords.if
+import rego.v1
 
 coin if rand.intn("flip", 1) == 0
 `))
@@ -172,7 +174,7 @@ coin if rand.intn("flip", 1) == 0
 
 func ExampleBundles() {
 	ctx := context.Background()
-	opts := load_sdk.DefaultOptions()
+	opts := eopa_sdk.DefaultOptions()
 	opts.Config = strings.NewReader(fmt.Sprintf(`
 services:
 - name: bndl
@@ -207,7 +209,7 @@ bundles:
 
 func ExampleBJSONBundles() {
 	ctx := context.Background()
-	opts := load_sdk.DefaultOptions()
+	opts := eopa_sdk.DefaultOptions()
 	opts.Logger = logging.New()
 	opts.Config = strings.NewReader(fmt.Sprintf(`
 services:
@@ -247,7 +249,7 @@ func ExampleBJSONBundleViaDiscovery() {
 	// Note: for demonstration purposes only. Not required for SDK usage.
 	os.Setenv("BUNDLE_HOST", bundleServer.URL)
 
-	opts := load_sdk.DefaultOptions()
+	opts := eopa_sdk.DefaultOptions()
 	opts.Logger = logging.New()
 	opts.Config = strings.NewReader(fmt.Sprintf(`
 services:
@@ -301,11 +303,13 @@ var testserver = srv(func(w http.ResponseWriter, _ *http.Request) error {
 	})
 })
 
-var dlBuffer = bytes.Buffer{}
-var dlSink = srv(func(_ http.ResponseWriter, r *http.Request) error {
-	_, err := io.Copy(&dlBuffer, r.Body)
-	return err
-})
+var (
+	dlBuffer = bytes.Buffer{}
+	dlSink   = srv(func(_ http.ResponseWriter, r *http.Request) error {
+		_, err := io.Copy(&dlBuffer, r.Body)
+		return err
+	})
+)
 
 var bundleServer = httptest.NewServer(http.FileServer(http.Dir("testdata")))
 

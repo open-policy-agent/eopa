@@ -36,9 +36,9 @@ services:
     - "--server"
     - "--addr=0.0.0.0:8181"
     - "--log-level=debug"
-    - "--config-file=/data/eopa.yml"
+    - "--config-file=/data/eopa-conf.yml"
     volumes:
-    - "./eopa.yml:/data/eopa.yml"
+    - "./eopa-conf.yml:/data/eopa-conf.yml"
     depends_on:
     - bucket
 

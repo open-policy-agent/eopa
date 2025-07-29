@@ -1,6 +1,6 @@
 # Kubernetes Deployment
 
-Example code for [deployment](https://docs.styra.com/enterprise-opa/installation/deployment) of Styra Enterprise OPA in a Kubernetes cluster.
+Example code for [deployment](https://docs.styra.com/enterprise-opa/installation/deployment) of EOPA in a Kubernetes cluster.
 
 To run the example code in a local [kind](https://kind.sigs.k8s.io) cluster, follow the steps outlined below.
 
@@ -10,7 +10,7 @@ First, create a new cluster with the provided configuration file.
 kind create cluster --config kind-config.yaml
 ```
 
-Edit the `manifests.yaml` file and add your license key in the `styra-enterprise-opa-license` secret manifest.
+Edit the `manifests.yaml` file and add your license key in the `eopa-license` secret manifest.
 
 Next, deploy the resource manifests:
 
@@ -18,7 +18,7 @@ Next, deploy the resource manifests:
 kubectl apply -f manifests.yaml
 ```
 
-Last, use port-forwarding to verify that Styra Enterprise OPA is up and reachable:
+Last, use port-forwarding to verify that EOPA is up and reachable:
 
 ```shell
 kubectl -n eopa port-forward deployment/eopa 8181

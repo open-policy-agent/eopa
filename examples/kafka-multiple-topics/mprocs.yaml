@@ -1,4 +1,4 @@
 procs:
   docker: "docker compose up"
   benthos: "benthos -c benthos-kafka.yml"
-  eopa: "eopa run -ldebug -s transform.rego -c enterprise-opa.yml"
+  eopa: "eopa run -ldebug -s transform.rego -c eopa-conf.yml"

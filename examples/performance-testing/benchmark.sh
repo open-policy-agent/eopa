@@ -19,7 +19,7 @@ function cleanup {
 trap cleanup EXIT
 trap cleanup ERR
 
-usage="$(basename "$0") [opa-bundle] [enterprise-opa-bundle] [query_list]"
+usage="$(basename "$0") [opa-bundle] [eopa-bundle] [query_list]"
 
 if [ "$#" -ne 3 ]; then
     echo "Usage: $usage"
@@ -53,7 +53,7 @@ if [ -z "${EOPA_LICENSE_KEY}" ]; then
 fi
 
 echo "OPA bundle: $1"
-echo "Enterprise OPA bundle: $2"
+echo "EOPA bundle: $2"
 echo "Query list: $3"
 echo ""
 
@@ -75,19 +75,19 @@ opa_pid=""
 
 echo ""
 
-# Enterprise OPA Test
+# EPA Test
 nohup eopa run --server -b "$2" > eopa.log 2>&1 &
 eopa_pid="$!"
 
 while [[ "$(curl -X "POST" -d $'{"input": {}}' -s -o /dev/null -w ''%{http_code}'' http://localhost:8181/v1/data/rbac/allow?metrics)" != "200" ]]; do
-  echo "Waiting for Enterprise OPA to start..."
+  echo "Waiting for EOPA to start..."
   sleep 2
 done
-echo "Running Enterprise OPA test..."
+echo "Running EOPA test..."
 
 k6 -q run -u 10 -d $TEST_DURATION -e HOST=localhost -e QUERY_FILE="$3" test.js
 echo "" # needed to make sure k6 output is on a new line
-echo "Stopping Enterprise OPA..."
+echo "Stopping EOPA..."
 kill "$eopa_pid"
 eopa_pid=""
 

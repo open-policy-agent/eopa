@@ -2,7 +2,7 @@
 
 ## Setup containers:
 
-- `docker compose up`: starts Enterprise OPA, and a request generator that'll send eval
+- `docker compose up`: starts EOPA, and a request generator that'll send eval
   requests continuously.
 
 ## Prepare a policy change

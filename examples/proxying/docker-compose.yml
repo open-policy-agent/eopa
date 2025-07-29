@@ -1,5 +1,5 @@
 services:
-    enterprise-opa:
+    eopa:
         image: ghcr.io/open-policy-agent/eopa:latest
         ports:
             - "8181:8181"
@@ -9,7 +9,6 @@ services:
             - "--addr=0.0.0.0:8181"
             - "--log-level=debug"
         environment:
-            EOPA_LICENSE_KEY: ${EOPA_LICENSE_KEY}
             HTTP_PROXY: proxy:3128
             HTTPS_PROXY: proxy:3128
         networks:

@@ -19,5 +19,5 @@ input:
     interval: 10ms
 output:
   http_client:
-    url: "http://enterprise-opa:8181/v1/data/authz/allow"
+    url: "http://eopa:8181/v1/data/authz/allow"
     verb: POST

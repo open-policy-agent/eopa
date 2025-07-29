@@ -23,8 +23,8 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
 
-  enterprise-opa:
-    image: ${EOPA_IMAGE:-ghcr.io/styrainc/enterprise-opa:latest}
+  eopa:
+    image: ${EOPA_IMAGE:-ghcr.io/open-policy-agent/eopa:latest}
     ports:
       - "8181:8181"
     command:
@@ -32,10 +32,8 @@ services:
       - "--server"
       - "--addr=0.0.0.0:8181"
       - "--log-level=debug"
-      - "--config-file=/data/enterprise-opa-conf.yaml"
+      - "--config-file=/data/eopa-conf.yaml"
       - "/data/policy/transform.rego"
-    environment:
-      EOPA_LICENSE_KEY: ${EOPA_LICENSE_KEY}
     volumes:
       - "./:/data"
     depends_on:

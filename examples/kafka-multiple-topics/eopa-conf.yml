@@ -1,4 +1,4 @@
-# enterprise-opa-conf.yaml
+# eopa-conf.yaml
 plugins:
   data:
     kafka.messages:
