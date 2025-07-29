@@ -1,6 +1,6 @@
 package authz
 
-import future.keywords.if
+import rego.v1
 
 default allow := false
 
