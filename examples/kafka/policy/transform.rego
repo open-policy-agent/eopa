@@ -1,9 +1,6 @@
 package e2e
 
-import future.keywords.contains
-import future.keywords.every
-import future.keywords.if
-import future.keywords.in
+import rego.v1
 
 _payload(msg) := json.unmarshal(base64.decode(msg.value))
 
@@ -17,7 +14,7 @@ transform[payload.id] := val if {
 	val	:= object.filter(payload, ["name", "roles"])
 }
 
-transform[key] := val {
+transform[key] := val if {
 	some key, val in input.previous
 	not key in batch_ids
 }

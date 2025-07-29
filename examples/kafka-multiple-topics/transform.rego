@@ -21,18 +21,17 @@ _values(kind, payload) := payload if not kind in {"users", "groups"} # for other
 batches contains _kind(msg) if some msg in input.incoming
 
 # incoming messages are parsed and stored under their ID payload field
+# regal ignore:rule-name-repeats-package
 transform[kind][key] := _values(kind, payload) if {
 	some kind, payloads in incoming_latest
-	some _, payload in payloads
+	some payload in payloads
 	key := payload.id
 	not is_delete(payload)
 }
 
-# no "type" in the payload means "not delete" => undefined
-is_delete(payload) if payload.type == "delete"
-
 # if no new data came in for a certain message, we'll retain the data
 # stored previously
+# regal ignore:rule-name-repeats-package
 transform[kind][key] := val if {
 	# we cannot read existing kinds from batches, as we'd lose old data
 	# that has no updates in the incoming batch
@@ -40,6 +39,9 @@ transform[kind][key] := val if {
 	some key, val in existing
 	no_news_for_key(kind, key)
 }
+
+# no "type" in the payload means "not delete" => undefined
+is_delete(payload) if payload.type == "delete"
 
 no_news_for_key(kind, _) if not kind in batches
 
