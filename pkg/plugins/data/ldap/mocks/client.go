@@ -54,7 +54,7 @@ func (_m *Client) Bind(username string, password string) error {
 	return r0
 }
 
-// Close provides a mock function with given fields:
+// Close provides a mock function with no fields
 func (_m *Client) Close() error {
 	ret := _m.Called()
 
@@ -168,7 +168,37 @@ func (_m *Client) DirSyncAsync(ctx context.Context, searchRequest *ldap.SearchRe
 	return r0
 }
 
-// ExternalBind provides a mock function with given fields:
+// Extended provides a mock function with given fields: _a0
+func (_m *Client) Extended(_a0 *ldap.ExtendedRequest) (*ldap.ExtendedResponse, error) {
+	ret := _m.Called(_a0)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Extended")
+	}
+
+	var r0 *ldap.ExtendedResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*ldap.ExtendedRequest) (*ldap.ExtendedResponse, error)); ok {
+		return rf(_a0)
+	}
+	if rf, ok := ret.Get(0).(func(*ldap.ExtendedRequest) *ldap.ExtendedResponse); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ldap.ExtendedResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(*ldap.ExtendedRequest) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ExternalBind provides a mock function with no fields
 func (_m *Client) ExternalBind() error {
 	ret := _m.Called()
 
@@ -186,7 +216,7 @@ func (_m *Client) ExternalBind() error {
 	return r0
 }
 
-// GetLastError provides a mock function with given fields:
+// GetLastError provides a mock function with no fields
 func (_m *Client) GetLastError() error {
 	ret := _m.Called()
 
@@ -204,7 +234,7 @@ func (_m *Client) GetLastError() error {
 	return r0
 }
 
-// IsClosing provides a mock function with given fields:
+// IsClosing provides a mock function with no fields
 func (_m *Client) IsClosing() bool {
 	ret := _m.Called()
 
@@ -451,7 +481,7 @@ func (_m *Client) SimpleBind(_a0 *ldap.SimpleBindRequest) (*ldap.SimpleBindResul
 	return r0, r1
 }
 
-// Start provides a mock function with given fields:
+// Start provides a mock function with no fields
 func (_m *Client) Start() {
 	_m.Called()
 }
@@ -494,7 +524,7 @@ func (_m *Client) Syncrepl(ctx context.Context, searchRequest *ldap.SearchReques
 	return r0
 }
 
-// TLSConnectionState provides a mock function with given fields:
+// TLSConnectionState provides a mock function with no fields
 func (_m *Client) TLSConnectionState() (tls.ConnectionState, bool) {
 	ret := _m.Called()
 
@@ -540,7 +570,7 @@ func (_m *Client) UnauthenticatedBind(username string) error {
 	return r0
 }
 
-// Unbind provides a mock function with given fields:
+// Unbind provides a mock function with no fields
 func (_m *Client) Unbind() error {
 	ret := _m.Called()
 
