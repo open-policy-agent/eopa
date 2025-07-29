@@ -251,6 +251,7 @@ func ExampleBJSONBundleViaDiscovery() {
 
 	opts := eopa_sdk.DefaultOptions()
 	opts.Logger = logging.New()
+	opts.V0Compatible = true // Needed for the BJSON bundle.
 	opts.Config = strings.NewReader(fmt.Sprintf(`
 services:
 - name: bndl
