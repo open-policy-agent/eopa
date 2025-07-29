@@ -18,6 +18,16 @@ updates:
       e2e:
         patterns:
           - "*"
+  - package-ecosystem: gomod
+    open-pull-requests-limit: 10
+    directories:
+      - "/examples/*"
+    schedule:
+      interval: weekly
+    groups: # group all deps
+      build:
+        patterns:
+          - "*"
   - package-ecosystem: npm
     directory: /e2e/prisma
     schedule:
