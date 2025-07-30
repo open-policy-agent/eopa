@@ -1,0 +1,111 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: eopa
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: eopa-license
+  namespace: eopa
+type: Opaque
+stringData:
+  license: changeme
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eopa-config
+  namespace: eopa
+data:
+  config.yaml: |
+    decision_logs:
+      console: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: eopa
+  namespace: eopa
+  name: eopa
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eopa
+  template:
+    metadata:
+      labels:
+        app: eopa
+      name: eopa
+    spec:
+      containers:
+        - name: eopa
+          image: ghcr.io/open-policy-agent/eopa:latest
+          args:
+            - "run"
+            - "--server"
+            - "--addr=0.0.0.0:8181"
+            - "--config-file=/etc/config/config.yaml"
+          env:
+            - name: EOPA_LICENSE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: eopa-license
+                  key: license
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config
+          readinessProbe:
+            httpGet:
+              path: /health
+              scheme: HTTP
+              port: 8181
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              scheme: HTTP
+              port: 8181
+            initialDelaySeconds: 3
+            periodSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: eopa-config
+            items:
+              - key: "config.yaml"
+                path: "config.yaml"
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: eopa
+  namespace: eopa
+spec:
+  selector:
+    app: eopa
+  ports:
+    - port: 8181
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: eopa
+  namespace: eopa
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  rules:
+    - http:
+        paths:
+          - pathType: Prefix
+            path: /eopa(/|$)(.*)
+            backend:
+              service:
+                name: eopa
+                port:
+                  number: 8181

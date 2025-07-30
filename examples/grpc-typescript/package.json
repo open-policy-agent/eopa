@@ -1,0 +1,21 @@
+{
+  "name": "grpc-typescript",
+  "version": "0.0.1",
+  "description": "Example for using EOPA's gRPC API from TypeScript",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Styra Inc.",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@buf/styra_enterprise-opa.connectrpc_es": "^1.4.0-20230630064235-ab943e577ec8.3",
+    "@bufbuild/protobuf": "^1.10.1",
+    "@connectrpc/connect-node": "^2.0.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

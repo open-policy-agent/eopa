@@ -1,0 +1,20 @@
+version: '3'
+services:
+  benthos: # generate API requests
+    image: jeffail/benthos:latest
+    volumes:
+    - "./benthos.yaml:/benthos.yaml"
+
+  eopa:
+    image: ghcr.io/open-policy-agent/eopa:latest
+    ports:
+    - "8181:8181"
+    command:
+    - "run"
+    - "--server"
+    - "--addr=0.0.0.0:8181"
+    - "--log-level=debug"
+    - "--config-file=/data/eopa-conf.yaml"
+    - "/data/policy.rego"
+    volumes:
+    - "./:/data"

@@ -1,0 +1,15 @@
+input:
+  broker:
+    inputs:
+    - http_server:
+        path: /post/logs
+      processors:
+      - decompress:
+          algorithm: gzip
+      - unarchive:
+          format: json_array
+    - http_server:
+        path: /post/plain
+      processors:
+      - decompress:
+          algorithm: gzip

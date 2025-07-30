@@ -18,12 +18,30 @@ updates:
       e2e:
         patterns:
           - "*"
+  - package-ecosystem: gomod
+    open-pull-requests-limit: 10
+    directories:
+      - "/examples/*"
+    schedule:
+      interval: weekly
+    groups: # group all deps
+      build:
+        patterns:
+          - "*"
   - package-ecosystem: npm
     directory: /e2e/prisma
     schedule:
       interval: daily
     groups: # group all deps
       e2e/prisma:
+        patterns:
+          - "*"
+  - package-ecosystem: "npm"
+    directory: "/examples/grpc-typescript"
+    schedule:
+      interval: "weekly"
+    groups: # group all deps
+      examples/grpc-typescript:
         patterns:
           - "*"
   - package-ecosystem: github-actions

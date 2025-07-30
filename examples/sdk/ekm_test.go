@@ -7,10 +7,9 @@ import (
 	"net/http"
 	"strings"
 
+	eopa_sdk "github.com/open-policy-agent/eopa/pkg/sdk"
 	"github.com/open-policy-agent/opa/v1/sdk"
 	"github.com/open-policy-agent/opa/v1/storage"
-
-	load_sdk "github.com/open-policy-agent/eopa/pkg/sdk"
 
 	// These dependencies are only for demonstration purposes
 	hcvault "github.com/hashicorp/vault/api"
@@ -42,7 +41,7 @@ ekm:
             bearer: "kv/data/httpsend/bearer:data/token"
             scheme: "kv/data/httpsend/bearer:data/scheme"
 `
-	opts := load_sdk.DefaultOptions()
+	opts := eopa_sdk.DefaultOptions()
 	opts.Config = strings.NewReader(fmt.Sprintf(configFmt, ekmTestSrv.URL, vaultAddr))
 
 	store := opts.Store

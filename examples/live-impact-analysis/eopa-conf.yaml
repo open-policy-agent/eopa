@@ -1,0 +1,4 @@
+#decision_logs:
+#  console: true
+plugins:
+  impact_analysis: {}
