@@ -18,7 +18,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/util"
 )
 
-// Builtins is the registry of built-in functions supported by Enterprise OPA.
+// Builtins is the registry of built-in functions supported by EOPA.
 // Call RegisterBuiltin to add a new built-in.
 var Builtins []*ast.Builtin
 var builtinFunctions = map[string]topdown.BuiltinFunc{}
@@ -69,9 +69,8 @@ func RegisterBuiltin(b *ast.Builtin) {
 // built-in definitions.
 var BuiltinMap map[string]*ast.Builtin
 
-// DefaultBuiltins is the registry of built-in functions supported in Enterprise
-// OPA by default. When adding a new built-in function to Enterprise OPA, update
-// this list.
+// DefaultBuiltins is the registry of built-in functions supported in EOPA by
+// default. When adding a new built-in function to EOPA, update this list.
 var DefaultBuiltins = [...]*ast.Builtin{
 	// SQL/database builtins.
 	dynamoDBGet,
@@ -426,7 +425,7 @@ func Init() {
 	initOnce.Do(func() {
 		BuiltinMap = map[string]*ast.Builtin{}
 		for _, b := range DefaultBuiltins {
-			RegisterBuiltin(b)     // Only used for generating Enterprise OPA-specific capabilities.
+			RegisterBuiltin(b)     // Only used for generating EOPA-specific capabilities.
 			ast.RegisterBuiltin(b) // Normal builtin registration with OPA.
 		}
 		for name, fn := range builtinFunctions {

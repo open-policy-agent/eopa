@@ -3,8 +3,8 @@
 
 //go:build e2e
 
-// package kafka is for testing Enterprise OPA running as server,
-// interacting with kafka-compatible services.
+// package kafka is for testing EOPA running as server, interacting with
+// kafka-compatible services.
 package kafka
 
 import (

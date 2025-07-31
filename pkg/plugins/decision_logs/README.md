@@ -1,6 +1,6 @@
 # Decision Log Replacement
 
-Enterprise OPA allows for replacing the built-in decision logs plugin by a custom one:
+EOPA allows for replacing the built-in decision logs plugin by a custom one:
 
 ```yaml
 services:
@@ -67,5 +67,5 @@ buffer:
 These may become TODOs if we decide that the deviation isn't acceptable.
 
 - Console output goes to stdout, whereas with the default plugin, it goes to
-  stderr. All of Enterprise OPA's logs to go stderr, so it's actually rather
+  stderr. All of EOPA's logs to go stderr, so it's actually rather
   convenient to collect DLs from stdout instead.

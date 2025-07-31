@@ -52,7 +52,7 @@ p := true`
 				} else if err != nil {
 					t.Errorf("Decode: %v", err)
 				}
-				if strings.Contains(m.Msg, "Enterprise OPA is up to date.") {
+				if strings.Contains(m.Msg, "is up to date.") {
 					t.Fatalf("expected no message, got %v", m.Msg)
 				}
 			}

@@ -342,7 +342,7 @@ func TestBulkRW(t *testing.T) {
 // Sequential request / response tests.
 // Note(philip): These tests have been introduced because of a bug found in
 // the v0.100.8 release by Miro, where a write transaction was opened, but
-// potentially never closed, causing Enterprise OPA to hang indefinitely.
+// potentially never closed, causing EOPA to hang indefinitely.
 func TestBulkRWSeq(t *testing.T) {
 	type BulkRWSeqStep struct {
 		request     *bulkv1.BulkRWRequest

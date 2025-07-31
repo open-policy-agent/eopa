@@ -380,7 +380,7 @@ func outputFromRaw(m *plugins.Manager, outputRaw []byte) (output, error) {
 // valid while updates are rolled out.
 func batchingBackCompat(opts *batchOpts, logger logging.Logger) {
 	if opts.Format == "" && opts.Array {
-		logger.Warn("array is DEPRECATED and will be removed in a future version of Enterprise OPA. Use the 'format' option instead.")
+		logger.Warn("array is DEPRECATED and will be removed in a future version of EOPA. Use the 'format' option instead.")
 		opts.Format = "array"
 	}
 }

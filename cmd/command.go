@@ -188,7 +188,7 @@ func EOPACommand() *cobra.Command {
 				if p, _ := cmd.Flags().GetBool("profile"); p {
 					t := cmd.Flag("target")
 					if !t.Changed || t.Value.String() != "rego" { // not explicitly requested rego already
-						logger.Warn("profiling is not supported in Enterprise OPA, switching to OPA's evaluation mode")
+						logger.Warn("profiling is not supported in EOPA, switching to OPA's evaluation mode")
 						t.Value.Set("rego")
 					}
 				}
