@@ -3,8 +3,8 @@
 
 //go:build e2e
 
-// package git is for testing Enterprise OPA as container, running as server,
-// interacting with remote git repositories.
+// package git is for testing EOPA as container, running as server, interacting
+// with remote git repositories.
 package git
 
 import (

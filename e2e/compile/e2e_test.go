@@ -309,10 +309,10 @@ func toFruitRows(xs []fruitJSON) []fruitRow {
 }
 
 // In these test, we test the compile API end-to-end. We start an instance of
-// Enterprise OPA, load a policy, and then run a series of tests that compile
-// a query and then execute it against a database. The query is a simple
-// "include" query that filters rows from a table based on some conditions.
-// The conditions are defined in the data policy.
+// EOPA, load a policy, and then run a series of tests that compile a query and
+// then execute it against a database. The query is a simple "include" query
+// that filters rows from a table based on some conditions. The conditions are
+// defined in the data policy.
 func TestCompileHappyPathE2E(t *testing.T) {
 	dbTypes := []DBType{Postgres, MySQL, MSSQL, SQLite}
 

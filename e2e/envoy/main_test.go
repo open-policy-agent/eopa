@@ -3,7 +3,7 @@
 
 //go:build e2e
 
-// package envoy is for testing Enterprise OPA as container, running as server,
+// package envoy is for testing EOPA as container, running as server,
 // interacting with Envoy as an external authorizer using the opa-envoy-plugin.
 package envoy
 

@@ -1,9 +1,9 @@
 // Copyright 2025 The OPA Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package grpc provides the implementation of Enterprise OPA's gRPC server.
-// It is modeled directly off of OPA's HTTP Server implementation, and
-// borrows as much code from OPA as is reasonable.
+// Package grpc provides the implementation of EOPA's gRPC server. It is modeled
+// directly off of OPA's HTTP Server implementation, and borrows as much code
+// from OPA as is reasonable.
 //
 // Several features of the OPA HTTP Server are missing, notably:
 //   - Logging
@@ -337,7 +337,7 @@ func (s *Server) loadTLSCredentials() credentials.TransportCredentials {
 		}
 		s.certKeyFileHash = certKeyHash
 
-		// Enterprise OPA custom root CA Cert for mTLS use cases.
+		// EOPA custom root CA Cert for mTLS use cases.
 		// Note(philip): This currently only loads up a custom root CA cert *on
 		// startup*. Cert refresh will not pick up changes to this certificate.
 		if s.tlsRootCACertFilename != "" {

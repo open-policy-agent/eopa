@@ -3,8 +3,8 @@
 
 //go:build e2e
 
-// package impact is for testing Enterprise OPA as container, running as server,
-// with LIA enabled, and sending decision logs to a decision log service
+// package impact is for testing EOPA as container, running as server, with LIA
+// enabled, and sending decision logs to a decision log service
 package impact
 
 import (

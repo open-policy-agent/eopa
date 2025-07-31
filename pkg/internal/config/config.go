@@ -65,9 +65,9 @@ func ParseServicesConfig(opts ServiceOptions) (map[string]rest.Client, error) {
 	return services, nil
 }
 
-// Enterprise OPA implements configuration file loading. The supplied config file will be
-// read from disk (if specified) and overrides will be applied. If no config file is
-// specified, the overrides can still be applied to an empty config.
+// EOPA implements configuration file loading. The supplied config file will
+// be read from disk (if specified) and overrides will be applied. If no config
+// file is specified, the overrides can still be applied to an empty config.
 func Load(configFile string, overrides []string, overrideFiles []string) ([]byte, error) {
 	baseConf := map[string]interface{}{}
 
