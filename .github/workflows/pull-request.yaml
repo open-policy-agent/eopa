@@ -86,6 +86,31 @@ jobs:
       - name: Run Regal Lint
         run: regal lint --format github .
 
+  check-license-headers:
+    runs-on: ubuntu-24.04
+    needs: prereqs
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - id: eopa
+        name: read versions
+        run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: ${{ steps.eopa.outputs.go_version }}
+      - name: Install addlicense
+        run: go install github.com/google/addlicense@latest
+      - name: Check license headers
+        run: |
+          addlicense -check \
+            -s=only \
+            -c "The OPA Authors" \
+            -ignore '**.md' -ignore '**/*.yaml' -ignore '**/*.yml' \
+            -ignore 'internal/**' \
+            -ignore 'pkg/internal/edittree/bitvector/**' \
+            .
+
   test:
     name: Test
     needs: prereqs
