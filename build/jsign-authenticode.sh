@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright 2025 The OPA Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # This script automates the authenticode signing and timestamping process for a
 # windows executable, using jsign.
 

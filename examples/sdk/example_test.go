@@ -1,3 +1,6 @@
+// Copyright 2025 The OPA Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package sdk_test demonstrates the use of OPA's sdk package,
 // github.com/open-policy-agent/opa/sdk, with EOPA's VM code,
 // storage, and all plugins.

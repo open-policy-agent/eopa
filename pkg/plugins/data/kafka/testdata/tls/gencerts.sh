@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright 2025 The OPA Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # taken from
 # https://github.com/dexidp/dex/blob/2d1ac74ec0ca12ae4d36072525d976c1a596820a/examples/k8s/gencert.sh#L22
 

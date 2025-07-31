@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright 2025 The OPA Authors
+# SPDX-License-Identifier: Apache-2.0
+
 set -eou pipefail
 REGAL=$(go list -m github.com/styrainc/regal | cut -d' ' -f2)
 OPA=$(go list -m github.com/open-policy-agent/opa | cut -d' ' -f2)

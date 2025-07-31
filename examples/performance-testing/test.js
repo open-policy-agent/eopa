@@ -1,3 +1,8 @@
+/**
+ * Copyright 2025 The OPA Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { check } from 'k6';
 import http from 'k6/http';
 import { Trend, Gauge } from 'k6/metrics';

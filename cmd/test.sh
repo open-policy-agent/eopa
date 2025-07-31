@@ -1,4 +1,7 @@
 #!/bin/bash 
+# Copyright 2025 The OPA Authors
+# SPDX-License-Identifier: Apache-2.0
+
 
 # exercising keygen.sh API endpoint: to get rate limit errors
 # Note: not a good idea to run in CI or continuosly (uses a significant number of daily keygen API requests)

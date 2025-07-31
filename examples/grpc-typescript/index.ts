@@ -1,3 +1,8 @@
+/**
+ * Copyright 2025 The OPA Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { createPromiseClient } from "@connectrpc/connect";
 import { createGrpcTransport } from "@connectrpc/connect-node";
 import { Struct } from "@bufbuild/protobuf";

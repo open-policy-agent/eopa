@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright 2025 The OPA Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Runs in the current working directory, and generates a Github Actions job matrix.
 
 # Parameter expansion + ternary trick for POSIX shell env var set guards:

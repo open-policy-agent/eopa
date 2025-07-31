@@ -1,3 +1,6 @@
+// Copyright 2025 The OPA Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package json
 
 func UnionObjects(a, b Json) Json {

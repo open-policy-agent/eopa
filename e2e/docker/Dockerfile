@@ -1,3 +1,6 @@
+# Copyright 2025 The OPA Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # We need the debug image here because "RUN eopa version" needs
 # a shell of some sort.
 FROM ko.local/eopa:edge-debug AS builder
