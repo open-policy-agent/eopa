@@ -1,3 +1,6 @@
+// Copyright 2025 The OPA Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package rego_vm contains the rego target plugin to be used with OPA.
 package rego_vm
 

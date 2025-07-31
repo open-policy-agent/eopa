@@ -1,3 +1,6 @@
+// Copyright 2025 The OPA Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package test_bootstrap implements the logic for generating Rego test mocks
 // automatically from an OPA bundle and entrypoint list.
 package test_bootstrap

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright 2025 The OPA Authors
+# SPDX-License-Identifier: Apache-2.0
+
 set -eo pipefail
 EOPA_EXEC="$1"
 TARGET="$2"

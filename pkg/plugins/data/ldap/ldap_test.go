@@ -1,3 +1,6 @@
+// Copyright 2025 The OPA Authors
+// SPDX-License-Identifier: Apache-2.0
+
 //go:generate go run github.com/vektra/mockery/v2@latest --srcpkg github.com/go-ldap/ldap/v3 --name Client --output mocks --disable-version-string --case underscore
 
 package ldap_test

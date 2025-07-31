@@ -1,3 +1,6 @@
+// Copyright 2025 The OPA Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package rego_test demonstrates the use of OPA's rego package,
 // github.com/open-policy-agent/opa/rego, with EOPA's VM code.
 package rego_test

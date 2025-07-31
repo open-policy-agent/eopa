@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright 2025 The OPA Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Given a variable VERSION (e.g. from go list -m -f '{{.Version}}' github.com/open-policy-agent/opa)
 # echoes the normalized OPA version according to the following rules:
 # - If VERSION is "v1.6.0"         => output "1.6.0"

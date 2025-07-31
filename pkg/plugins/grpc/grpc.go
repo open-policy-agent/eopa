@@ -1,3 +1,6 @@
+// Copyright 2025 The OPA Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package grpc provides the implementation of Enterprise OPA's gRPC server.
 // It is modeled directly off of OPA's HTTP Server implementation, and
 // borrows as much code from OPA as is reasonable.

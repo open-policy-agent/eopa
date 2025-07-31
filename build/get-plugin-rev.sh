@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright 2025 The OPA Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Script to get number of commits from the last OPA revendoring
 
 LINE=$(git grep -n "github.com/open-policy-agent/opa " go.mod | awk -F: '{ print $2; exit }')

@@ -1,4 +1,7 @@
 #!/bin/sh
+# Copyright 2025 The OPA Authors
+# SPDX-License-Identifier: Apache-2.0
+
 
 # For generating static HTML docs, we currently are using:
 #   https://github.com/pseudomuto/protoc-gen-doc

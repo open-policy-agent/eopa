@@ -1,3 +1,6 @@
+// Copyright 2025 The OPA Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package test_bootstrap
 
 // We provide 3x flavors of test cases for each top-level rule:
