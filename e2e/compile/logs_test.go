@@ -89,7 +89,7 @@ plugins:
 	for c, config := range configs {
 		t.Run(c, func(t *testing.T) {
 			path := "filters/include"
-			eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort, config)
+			eopa, eopaOut, eopaErr := loadEOPA(t, eopaHTTPPort, config)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}

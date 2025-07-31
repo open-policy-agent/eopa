@@ -142,7 +142,7 @@ plugins:
 		for dm, configFmt := range dropAndMask {
 			t.Run("buffer="+tc.buffer+"/drop+mask="+dm, func(t *testing.T) {
 				config := fmt.Sprintf(configFmt, tc.buffer)
-				eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
+				eopa, eopaOut, eopaErr := loadEOPA(t, config, policy, eopaHTTPPort, false)
 				if err := eopa.Start(); err != nil {
 					t.Fatal(err)
 				}
@@ -318,7 +318,7 @@ plugins:
 	for dm, config := range dropAndMask {
 		t.Run("drop+mask="+dm, func(t *testing.T) {
 
-			eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
+			eopa, eopaOut, eopaErr := loadEOPA(t, config, policy, eopaHTTPPort, false)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
@@ -382,7 +382,7 @@ plugins:
     output:
       type: console
 `
-		eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
+		eopa, eopaOut, eopaErr := loadEOPA(t, config, policy, eopaHTTPPort, false)
 		if err := eopa.Start(); err != nil {
 			t.Fatal(err)
 		}
@@ -433,7 +433,7 @@ plugins:
     output:
       type: console
 `
-		eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
+		eopa, eopaOut, eopaErr := loadEOPA(t, config, policy, eopaHTTPPort, false)
 		if err := eopa.Start(); err != nil {
 			t.Fatal(err)
 		}
@@ -538,7 +538,7 @@ plugins:
 				w.WriteHeader(http.StatusInternalServerError)
 			}))
 			t.Cleanup(ts.Close)
-			eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(tc.configFmt, ts.URL), policy, eopaHTTPPort, false)
+			eopa, _, eopaErr := loadEOPA(t, fmt.Sprintf(tc.configFmt, ts.URL), policy, eopaHTTPPort, false)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
@@ -626,7 +626,7 @@ plugins:
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	t.Cleanup(ts.Close)
-	eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(config, ts.URL, expectedRetries), policy, eopaHTTPPort, false)
+	eopa, _, eopaErr := loadEOPA(t, fmt.Sprintf(config, ts.URL, expectedRetries), policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -708,7 +708,7 @@ plugins:
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	t.Cleanup(ts.Close)
-	eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(configFmt, ts.URL), policy, eopaHTTPPort, false)
+	eopa, eopaOut, eopaErr := loadEOPA(t, fmt.Sprintf(configFmt, ts.URL), policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -791,7 +791,7 @@ plugins:
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	t.Cleanup(ts.Close)
-	eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(configFmt, ts.URL), policy, eopaHTTPPort, false)
+	eopa, _, eopaErr := loadEOPA(t, fmt.Sprintf(configFmt, ts.URL), policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -872,7 +872,7 @@ plugins:
 	t.Cleanup(func() { _ = srv.Close() })
 
 	config := fmt.Sprintf(configFmt, "https://127.0.0.1:9999")
-	eopa, _, eopaErr := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
+	eopa, _, eopaErr := loadEOPA(t, config, policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -898,7 +898,7 @@ plugins:
 
 type gcpOverrideEndpoint string
 
-func loadEnterpriseOPA(t *testing.T, config, policy string, httpPort int, opts ...any) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
+func loadEOPA(t *testing.T, config, policy string, httpPort int, opts ...any) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	var silent bool
 	logLevel := "debug" // Needed for checking if server is ready
 	for _, o := range opts {

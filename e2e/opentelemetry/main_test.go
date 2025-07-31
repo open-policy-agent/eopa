@@ -70,7 +70,7 @@ import future.keywords.if
 p if http.send({"url":"%[1]s", "method":"GET"})
 `, ts.URL)
 
-	eopa, _, eopaErr := loadEnterpriseOPA(t, config, policy, eopaHTTPPort)
+	eopa, _, eopaErr := loadEOPA(t, config, policy, eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func findAllOccurrences(data []byte, searches []string) map[string][]int { // ht
 	return results
 }
 
-func loadEnterpriseOPA(t *testing.T, config, policy string, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
+func loadEOPA(t *testing.T, config, policy string, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	logLevel := "debug" // Needed for checking if server is ready
 
 	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}

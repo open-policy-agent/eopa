@@ -25,7 +25,7 @@ func main() {
 		}
 	}() // orderly shutdown, run all defer routines
 
-	root := eopaCmd.EnterpriseOPACommand()
+	root := eopaCmd.EOPACommand()
 
 	// setup default modules
 	if err := library.Init(); err != nil {

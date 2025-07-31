@@ -60,7 +60,7 @@ plugins:
       access_secret: %[4]s
 `
 	m, port := minioClient(t, ctx, minioRootUser, minioRootPassword, bucket)
-	eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(plaintextConfig, port, bucket, minioRootUser, minioRootPassword), policy, eopaHTTPPort, false)
+	eopa, _, eopaErr := loadEOPA(t, fmt.Sprintf(plaintextConfig, port, bucket, minioRootUser, minioRootPassword), policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ plugins:
         format: array
 `
 	m, port := minioClient(t, ctx, minioRootUser, minioRootPassword, bucket)
-	eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(plaintextConfig, port, bucket, minioRootUser, minioRootPassword), policy, eopaHTTPPort, false)
+	eopa, _, eopaErr := loadEOPA(t, fmt.Sprintf(plaintextConfig, port, bucket, minioRootUser, minioRootPassword), policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}

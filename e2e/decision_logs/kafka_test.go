@@ -174,7 +174,7 @@ plugins:
 				}
 			}()
 
-			eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(tc.config, broker), policy, eopaHTTPPort, false)
+			eopa, _, eopaErr := loadEOPA(t, fmt.Sprintf(tc.config, broker), policy, eopaHTTPPort, false)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}

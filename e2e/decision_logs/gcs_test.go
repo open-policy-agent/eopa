@@ -47,7 +47,7 @@ plugins:
 	srv := setupCloudStorage(t)
 	t.Cleanup(srv.Stop)
 
-	eopa, _, eopaErr := loadEnterpriseOPA(t, fmt.Sprintf(plaintextConfig, gcpBucket), policy, eopaHTTPPort, false, gcpOverrideEndpoint(srv.URL()))
+	eopa, _, eopaErr := loadEOPA(t, fmt.Sprintf(plaintextConfig, gcpBucket), policy, eopaHTTPPort, false, gcpOverrideEndpoint(srv.URL()))
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}

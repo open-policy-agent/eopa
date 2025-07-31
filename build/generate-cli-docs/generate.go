@@ -35,7 +35,7 @@ func main() {
 	}
 	out := os.Args[1]
 
-	command := eopaCmd.EnterpriseOPACommand()
+	command := eopaCmd.EOPACommand()
 	command.Use = "eopa [command]"
 	command.DisableAutoGenTag = true
 

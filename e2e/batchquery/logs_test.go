@@ -118,7 +118,7 @@ plugins:
 	for c, config := range configs {
 		t.Run(c, func(t *testing.T) {
 			path := "testmod/gt1"
-			eopa, eopaOut, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort, config)
+			eopa, eopaOut, eopaErr := loadEOPA(t, eopaHTTPPort, config)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
@@ -283,7 +283,7 @@ func retrieveDLs(t *testing.T, rdr io.Reader) []payload {
 	return ms
 }
 
-func loadEnterpriseOPA(t *testing.T, httpPort int, config string) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
+func loadEOPA(t *testing.T, httpPort int, config string) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}
 
 	tempDir := t.TempDir()

@@ -175,7 +175,7 @@ func TestGitPlugin(t *testing.T) {
 			wait.ForLog(t, eopaErr, func(s string) bool { return strings.Contains(s, "Server initialized") }, time.Second)
 
 			host := fmt.Sprintf("localhost:%d", eopaHTTPPort)
-			checkEnterpriseOPA(t, host, map[string]any{"foo1": "bar1"})
+			checkEOPA(t, host, map[string]any{"foo1": "bar1"})
 
 			// update remote branch and check for the updates
 			w, err := repo.Worktree()
@@ -213,12 +213,12 @@ func TestGitPlugin(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			checkEnterpriseOPA(t, host, map[string]any{"foo2": "bar2"})
+			checkEOPA(t, host, map[string]any{"foo2": "bar2"})
 		})
 	}
 }
 
-func checkEnterpriseOPA(t *testing.T, host string, exp any) {
+func checkEOPA(t *testing.T, host string, exp any) {
 	if err := wait.Func(func() bool {
 		// check store response (TODO: check metrics/status when we have them)
 		req, err := http.NewRequest("GET", "http://"+host+"/v1/data/git/e2e", nil)
