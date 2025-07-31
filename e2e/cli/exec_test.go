@@ -10,17 +10,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
+	"github.com/open-policy-agent/opa/v1/ast"
 	sdk_test "github.com/open-policy-agent/opa/v1/sdk/test"
+	"github.com/open-policy-agent/opa/v1/types"
 
 	"github.com/open-policy-agent/eopa/e2e/utils"
-	"github.com/open-policy-agent/eopa/pkg/builtins"
 )
 
 var (
@@ -29,7 +29,18 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	builtins.Init() // sdk_test needs to know the builtins to build a bundle on-demand
+	// sdk_test needs to know the builtin to build a bundle on-demand
+	ast.RegisterBuiltin(&ast.Builtin{
+		Name:        "sql.send",
+		Description: "Returns query result rows to the given SQL query.",
+		Decl: types.NewFunction(
+			types.Args(
+				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))).Description("query object"),
+			),
+			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("query result rows"),
+		),
+		Nondeterministic: true,
+	})
 
 	r := rand.New(rand.NewSource(2907))
 	for {
@@ -238,29 +249,7 @@ func tempFile(t *testing.T, in any) string {
 	return inputPath
 }
 
-func eopaEvalQuery(query string) *exec.Cmd {
-	return exec.Command(binary(), "eval", "-fpretty", query)
-}
-
-func filter(in []string) []string {
-	out := []string{}
-	for i := range in {
-		if !strings.HasPrefix(in[i], "EOPA") {
-			out = append(out, in[i])
-		}
-	}
-	return out
-}
-
-func eopaSansEnv(t *testing.T, policy, config string, args ...string) (*exec.Cmd, *bytes.Buffer) {
-	return eopaFilterEnv(t, policy, config, filter, args...)
-}
-
 func eopaCmd(t *testing.T, policy, config string, args ...string) (*exec.Cmd, *bytes.Buffer) {
-	return eopaFilterEnv(t, policy, config, nil, args...)
-}
-
-func eopaFilterEnv(t *testing.T, policy, config string, f func([]string) []string, args ...string) (*exec.Cmd, *bytes.Buffer) {
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
 	if config != "" {
@@ -278,9 +267,6 @@ func eopaFilterEnv(t *testing.T, policy, config string, f func([]string) []strin
 		args = append(args, policyPath)
 	}
 	eopa := exec.Command(binary(), args...)
-	if f != nil {
-		eopa.Env = f(eopa.Env)
-	}
 	eopa.Stderr = &buf
 
 	t.Cleanup(func() {
