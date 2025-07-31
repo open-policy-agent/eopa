@@ -46,7 +46,7 @@ package test
 
 hello := "world"
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, policy, eopaHTTPPort)
+	eopa, eopaOut := loadEOPA(t, policy, eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ package test
 
 hello := "world"
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, policy, eopaHTTPPort)
+	eopa, eopaOut := loadEOPA(t, policy, eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ package test
 
 hello := "world"
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, policy, eopaHTTPPort)
+	eopa, eopaOut := loadEOPA(t, policy, eopaHTTPPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +193,7 @@ rego_modules:
 	}
 }
 
-func loadEnterpriseOPA(t *testing.T, policy string, httpPort int) (*exec.Cmd, *bytes.Buffer) {
+func loadEOPA(t *testing.T, policy string, httpPort int) (*exec.Cmd, *bytes.Buffer) {
 	buf := bytes.Buffer{}
 	dir := t.TempDir()
 	policyPath := filepath.Join(dir, "eval.rego")

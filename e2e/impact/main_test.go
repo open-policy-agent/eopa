@@ -89,7 +89,7 @@ import future.keywords
 
 p := rand.intn("test", 2)
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
+	eopa, eopaOut := loadEOPA(t, config, policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +226,7 @@ import future.keywords
 
 q := true
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
+	eopa, eopaOut := loadEOPA(t, config, policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -342,7 +342,7 @@ import future.keywords
 
 q := true
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, true)
+	eopa, eopaOut := loadEOPA(t, config, policy, eopaHTTPPort, true)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -544,7 +544,7 @@ p := rand.intn("test", 2)
 		},
 	} {
 		t.Run(fmt.Sprintf("format=%s/group=%v", tc.format, tc.group), func(t *testing.T) {
-			eopa, eopaOut := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
+			eopa, eopaOut := loadEOPA(t, config, policy, eopaHTTPPort, false)
 			if err := eopa.Start(); err != nil {
 				t.Fatal(err)
 			}
@@ -591,7 +591,7 @@ p := rand.intn("test", 2)
 
 type extra string
 
-func loadEnterpriseOPA(t *testing.T, config, policy string, httpPort int, opts ...any) (*exec.Cmd, *bytes.Buffer) {
+func loadEOPA(t *testing.T, config, policy string, httpPort int, opts ...any) (*exec.Cmd, *bytes.Buffer) {
 	var silent bool
 	var extraArgs string
 	logLevel := "debug"
@@ -677,7 +677,7 @@ import future.keywords
 
 q := true
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false)
+	eopa, eopaOut := loadEOPA(t, config, policy, eopaHTTPPort, false)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -718,7 +718,7 @@ import future.keywords
 
 q := true
 `
-	eopa, eopaOut := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, false, extra(`--tls-ca-cert-file testdata/tls/ca.pem --tls-cert-file testdata/tls/server-cert.pem --tls-private-key-file testdata/tls/server-key.pem`))
+	eopa, eopaOut := loadEOPA(t, config, policy, eopaHTTPPort, false, extra(`--tls-ca-cert-file testdata/tls/ca.pem --tls-cert-file testdata/tls/server-cert.pem --tls-private-key-file testdata/tls/server-key.pem`))
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -757,7 +757,7 @@ plugins:
 package test
 q := true
 `
-	eopa, _ := loadEnterpriseOPA(t, config, policy, eopaHTTPPort, true, errorLogging{})
+	eopa, _ := loadEOPA(t, config, policy, eopaHTTPPort, true, errorLogging{})
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}

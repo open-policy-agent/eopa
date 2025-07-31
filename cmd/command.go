@@ -100,7 +100,7 @@ The following flags control specific optimizations:
 `
 }
 
-func EnterpriseOPACommand() *cobra.Command {
+func EOPACommand() *cobra.Command {
 	var instructionLimit int64
 	var optLevel int64
 	var enableOptPassFlags, disableOptPassFlags iropt.OptimizationPassFlags

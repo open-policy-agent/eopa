@@ -88,7 +88,7 @@ allow if {
 }
 `
 	// Start up containers.
-	eopa, _, eopaErr := loadEnterpriseOPA(t, "data.pb", fmt.Sprintf(config, bind, eopaEnvoyGRPCPort, eopaGRPCPort), policy, eopaEnvoyGRPCPort)
+	eopa, _, eopaErr := loadEOPA(t, "data.pb", fmt.Sprintf(config, bind, eopaEnvoyGRPCPort, eopaGRPCPort), policy, eopaEnvoyGRPCPort)
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func grpcurl(t *testing.T, args string) error {
 	}, 250*time.Millisecond, 5*time.Second)
 }
 
-func loadEnterpriseOPA(t *testing.T, protobuf, config, policy string, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
+func loadEOPA(t *testing.T, protobuf, config, policy string, httpPort int) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	logLevel := "debug" // Needed for checking if server is ready
 
 	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}

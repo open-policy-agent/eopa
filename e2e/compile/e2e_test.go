@@ -316,7 +316,7 @@ func toFruitRows(xs []fruitJSON) []fruitRow {
 func TestCompileHappyPathE2E(t *testing.T) {
 	dbTypes := []DBType{Postgres, MySQL, MSSQL, SQLite}
 
-	eopa, _, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort, "")
+	eopa, _, eopaErr := loadEOPA(t, eopaHTTPPort, "")
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -536,7 +536,7 @@ func TestCompileHappyPathE2E(t *testing.T) {
 // execution added something to the exposed prometheus metrics at /v1/metrics.
 // Also, it checks that the cache hit/miss metrics have been exposed accordingly.
 func TestPrometheusMetrics(t *testing.T) {
-	eopa, _, eopaErr := loadEnterpriseOPA(t, eopaHTTPPort, "")
+	eopa, _, eopaErr := loadEOPA(t, eopaHTTPPort, "")
 	if err := eopa.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -788,7 +788,7 @@ func getUCASTAndRunPrisma(t *testing.T, path string, payload map[string]any, con
 	return toFruitRows(rowsData)
 }
 
-func loadEnterpriseOPA(t *testing.T, httpPort int, config string) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
+func loadEOPA(t *testing.T, httpPort int, config string) (*exec.Cmd, *bytes.Buffer, *bytes.Buffer) {
 	stdout, stderr := bytes.Buffer{}, bytes.Buffer{}
 
 	tempDir := t.TempDir()
