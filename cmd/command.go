@@ -23,7 +23,7 @@ import (
 	"github.com/open-policy-agent/eopa/pkg/rego_vm"
 )
 
-const brand = "Enterprise OPA"
+const brand = "EOPA"
 
 // Key for matching up --data with the config. The semantics are a little weird
 // because some subcommand receive the extra data paths as extra CLI arguments,
