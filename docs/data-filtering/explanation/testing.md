@@ -11,7 +11,7 @@ import SideBySideColumn from '@site/src/components/SideBySide/Column';
 
 # Data Filters Testing
 
-There are two approaches to testing data filter policies using Enterprise OPA:
+There are two approaches to testing data filter policies using EOPA:
 
 1. **Effects**-based tests: testing the **effects of filters against sample data**
 2. **Code**-based tests: testing the **compiled filters as code**
@@ -47,7 +47,7 @@ erDiagram
 
 ## Filter Effects Testing
 
-Enterprise OPA provides a helper method for testing the _effect of data filtering_ on provided data: the `filter.helper()` built-in function provided via `data.system.eopa.utils.tests.v1.filter`
+EOPA provides a helper method for testing the _effect of data filtering_ on provided data: the `filter.helper()` built-in function provided via `data.system.eopa.utils.tests.v1.filter`
 
 In the following Rego files, we have the filter rules, and a set of unit tests using those helpers:
 
