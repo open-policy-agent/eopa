@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 sidebar_label: Go with gRPC
-title: Integrating in Go with gRPC | Enterprise OPA
+title: Integrating in Go with gRPC | EOPA
 ---
 
 <!-- markdownlint-disable MD044 -->
@@ -10,7 +10,7 @@ import LicenseTrialAdmonition from '../../../enterprise-opa/_license-trial-admon
 
 # Integrating in Go with gRPC
 
-Enterprise OPA offers a gRPC API for low-latency communication between production systems.
+EOPA offers a gRPC API for low-latency communication between production systems.
 This API can be accessed during development with tools like `grpcurl`, but in production, it will almost always be accessed using code generated for a particular programming language.
 
 :::info
@@ -20,19 +20,19 @@ Refer to the [gRPC API reference documentation](../../reference/api-reference/gr
 
 ## Overview
 
-In this tutorial we'll be walking through how to use `buf` to generate Go client bindings for the Enterprise OPA gRPC API, and then dynamically update and query live data from Enterprise OPA over gRPC.
+In this tutorial we'll be walking through how to use `buf` to generate Go client bindings for the EOPA gRPC API, and then dynamically update and query live data from EOPA over gRPC.
 To demo that functionality, we'll need to complete the following:
 
-- Generate the [Enterprise OPA gRPC API](https://github.com/StyraInc/enterprise-opa/tree/main/proto) client bindings.
+- Generate the [EOPA gRPC API](https://github.com/StyraInc/enterprise-opa/tree/main/proto) client bindings.
 - Create the policy and configuration data for the example.
 - Create the Go client program.
-- Run the client program and Enterprise OPA locally.
+- Run the client program and EOPA locally.
 
 
 ## Project setup
 
 :::note
-If you have an existing Golang project that you are integrating the Enterprise OPA gRPC definitions into, you can skip to the next step.
+If you have an existing Golang project that you are integrating the EOPA gRPC definitions into, you can skip to the next step.
 :::
 
 Before we get started, we will need to do some housekeeping for the Go tooling.
@@ -56,7 +56,7 @@ After running a command like `go mod tidy` you may also see a `go.sum` file.
 Most of the Go language and editor tooling will automatically work with these files to keep your dependencies up to date as we move through the tutorial.
 
 
-## Generating the gRPC Go client bindings for Enterprise OPA
+## Generating the gRPC Go client bindings for EOPA
 
 To build the client bindings we will need for the demo application, we will need to have the following tooling installed and usable:
 
@@ -71,7 +71,7 @@ We will also need to pull down the [`StyraInc/enterprise-opa` repository](https:
 git clone https://github.com/StyraInc/enterprise-opa && cp enterprise-opa/proto proto/
 ```
 
-This will clone the Enterprise OPA blueprints repository down, and copy out the protobuf definitions folder for use in our project.
+This will clone the EOPA blueprints repository down, and copy out the protobuf definitions folder for use in our project.
 We can then update the Buf generation config to match our project's module name.
 
 In the file `proto/buf.gen.yaml`, change the contents to match the following (customizing the organization and project names to match your project):
@@ -141,7 +141,7 @@ func bytesToProtoStruct(source []byte) (*structpb.Struct, error) {
 
 func main() {
 	ctx := context.Background()
-	addr := flag.String("addr", "localhost:9090", "Address of the Enterprise OPA gRPC server.")
+	addr := flag.String("addr", "localhost:9090", "Address of the EOPA gRPC server.")
 	dataFilename := flag.String("datafile", "data.json", "Name of the config data JSON file to use.")
 	policyFilename := flag.String("policyfile", "policy.rego", "Name of the Rego policy file to use.")
 
@@ -161,16 +161,16 @@ Example: (Assuming a rule at 'app.rbac.allow')
 	}
 	query := args[0]
 
-	// Connect to the Enterprise OPA instance.
+	// Connect to the EOPA instance.
 	conn, err := grpc.Dial(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("failed to dial the Enterprise OPA server: %v", err)
+		log.Fatalf("failed to dial the EOPA server: %v", err)
 	}
 	defer conn.Close()
 	clientData := datav1.NewDataServiceClient(conn)
 	clientPolicy := policyv1.NewPolicyServiceClient(conn)
 
-	// Read in and push the JSON config data to the Enterprise OPA instance over gRPC.
+	// Read in and push the JSON config data to the EOPA instance over gRPC.
 	configData, err := os.ReadFile(*dataFilename)
 	if err != nil {
 		log.Fatal(err)
@@ -183,7 +183,7 @@ Example: (Assuming a rule at 'app.rbac.allow')
 		log.Fatalf("CreateData failed: %v", err)
 	}
 
-	// Create a new policy by reading the policy file in, and then pushing the policy up to the Enterprise OPA instance over gRPC.
+	// Create a new policy by reading the policy file in, and then pushing the policy up to the EOPA instance over gRPC.
 	policy, err := os.ReadFile(*policyFilename)
 	if err != nil {
 		log.Fatal(err)
@@ -350,12 +350,12 @@ Create a file named `data.json` with the following contents:
 This sample data will be used by the RBAC policy we created in a previous step.
 
 
-## Running `grpcpush` and Enterprise OPA together
+## Running `grpcpush` and EOPA together
 
-Now that we have all of our setup work out of the way, we can finally run Enterprise OPA and the demo program together.
+Now that we have all of our setup work out of the way, we can finally run EOPA and the demo program together.
 
 
-### Configuring and running Enterprise OPA locally
+### Configuring and running EOPA locally
 
 Create a file called `enterprise-opa-conf.yaml` and insert the YAML configuration below.
 
@@ -365,7 +365,7 @@ plugins:
     addr: "127.0.0.1:9090"
 ```
 
-Before running Enterprise OPA, we will need to set the `EOPA_LICENSE_KEY` environment variable.
+Before running EOPA, we will need to set the `EOPA_LICENSE_KEY` environment variable.
 
 <LicenseTrialAdmonition />
 
@@ -375,14 +375,14 @@ Before running Enterprise OPA, we will need to set the `EOPA_LICENSE_KEY` enviro
 export EOPA_LICENSE_KEY=<license key here>
 ```
 
-We can now run Enterprise OPA in server mode, with the `grpc` plugin enabled:
+We can now run EOPA in server mode, with the `grpc` plugin enabled:
 
 ```shell
 # terminal-command
 eopa run --server --config enterprise-opa-conf.yaml
 ```
 
-This will start up Enterprise OPA, and will provide an unsecured gRPC server at the address `localhost:9090`.
+This will start up EOPA, and will provide an unsecured gRPC server at the address `localhost:9090`.
 
 
 ### Running the `grpcpush` program

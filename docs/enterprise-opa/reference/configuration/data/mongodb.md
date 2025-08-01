@@ -1,7 +1,7 @@
 ---
 sidebar_position: 6
 sidebar_label: MongoDB
-title: MongoDB Data Plugin | Enterprise OPA
+title: MongoDB Data Plugin | EOPA
 ---
 
 import MongoDBAuth from "../../_mongodb/_mongodb-auth.md"
@@ -10,7 +10,7 @@ import MongoDBFindParameters from "../../_mongodb/_mongodb-find-parameters.mdx"
 
 # MongoDB Data Plugin
 
-Enterprise OPA supports pulling in data from MongoDB documents using periodic polling.
+EOPA supports pulling in data from MongoDB documents using periodic polling.
 
 :::info
 You can also query MongoDB directly from a policy at query-time using the [`mongodb` built-in function](/enterprise-opa/reference/built-in-functions/mongodb).
@@ -19,7 +19,7 @@ You can also query MongoDB directly from a policy at query-time using the [`mong
 
 ## Example Configuration
 
-The MongoDB integration is provided through the `data` plugin, and needs to be enabled in Enterprise OPA's configuration.
+The MongoDB integration is provided through the `data` plugin, and needs to be enabled in EOPA's configuration.
 
 ```yaml
 # enterprise-opa-conf.yaml
@@ -36,7 +36,7 @@ plugins:
       rego_transform: data.e2e.transform
 ```
 
-With a config like this, Enterprise OPA will retrieve the documents in the employees collection in the permissions database every 10s.
+With a config like this, EOPA will retrieve the documents in the employees collection in the permissions database every 10s.
 The result will contain only documents containing `{organization: HR}` and the documents will be available to all policy evaluations under `data.employees.hr.{_id}`.
 
 
@@ -62,14 +62,14 @@ The result will contain only documents containing `{organization: HR}` and the d
 
 ## Data Transformations
 
-The `rego_transform` attribute specifies the path to a rule used to transform data pulled from MongoDB into a different format for storage in Enterprise OPA.
+The `rego_transform` attribute specifies the path to a rule used to transform data pulled from MongoDB into a different format for storage in EOPA.
 
 `rego_transform` policies take incoming messages as JSON via `input.incoming` and returns the transformed JSON.
 
 
 ### Example
 
-Starting with the Enterprise OPA configuration above and the example Data
+Starting with the EOPA configuration above and the example Data
 
 ```json
 [

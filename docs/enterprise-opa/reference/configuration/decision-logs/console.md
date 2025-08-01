@@ -2,7 +2,7 @@
 sidebar_position: 5
 sidebar_label: Console Sink
 sidebar_class_name: divider-after
-title: Console Sink Configuration | Enterprise OPA
+title: Console Sink Configuration | EOPA
 ---
 
 The Console decision log sink is an expansion on the [OPA console log sink](https://www.openpolicyagent.org/docs/management-decision-logs/#local-decision-logs).
@@ -17,4 +17,4 @@ plugins:
 ```
 
 It takes no further configuration, and will print decision logs to
-the Enterprise OPA agent's standard output.
+the EOPA agent's standard output.

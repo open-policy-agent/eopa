@@ -1,13 +1,13 @@
 ---
 sidebar_position: 3
 sidebar_label: gRPC with Typescript
-title: Using Enterprise OPA gRPC API from TypeScript
+title: Using EOPA gRPC API from TypeScript
 ---
 
 
 # Using gRPC from TypeScript
 
-To use the [Enterprise OPA](/enterprise-opa) [gRPC API](/enterprise-opa/reference/api-reference/grpc-api) from TypeScript, we're relying on the SDKs generated from the Protobuf Schema published on [Buf](https://buf.build/styra/enterprise-opa).
+To use the [EOPA](/enterprise-opa) [gRPC API](/enterprise-opa/reference/api-reference/grpc-api) from TypeScript, we're relying on the SDKs generated from the Protobuf Schema published on [Buf](https://buf.build/styra/enterprise-opa).
 
 
 ## Installation
@@ -91,7 +91,7 @@ const resp = await client.getData(req);
 console.log(resp.result?.document?.toJson()); // => { example: true }
 ```
 
-Now run an Enterprise OPA instance serving this Rego,
+Now run an EOPA instance serving this Rego,
 
 ```rego
 # policy.rego
@@ -119,7 +119,7 @@ node --import tsx index.ts
 { example: true }
 ```
 
-For the full `package.json`, and the example configuration of Enterprise OPA, please see [the examples repository](https://github.com/StyraInc/enterprise-opa/tree/main/examples/grpc-typescript).
+For the full `package.json`, and the example configuration of EOPA, please see [the examples repository](https://github.com/StyraInc/enterprise-opa/tree/main/examples/grpc-typescript).
 
 
 ## References

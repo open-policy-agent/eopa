@@ -4,9 +4,9 @@ sidebar_label: CLI Reference
 title: CLI Reference
 ---
 
-# Enterprise OPA CLI Reference
+# EOPA CLI Reference
 
-The Enterprise OPA executable provides the following commands.
+The EOPA executable provides the following commands.
 
 ## eopa bench
 
@@ -26,7 +26,7 @@ Example with bundle and input data:
 eopa bench -b ./policy-bundle -i input.json 'data.authz.allow'
 ```
 
-To run benchmarks against a running Enterprise OPA server to evaluate
+To run benchmarks against a running EOPA server to evaluate
 server overhead use the –e2e flag. To enable more detailed analysis use
 the –metrics and –benchmem flags.
 
@@ -45,7 +45,7 @@ eopa bench <query> [flags]
   -c, --config-file string              set path of configuration file
       --count int                       number of times to repeat each benchmark (default 1)
   -d, --data string                     set policy or data file(s). This flag can be repeated.
-      --e2e                             run benchmarks against a running Enterprise OPA server
+      --e2e                             run benchmarks against a running EOPA server
       --fail                            exits with non-zero exit code on undefined/empty result and errors (default true)
   -f, --format {pretty,json,gobench}    set output format (default pretty)
   -h, --help                            help for bench
@@ -70,13 +70,13 @@ eopa bench <query> [flags]
 
 ## eopa build
 
-Build an Enterprise OPA bundle
+Build an EOPA bundle
 
 ### Synopsis
 
-Build an Enterprise OPA bundle.
+Build an EOPA bundle.
 
-The ‘build’ command packages Enterprise OPA policy and data files into
+The ‘build’ command packages EOPA policy and data files into
 bundles. Bundles are gzipped tarballs containing policies and data.
 Paths referring to directories are loaded recursively.
 
@@ -87,7 +87,7 @@ example.rego
 $ eopa build -b .
 ```
 
-You can load bundles into Enterprise OPA on the command-line:
+You can load bundles into EOPA on the command-line:
 
 ```
 $ ls
@@ -96,7 +96,7 @@ bundle.tar.gz example.rego
 $ eopa run bundle.tar.gz
 ```
 
-You can also configure Enterprise OPA to download bundles from remote
+You can also configure EOPA to download bundles from remote
 HTTP endpoints:
 
 ```
@@ -149,7 +149,7 @@ wasm    The wasm target emits a bundle containing a WebAssembly module compiled 
 
 plan    The plan target emits a bundle containing a plan, i.e., an intermediate
         representation compiled from the input files for each specified entrypoint.
-        This is for further processing, Enterprise OPA cannot evaluate a "plan bundle" like it
+        This is for further processing, EOPA cannot evaluate a "plan bundle" like it
         can evaluate a wasm or rego bundle.
 ```
 
@@ -217,7 +217,7 @@ https://www.openpolicyagent.org/docs/latest/management-bundles/#signature-format
 ### Capabilities
 
 The ‘build’ command can validate policies against a configurable set of
-Enterprise OPA capabilities. The capabilities define the built-in
+EOPA capabilities. The capabilities define the built-in
 functions and other language features that policies may depend on. For
 example, the following capabilities file only permits the policy to
 depend on the “plus” built-in function (‘+’):
@@ -248,10 +248,10 @@ depend on the “plus” built-in function (‘+’):
 ```
 
 Capabilities can be used to validate policies against a specific version
-of Enterprise OPA. The Enterprise OPA repository contains a set of
-capabilities files for each Enterprise OPA release. For example, the
+of EOPA. The EOPA repository contains a set of
+capabilities files for each EOPA release. For example, the
 following command builds a directory of policies (‘./policies’) and
-validates them against Enterprise OPA v0.22.0:
+validates them against EOPA v0.22.0:
 
 ```
 eopa build ./policies --capabilities v0.22.0
@@ -294,7 +294,7 @@ eopa build <path> [<path> [...]] [flags]
 
 ## eopa bundle
 
-Enterprise OPA Bundle commands
+EOPA Bundle commands
 
 ### Options
 
@@ -338,14 +338,14 @@ eopa bundle dump [flags]
 
 ## eopa capabilities
 
-Print the capabilities of Enterprise OPA
+Print the capabilities of EOPA
 
 ### Synopsis
 
-Show capabilities for Enterprise OPA.
+Show capabilities for EOPA.
 
-The ‘capabilities’ command prints the Enterprise OPA capabilities, prior
-to and including the version of Enterprise OPA used.
+The ‘capabilities’ command prints the EOPA capabilities, prior
+to and including the version of EOPA used.
 
 Print a list of all existing capabilities version names
 
@@ -694,20 +694,20 @@ Execute against input files
 
 Execute against input files.
 
-The ‘exec’ command executes Enterprise OPA against one or more input
-files. If the paths refer to directories, Enterprise OPA will execute
+The ‘exec’ command executes EOPA against one or more input
+files. If the paths refer to directories, EOPA will execute
 against files contained inside those directories, recursively.
 
 The ‘exec’ command accepts a –config-file/-c or series of –set options
 as arguments. These options behave the same as way as ‘eopa run’. Since
-the ‘exec’ command is intended to execute Enterprise OPA in one-shot,
+the ‘exec’ command is intended to execute EOPA in one-shot,
 the ‘exec’ command will manually trigger plugins before and after policy
 execution:
 
 Before: Discovery -\> Bundle -\> Status After: Decision Logs
 
 By default, the ‘exec’ command executes the “default decision”
-(specified in the Enterprise OPA configuration) against each input file.
+(specified in the EOPA configuration) against each input file.
 This can be overridden by specifying the –decision argument and pointing
 at a specific policy decision,
 
@@ -858,7 +858,7 @@ eopa impact record [flags]
 ### Options
 
 ```
-  -a, --addr string                   Enterprise OPA address to connect to (e.g. "https://staging.enterprise-opa.example.com:8443") (default "http://127.0.0.1:8181")
+  -a, --addr string                   EOPA address to connect to (e.g. "https://staging.enterprise-opa.example.com:8443") (default "http://127.0.0.1:8181")
   -b, --bundle string                 Path to bundle to use for secondary evaluation
   -d, --duration duration             Live Impact Analysis duration (e.g. "5m") (default 30s)
       --equals                        Include equal results (e.g. for assessing performance differences)
@@ -872,18 +872,18 @@ eopa impact record [flags]
       --tls-ca-cert-file string       TLS CA cert path
       --tls-cert-file string          TLS client cert path
       --tls-private-key-file string   TLS key path
-      --tls-skip-verification         Skip TLS verification when connecting to Enterprise OPA
+      --tls-skip-verification         Skip TLS verification when connecting to EOPA
 ```
 
 ------------------------------------------------------------------------
 
 ## eopa inspect
 
-Inspect Enterprise OPA bundle(s)
+Inspect EOPA bundle(s)
 
 ### Synopsis
 
-Inspect Enterprise OPA bundle(s).
+Inspect EOPA bundle(s).
 
 The ‘inspect’ command provides a summary of the contents in Enterprise
 OPA bundle(s) or a single Rego file. Bundles are gzipped tarballs
@@ -905,7 +905,7 @@ bundle.tar.gz
 $ eopa inspect bundle.tar.gz
 ```
 
-You can provide exactly one Enterprise OPA bundle, to a bundle
+You can provide exactly one EOPA bundle, to a bundle
 directory, or direct path to a Rego file to the ‘inspect’ command on the
 command-line. If you provide a path referring to a directory, the
 ‘inspect’ command will load that path as a bundle and summarize its
@@ -934,7 +934,7 @@ License status
 
 ### Synopsis
 
-View details about an Enterprise OPA license key or token.
+View details about an EOPA license key or token.
 
 ```
 eopa license [flags]
@@ -952,11 +952,11 @@ eopa license [flags]
 
 ## eopa license trial
 
-Create a new Enterprise OPA trial license.
+Create a new EOPA trial license.
 
 ### Synopsis
 
-Gather all of the data needed to create a new Enterprise OPA trial
+Gather all of the data needed to create a new EOPA trial
 license and create one. Any information not provided via flags is
 collected interactively. Upon success, the new trial license key is
 printed to stdout.
@@ -1152,11 +1152,11 @@ Remove files that aren't expected in the target directory:
 
 ## eopa run
 
-Start Enterprise OPA in interactive or server mode
+Start EOPA in interactive or server mode
 
 ### Synopsis
 
-Start an instance of Enterprise OPA.
+Start an instance of EOPA.
 
 To run the interactive shell:
 
@@ -1170,13 +1170,13 @@ To run the server:
 $ eopa run -s
 ```
 
-The ‘run’ command starts an instance of the Enterprise OPA runtime. The
-Enterprise OPA runtime can be started as an interactive shell or a
+The ‘run’ command starts an instance of the EOPA runtime. The
+EOPA runtime can be started as an interactive shell or a
 server.
 
 When the runtime is started as a shell, users can define rules and
 evaluate expressions interactively. When the runtime is started as a
-server, Enterprise OPA exposes an HTTP API for managing policies,
+server, EOPA exposes an HTTP API for managing policies,
 reading and writing data, and executing queries.
 
 The runtime can be initialized with one or more files that contain
@@ -1187,7 +1187,7 @@ which will be treated as a bundle. Without the ‘–bundle’ flag Enterprise
 OPA will recursively load ALL rego, JSON, and YAML files.
 
 When loading from directories, only files with known extensions are
-considered. The current set of file extensions that Enterprise OPA will
+considered. The current set of file extensions that EOPA will
 consider are:
 
 ```
@@ -1246,7 +1246,7 @@ $ eopa run -s --set "services.cli1.url=https://example.com" \
 ```
 
 The ‘run’ command can also verify the signature of a signed bundle. A
-signed bundle is a normal Enterprise OPA bundle that includes a file
+signed bundle is a normal EOPA bundle that includes a file
 named “.signatures.json”. For more information on signed bundles see
 https://www.openpolicyagent.org/docs/latest/management-bundles/#signing.
 
@@ -1371,7 +1371,7 @@ eopa run [flags]
   -l, --log-level {debug,info,error}         set log level (default info)
       --log-timestamp-format string          set log timestamp format (OPA_LOG_TIMESTAMP_FORMAT environment variable)
   -m, --max-errors int                       set the number of errors to allow before compilation fails early (default 10)
-      --min-tls-version {1.0,1.1,1.2,1.3}    set minimum TLS version to be used by Enterprise OPA's server (default 1.2)
+      --min-tls-version {1.0,1.1,1.2,1.3}    set minimum TLS version to be used by EOPA's server (default 1.2)
       --no-discovery-license-check           Disable discovery-based licensing check.
       --no-license-fallback                  Don't fall back to OPA-mode when no license provided.
   -O, --optimize int                         set optimization level
@@ -1403,11 +1403,11 @@ eopa run [flags]
 
 ## eopa sign
 
-Generate an Enterprise OPA bundle signature
+Generate an EOPA bundle signature
 
 ### Synopsis
 
-Generate an Enterprise OPA bundle signature.
+Generate an EOPA bundle signature.
 
 The ‘sign’ command generates a digital signature for policy bundles. It
 generates a “.signatures.json” file that dictates which files should be
@@ -1429,7 +1429,7 @@ command expects a PEM file containing the private key. For HMAC family
 of algorithms (eg. HS256), the secret can be provided using the
 –signing-key flag.
 
-Enterprise OPA ‘sign’ can ONLY be used with the –bundle flag to load
+EOPA ‘sign’ can ONLY be used with the –bundle flag to load
 paths that refer to existing bundle files or directories following the
 bundle structure.
 
@@ -1491,7 +1491,7 @@ And the decoded JWT payload has the following form:
 
 The “files” field is generated from the files under the directory
 path(s) provided to the ‘sign’ command. During bundle signature
-verification, Enterprise OPA will check each file name (ex.
+verification, EOPA will check each file name (ex.
 “foo/bar/data.json”) in the “files” field exists in the actual bundle.
 The file content is hashed using SHA256.
 
@@ -1603,7 +1603,7 @@ The optional “gobench” output format conforms to the Go Benchmark Data
 Format.
 
 The –watch flag can be used to monitor policy and data file-system
-changes. When a change is detected, Enterprise OPA reloads the policy
+changes. When a change is detected, EOPA reloads the policy
 and data and then re-runs the tests. Watching individual files (rather
 than directories) is generally not recommended as some updates might
 cause them to be dropped by OPA.
@@ -1764,11 +1764,11 @@ be required beyond those generated by this command!
 
 ## eopa version
 
-Print the version of Enterprise OPA
+Print the version of EOPA
 
 ### Synopsis
 
-Show version and build information for Enterprise OPA.
+Show version and build information for EOPA.
 
 ```
 eopa version [flags]

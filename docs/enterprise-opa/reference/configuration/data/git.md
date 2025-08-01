@@ -1,19 +1,19 @@
 ---
 sidebar_position: 7
 sidebar_label: Git
-title: Git Configuration | Enterprise OPA
+title: Git Configuration | EOPA
 ---
 
 # Git
 
-Enterprise OPA's support for pulling in data from any Git repository makes it possible to
+EOPA's support for pulling in data from any Git repository makes it possible to
 use GitOps practices for managing data and have that data available for policy
-evaluations in Enterprise OPA.
+evaluations in EOPA.
 
 
 ## Example Configuration
 
-The Git integration is provided via the `data` plugin, and needs to be enabled in Enterprise OPA's configuration.
+The Git integration is provided via the `data` plugin, and needs to be enabled in EOPA's configuration.
 
 
 ### Minimal
@@ -28,7 +28,7 @@ plugins:
       file_path: users.json
 ```
 
-With this minimal configuration, Enterprise OPA will pull in the `users.json` file from the
+With this minimal configuration, EOPA will pull in the `users.json` file from the
 repository's `main` branch every 30 seconds.
 
 All of this, and various authentication methods, can be configured using an advanced configuration:
@@ -60,7 +60,7 @@ plugins:
       rego_transform: data.e2e.transform
 ```
 
-With a config like this, Enterprise OPA will retrieve the file from the specified
+With a config like this, EOPA will retrieve the file from the specified
 repository location, and attempt to parse as any of:
 - XML
 - YAML
@@ -92,7 +92,7 @@ If the referenced Git repository contains a `users.json` file with this content,
   }
 ]
 ```
-then Enterprise OPA's `data.git.users` will look like this:
+then EOPA's `data.git.users` will look like this:
 
 ```json
 # terminal-command
@@ -121,20 +121,20 @@ curl 'http://127.0.0.1:8181/v1/data/git/users?pretty'
 
 :::note
 The **key** below `data` in the configuration (`git.users` in the example) can be anything you want,
-and determines where the retrieved document will be found in Enterprise OPA's `data` hierarchy.
+and determines where the retrieved document will be found in EOPA's `data` hierarchy.
 :::
 
 
 ## Data Transformations
 
-The `rego_transform` attribute specifies the path to a rule used to transform data pulled from Git into a different format for storage in Enterprise OPA.
+The `rego_transform` attribute specifies the path to a rule used to transform data pulled from Git into a different format for storage in EOPA.
 
 `rego_transform` policies take incoming messages as JSON via `input.incoming` and returns the transformed JSON.
 
 
 ### Example
 
-Starting with the Enterprise OPA configuration above and the example data above
+Starting with the EOPA configuration above and the example data above
 
 Our `data.e2e.transform` policy is:
 

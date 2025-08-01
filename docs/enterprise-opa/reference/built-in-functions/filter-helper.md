@@ -5,7 +5,7 @@ title: "filter.helper: Testing data filtering"
 ---
 
 
-Enterprise OPA provides a high-level `filter.helper()` built-in function for example-based testing of data filter policies. It can be used by importing
+EOPA provides a high-level `filter.helper()` built-in function for example-based testing of data filter policies. It can be used by importing
 
 ```rego
 import data.system.eopa.utils.tests.v1.filter

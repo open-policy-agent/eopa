@@ -1,7 +1,7 @@
 ---
 sidebar_position: 11
 sidebar_label: vault
-title: "vault: Interacting with HashiCorp Vault | Enterprise OPA"
+title: "vault: Interacting with HashiCorp Vault | EOPA"
 ---
 
 import FunctionErrors from './_function-errors.md'
@@ -45,10 +45,10 @@ secret := vault.send({
 
 ### Utility methods
 
-Enterprise OPA comes with helper methods for using this builtin, and take its configuration
+EOPA comes with helper methods for using this builtin, and take its configuration
 from the environment variables `VAULT_ADDRESS` and `VAULT_TOKEN`: `vault.secret` and `vault.secret_opts`.
 
-Both of these methods are available in Enterprise OPA at `data.system.eopa.utils.vault.v1.env`.
+Both of these methods are available in EOPA at `data.system.eopa.utils.vault.v1.env`.
 
 ```rego
 package example

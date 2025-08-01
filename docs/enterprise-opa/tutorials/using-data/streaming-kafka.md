@@ -1,7 +1,7 @@
 ---
 sidebar_position: 5
 sidebar_label: Streaming data from Kafka
-title: Streaming data from Kafka | Enterprise OPA
+title: Streaming data from Kafka | EOPA
 ---
 
 
@@ -11,23 +11,23 @@ title: Streaming data from Kafka | Enterprise OPA
 import LicenseTrialAdmonition from '../../../enterprise-opa/_license-trial-admonition.md';
 
 
-Enterprise OPA has the capability to ingest data from Kafka topics and use it in policy evaluation.
-This can be useful to keep a dataset that is frequently updated fresh in Enterprise OPA.
+EOPA has the capability to ingest data from Kafka topics and use it in policy evaluation.
+This can be useful to keep a dataset that is frequently updated fresh in EOPA.
 
 
 ## Overview
 
-In this tutorial we'll be walking through how to use Enterprise OPA's Kafka integration.
+In this tutorial we'll be walking through how to use EOPA's Kafka integration.
 To demo the Kafka functionality, we'll need to complete the following:
 
-- Run Kafka broker and Enterprise OPA locally in some containers
+- Run Kafka broker and EOPA locally in some containers
 - Publish some data on the Kafka topic
-- Query the data which was streamed to Enterprise OPA
+- Query the data which was streamed to EOPA
 
 
-## Running the Kafka and Enterprise OPA using Docker Compose
+## Running the Kafka and EOPA using Docker Compose
 
-Enterprise OPA requires a Kafka cluster to test the Kafka integration.
+EOPA requires a Kafka cluster to test the Kafka integration.
 For this tutorial, we'll run a local containerized test "cluster", using the Confluent images for Kafka and Zookeeper.
 
 :::note
@@ -86,10 +86,10 @@ The Kafka deployment above uses the settings from the [Kafka quickstart](https:/
 This is appropriate for testing purposes only.
 :::
 
-The `eopa` configuration mounts the current directory into `/data` in the container. We need this directory to contain a configuration file and a transformation policy file to format data as it is ingested into Enterprise OPA.
+The `eopa` configuration mounts the current directory into `/data` in the container. We need this directory to contain a configuration file and a transformation policy file to format data as it is ingested into EOPA.
 
-Create a file called `enterprise-opa-conf.yaml`, this file is used to configure Enterprise OPA to ingest data from Kafka.
-We must also instruct Enterprise OPA on which policy to use to transform the data as it is ingested.
+Create a file called `enterprise-opa-conf.yaml`, this file is used to configure EOPA to ingest data from Kafka.
+We must also instruct EOPA on which policy to use to transform the data as it is ingested.
 Insert the content below into the `enterprise-opa-conf.yaml` file in the current directory.
 
 ```yaml
@@ -108,7 +108,7 @@ plugins:
 We also need to supply a policy to be loaded at `data.e2e.transform`.
 We do this by creating a local file called `transform.rego` in the current directory.
 The policy below will ensure that only messages on the `users` topic are ingested, and that the data is transformed to only include the `name` and `roles` fields.
-Insert the content below into the `transform.rego` file so that it can be loaded into the Enterprise OPA container.
+Insert the content below into the `transform.rego` file so that it can be loaded into the EOPA container.
 
 ```rego
 # transform.rego
@@ -134,7 +134,7 @@ transform[key] := val if {
 }
 ```
 
-Before running Enterprise OPA, we need to set the `EOPA_LICENSE_KEY` environment variable.
+Before running EOPA, we need to set the `EOPA_LICENSE_KEY` environment variable.
 
 <LicenseTrialAdmonition />
 
@@ -153,13 +153,13 @@ docker-compose up
 
 ## Publishing messages to Kafka
 
-With the containers up and running, it's time to test the Enterprise OPA integration with Kafka.
+With the containers up and running, it's time to test the EOPA integration with Kafka.
 
 :::note
 The following example uses the [kcat tool](https://github.com/edenhill/kcat) to produce messages to Kafka topics in these examples, but any tool for producing messages should work.
 :::
 
-We're going to publish some messages to the `users` topic, which we previously configured Enterprise OPA to consume from.
+We're going to publish some messages to the `users` topic, which we previously configured EOPA to consume from.
 The data will be in the form of a JSON object per line, and will be stored in a file called `users.jsonl`.
 
 You can create the `users.jsonl` file now with the content below.
@@ -207,9 +207,9 @@ kcat -C -b localhost -t users
 ```
 
 
-## Query the data which was streamed to Enterprise OPA
+## Query the data which was streamed to EOPA
 
-The same data we have seen using `kcat` can now be queried from Enterprise OPA.
+The same data we have seen using `kcat` can now be queried from EOPA.
 
 We can run a simple curl command to verify that the data has been ingested and transformed correctly.
 
@@ -245,5 +245,5 @@ curl -s "localhost:8181/v1/data/kafka/messages?pretty=true"
 
 ## Further Reading
 
-- The files used in the examples are also available in the Enterprise OPA [blueprints repo](https://github.com/StyraInc/enterprise-opa/tree/main/examples/kafka).
-- View the [Kafka configuration](/enterprise-opa/reference/configuration/data/kafka) for Enterprise OPA.
+- The files used in the examples are also available in the EOPA [blueprints repo](https://github.com/StyraInc/enterprise-opa/tree/main/examples/kafka).
+- View the [Kafka configuration](/enterprise-opa/reference/configuration/data/kafka) for EOPA.

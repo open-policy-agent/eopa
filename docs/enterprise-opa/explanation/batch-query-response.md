@@ -1,11 +1,11 @@
 ---
 sidebar_position: 1
 sidebar_label: Batch Query Response
-title: Batch Query Response Types in Enterprise OPA
+title: Batch Query Response Types in EOPA
 ---
 
 
-# Batch Query Response Types in Enterprise OPA
+# Batch Query Response Types in EOPA
 
 :::danger
 :::

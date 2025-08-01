@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 sidebar_label: Kafka Sink
-title: Kafka Sink Configuration | Enterprise OPA
+title: Kafka Sink Configuration | EOPA
 ---
 
 The Kafka decision log sink allows publishing decision log entries as

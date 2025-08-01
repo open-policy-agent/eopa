@@ -5,23 +5,23 @@ title: How to generate test scaffolding
 ---
 
 :::tip
-You **do not need** an Enterprise OPA license to use this functionality.
+You **do not need** an EOPA license to use this functionality.
 :::
 
 
 # How to generate tests and test scaffolding
 
-This guide shows you how to use the Enterprise OPA CLI to generate new tests and
+This guide shows you how to use the EOPA CLI to generate new tests and
 bootstrap an application with tests.
 
-1. [Install the Enterprise OPA CLI](#install-the-enterprise-opa-cli)
+1. [Install the EOPA CLI](#install-the-enterprise-opa-cli)
 1. [Run `eopa test bootstrap` to generate a starting set of test stubs (one test group per rule body)](#eopa-test-bootstrap)
 1. [Use `eopa test new` with naming annotations to generate new test cases](#eopa-test-new)
 
 ---
 
 
-## Install the Enterprise OPA CLI
+## Install the EOPA CLI
 
 ```sh
 # terminal-command

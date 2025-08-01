@@ -1,23 +1,23 @@
 ---
 sidebar_position: 1
 sidebar_label: From Hashicorp Vault
-title: Using Secrets from HashiCorp Vault | Enterprise OPA
+title: Using Secrets from HashiCorp Vault | EOPA
 ---
 
 # Using HashiCorp Vault as an External Key Manager
 
-Enterprise OPA supports integrating with [HashiCorp Vault](https://www.vaultproject.io/use-cases/secrets-management) as a third-party External Key Manager.
+EOPA supports integrating with [HashiCorp Vault](https://www.vaultproject.io/use-cases/secrets-management) as a third-party External Key Manager.
 
-The Enterprise OPA Vault integration can be used to:
-- Retrieve the Enterprise OPA [License key](#license-keys) from a Vault secret
-- Override the configuration for an Enterprise OPA [service or key configuration](#services-and-keys-overrides)
+The EOPA Vault integration can be used to:
+- Retrieve the EOPA [License key](#license-keys) from a Vault secret
+- Override the configuration for an EOPA [service or key configuration](#services-and-keys-overrides)
 - Override the configuration of [`http.send`](#httpsend-overrides)
 
 
 ## Configuration
 
-1. [Connecting Vault to Enterprise OPA](#connecting-vault-to-enterprise-opa)
-2. [Authenticating Enterprise OPA](#authenticating-enterprise-opa)
+1. [Connecting Vault to EOPA](#connecting-vault-to-enterprise-opa)
+2. [Authenticating EOPA](#authenticating-enterprise-opa)
 3. [Accessing secrets from Vault](#accessing-secrets-from-vault)
 
 
@@ -37,7 +37,7 @@ ekm:
       key: "kv/data/license:data/key"
 ```
 
-This will configure Enterprise OPA to extract its license key from the Vault key-value store located at `kv/data/license:data/key`
+This will configure EOPA to extract its license key from the Vault key-value store located at `kv/data/license:data/key`
 
 
 #### Advanced
@@ -88,7 +88,7 @@ ekm:
             scheme: "kv/data/tls/bearer:data/scheme"
 ```
 
-In this example, Enterprise OPA will:
+In this example, EOPA will:
 - Extract its license key from the Vault key-value store located at `kv/data/license:data/key`
 - Use the value looked up from `vault()` for the authorization bearer token used to retrieve the discovery and test bundles from the `acmecorp` service
 - Override the RSA public key used for bundle signing with `kv/data/discovery/rsa:data/key`
@@ -98,7 +98,7 @@ In this example, Enterprise OPA will:
 ### Configuration
 
 
-#### Connecting Vault to Enterprise OPA
+#### Connecting Vault to EOPA
 
 | Field | Type | Required | Description | Environment Variables |
 | --- | --- | --- | --- | ---|
@@ -108,7 +108,7 @@ In this example, Enterprise OPA will:
 | `ekm.vault.access_type` | `string` | Yes | Access type determines which Vault authentication service to use. Supported types are `token`, `approle`, `kubernetes` | |
 
 
-#### Authenticating Enterprise OPA
+#### Authenticating EOPA
 
 Configuration is required for the corresponding `ekm.vault.access_type`.
 
@@ -152,7 +152,7 @@ Configuration is required for the corresponding `ekm.vault.access_type`.
 
 #### Config Values
 
-Since [Enterprise OPA v1.26.0](https://github.com/StyraInc/enterprise-opa/releases/tag/v1.26.0), you can use _variable interpolation_ to put secrets into your configurations of services, keys, and plugins.
+Since [EOPA v1.26.0](https://github.com/StyraInc/enterprise-opa/releases/tag/v1.26.0), you can use _variable interpolation_ to put secrets into your configurations of services, keys, and plugins.
 
 For example, to configure the decision logs plugin to use a secret for posting logs to an HTTP endpoint:
 ```yaml

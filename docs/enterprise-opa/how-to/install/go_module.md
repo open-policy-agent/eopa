@@ -1,5 +1,5 @@
 ---
-title: How to use Enterprise OPA as a Go module
+title: How to use EOPA as a Go module
 sidebar_label: Go module
 sidebar_position: 3
 ---
@@ -10,7 +10,7 @@ import InstallGoModule from '../_install_go_module.md'
 
 # Use as a Go module
 
-Enterprise OPA is available as a Go module and can be integrated as a library.
+EOPA is available as a Go module and can be integrated as a library.
 To obtain the source for the Go module please [contact
 us](https://inviter.co/styra).
 

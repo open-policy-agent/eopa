@@ -1,7 +1,7 @@
 ---
 sidebar_position: 9
 sidebar_label: mongodb
-title: "mongodb functions: Interacting with a MongoDB database | Enterprise OPA"
+title: "mongodb functions: Interacting with a MongoDB database | EOPA"
 ---
 
 import FunctionErrors from "./_function-errors.md"
@@ -92,10 +92,10 @@ resource_query_response := mongodb.find({
 
 ## Utility helpers
 
-Enterprise OPA comes with helper methods for using this builtin together with
+EOPA comes with helper methods for using this builtin together with
 [`vault.send`](vault): `mongodb.find` and `mongodb.find_one`.
 
-Both of these methods are available in Enterprise OPA at `data.system.eopa.utils.mongodb.v1.vault`.
+Both of these methods are available in EOPA at `data.system.eopa.utils.mongodb.v1.vault`.
 
 ```rego
 package example

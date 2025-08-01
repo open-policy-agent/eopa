@@ -1,17 +1,17 @@
 ---
 sidebar_position: 1
 sidebar_label: Rego package in Go
-title: How to integrate with Enterprise OPA in Go with the Rego package
+title: How to integrate with EOPA in Go with the Rego package
 ---
 
 <!-- markdownlint-disable MD044 -->
 import InstallGoModule from '../_install_go_module.md'
 
 
-# How to integrate Enterprise OPA in a Go application with the Rego package
+# How to integrate EOPA in a Go application with the Rego package
 
-This how-to guide shows how to embed Enterprise OPA into a Go application
-and enable Enterprise OPA's VM target with the
+This how-to guide shows how to embed EOPA into a Go application
+and enable EOPA's VM target with the
 [rego](https://pkg.go.dev/github.com/open-policy-agent/opa/rego) package.
 
 
@@ -20,7 +20,7 @@ and enable Enterprise OPA's VM target with the
 <InstallGoModule />
 
 
-## Import the Enterprise OPA VM package
+## Import the EOPA VM package
 
 Add the following import to the Go application. You should add this import in
 the file(s) in your application that integrates with the
@@ -31,9 +31,9 @@ import eopa_vm "github.com/styrainc/enterprise-opa-private/pkg/rego_vm"
 ```
 
 
-## Enable the Enterprise OPA VM target
+## Enable the EOPA VM target
 
-Enable Enterprise OPA's optimized evaluation engine by passing the
+Enable EOPA's optimized evaluation engine by passing the
 `eopa_vm.Target` target when constructing the `rego.Rego` object.
 
 ```go
@@ -55,7 +55,7 @@ Enable Enterprise OPA's optimized evaluation engine by passing the
 
 ## Wrap up
 
-This how-to guide showed how you can embed Enterprise OPA into a Go application that
+This how-to guide showed how you can embed EOPA into a Go application that
 uses the [rego](https://pkg.go.dev/github.com/open-policy-agent/opa/rego)
 package. The sample code is hosted on
 [GitHub](https://github.com/StyraInc/enterprise-opa/tree/main/examples/go-rego).

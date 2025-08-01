@@ -1,6 +1,6 @@
 ---
 sidebar_label: Overview
-title: Getting Data into Enterprise OPA
+title: Getting Data into EOPA
 sidebar_position: 0
 ---
 
@@ -10,7 +10,7 @@ sidebar_position: 0
 <LinkTiles items={[
     {
         "text": "Bundles",
-        "description": "Using the Bundles API with Enterprise OPA",
+        "description": "Using the Bundles API with EOPA",
         "to": "data/bundle-api",
     },
     {

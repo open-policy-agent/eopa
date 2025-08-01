@@ -1,7 +1,7 @@
 ---
 sidebar_position: 4
 sidebar_label: HTTP Sink
-title: HTTP Sink Configuration | Enterprise OPA
+title: HTTP Sink Configuration | EOPA
 ---
 
 The HTTP decision log sink is a more generic version of the Service sink. It will send decision logs as payloads to an HTTP API.
@@ -45,7 +45,7 @@ plugins:
 
 ### OAuth2
 
-Enterprise OPA will authenticate using a bearer token obtained through the OAuth2 client credentials flow.
+EOPA will authenticate using a bearer token obtained through the OAuth2 client credentials flow.
 
 | Field | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |

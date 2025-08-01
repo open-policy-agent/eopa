@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 sidebar_label: gRPC API
-title: gRPC API | Enterprise OPA
+title: gRPC API | EOPA
 ---
 
 
@@ -23,7 +23,7 @@ See the [buf.build Bulk API reference documentation](https://buf.build/styra/ent
 
 ## Data API
 
-DataService is an API for CRUD operations on the data stored in Enterprise OPA.
+DataService is an API for CRUD operations on the data stored in EOPA.
 
 See the [buf.build Data API reference documentation](https://buf.build/styra/enterprise-opa/docs/main:eopa.data.v1)
 
@@ -32,7 +32,7 @@ The Data API also has the ability to [stream reads/writes](https://buf.build/sty
 
 ## Policy API
 
-PolicyService is an API for CRUD operations on the policies stored in Enterprise OPA.
+PolicyService is an API for CRUD operations on the policies stored in EOPA.
 
 See the [buf.build Policy API reference documentation](https://buf.build/styra/enterprise-opa/docs/main:eopa.policy.v1)
 

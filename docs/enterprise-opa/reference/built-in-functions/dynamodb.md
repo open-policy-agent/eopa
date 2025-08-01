@@ -1,7 +1,7 @@
 ---
 sidebar_position: 10
 sidebar_label: dynamodb
-title: "dynamodb: Interacting with a DynamoDB database | Enterprise OPA"
+title: "dynamodb: Interacting with a DynamoDB database | EOPA"
 ---
 
 import FunctionErrors from "./_function-errors.md"
@@ -107,10 +107,10 @@ See the [AWS SDK](https://docs.aws.amazon.com/sdk-for-go/api/service/dynamodb/#Q
 
 ## Utility helpers
 
-Enterprise OPA comes with helper methods for using these built-ins together with
+EOPA comes with helper methods for using these built-ins together with
 [`vault.send`](vault): `dynamodb.get` and `dynamodb.query`.
 
-Both of these methods are available in Enterprise OPA at `data.system.eopa.utils.dynamodb.v1.vault`.
+Both of these methods are available in EOPA at `data.system.eopa.utils.dynamodb.v1.vault`.
 
 ```rego
 package example

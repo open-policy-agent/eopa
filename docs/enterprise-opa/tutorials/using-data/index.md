@@ -1,7 +1,7 @@
 ---
 sidebar_label: Overview
 slug: /tutorials/using-data
-title: Using Data with Enterprise OPA
+title: Using Data with EOPA
 sidebar_position: 0
 show_feedback_form: false
 ---
@@ -38,7 +38,7 @@ show_feedback_form: false
     },
     {
         "text": "Streaming data from kafka",
-        "description": "Tutorial on how to subscribe to a Kafka topic and transform messages into Enterprise OPA's data store",
+        "description": "Tutorial on how to subscribe to a Kafka topic and transform messages into EOPA's data store",
         "to": "using-data/querying-redis",
     },
 ]}/>

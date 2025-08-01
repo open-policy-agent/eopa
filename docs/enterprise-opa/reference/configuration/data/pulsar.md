@@ -1,17 +1,17 @@
 ---
 sidebar_position: 9
 sidebar_label: Pulsar
-title: Pulsar Datasource Configuration | Enterprise OPA
+title: Pulsar Datasource Configuration | EOPA
 ---
 
 # Pulsar Datasource Configuration
 
-Enterprise OPA's support for Apache Pulsar makes it possible to stream data updates to Enterprise OPA. This can be useful when events representing changes to data used in policy evaluation are available on a Pulsar topic (CDC, change data capture).
+EOPA's support for Apache Pulsar makes it possible to stream data updates to EOPA. This can be useful when events representing changes to data used in policy evaluation are available on a Pulsar topic (CDC, change data capture).
 
 
 ## Example Configuration
 
-The Pulsar integration is provided through the `data` plugin, and needs to be enabled in Enterprise OPA's configuration.
+The Pulsar integration is provided through the `data` plugin, and needs to be enabled in EOPA's configuration.
 
 
 ### Minimal
@@ -30,14 +30,14 @@ plugins:
 
 In addition to the minimal configuration above, note the following:
 
-- The `users` key will be used as a "namespace" by the plug-in, and will have Enterprise OPA use `data.users` for data ingested through Pulsar. Use the name makes the most sense for your application.
-- The `topics` array will be the Pulsar topics from which Enterprise OPA uses consume the messages.
+- The `users` key will be used as a "namespace" by the plug-in, and will have EOPA use `data.users` for data ingested through Pulsar. Use the name makes the most sense for your application.
+- The `topics` array will be the Pulsar topics from which EOPA uses consume the messages.
 - The `rego_transform` attribute allows using a message transformer on incoming message batches.
 
 
 ### Subscription Name, Type and Initial Position
 
-- The `subscription_name` lets you control the name of the Pulsar subscription. It defaults to `eopa_<INSTANCE_ID>_<MOUNT_POINT>`. For example, our example above would use the subscription name `eopa_<INSTANCE_ID>_users`. `<INSTANCE_ID>` is a UUID that changes with each startup of an Enterprise OPA instance.
+- The `subscription_name` lets you control the name of the Pulsar subscription. It defaults to `eopa_<INSTANCE_ID>_<MOUNT_POINT>`. For example, our example above would use the subscription name `eopa_<INSTANCE_ID>_users`. `<INSTANCE_ID>` is a UUID that changes with each startup of an EOPA instance.
 
 - The `subscription_type` configurable lets you control the subscription type used with Pulsar.
 Valid values are `exclusive` (default), `shared`, `key_shared` and `failover`.
@@ -45,7 +45,7 @@ Valid values are `exclusive` (default), `shared`, `key_shared` and `failover`.
 - The `subscription_initial_position` configurable determines where the data plugin starts receiving messages from.
 Valid values are `earliest` (default) and `latest`: `earliest` makes the plugin consume all available messages, `latest` will consume messages published after it has subscribed.
 
-The default values for these three configuration options ensure that **each instance** of Enterprise OPA that's consuming a Pulsar topic will get **all the messages**.
+The default values for these three configuration options ensure that **each instance** of EOPA that's consuming a Pulsar topic will get **all the messages**.
 If this is not desired for your use case, you can tweak the settings.
 
 
@@ -95,7 +95,7 @@ plugins:
 
 ## Message Transformers
 
-The `rego_transform` attribute specifies the path to a rule used to transform incoming messages via `input.incoming` into a format suitable for storage in Enterprise OPA. The raw input provided for each transform should be familiar to most Pulsar users:
+The `rego_transform` attribute specifies the path to a rule used to transform incoming messages via `input.incoming` into a format suitable for storage in EOPA. The raw input provided for each transform should be familiar to most Pulsar users:
 
 ```json
 {
@@ -110,7 +110,7 @@ The `rego_transform` attribute specifies the path to a rule used to transform in
 
 Most of the attributes are optional (for example, their values may be empty), and the base64-encoded `value` is typically used.
 
-`rego_transform` policies take a batch of one or more incoming messages as input and return the desired state of the data store of Enterprise OPA. Policies also have access to the data already stored via `input.previous`.
+`rego_transform` policies take a batch of one or more incoming messages as input and return the desired state of the data store of EOPA. Policies also have access to the data already stored via `input.previous`.
 Policies might perform operations such as:
 
 - Filtering out or target operations for messages from a particular topic
@@ -149,5 +149,5 @@ transform[key] := val if {
 
 ### Notes on Transforms
 
-The mechanism for transforming messages from batches into Enterprise OPA's storage is the same for all data plugins.
+The mechanism for transforming messages from batches into EOPA's storage is the same for all data plugins.
 Since Pulsar is quite similar to Kafka, its [Notes on Transforms](kafka/#notes-on-transforms) apply to Pulsar, too.

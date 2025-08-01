@@ -1,10 +1,10 @@
 ---
 sidebar_position: 10
 sidebar_label: Live Impact Analysis
-title: Testing policy updates with Live Impact Analysis | Enterprise OPA
+title: Testing policy updates with Live Impact Analysis | EOPA
 ---
 
-Live Impact Analysis (LIA) is a feature of Enterprise OPA which
+Live Impact Analysis (LIA) is a feature of EOPA which
 allows you to preview the impact of changes to policy code before deploying.
 LIA works by sampling live traffic and comparing the results from the new
 policy against the currently deployed policy.
@@ -13,7 +13,7 @@ policy against the currently deployed policy.
 ## Overview
 
 In this tutorial we'll be walking through the LIA feature with an example policy.
-We will send sample traffic to Enterprise OPA and use LIA to compare the results from two versions of a policy.
+We will send sample traffic to EOPA and use LIA to compare the results from two versions of a policy.
 
 Our demo architecture looks like this:
 
@@ -23,9 +23,9 @@ Our demo architecture looks like this:
 title: LIA Demo Setup
 ---
 flowchart LR
-    http["HTTP Load Generator"] -- 1. Example Queries ---> enterprise-opa["Enterprise OPA\n(Server)"]
+    http["HTTP Load Generator"] -- 1. Example Queries ---> enterprise-opa["EOPA\n(Server)"]
     enterprise-opa -- 3. Results ---> liacli
-    liacli["Enterprise OPA\n(LIA CLI)"] -- 2. Secondary Bundle ---> enterprise-opa
+    liacli["EOPA\n(LIA CLI)"] -- 2. Secondary Bundle ---> enterprise-opa
     style enterprise-opa fill:white,stroke:#24b6e0,stroke-width:4px
     style liacli fill:white,stroke:#24b6e0,stroke-width:4px
     style http fill:white,stroke:black,stroke-width:1px
@@ -34,12 +34,12 @@ flowchart LR
 This tutorial will consist of the following steps:
 
 - Installation of prerequisites
-- Configuration of LIA and policy for use in Enterprise OPA
+- Configuration of LIA and policy for use in EOPA
 - Configuring and sending sample traffic
 - Running the Live Impact Analysis and reviewing the results
 
-Our load generator will send a series of queries to Enterprise OPA.
-Next we'll use the Enterprise OPA CLI to kick off a LIA run with a new policy.
+Our load generator will send a series of queries to EOPA.
+Next we'll use the EOPA CLI to kick off a LIA run with a new policy.
 This will output some results we can review to make sure our policy change is working as expected.
 
 
@@ -47,15 +47,15 @@ This will output some results we can review to make sure our policy change is wo
 
 Please ensure that you have the following installed before continuing.
 
-- [Enterprise OPA](/enterprise-opa/how-to/install/local) - installed and [licensed](/enterprise-opa/how-to/run/with-a-license).
-  We'll be running Enterprise OPA locally for this demo but the process for running LIA against a remote deployment is much the same.
+- [EOPA](/enterprise-opa/how-to/install/local) - installed and [licensed](/enterprise-opa/how-to/run/with-a-license).
+  We'll be running EOPA locally for this demo but the process for running LIA against a remote deployment is much the same.
 - [Benthos](https://www.benthos.dev/docs/guides/getting_started#install) - an open source stream generator and processor.
   We'll be using this for traffic generation in our demo, but it'll likely be useful for your own testing too.
 
 
 ## Configure Live Impact Analysis
 
-Enterprise OPA doesn't enable LIA by default, so we need to configure it.
+EOPA doesn't enable LIA by default, so we need to configure it.
 The feature can be configured using the configuration file example below.
 
 ```yaml
@@ -106,9 +106,9 @@ allow if {
 Save this policy as `policy.rego`.
 
 
-## Running Enterprise OPA
+## Running EOPA
 
-Run Enterprise OPA in server mode with the following command, specifying our configuration file and Rego policy.
+Run EOPA in server mode with the following command, specifying our configuration file and Rego policy.
 
 ```shell
 # terminal-command
@@ -118,7 +118,7 @@ eopa run -s -c config.yaml policy.rego
 
 # Configure and Send Sample Traffic
 
-We're going to be using Benthos (which we installed earlier) to send sample traffic to Enterprise OPA.
+We're going to be using Benthos (which we installed earlier) to send sample traffic to EOPA.
 Benthos is a general purpose tool, so we need to configure it for our use case.
 We need our requests to have `path`, `method` and `username` fields like this:
 
@@ -130,7 +130,7 @@ We need our requests to have `path`, `method` and `username` fields like this:
 }
 ```
 
-We can use a Benthos config file to generate the requests we need and send them to our running Enterprise OPA server every 10ms.
+We can use a Benthos config file to generate the requests we need and send them to our running EOPA server every 10ms.
 
 ```yaml
 # benthos.yaml
@@ -167,7 +167,7 @@ benthos -c benthos.yaml
 ```
 
 :::note
-It'd be simple to update this Benthos config to target a remote Enterprise OPA instance, should your use case require it.
+It'd be simple to update this Benthos config to target a remote EOPA instance, should your use case require it.
 Using [`kubectl port-forward`](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/)
 is a quick way to do this for an instance without a public URL.
 :::
@@ -195,7 +195,7 @@ allow if {
 }
 ```
 
-Now we need to build our policy to be sent to the Enterprise OPA instance for LIA.
+Now we need to build our policy to be sent to the EOPA instance for LIA.
 The LIA command will send a policy bundle to the server for comparison:
 We can create one like this:
 

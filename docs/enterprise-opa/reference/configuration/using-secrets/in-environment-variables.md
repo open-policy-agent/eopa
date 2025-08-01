@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 sidebar_label: Environment Variables
-title: Using environment variables as secrets | Enterprise OPA
+title: Using environment variables as secrets | EOPA
 ---
 
 
@@ -10,7 +10,7 @@ title: Using environment variables as secrets | Enterprise OPA
 
 ## During Runtime
 
-Enterprise OPA supports using environment variables for static runtime configuration.
+EOPA supports using environment variables for static runtime configuration.
 
 See the [Open Policy Agent documentation](https://www.openpolicyagent.org/docs/configuration/#using-environment-variables-in-configuration) for reference.
 
@@ -18,9 +18,9 @@ See the [Open Policy Agent documentation](https://www.openpolicyagent.org/docs/c
 ## During Discovery
 
 :::info
-This feature is only supported in Enterprise OPA.
+This feature is only supported in EOPA.
 :::
 
-Enterprise OPA supports using environment variables in static JSON configuration files delivered via [discovery](https://www.openpolicyagent.org/docs/management-discovery/).
+EOPA supports using environment variables in static JSON configuration files delivered via [discovery](https://www.openpolicyagent.org/docs/management-discovery/).
 
 This feature makes discovery configuration and runtime configuration equivalent.

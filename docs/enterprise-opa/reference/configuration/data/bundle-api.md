@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 sidebar_label: Using Bundles
-title: Data Bundle API | Enterprise OPA
+title: Data Bundle API | EOPA
 ---
 
 :::note
@@ -11,9 +11,9 @@ See [Bundle Format](/enterprise-opa/explanation/bundle-format) for additional in
 
 # Data Bundle API
 
-Working in much the same way as in OPA, the Bundle API is a functionality of Enterprise OPA which can can periodically download Enterprise OPA formatted bundles from remote HTTP servers.
+Working in much the same way as in OPA, the Bundle API is a functionality of EOPA which can can periodically download EOPA formatted bundles from remote HTTP servers.
 
-The following is an example of a simple Enterprise OPA configuration using the Bundle API, note that it's the same as how policy can is fetched:
+The following is an example of a simple EOPA configuration using the Bundle API, note that it's the same as how policy can is fetched:
 
 ```yaml
 services:
@@ -33,7 +33,7 @@ bundles:
       max_delay_seconds: 20
 ```
 
-Using this configuration, Enterprise OPA will fetch bundles from `https://example.com/service/v1/somedir/bundle.tar.gz` using a Bearer token for authentication.
+Using this configuration, EOPA will fetch bundles from `https://example.com/service/v1/somedir/bundle.tar.gz` using a Bearer token for authentication.
 
 Other advanced features of the Bundle API are explained in detail in the OPA documentation:
 

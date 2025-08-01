@@ -1,17 +1,17 @@
 ---
-title: How to deploy Enterprise OPA on Kubernetes
+title: How to deploy EOPA on Kubernetes
 sidebar_label: Deploy on Kubernetes
 sidebar_position: 2
 ---
 
 # Deploy on Kubernetes
 
-This guide gives an outline of how to deploy Enterprise OPA in Kubernetes. There are a number of adjustments you may wish to consider for your own deployment:
+This guide gives an outline of how to deploy EOPA in Kubernetes. There are a number of adjustments you may wish to consider for your own deployment:
 
-- Setting memory and CPU requests for the Enterprise OPA container. These values will depend on your data and throughput requirements.
+- Setting memory and CPU requests for the EOPA container. These values will depend on your data and throughput requirements.
 - Adjustments to the example configuration file included here as a secret to load bundles over the Bundle Service API.
-- Creating an Ingress resource to expose the Enterprise OPA API.
-- Deploying `kube-mgmt` to load Kubernetes data or policies in `ConfigMap` resources into Enterprise OPA.
+- Creating an Ingress resource to expose the EOPA API.
+- Deploying `kube-mgmt` to load Kubernetes data or policies in `ConfigMap` resources into EOPA.
 
 
 ## 1. Create a namespace
@@ -28,7 +28,7 @@ metadata:
 
 ## 2. Store the license in a secret
 
-This is a required step. This secret is used in the Enterprise OPA pods to enable them to start.
+This is a required step. This secret is used in the EOPA pods to enable them to start.
 
 ```yaml
 apiVersion: v1
@@ -42,13 +42,13 @@ stringData:
 ```
 
 :::tip
-If you are storing your Enterprise OPA license key in [HashiCorp Vault](/enterprise-opa/reference/configuration/using-secrets/from-hashicorp-vault), you can skip this step and instead use the Enterprise OPA configuration file.
+If you are storing your EOPA license key in [HashiCorp Vault](/enterprise-opa/reference/configuration/using-secrets/from-hashicorp-vault), you can skip this step and instead use the EOPA configuration file.
 :::
 
 
 ## 3. Create the configuration file
 
-Create a `ConfigMap` for configuration. This will be loaded into the Enterprise OPA pods via a volume mount.
+Create a `ConfigMap` for configuration. This will be loaded into the EOPA pods via a volume mount.
 
 ```yaml
 apiVersion: v1
@@ -69,16 +69,16 @@ data:
 ```
 
 :::caution
-If you're providing anything sensitive in your Enterprise OPA configuration—like tokens or private keys—don't place them in the config map directly. Instead, use [HashiCorp Vault](/enterprise-opa/reference/configuration/using-secrets/from-hashicorp-vault), [environment variable substitution](https://www.openpolicyagent.org/docs/configuration/#environment-variable-substitution) or in a file via the `--set-file` [override](https://www.openpolicyagent.org/docs/configuration/#cli-runtime-overrides) for `eopa run`.
+If you're providing anything sensitive in your EOPA configuration—like tokens or private keys—don't place them in the config map directly. Instead, use [HashiCorp Vault](/enterprise-opa/reference/configuration/using-secrets/from-hashicorp-vault), [environment variable substitution](https://www.openpolicyagent.org/docs/configuration/#environment-variable-substitution) or in a file via the `--set-file` [override](https://www.openpolicyagent.org/docs/configuration/#cli-runtime-overrides) for `eopa run`.
 :::
 
 
 ## 4. Create the deployment
 
-Finally, we can run Enterprise OPA by creating a Deployment resource.
+Finally, we can run EOPA by creating a Deployment resource.
 
 :::note
-This Deployment makes reference the Enterprise OPA image hosted on the GitHub Container Registry. If this is inaccessible from your cluster, you will need to push a copy of the image to a registry that is accessible and update the image name in the Deployment's Pod spec.
+This Deployment makes reference the EOPA image hosted on the GitHub Container Registry. If this is inaccessible from your cluster, you will need to push a copy of the image to a registry that is accessible and update the image name in the Deployment's Pod spec.
 :::
 
 
@@ -143,16 +143,16 @@ spec:
 ```
 
 
-## 5. Access the Enterprise OPA API
+## 5. Access the EOPA API
 
 
-### Connecting to the Enterprise OPA API using `kubectl port-forward`
+### Connecting to the EOPA API using `kubectl port-forward`
 
 :::note
 This method is only really suitable for local testing.
 :::
 
-First, run the following command to forward port 8181 on your local machine to the Enterprise OPA API:
+First, run the following command to forward port 8181 on your local machine to the EOPA API:
 
 ```shell-session
 # terminal-command
@@ -177,14 +177,14 @@ curl --silent localhost:8181/v1/data/system/version?pretty=true
 ```
 
 
-### Connecting to the Enterprise OPA API using a Service & Ingress
+### Connecting to the EOPA API using a Service & Ingress
 
 This method is more suitable in the following scenarios:
 
-- You want to run Enterprise OPA in production and have other services in the cluster that depend on it.
-- When benchmarking Enterprise OPA from within the cluster.
+- You want to run EOPA in production and have other services in the cluster that depend on it.
+- When benchmarking EOPA from within the cluster.
 
-First, create a Service resource. This will give Enterprise OPA a record in the Kubernetes DNS and make it accessible from other pods in the cluster at `enterprise-opa.eopa.svc.cluster.local:8181`.
+First, create a Service resource. This will give EOPA a record in the Kubernetes DNS and make it accessible from other pods in the cluster at `enterprise-opa.eopa.svc.cluster.local:8181`.
 
 ```yaml
 kind: Service
@@ -199,7 +199,7 @@ spec:
   - port: 8181
 ```
 
-Optionally, create an Ingress resource to allow the Enterprise OPA instances to be accessed from another location.
+Optionally, create an Ingress resource to allow the EOPA instances to be accessed from another location.
 
 :::note
 You will need to update the `host` field to hostname you wish to use.

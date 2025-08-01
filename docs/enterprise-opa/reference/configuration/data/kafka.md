@@ -1,17 +1,17 @@
 ---
 sidebar_position: 2
 sidebar_label: Kafka
-title: Kafka Datasource Configuration | Enterprise OPA
+title: Kafka Datasource Configuration | EOPA
 ---
 
 # Kafka Datasource Configuration
 
-Enterprise OPA's support for Apache Kafka makes it possible to stream data updates to Enterprise OPA. This can be useful when events representing changes to data used in policy evaluation are available on a Kafka topic (CDC, change data capture).
+EOPA's support for Apache Kafka makes it possible to stream data updates to EOPA. This can be useful when events representing changes to data used in policy evaluation are available on a Kafka topic (CDC, change data capture).
 
 
 ## Example Configuration
 
-The Kafka integration is provided through the `data` plugin, and needs to be enabled in Enterprise OPA's configuration.
+The Kafka integration is provided through the `data` plugin, and needs to be enabled in EOPA's configuration.
 
 
 ### Minimal
@@ -31,17 +31,17 @@ plugins:
 
 In addition to the minimal configuration above, note the following:
 
-- The `kafka.messages` key will be used as a "namespace" by the plug-in, and will have Enterprise OPA use `data.kafka.messages` for data ingested through Kafka. Use the name makes the most sense for your application.
-- The `topics` array will be the Kafka topics from which Enterprise OPA uses consume the messages.
+- The `kafka.messages` key will be used as a "namespace" by the plug-in, and will have EOPA use `data.kafka.messages` for data ingested through Kafka. Use the name makes the most sense for your application.
+- The `topics` array will be the Kafka topics from which EOPA uses consume the messages.
 - The `rego_transform` attribute allows using a message transformer on incoming message batches.
 - The `consumer_group` boolean defines if the data plugin should form its own consumer group.
 
 
 ### Consumer Group
 
-Due to the way Kafka works, multiple instances of Enterprise OPA cannot form a consumer group: they would each only see a subset of the data. However, it is possible to have each Kafka data plugin register _its own_ consumer group (of one member). The benefit is that you can gather information about its lag through standard Kafka tooling.
+Due to the way Kafka works, multiple instances of EOPA cannot form a consumer group: they would each only see a subset of the data. However, it is possible to have each Kafka data plugin register _its own_ consumer group (of one member). The benefit is that you can gather information about its lag through standard Kafka tooling.
 
-Consumer groups will have a name of `eopa_<INSTANCE_ID>_<MOUNT_POINT>`. For example, our example above would use the group name `eopa_<INSTANCE_ID>_kafka.messages`. `<INSTANCE_ID>` is a UUID that changes with each startup of an Enterprise OPA instance.
+Consumer groups will have a name of `eopa_<INSTANCE_ID>_<MOUNT_POINT>`. For example, our example above would use the group name `eopa_<INSTANCE_ID>_kafka.messages`. `<INSTANCE_ID>` is a UUID that changes with each startup of an EOPA instance.
 
 
 ### Consumer Offset
@@ -72,7 +72,7 @@ plugins:
 
 ## Message Transformers
 
-The `rego_transform` attribute specifies the path to a rule used to transform incoming messages via `input.incoming` into a format suitable for storage in Enterprise OPA. The raw input provided for each transform should be familiar to most Kafka users:
+The `rego_transform` attribute specifies the path to a rule used to transform incoming messages via `input.incoming` into a format suitable for storage in EOPA. The raw input provided for each transform should be familiar to most Kafka users:
 
 ```json
 {
@@ -86,7 +86,7 @@ The `rego_transform` attribute specifies the path to a rule used to transform in
 
 Most of the attributes are optional (for example, their values may be empty), and the base64-encoded `value` is typically used.
 
-`rego_transform` policies take a batch of one or more incoming messages as input and return the desired state of the data store of Enterprise OPA. Policies also have access to the data already stored via `input.previous`.
+`rego_transform` policies take a batch of one or more incoming messages as input and return the desired state of the data store of EOPA. Policies also have access to the data already stored via `input.previous`.
 Policies might perform operations such as:
 
 - Filtering out or target operations for messages from a particular topic
@@ -128,7 +128,7 @@ transform[key] := val if {
 
 #### Batching
 
-Messages are consumed by the Rego transform in batches. When an Enterprise OPA instance connects to a Kafka cluster, those batches can become large -- many messages have to be ingested to get up to speed.
+Messages are consumed by the Rego transform in batches. When an EOPA instance connects to a Kafka cluster, those batches can become large -- many messages have to be ingested to get up to speed.
 
 It's possible that multiple messages concerning _the same ID_ are in one batch. Due to the way Rego evaluation works, this leads to an "object insert conflict" ([see here for details on this error type](/opa/errors/eval-conflict-error/object-keys-must-be-unique)).
 
@@ -233,4 +233,4 @@ we ultimately end up dropping the data of IDs those entries have been marked as 
 
 ## Further reading
 
-- Please see the tutorial on configuring [Enterprise OPA with Kafka](/enterprise-opa/tutorials/using-data/streaming-kafka) for an end to end example.
+- Please see the tutorial on configuring [EOPA with Kafka](/enterprise-opa/tutorials/using-data/streaming-kafka) for an end to end example.

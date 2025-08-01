@@ -1,7 +1,7 @@
 ---
 sidebar_position: 11
 sidebar_label: redis
-title: "redis: Interacting with a Redis database | Enterprise OPA"
+title: "redis: Interacting with a Redis database | EOPA"
 ---
 
 import FunctionErrors from "./_function-errors.md"
@@ -29,7 +29,7 @@ The `redis.query` function allows you to make a query against a Redis database.
 | `command` | String | Yes | | Redis [command](https://redis.io/commands/) to execute. This field is case-insensitive. |
 | `args` | Array | Yes | | Arguments to pass to the Redis command. |
 
-Note that only the following Redis commands are supported. Using a Redis command not in the list below as the value for the `command` field will cause Enterprise OPA to exit with an error.
+Note that only the following Redis commands are supported. Using a Redis command not in the list below as the value for the `command` field will cause EOPA to exit with an error.
 
 - [get](https://redis.io/commands/get)
 - [getrange](https://redis.io/commands/getrange)
@@ -80,10 +80,10 @@ redis.query({
 
 ## Utility helpers
 
-Enterprise OPA comes with a helper method for using this builtin together with
+EOPA comes with a helper method for using this builtin together with
 [`vault.send`](vault): `redis.query`.
 
-This method is available in Enterprise OPA at `data.system.eopa.utils.redis.v1.vault`.
+This method is available in EOPA at `data.system.eopa.utils.redis.v1.vault`.
 
 ```rego
 package example

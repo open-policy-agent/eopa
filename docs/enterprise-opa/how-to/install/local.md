@@ -1,5 +1,5 @@
 ---
-title: How to install Enterprise OPA binaries locally
+title: How to install EOPA binaries locally
 sidebar_label: Local binaries
 sidebar_position: 0
 ---
@@ -9,7 +9,7 @@ sidebar_position: 0
 
 ## macOS and Linux
 
-On macOS and Linux, `brew` is the preferred installation method, as updates to Enterprise OPA will be handled automatically.
+On macOS and Linux, `brew` is the preferred installation method, as updates to EOPA will be handled automatically.
 
 ```shell
 # terminal-command
@@ -29,7 +29,7 @@ brew install styrainc/packages/eopa
 
 **Windows and macOS** binaries are provided for convenience and exploration. Only Linux binaries and container images are supported for use in production environments.
 
-Once you have downloaded and installed an Enterprise OPA binary in your `$PATH`, you can verify the installation by running the following command:
+Once you have downloaded and installed an EOPA binary in your `$PATH`, you can verify the installation by running the following command:
 
 ```shell
 # terminal-command

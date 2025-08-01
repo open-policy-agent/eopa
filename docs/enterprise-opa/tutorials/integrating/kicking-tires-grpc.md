@@ -1,12 +1,12 @@
 ---
 sidebar_position: 3
 sidebar_label: Kicking the tires with gRPC
-title: Kicking the tires with gRPC | Enterprise OPA
+title: Kicking the tires with gRPC | EOPA
 ---
 
 # Kicking the tires with gRPC
 
-Enterprise OPA has a gRPC API, allowing low-latency, efficient communication between production systems. It emulates the OPA v1 REST API endpoints, and includes a few experimental endpoints which can provide improved performance for some workloads.
+EOPA has a gRPC API, allowing low-latency, efficient communication between production systems. It emulates the OPA v1 REST API endpoints, and includes a few experimental endpoints which can provide improved performance for some workloads.
 
 The following resources provide additional information:
 
@@ -25,7 +25,7 @@ This tutorial relies on the [`grpcurl`][grpcurl] tool. Binaries are available fr
 
 ## Configuration
 
-The gRPC service is provided by the `grpc` plug-in, and needs to be enabled in Enterprise OPA's configuration before the gRPC endpoints are made available to the network.
+The gRPC service is provided by the `grpc` plug-in, and needs to be enabled in EOPA's configuration before the gRPC endpoints are made available to the network.
 
 `enterprise-opa-conf.yaml`
 
@@ -167,9 +167,9 @@ public_server[server] { # a server exists in the public_server set if...
 Once we have these two files, we can then use [`grpcurl`][grpcurl] to follow the rest of the tutorial, although we'll need to alter most steps to work with the JSON formats that `grpcurl` expects to see.
 
 
-## Starting up the Enterprise OPA server
+## Starting up the EOPA server
 
-To run Enterprise OPA with the configuration, run the command below:
+To run EOPA with the configuration, run the command below:
 
 ```sh
 # terminal-command
@@ -181,7 +181,7 @@ The policy will be pushed to the server as part of the steps below, so we do not
 
 ## Creating request data
 
-We'll end up making three gRPC calls against the Enterprise OPA server:
+We'll end up making three gRPC calls against the EOPA server:
 
 - [`eopa.policy.v1.PolicyService/CreatePolicy`](https://buf.build/styra/enterprise-opa/docs/main:eopa.policy.v1#eopa.policy.v1.PolicyService.CreatePolicy) :: Inserts the code from `example.rego` into the policy store.
 - [`eopa.data.v1.DataService/GetData`](https://buf.build/styra/enterprise-opa/docs/main:eopa.data.v1#eopa.data.v1.DataService.GetData) :: Queries the `/example` document (running all rules in the policy).
@@ -241,7 +241,7 @@ After running `./create_testdata.sh`, we should have three JSON files available 
 We can then push up our policy, and query the two endpoints from the original tutorial, `example/violation` and `example/allow` as follows:
 
 ```bash
-# Uploads a policy to the Enterprise OPA server.
+# Uploads a policy to the EOPA server.
 # terminal-command
 grpcurl -d @ -plaintext localhost:9090 eopa.policy.v1.PolicyService/CreatePolicy <v1-policy-input.json
 

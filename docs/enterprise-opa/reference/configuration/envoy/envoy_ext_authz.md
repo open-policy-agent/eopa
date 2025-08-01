@@ -1,18 +1,18 @@
 ---
 sidebar_position: 1
 sidebar_label: Integrating with Envoy
-title: Integrating with Envoy | Enterprise OPA
+title: Integrating with Envoy | EOPA
 ---
 
 
 # Integrating with Envoy
 
-Enterprise OPA can be used with Envoy as an [External Authorization filter](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ext_authz_filter.html), and supports configuration in the same manner as the open source [OPA-Envoy plugin](https://github.com/open-policy-agent/opa-envoy-plugin).
+EOPA can be used with Envoy as an [External Authorization filter](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ext_authz_filter.html), and supports configuration in the same manner as the open source [OPA-Envoy plugin](https://github.com/open-policy-agent/opa-envoy-plugin).
 
 
 ## Configuration
 
-Enterprise OPA supports all of the same configuration options from OPA-Envoy.
+EOPA supports all of the same configuration options from OPA-Envoy.
 An example configuration snippet enabling the plugin and several of its features is shown below:
 
 ```yaml

@@ -1,12 +1,12 @@
 ---
 sidebar_position: 3
 sidebar_label: Querying DynamoDB
-title: Querying DynamoDB with dynamodb.get and dynamodb.query | Enterprise OPA
+title: Querying DynamoDB with dynamodb.get and dynamodb.query | EOPA
 ---
 
 # Querying DynamoDB with `dynamodb.get` and `dynamodb.query`
 
-Enterprise OPA provides the `dynamodb.get` and `dynamodb.query` built-in functions for querying DynamoDB during policy evaluation.
+EOPA provides the `dynamodb.get` and `dynamodb.query` built-in functions for querying DynamoDB during policy evaluation.
 
 The built-ins currently support the [GetItem](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html)
 and the [Query](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html) operations.
@@ -20,8 +20,8 @@ run the examples on your own machine later, the instructions for doing so are pr
 
 ## Using `dynamodb.get`
 
-The `dynamodb.get` function works similarly to the other database-related built-in functions of Enterprise OPA, or the
-`http.send` function in OPA/Enterprise OPA.
+The `dynamodb.get` function works similarly to the other database-related built-in functions of EOPA, or the
+`http.send` function in OPA/EOPA.
 
 ```rego
 package servers

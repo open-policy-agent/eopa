@@ -1,19 +1,19 @@
 ---
 sidebar_position: 4
 sidebar_label: LDAP
-title: LDAP Configuration | Enterprise OPA
+title: LDAP Configuration | EOPA
 ---
 
 # LDAP
 
-Enterprise OPA's support for pulling in data from any LDAP server makes it possible to
+EOPA's support for pulling in data from any LDAP server makes it possible to
 have all your user and groups data managed in directory services available for policy
-evaluations in Enterprise OPA.
+evaluations in EOPA.
 
 
 ## Example Configuration
 
-The LDAP integration is provided via the `data` plugin, and needs to be enabled in Enterprise OPA's configuration.
+The LDAP integration is provided via the `data` plugin, and needs to be enabled in EOPA's configuration.
 
 
 ### Minimal
@@ -29,7 +29,7 @@ plugins:
       base_dn: ou=users,dc=example,dc=org
 ```
 
-With this minimal configuration, Enterprise OPA will pull in all attributes of all
+With this minimal configuration, EOPA will pull in all attributes of all
 objects found under the base DN  `ou=users,dc=example,dc=org` every 30 seconds.
 
 All of this, and various other search- and TLS-related settings, can be configured
@@ -67,7 +67,7 @@ plugins:
       rego_transform: data.e2e.transform
 ```
 
-With a config like this, Enterprise OPA will periodically perform an LDAP search
+With a config like this, EOPA will periodically perform an LDAP search
 according to the configured parameters, and provide the retrieved data in the
 configured subtree, e.g. `data.ldap.users`.
 
@@ -117,7 +117,7 @@ result: 0 Success
 # numEntries: 2
 ```
 
-and you've configured your Enterprise OPA instance as above, you will
+and you've configured your EOPA instance as above, you will
 be able to see the entities appear in your `data.ldap.users` tree:
 
 
@@ -199,20 +199,20 @@ matches_user(user) if {
 
 :::note
 The **key** below `data` in the configuration (`git.users` in the example) can be anything you want,
-and determines where the retrieved document will be found in Enterprise OPA's `data` hierarchy.
+and determines where the retrieved document will be found in EOPA's `data` hierarchy.
 :::
 
 
 ## Data Transformations
 
-The `rego_transform` attribute specifies the path to a rule used to transform data pulled from LDAP into a different format for storage in Enterprise OPA.
+The `rego_transform` attribute specifies the path to a rule used to transform data pulled from LDAP into a different format for storage in EOPA.
 
 `rego_transform` policies take incoming messages as JSON via `input.incoming` and returns the transformed JSON.
 
 
 ### Example
 
-Starting with the Enterprise OPA configuration above, but using [LLDAP](https://github.com/lldap/lldap/) with users `alice (Alice Abramson)` and `bob (Bob Branzino)`, and groups `admin` (with `alice` and `bob`), and `superadmin` (with `alice`).
+Starting with the EOPA configuration above, but using [LLDAP](https://github.com/lldap/lldap/) with users `alice (Alice Abramson)` and `bob (Bob Branzino)`, and groups `admin` (with `alice` and `bob`), and `superadmin` (with `alice`).
 
 Our `data.e2e.transform` policy is:
 

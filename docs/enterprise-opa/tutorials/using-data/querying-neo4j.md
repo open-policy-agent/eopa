@@ -1,12 +1,12 @@
 ---
 sidebar_position: 3
 sidebar_label: Querying Neo4J
-title: Querying Neo4J | Enterprise OPA
+title: Querying Neo4J | EOPA
 ---
 
 # Querying Neo4J
 
-Enterprise OPA provides the `neo4j.query` [built-in function](/enterprise-opa/reference/built-in-functions/neo4j) for querying Neo4J at the time of a policy decision.
+EOPA provides the `neo4j.query` [built-in function](/enterprise-opa/reference/built-in-functions/neo4j) for querying Neo4J at the time of a policy decision.
 
 
 ## Overview
@@ -172,7 +172,7 @@ allow if {
 }
 
 # NOTE: credentials are hard-coded here for example purposes, in a production
-# setting you should use Enterprise OPA's vault helpers or some other mechanism to
+# setting you should use EOPA's vault helpers or some other mechanism to
 # properly secure any sensitive API tokens or other credentials.
 
 userReq := {

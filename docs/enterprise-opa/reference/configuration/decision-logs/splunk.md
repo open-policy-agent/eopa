@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 sidebar_label: Splunk Sink
-title: Splunk Sink Configuration | Enterprise OPA
+title: Splunk Sink Configuration | EOPA
 ---
 
 The Splunk decision log sink allows publishing decision log entries as
@@ -68,7 +68,7 @@ in its desired format, i.e. wrapped in an `event` envelope:
 ```
 
 :::tip
-You can use the Enterprise OPA Enterprise Key Management feature to avoid putting your Splunk token secret into the configuration file.
+You can use the EOPA Enterprise Key Management feature to avoid putting your Splunk token secret into the configuration file.
 [Learn more.](../using-secrets/from-hashicorp-vault)
 :::
 

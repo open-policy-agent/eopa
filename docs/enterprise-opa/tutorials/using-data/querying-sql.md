@@ -1,12 +1,12 @@
 ---
 sidebar_position: 1
 sidebar_label: Querying SQL
-title: Querying SQL with sql.send | Enterprise OPA
+title: Querying SQL with sql.send | EOPA
 ---
 
 # Querying SQL with `sql.send`
 
-Enterprise OPA has a [built-in function](/enterprise-opa/reference/built-in-functions/sql), `sql.send` for directly querying SQL databases.
+EOPA has a [built-in function](/enterprise-opa/reference/built-in-functions/sql), `sql.send` for directly querying SQL databases.
 This enables writing policies that pull information directly from existing database records.
 
 
@@ -55,12 +55,12 @@ services:
 
 ## Creating our database
 
-Enterprise OPA currently supports [Microsoft SQL Server][sqlserver], [MySQL-compatible][mysql], [PostgreSQL-compatible][postgres], [Snowflake][]snowflake], and [SQLite][sqlite] databases, so we will use a small SQLite database for this tutorial to illustrate what is possible.
+EOPA currently supports [Microsoft SQL Server][sqlserver], [MySQL-compatible][mysql], [PostgreSQL-compatible][postgres], [Snowflake][]snowflake], and [SQLite][sqlite] databases, so we will use a small SQLite database for this tutorial to illustrate what is possible.
 
 In a file name `init-database.sql`, insert the following SQL schema code and DDL statements:
 
 ```sql
--- Create tables for Enterprise OPA to query.
+-- Create tables for EOPA to query.
 CREATE TABLE employees (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -177,7 +177,7 @@ We have a table in the database encoding these relationships, so we only need to
 
 ## Running the demo
 
-To show off this example, we will use the `docker-compose.yaml` file we wrote earlier to bring up two containers: one for the demo REST server, and one for Enterprise OPA.
+To show off this example, we will use the `docker-compose.yaml` file we wrote earlier to bring up two containers: one for the demo REST server, and one for EOPA.
 
 To start the containers, run `docker compose up`.
 

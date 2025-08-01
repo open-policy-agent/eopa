@@ -1,15 +1,15 @@
 ---
 sidebar_position: 6
 sidebar_label: Rule Tracing
-title: Rule Tracing in Decision Logs | Enterprise OPA
+title: Rule Tracing in Decision Logs | EOPA
 ---
 
 
 # Rule tracing in Decision Logs
 
-Enterprise OPA has support for logging the intermediate results of a decision request by setting the environment variable `OPA_DECISIONS_INTERMEDIATE_RESULTS` to one of three values: `NO_VALUE`, `SHA256`, and `VALUE`.
+EOPA has support for logging the intermediate results of a decision request by setting the environment variable `OPA_DECISIONS_INTERMEDIATE_RESULTS` to one of three values: `NO_VALUE`, `SHA256`, and `VALUE`.
 
-When this is set, then Enterprise OPA's decision logs will contain an object under the key `intermediate_results`. The structure of `intermediate_keys` is:
+When this is set, then EOPA's decision logs will contain an object under the key `intermediate_results`. The structure of `intermediate_keys` is:
 
 
 | Configuration | Key description | Value description |
@@ -20,7 +20,7 @@ When this is set, then Enterprise OPA's decision logs will contain an object und
 
 
 :::danger[Known Issue]
-This feature does not currently work with Enterprise OPA's decision log plugins, but it does work with Open Policy Agent decision log configurations.
+This feature does not currently work with EOPA's decision log plugins, but it does work with Open Policy Agent decision log configurations.
 
 For now, the following addition into your OPA configuration file should work
 

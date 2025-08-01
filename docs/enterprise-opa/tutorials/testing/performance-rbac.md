@@ -1,13 +1,13 @@
 ---
 sidebar_position: 11
 sidebar_label: Performance Testing
-title: Testing policy performance for RBAC use cases | Enterprise OPA
+title: Testing policy performance for RBAC use cases | EOPA
 ---
 
 # Testing policy performance for RBAC use cases
 
-Enterprise OPA is designed to be more performant in use cases where a large volume of data is needed to make a policy decision.
-The following tutorial outlines the recommended way to make performance comparisons between Enterprise OPA and OPA.
+EOPA is designed to be more performant in use cases where a large volume of data is needed to make a policy decision.
+The following tutorial outlines the recommended way to make performance comparisons between EOPA and OPA.
 Once you have completed this tutorial, you should have the tools you need to run follow on comparisons with your own policies and data.
 
 
@@ -52,7 +52,7 @@ Each of these roles grant rights to perform actions on resources:
 }
 ```
 
-You can compare the performance of Enterprise OPA and OPA by processing this simple policy. This policy takes the `user` and checks if any of their `roles` permit the given `action` on the requested resource.
+You can compare the performance of EOPA and OPA by processing this simple policy. This policy takes the `user` and checks if any of their `roles` permit the given `action` on the requested resource.
 
 ```rego
 package rbac
@@ -94,12 +94,12 @@ Performance tests can run on Linux, macOS, or Windows.
 
 The following prerequisites are required for performance testing:
 
-- Enterprise OPA as a binary, [Installation](/enterprise-opa/how-to/install/local) provides installation instructions.
+- EOPA as a binary, [Installation](/enterprise-opa/how-to/install/local) provides installation instructions.
 - The latest OPA binary, [OPA Releases](https://github.com/open-policy-agent/opa/releases) provides installation instructions.
 - The k6 benchmarking tool, [k6 Install](https://k6.io/docs/get-started/installation/) provides installation instructions.
 - Git Large File Storage (to use pre-built bundles), [Git Large File Storage](https://git-lfs.com/) provides installation instructions.
 
-Confirm that the `EOPA_LICENSE_KEY` environment variable is set in every terminal that will run Enterprise OPA.
+Confirm that the `EOPA_LICENSE_KEY` environment variable is set in every terminal that will run EOPA.
 
 Check the binaries are present in your path:
 
@@ -129,7 +129,7 @@ Checking out LFS objects: 100% (10/10), 335 MB | 0 B/s, done.
 
 ### Resources
 
-To download the resources for Enterprise OPA performance testing, clone the GitHub repository containing the examples:
+To download the resources for EOPA performance testing, clone the GitHub repository containing the examples:
 
 ```shell
 # terminal-command
@@ -140,7 +140,7 @@ cd enterprise-opa/examples/performance-testing
 
 We are going to be using some sample data which as been generated based on the example domain outlined above.
 
-There are five sets of sample data ranging from 10 MB to 400 MB when uncompressed. For each set, there is a bundle for OPA and a bundle for Enterprise OPA. Also included are sample query sets which will be used to exercise the bundles during the test. Since bundles are compressed, the combined size of all downloads is around 335 MB.
+There are five sets of sample data ranging from 10 MB to 400 MB when uncompressed. For each set, there is a bundle for OPA and a bundle for EOPA. Also included are sample query sets which will be used to exercise the bundles during the test. Since bundles are compressed, the combined size of all downloads is around 335 MB.
 
 Each dataset is based on the example domain above, only in varying sizes:
 
@@ -153,8 +153,8 @@ Each dataset is based on the example domain above, only in varying sizes:
 
 ### Running Tests
 
-The `benchmark.sh` script runs a performance test against OPA and then the same test against Enterprise OPA.
-Supply the filename of the query list and the OPA and Enterprise OPA Bundles.
+The `benchmark.sh` script runs a performance test against OPA and then the same test against EOPA.
+Supply the filename of the query list and the OPA and EOPA Bundles.
 
 ```shell
 # terminal-command
@@ -181,7 +181,7 @@ opa version: 0.48.0
 eopa version: 0.48.0-1
 k6 version: v0.42.0
 OPA bundle: bundle-opa-400.tar.gz
-Enterprise OPA bundle: bundle-enterprise-opa-400.tar.gz
+EOPA bundle: bundle-enterprise-opa-400.tar.gz
 Query list: queries-400
 
 Waiting for OPA to start...
@@ -191,12 +191,12 @@ Results:
   server heap size (max):       7.26GB
 Stopping OPA...
 
-Waiting for Enterprise OPA to start...
-Running Enterprise OPA test...
+Waiting for EOPA to start...
+Running EOPA test...
 Results:
   requests per second (mean):   10961.95
   server heap size (max):       1.12GB
-Stopping Enterprise OPA...
+Stopping EOPA...
 ```
 
 You will see that the following statistics are reported for each test:
@@ -232,7 +232,7 @@ It should be intuitive how this can be used to generate a new dataset with diffe
 This can take some time (minutes) if you have specified a large number of objects.
 :::
 
-This will output a `queries` file and a bundle file: `bundle.tar.gz`, you can convert this for use in Enterprise OPA with:
+This will output a `queries` file and a bundle file: `bundle.tar.gz`, you can convert this for use in EOPA with:
 
 ```shell
 # terminal-command

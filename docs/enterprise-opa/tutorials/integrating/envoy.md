@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 sidebar_label: Envoy External Authorization
-title: Integrating with Envoy External Authorization | Enterprise OPA
+title: Integrating with Envoy External Authorization | EOPA
 ---
 
 <!-- markdownlint-disable MD044 -->
@@ -14,19 +14,19 @@ Envoy, the popular open source service proxy, supports
 [external authorization](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ext_authz_filter.html)
 filters as part of its configuration.
 
-Enterprise OPA has support responding to the
+EOPA has support responding to the
 [`CheckRequest`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto#envoy-v3-api-msg-service-auth-v3-checkrequest)
 message sent by Envoy over gRPC.
 
 
 ## Overview
 
-In this tutorial we'll see how to use Enterprise OPA as an External
+In this tutorial we'll see how to use EOPA as an External
 Authorization service for the Envoy proxy. We'll do this by:
 
 - Running a local Kubernetes cluster
 - Creating a simple authorization policy in Rego and serving it via the Bundle API
-- Deploying a sample application with Envoy and Enterprise OPA sidecars
+- Deploying a sample application with Envoy and EOPA sidecars
 - Run some sample requests to see the policy in action
 
 Once we're finished, we'll have set up a system of containers to do the following:
@@ -172,7 +172,7 @@ kubectl create configmap authz-policy --from-file policy.rego
 ```
 
 Now that the policy is stored in a ConfigMap, we can spin up an HTTP server to make it
-available to as a Bundle to Enterprise OPA when it's making decisions for our application:
+available to as a Bundle to EOPA when it's making decisions for our application:
 
 ```yaml
 # bundle-server.yaml
@@ -263,10 +263,10 @@ You may now exit the port-forwarding session, the bundle server will only be acc
 from inside the cluster from now on.
 
 
-## Deploying an application with Envoy and Enterprise OPA sidecars
+## Deploying an application with Envoy and EOPA sidecars
 
 In this tutorial, we are manually configuring the Envoy proxy sidecar to intermediate
-HTTP traffic from clients and our application. Envoy will consult Enterprise OPA to
+HTTP traffic from clients and our application. Envoy will consult EOPA to
 make authorization decisions for each request by sending `CheckRequest` messages over
 a gRPC connection.
 
@@ -274,7 +274,7 @@ We will use the following Envoy configuration to achieve this. In summary, this
 configures Envoy to:
 
 - Listen on port `8000` for HTTP traffic
-- Consult Enterprise OPA for authorization decisions at 127.0.0.1:9191 & deny failing requests
+- Consult EOPA for authorization decisions at 127.0.0.1:9191 & deny failing requests
 - Forward requests to the application at 127.0.0.1:8080 if ok.
 
 ```yaml
@@ -367,9 +367,9 @@ There are a few things to note:
 - the `demo-test-server` container is a simple user store using in-memory state.
 - the `envoy` container is configured to use the `proxy-config` `ConfigMap` we
   created earlier.
-- The Enterprise OPA container is configured to download policy bundles from
+- The EOPA container is configured to download policy bundles from
   the in-cluster bundle server (`bundle-server.default.svc.cluster.local`).
-- The Enterprise OPA license key must be set. We show how to do this in the next step.
+- The EOPA license key must be set. We show how to do this in the next step.
 
 ```yaml
 # app.yaml
@@ -394,7 +394,7 @@ spec:
           image: openpolicyagent/proxy_init:v8
           # Configure the iptables bootstrap script to redirect traffic to the
           # Envoy proxy on port 8000. Envoy will be running as 1111, and port
-          # 8282 will be excluded to support Enterprise OPA health checks.
+          # 8282 will be excluded to support EOPA health checks.
           args: ["-p", "8000", "-u", "1111", "-w", "8282"]
           securityContext:
             capabilities:

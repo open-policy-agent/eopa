@@ -1,5 +1,5 @@
 <!-- markdownlint-disable MD041 -->
-Extract the Enterprise OPA tarball into your source directory.
+Extract the EOPA tarball into your source directory.
 
 ```bash
 # terminal-command

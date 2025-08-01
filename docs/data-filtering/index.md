@@ -1,6 +1,6 @@
 ---
-title: Data Filtering with the Enterprise OPA Platform
-description: Data Filtering with the Enterprise OPA Platform
+title: Data Filtering with the EOPA Platform
+description: Data Filtering with the EOPA Platform
 sidebar_position: 4
 ---
 
@@ -28,8 +28,8 @@ The response to this is a **set of filtered application data**.
 ```mermaid
 sequenceDiagram
     User->>Application: List employees
-    Application-->>Enterprise OPA: {"user": ..., "action": "view" }
-    Enterprise OPA-->>Application: <filters>
+    Application-->>EOPA: {"user": ..., "action": "view" }
+    EOPA-->>Application: <filters>
     Application-->>Database: SELECT employees WHERE <filters>
     Database-->>Application: Filtered employees
     Application-->>User: Filtered employees

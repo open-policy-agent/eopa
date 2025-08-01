@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 sidebar_label: Batch API
-title: Batch Query API | Enterprise OPA
+title: Batch Query API | EOPA
 ---
 
 # Batch Query API
@@ -76,7 +76,7 @@ In this case, the response will contain an empty body.
 | `responses[_].decision_id` | `string` | If decision logging is enabled, this field contains a unique string identifier representing the individual response. |
 | `responses[_].result` | `any` | The result of evaluating the policy with the given input. |
 | `responses[_].metrics` | `object[string:object]` | If query metrics are enabled, this field contains query performance metrics collected during the parse, compile, and evaluation steps. |
-| `responses[_].provenance` | `object[string:object]` | If provenance support is enabled, this field contains information about the Enterprise OPA instance, as well as any bundles that have been loaded. |
+| `responses[_].provenance` | `object[string:object]` | If provenance support is enabled, this field contains information about the EOPA instance, as well as any bundles that have been loaded. |
 
 
 ### 400 Response

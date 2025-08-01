@@ -1,7 +1,7 @@
 ---
 sidebar_position: 10
 sidebar_label: neo4j
-title: "neo4j functions: Interacting with a Neo4J database | Enterprise OPA"
+title: "neo4j functions: Interacting with a Neo4J database | EOPA"
 ---
 
 import FunctionErrors from "./_function-errors.md"
@@ -54,10 +54,10 @@ neo4j.query({
 
 ## Utility helpers
 
-Enterprise OPA comes with a helper method for using this builtin together with
+EOPA comes with a helper method for using this builtin together with
 [`vault.send`](vault): `neo4j.query`.
 
-This method is available in Enterprise OPA at `data.system.eopa.utils.neo4j.v1.vault`.
+This method is available in EOPA at `data.system.eopa.utils.neo4j.v1.vault`.
 
 ```rego
 package example

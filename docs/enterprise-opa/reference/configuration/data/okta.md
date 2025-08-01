@@ -1,7 +1,7 @@
 ---
 sidebar_position: 3
 sidebar_label: Okta
-title: Okta Datasource Configuration | Enterprise OPA
+title: Okta Datasource Configuration | EOPA
 ---
 
 import PluginDataKey from './_plugin-data-key.mdx'
@@ -9,15 +9,15 @@ import PluginDataKey from './_plugin-data-key.mdx'
 
 # Okta Datasource Configuration
 
-The Enterprise OPA Okta datasource plugin pulls in data from Okta's APIs, making
+The EOPA Okta datasource plugin pulls in data from Okta's APIs, making
 it possible to have all your users and groups data managed via Okta available
-for policy evaluations in Enterprise OPA.
+for policy evaluations in EOPA.
 
 
 ## Example Configuration
 
 The Okta integration is provided via the `data` plugin, and needs to be enabled
-in the Enterprise OPA configuration via a plugin with `type: okta`
+in the EOPA configuration via a plugin with `type: okta`
 
 
 ### Minimal
@@ -42,7 +42,7 @@ plugins:
       polling_interval: 10m  # default: 5m, minimum 10s
 ```
 
-With this minimal configuration, Enterprise OPA will pull in all data about users, groups,
+With this minimal configuration, EOPA will pull in all data about users, groups,
 roles and apps from the Okta API every 30 seconds.
 
 <!-- markdownlint-disable MD044 -->
@@ -52,11 +52,11 @@ roles and apps from the Okta API every 30 seconds.
 <!-- markdownlint-enable MD044 -->
 
 :::warning
-The Okta API has fairly aggressive rate limiting. A single Enterprise OPA instance polling
+The Okta API has fairly aggressive rate limiting. A single EOPA instance polling
 all of the data out of an Okta tenant may exhaust a substantial portion of the Okta
 account's rolling rate limit.
 
-Users should be aware that deploying many Enterprise OPA instances all connected to Okta may
+Users should be aware that deploying many EOPA instances all connected to Okta may
 result in the Okta account's rate limit being exceeded, and users with this use case
 may wish to poll Okta from a central location (such as the [Styra DAS](/das) Datasource Agent), and
 distribute the resulting data internally.
@@ -97,7 +97,7 @@ apps | okta.apps.read
 
 ## Example Call
 
-Using the Okta data plugin in Enterprise OPA with an Okta developer account,
+Using the Okta data plugin in EOPA with an Okta developer account,
 and all the client scopes listed above granted, this is an example of the shape
 and amount of data we gather:
 
@@ -311,14 +311,14 @@ Data under `apps` is unwieldy, so only the first app has been included in the ex
 
 ## Data Transformations
 
-The `rego_transform` attribute specifies the path to a rule used to transform data pulled from Okta into a different format for storage in Enterprise OPA.
+The `rego_transform` attribute specifies the path to a rule used to transform data pulled from Okta into a different format for storage in EOPA.
 
 `rego_transform` policies take incoming messages as JSON via `input.incoming` and returns the transformed JSON.
 
 
 ### Example
 
-Starting with the Enterprise OPA configuration above and the example data above
+Starting with the EOPA configuration above and the example data above
 
 Our `data.e2e.transform` policy is:
 

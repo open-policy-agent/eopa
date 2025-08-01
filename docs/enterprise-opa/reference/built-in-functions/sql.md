@@ -1,7 +1,7 @@
 ---
 sidebar_position: 8
 sidebar_label: sql
-title: "sql: Interacting with a SQL database | Enterprise OPA"
+title: "sql: Interacting with a SQL database | EOPA"
 ---
 
 import FunctionErrors from './_function-errors.md'
@@ -154,13 +154,13 @@ If `row_object` is `true`
 
 ### Utility methods
 
-Enterprise OPA comes with helper methods for using this builtin together with
+EOPA comes with helper methods for using this builtin together with
 [`vault.send`](vault):
 
 1. `mysql.send` and `mysql.send_opts`
 2. `postgres.send` and `postgres.send_opts`
 
-All of these methods are available in Enterprise OPA at `data.system.eopa.utils.mysql.v1.vault`
+All of these methods are available in EOPA at `data.system.eopa.utils.mysql.v1.vault`
 and `data.system.eopa.utils.postgres.v1.vault` respectively.
 
 ```rego

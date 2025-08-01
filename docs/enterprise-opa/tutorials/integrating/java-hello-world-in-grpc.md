@@ -11,7 +11,7 @@ import LicenseTrialAdmonition from '../../../enterprise-opa/_license-trial-admon
 
 # OPA Java Tutorial: Hello World using gRPC
 
-Enterprise OPA offers a gRPC API for application use cases demanding low-latency
+EOPA offers a gRPC API for application use cases demanding low-latency
 policy decisions. This tutorial will demonstrate how to build an integration
 against the gPRC API to make fast policy decisions from a Java application.
 
@@ -19,14 +19,14 @@ gRPC messages are serialized using Protocol Buffer definitions,
 as well as controlling the structure of messages they can also be used to generate
 SDKs to make integration easier in different languages - including Java.
 
-To use the [Enterprise OPA](/enterprise-opa)
+To use the [EOPA](/enterprise-opa)
 [gRPC API](/enterprise-opa/reference/api-reference/grpc-api)
 from Java, we will make use of the SDKs generated from the Protobuf Schema published
 on [Buf](https://buf.build/styra/enterprise-opa) rather than the
 [OPA Java SDK](https://styrainc.github.io/opa-java/javadoc/).
 
 :::note
-The gRPC API is only available in Enterprise OPA. If using open source OPA, or interested
+The gRPC API is only available in EOPA. If using open source OPA, or interested
 in integrating with the REST API instead, see the
 [OPA Java Tutorial: Hello World](/sdk/java/tutorials/hello-world).
 :::
@@ -34,7 +34,7 @@ in integrating with the REST API instead, see the
 
 ## Setup
 
-First ensure you have installed the Enterprise OPA binary and have a valid key.
+First ensure you have installed the EOPA binary and have a valid key.
 
 <LicenseTrialAdmonition />
 
@@ -72,7 +72,7 @@ BUILD SUCCESSFUL in 627ms
 
 ## Adding the gRPC SDK and dependencies
 
-The `app/build.gradle` file must also be updated to pull in the [Enterprise OPA Java gRPC SDK](https://buf.build/styra/enterprise-opa/sdks) and necessary gRPC dependencies.
+The `app/build.gradle` file must also be updated to pull in the [EOPA Java gRPC SDK](https://buf.build/styra/enterprise-opa/sdks) and necessary gRPC dependencies.
 
 Under the `repositories` section, add the following to pull dependencies from buf.build:
 
@@ -167,7 +167,7 @@ public class App {
 
 ## Creating policies
 
-The sample application is almost ready to run, but first an Enterprise OPA instance is needed for the gRPC SDK to communicate with.
+The sample application is almost ready to run, but first an EOPA instance is needed for the gRPC SDK to communicate with.
 We will be using the ABAC example policy from the [OPA Playground](https://play.openpolicyagent.org/).
 
 Create a `policy/` folder and the following two files:
@@ -299,9 +299,9 @@ pet_is_adopted if data.pet_attributes[input.resource].adopted == true
 </SideBySideContainer>
 
 
-## Running Enterprise OPA
+## Running EOPA
 
-Next create a configuration file for your Enterprise OPA instance that enables gRPC.
+Next create a configuration file for your EOPA instance that enables gRPC.
 
 `config.yaml`
 
@@ -312,7 +312,7 @@ plugins:
       localhost:9090
 ```
 
-Next, run Enterprise OPA. You should see the following output:
+Next, run EOPA. You should see the following output:
 
 ```shell
 # terminal-command
@@ -327,7 +327,7 @@ If you see errors related to not having a license key, follow any instructions t
 Consider running OPA in a separate background terminal, as it will be necessary to run more shell commands.
 :::
 
-Verify that the data was loaded into Enterprise OPA correctly using the HTTP API, which is exposed by default on `localhost:8181`:
+Verify that the data was loaded into EOPA correctly using the HTTP API, which is exposed by default on `localhost:8181`:
 
 ```curl
 # terminal-command

@@ -1,7 +1,7 @@
 ---
 sidebar_position: 4
 sidebar_label: Service Sink
-title: Service Sink Configuration | Enterprise OPA
+title: Service Sink Configuration | EOPA
 ---
 
 The Service decision log sink is an expansion on the [OPA service decision log sink](https://www.openpolicyagent.org/docs/management-decision-logs/). It sends decision logs as payloads to an HTTP API.

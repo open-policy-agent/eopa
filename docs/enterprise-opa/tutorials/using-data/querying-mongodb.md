@@ -1,12 +1,12 @@
 ---
 sidebar_position: 2
 sidebar_label: Querying MongoDB
-title: Querying MongoDB | Enterprise OPA
+title: Querying MongoDB | EOPA
 ---
 
 # Querying MongoDB
 
-Enterprise OPA provides the `mongodb.find` and `mongodb.find_one` [built-in functions](/enterprise-opa/reference/built-in-functions/mongodb) for querying MongoDB at the time of a policy decision.
+EOPA provides the `mongodb.find` and `mongodb.find_one` [built-in functions](/enterprise-opa/reference/built-in-functions/mongodb) for querying MongoDB at the time of a policy decision.
 
 
 ## Overview

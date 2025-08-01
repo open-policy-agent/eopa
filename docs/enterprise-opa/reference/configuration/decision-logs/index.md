@@ -1,8 +1,8 @@
 ---
-title: Decision Logs Configuration | Enterprise OPA
+title: Decision Logs Configuration | EOPA
 ---
 
-Enterprise OPA has expanded the OPA decision logger, with support for:
+EOPA has expanded the OPA decision logger, with support for:
 1. Multiple sinks, including native external integrations such as [Splunk](./decision-logs/splunk).
 2. Configurable log write buffering behavior.
 
@@ -12,10 +12,10 @@ Enterprise OPA has expanded the OPA decision logger, with support for:
 Enhanced decision logs are provided by a decision logger _plugin_ called `eopa_dl`.
 
 :::note
-The Enterprise OPA decision logger _must_ be used together with the default
+The EOPA decision logger _must_ be used together with the default
 decision log plugin in OPA.
 
-If the OPA decision logger plugin is not configured, Enterprise OPA will error and exit.
+If the OPA decision logger plugin is not configured, EOPA will error and exit.
 :::
 
 ```yaml

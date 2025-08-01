@@ -1,7 +1,7 @@
 ---
 sidebar_position: 4
 sidebar_label: Google Cloud Storage Sink
-title: Google Cloud Storage Sink Configuration | Enterprise OPA
+title: Google Cloud Storage Sink Configuration | EOPA
 ---
 
 The Google Cloud Storage decision log sink allows publishing decision log entries as

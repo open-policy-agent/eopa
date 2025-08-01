@@ -1,17 +1,17 @@
 ---
 sidebar_position: 1
 sidebar_label: Preview
-title: Preview API | Enterprise OPA
+title: Preview API | EOPA
 ---
 
-# Enterprise OPA Preview
+# EOPA Preview
 
-Enterprise OPA preview exposes API endpoints for trying out new or updated policies and data with or without existing production policies and data. Evaluations using this API do not affect policies and data being used in the production path.
+EOPA preview exposes API endpoints for trying out new or updated policies and data with or without existing production policies and data. Evaluations using this API do not affect policies and data being used in the production path.
 
 
 ## Configuration
 
-The Preview API is enabled by default, but can be disabled through configuration. This is supported both at start up and through discovery bundle updates. Define the preview block at the top level of your Enterprise OPA configuration file.
+The Preview API is enabled by default, but can be disabled through configuration. This is supported both at start up and through discovery bundle updates. Define the preview block at the top level of your EOPA configuration file.
 
 ```yaml
 preview:

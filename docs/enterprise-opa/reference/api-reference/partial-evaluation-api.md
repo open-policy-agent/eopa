@@ -8,7 +8,7 @@ sidebar_position: 5
 
 # Data Filters Compilation API
 
-Creating data filters and optional column masks from Rego policies in Enterprise OPA uses an expanded version of the Open Policy Agent `/v1/compile` API[<sup>1</sup>](#external-reference).
+Creating data filters and optional column masks from Rego policies in EOPA uses an expanded version of the Open Policy Agent `/v1/compile` API[<sup>1</sup>](#external-reference).
 
 
 ## Generate Filters and Column Masks
@@ -36,7 +36,7 @@ Where the `{path}` is the slash delimited filter rule to be compiled. E.g., to c
 
 The same request can generate filters that are representable in many different ways, such as raw SQL `WHERE` clauses or [Universal Conditions AST](/apps/data/reference/ucast-syntax).
 
-Enterprise OPA uses the `Accept` header to denote the target response format.
+EOPA uses the `Accept` header to denote the target response format.
 
 | Value | Response Schema | Description |
 | --- | --- | -- |
@@ -69,7 +69,7 @@ See the Open Policy Agent `/v1/compile` API[<sup>1</sup>](#external-reference)
 
 In this support ticket application example, the list of tickets a user can see is determined by their role.
 
-Roles are provided to Enterprise OPA via `roles/data.json`, and the SQL tables contain tickets and assignees.
+Roles are provided to EOPA via `roles/data.json`, and the SQL tables contain tickets and assignees.
 
 ```mermaid
 erDiagram
@@ -534,7 +534,7 @@ Column masks allow modifying or replacing that data before the user sees it.
 In this example, we'll be reusing the original database setup, with `tickets` and `users` tables.
 
 The key difference this time around will be plumbing in column masking for hiding the `tickets.id` field from all non-admin roles.
-Column masking rules use the same `input` as data filtering rules, but are evaluated directly by Enterprise OPA, with no special partial evaluation or compilation steps.
+Column masking rules use the same `input` as data filtering rules, but are evaluated directly by EOPA, with no special partial evaluation or compilation steps.
 
 
 #### Admin (with column masking)

@@ -1,13 +1,13 @@
 ---
 sidebar_position: 5
 sidebar_label: Logging decisions to Kafka and Splunk
-title: Logging decisions to Kafka and Splunk | Enterprise OPA
+title: Logging decisions to Kafka and Splunk | EOPA
 ---
 
 <!-- TODO: Split into "to Kafka", "to Splunk" tutorials -->
 
 Every policy evaluation requested by an API client leads to a decision log entry.
-In Enterprise OPA, these decision logs are handled differently from OPA:
+In EOPA, these decision logs are handled differently from OPA:
 
 1. Multiple, and new, sinks are available.
 2. Buffering is configurable.
@@ -15,7 +15,7 @@ In Enterprise OPA, these decision logs are handled differently from OPA:
 
 ## Overview
 
-In this tutorial we'll be walking through how to use Enterprise OPA's decision
+In this tutorial we'll be walking through how to use EOPA's decision
 log enhancements -- we will demonstrate how to send decision logs to
 
 - the console,
@@ -166,8 +166,8 @@ allow if {
 }
 ```
 
-With the Enterprise OPA configuration above, and with a license set up properly, we can run
-Enterprise OPA via `eopa run --config-file enterprise-opa.yml --server policy.rego`.
+With the EOPA configuration above, and with a license set up properly, we can run
+EOPA via `eopa run --config-file enterprise-opa.yml --server policy.rego`.
 
 To start up some auxiliary services, notably Apache Kafka and an HTTP sink,
 use  `docker compose up` with the provided `docker-compose.yml` file.
@@ -178,7 +178,7 @@ Splunk output in the configuration example with `http://127.0.0.1:4195/post/logs
 and you will see the Splunk-ready payload in that service's console logs.
 :::
 
-Next, we will observe that sending a simple requests to Enterprise OPA's HTTP API
+Next, we will observe that sending a simple requests to EOPA's HTTP API
 will now lead to the following:
 
 1. The HTTP service `dl-sink` will receive the decision log,
@@ -230,7 +230,7 @@ The HTTP service sports this output:
 ```
 
 which is exactly the same as we can find published on the Kafka topic,
-and on the running Enterprise OPA service's standard output.
+and on the running EOPA service's standard output.
 
 The payload sent to the Splunk endpoint is what that endpoint expects,
 e.g.
@@ -274,7 +274,7 @@ services.
 ## Outlook
 
 What's next? Soon, additional sinks will be available, enabling seamless
-integration of Enterprise OPA into observability and analytics data pipelines
+integration of EOPA into observability and analytics data pipelines
 such as AWS Kinesis and Google BigQuery.
 
 Looking for something else? Feel free to contact us for further decision log
@@ -285,5 +285,5 @@ outputs! Use the feedback form below or message us on
 ## Further Reading
 
 - Please see the [reference documentation for all details](/enterprise-opa/reference/configuration/decision-logs).
-- The files used in the examples are also available in the Enterprise OPA [blueprints repo](https://github.com/StyraInc/enterprise-opa/tree/main/examples/decision-logs).
+- The files used in the examples are also available in the EOPA [blueprints repo](https://github.com/StyraInc/enterprise-opa/tree/main/examples/decision-logs).
 - Documentation about the used Splunk Endpoint can be found here: [HTTP Event Collector](https://docs.splunk.com/Documentation/Splunk/9.0.4/RESTREF/RESTinput#services.2Fcollector).

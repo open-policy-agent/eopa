@@ -1,12 +1,12 @@
 ---
 sidebar_position: 4
 sidebar_label: Querying Redis
-title: Querying Redis | Enterprise OPA
+title: Querying Redis | EOPA
 ---
 
 # Querying Redis
 
-Enterprise OPA provides the `redis.query` [built-in function](/enterprise-opa/reference/built-in-functions/redis) for querying Redis at the time of a policy decision.
+EOPA provides the `redis.query` [built-in function](/enterprise-opa/reference/built-in-functions/redis) for querying Redis at the time of a policy decision.
 
 
 ## Overview
@@ -86,7 +86,7 @@ You'll need to have Docker already installed, set up, and working to follow alon
     }
     ```
 
-5. Launch an Enterprise OPA server:
+5. Launch an EOPA server:
 
     ```shell-session
     # terminal-command

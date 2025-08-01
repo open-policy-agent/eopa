@@ -1,17 +1,17 @@
 ---
 sidebar_position: 10
 sidebar_label: Local File
-title: Local File Datasource Configuration | Enterprise OPA
+title: Local File Datasource Configuration | EOPA
 ---
 
 # Local File Datasource Configuration
 
-Enterprise OPA supports periodically loading data from a local file on disk. This makes prototyping more convenient, and allows non-networked, and host-specific data use cases. (Example: SSH's `host_identity.json` file)
+EOPA supports periodically loading data from a local file on disk. This makes prototyping more convenient, and allows non-networked, and host-specific data use cases. (Example: SSH's `host_identity.json` file)
 
 
 ## Example Configuration
 
-The local file integration is provided via the `data` plugin, and needs to be enabled in Enterprise OPA's configuration.
+The local file integration is provided via the `data` plugin, and needs to be enabled in EOPA's configuration.
 
 
 ### Minimal
@@ -26,7 +26,7 @@ plugins:
       polling_interval: 5s
 ```
 
-With this minimal configuration, Enterprise OPA will pull the `localfile.users` information
+With this minimal configuration, EOPA will pull the `localfile.users` information
 - from the relative path: `./users.json`,
 - every 5 seconds,
 - parsing the file contents as JSON.
@@ -51,7 +51,7 @@ plugins:
       rego_transform: "data.localfile.transform"
 ```
 
-With a config like this, Enterprise OPA will read the text file, and attempt to parse it as JSON.
+With a config like this, EOPA will read the text file, and attempt to parse it as JSON.
 
 The result will then be available to all policy evaluations under `data.localfile.users`.
 
@@ -81,7 +81,7 @@ If the referenced file contains the following JSON document,
   }
 ]
 ```
-then Enterprise OPA's `data.localfile.users` will look like this:
+then EOPA's `data.localfile.users` will look like this:
 
 ```json
 # terminal-command
@@ -110,13 +110,13 @@ curl "http://127.0.0.1:8181/v1/data/localfile/users?pretty"
 
 :::note
 The **key** below `data` in the configuration (`localfile.users` in the example) can be anything you want,
-and determines where the retrieved document will be found in Enterprise OPA's `data` hierarchy.
+and determines where the retrieved document will be found in EOPA's `data` hierarchy.
 :::
 
 
 ## Data Transformations
 
-The `rego_transform` attribute specifies the path to a rule used to transform data pulled from the local file into a different format for storage in Enterprise OPA.
+The `rego_transform` attribute specifies the path to a rule used to transform data pulled from the local file into a different format for storage in EOPA.
 
 `rego_transform` policies take incoming messages as JSON via `input.incoming` and returns the transformed JSON.
 

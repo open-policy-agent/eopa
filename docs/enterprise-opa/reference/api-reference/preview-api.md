@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 sidebar_label: Preview API
-title: Preview API | Enterprise OPA
+title: Preview API | EOPA
 ---
 
 # Preview API
@@ -28,7 +28,7 @@ Request bodies are optional for the preview API. A request with no body behaves 
 | Key | Type | Description |
 | --- | --- | --- |
 | input | `object[string:any]` | This is the input object to use when evaluating a decision |
-| data | `object[string:any]` | This set of data is loaded in to Enterprise OPA for the evaluation. If data is included that conflicts with any existing data, the updated data is used instead of the existing data for the request. Data sent with requests is not persisted. |
+| data | `object[string:any]` | This set of data is loaded in to EOPA for the evaluation. If data is included that conflicts with any existing data, the updated data is used instead of the existing data for the request. Data sent with requests is not persisted. |
 | rego_modules | `object[string:string]` | This object is a set of file paths to Rego code strings. These policies are parsed and evaluated along with the request. If a policy is included that conflicts with an existing policy, the updated policy is used instead of the existing policy for the request. Policies sent with requests are not persisted. |
 | rego | `string` | When provided, this string of Rego code is evaluated in the context of the request path |
 | nd_builtin_cache | `object[string:object[string:any]]` | Providing this cache value allows overriding the return of built-in functions where the first key is the function name, the second key is the JSON stringified arguments to the function, and the value is the return of the built-in function call. |
@@ -90,7 +90,7 @@ The server will respond with a JSON object.
 | result | The base or virtual document referred to by the URL path. If the path is undefined, this key will be omitted. |
 | metrics | If query metrics are enabled, this field contains query performance metrics collected during the parse, compile, and evaluation steps. |
 | print | If print support is enabled, this field contains all output from `print()` statements in a new-line separated string. |
-| provenance | If provenance support is enabled, this field contains information about the Enterprise OPA instance, as well as any bundles that have been loaded. |
+| provenance | If provenance support is enabled, this field contains information about the EOPA instance, as well as any bundles that have been loaded. |
 
 
 ### Examples
@@ -374,4 +374,4 @@ Content-Type: application/json
 
 ## Authentication
 
-If the Enterprise OPA server is configured to require authentication as described in the [OPA security documentation](https://www.openpolicyagent.org/docs/security/#authentication-and-authorization), the Preview API will also require this authentication.
+If the EOPA server is configured to require authentication as described in the [OPA security documentation](https://www.openpolicyagent.org/docs/security/#authentication-and-authorization), the Preview API will also require this authentication.
