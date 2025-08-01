@@ -24,7 +24,7 @@ The following commands are used to try EOPA.
 1. `brew install styrainc/packages/eopa`
 1. `eopa license trial`
 1. `export EOPA_LICENSE_KEY=<your license key>`
-1. `eopa run -s https://dl.styra.com/eopa/bundle-enterprise-opa-400.tar.gz`
+1. `eopa run -s https://dl.styra.com/eopa/bundle-eopa-400.tar.gz`
 1. `curl 'http://localhost:8181/metrics/alloc_bytes?pretty=true'`
 
 The following commands compare EOPA with OPA.

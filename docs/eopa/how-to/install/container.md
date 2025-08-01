@@ -7,7 +7,7 @@ sidebar_position: 1
 # Install as a container
 
 Container images are published in GitHub Container Registry and tagged for each release. Image tags correspond to the release version.
-See the GitHub [package](https://github.com/open-policy-agent/eopa/pkgs/container/enterprise-opa) for the latest images.
+See the GitHub [package](https://github.com/open-policy-agent/eopa/pkgs/container/eopa) for the latest images.
 
 ```shell
 # terminal-command

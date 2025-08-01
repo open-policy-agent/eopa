@@ -17,7 +17,7 @@ The Kafka integration is provided through the `data` plugin, and needs to be ena
 ### Minimal
 
 ```yaml
-# enterprise-opa-conf.yaml
+# eopa-conf.yaml
 plugins:
   data:
     kafka.messages:

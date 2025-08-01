@@ -7,7 +7,7 @@ title: Using EOPA gRPC API from TypeScript
 
 # Using gRPC from TypeScript
 
-To use the [EOPA](/enterprise-opa) [gRPC API](/eopa/reference/api-reference/grpc-api) from TypeScript, we're relying on the SDKs generated from the Protobuf Schema published on [Buf](https://buf.build/styra/enterprise-opa).
+To use the [EOPA](/eopa) [gRPC API](/eopa/reference/api-reference/grpc-api) from TypeScript, we're relying on the SDKs generated from the Protobuf Schema published on [Buf](https://buf.build/styra/enterprise-opa).
 
 
 ## Installation
@@ -105,13 +105,13 @@ example if input.hello == "world"
 with a config enabling gRPC,
 
 ```yaml
-# enterprise-opa.yml
+# eopa.yml
 plugins:
   grpc:
     addr: localhost:9090
 ```
 
-via `eopa run --server --config-file enterprise-opa.yml policy.rego`, and execute the TypeScript code:
+via `eopa run --server --config-file eopa.yml policy.rego`, and execute the TypeScript code:
 
 ```shell
 # terminal-command
@@ -119,10 +119,10 @@ node --import tsx index.ts
 { example: true }
 ```
 
-For the full `package.json`, and the example configuration of EOPA, please see [the examples repository](https://github.com/StyraInc/eopa/tree/main/examples/grpc-typescript).
+For the full `package.json`, and the example configuration of EOPA, please see [the examples repository](https://github.com/open-policy-agent/eopa/tree/main/examples/grpc-typescript).
 
 
 ## References
 
-- [Example code](https://github.com/StyraInc/eopa/tree/main/examples/grpc-typescript)
+- [Example code](https://github.com/open-policy-agent/eopa/tree/main/examples/grpc-typescript)
 - [Buf Generated SDKs](https://buf.build/docs/bsr/generated-sdks/npm)

@@ -16,8 +16,8 @@ The EOPA Vault integration can be used to:
 
 ## Configuration
 
-1. [Connecting Vault to EOPA](#connecting-vault-to-enterprise-opa)
-2. [Authenticating EOPA](#authenticating-enterprise-opa)
+1. [Connecting Vault to EOPA](#connecting-vault-to-eopa)
+2. [Authenticating EOPA](#authenticating-eopa)
 3. [Accessing secrets from Vault](#accessing-secrets-from-vault)
 
 

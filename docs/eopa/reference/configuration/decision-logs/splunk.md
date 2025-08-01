@@ -44,7 +44,7 @@ in its desired format, i.e. wrapped in an `event` envelope:
     },
     "labels": {
       "id": "6067027a-caf0-4601-8691-6a1ba0906b4b",
-      "type": "enterprise-opa",
+      "type": "eopa",
       "version": "0.52.0"
     },
     "metrics": {

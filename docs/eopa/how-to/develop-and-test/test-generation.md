@@ -14,7 +14,7 @@ You **do not need** an EOPA license to use this functionality.
 This guide shows you how to use the EOPA CLI to generate new tests and
 bootstrap an application with tests.
 
-1. [Install the EOPA CLI](#install-the-enterprise-opa-cli)
+1. [Install the EOPA CLI](#install-the-eopa-cli)
 1. [Run `eopa test bootstrap` to generate a starting set of test stubs (one test group per rule body)](#eopa-test-bootstrap)
 1. [Use `eopa test new` with naming annotations to generate new test cases](#eopa-test-new)
 

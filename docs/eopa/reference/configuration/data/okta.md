@@ -23,7 +23,7 @@ in the EOPA configuration via a plugin with `type: okta`
 ### Minimal
 
 ```yaml
-# enterprise-opa-conf.yaml
+# eopa-conf.yaml
 plugins:
   data:
     okta.corp:

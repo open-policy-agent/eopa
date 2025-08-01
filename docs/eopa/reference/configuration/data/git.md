@@ -19,7 +19,7 @@ The Git integration is provided via the `data` plugin, and needs to be enabled i
 ### Minimal
 
 ```yaml
-# enterprise-opa-conf.yaml
+# eopa-conf.yaml
 plugins:
   data:
     git.users:
@@ -37,7 +37,7 @@ All of this, and various authentication methods, can be configured using an adva
 ### Advanced
 
 ```yaml
-# enterprise-opa-conf-advanced.yaml
+# eopa-conf-advanced.yaml
 plugins:
   data:
     git.users:

@@ -23,10 +23,10 @@ Our demo architecture looks like this:
 title: LIA Demo Setup
 ---
 flowchart LR
-    http["HTTP Load Generator"] -- 1. Example Queries ---> enterprise-opa["EOPA\n(Server)"]
-    enterprise-opa -- 3. Results ---> liacli
-    liacli["EOPA\n(LIA CLI)"] -- 2. Secondary Bundle ---> enterprise-opa
-    style enterprise-opa fill:white,stroke:#24b6e0,stroke-width:4px
+    http["HTTP Load Generator"] -- 1. Example Queries ---> eopa["EOPA\n(Server)"]
+    eopa -- 3. Results ---> liacli
+    liacli["EOPA\n(LIA CLI)"] -- 2. Secondary Bundle ---> eopa
+    style eopa fill:white,stroke:#24b6e0,stroke-width:4px
     style liacli fill:white,stroke:#24b6e0,stroke-width:4px
     style http fill:white,stroke:black,stroke-width:1px
 ```

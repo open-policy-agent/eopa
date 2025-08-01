@@ -8,7 +8,6 @@ title: Streaming data from Kafka | EOPA
 # Streaming data from Kafka
 
 <!-- markdownlint-disable MD044 -->
-import LicenseTrialAdmonition from '../../../eopa/_license-trial-admonition.md';
 
 
 EOPA has the capability to ingest data from Kafka topics and use it in policy evaluation.
@@ -62,8 +61,8 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-  enterprise-opa:
-    image: ghcr.io/styrainc/enterprise-opa:latest
+  eopa:
+    image: ghcr.io/open-policy-agent/eopa:latest
     ports:
       - "8181:8181"
     command:
@@ -71,10 +70,8 @@ services:
       - "--server"
       - "--addr=0.0.0.0:8181"
       - "--log-level=debug"
-      - "--config-file=/data/enterprise-opa-conf.yaml"
+      - "--config-file=/data/eopa-conf.yaml"
       - "/data/policy/transform.rego"
-    environment:
-      EOPA_LICENSE_KEY: ${EOPA_LICENSE_KEY}
     volumes:
       - "./:/data"
     depends_on:
@@ -88,12 +85,12 @@ This is appropriate for testing purposes only.
 
 The `eopa` configuration mounts the current directory into `/data` in the container. We need this directory to contain a configuration file and a transformation policy file to format data as it is ingested into EOPA.
 
-Create a file called `enterprise-opa-conf.yaml`, this file is used to configure EOPA to ingest data from Kafka.
+Create a file called `eopa-conf.yaml`, this file is used to configure EOPA to ingest data from Kafka.
 We must also instruct EOPA on which policy to use to transform the data as it is ingested.
-Insert the content below into the `enterprise-opa-conf.yaml` file in the current directory.
+Insert the content below into the `eopa-conf.yaml` file in the current directory.
 
 ```yaml
-# enterprise-opa-conf.yaml
+# eopa-conf.yaml
 plugins:
   data:
     kafka.messages:

@@ -22,7 +22,7 @@ You can also query MongoDB directly from a policy at query-time using the [`mong
 The MongoDB integration is provided through the `data` plugin, and needs to be enabled in EOPA's configuration.
 
 ```yaml
-# enterprise-opa-conf.yaml
+# eopa-conf.yaml
 plugins:
   data:
     employees.hr:

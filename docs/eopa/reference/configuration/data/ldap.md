@@ -19,7 +19,7 @@ The LDAP integration is provided via the `data` plugin, and needs to be enabled 
 ### Minimal
 
 ```yaml
-# enterprise-opa-conf.yaml
+# eopa-conf.yaml
 plugins:
   data:
     ldap.users:
@@ -39,7 +39,7 @@ using an advanced configuration:
 ### Advanced
 
 ```yaml
-# enterprise-opa-conf-advanced.yaml
+# eopa-conf-advanced.yaml
 plugins:
   data:
     ldap.users:

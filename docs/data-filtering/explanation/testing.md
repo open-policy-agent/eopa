@@ -343,7 +343,7 @@ ERROR: 1/1
 How does it all work?
 The test helper creates the provided tables in an in-memory SQLite database,
 uses `rego.compile()` ([see below](#filter-code-testing)) to compile the data filtering policy into SQL where clauses,
-and uses the provided query together with those clauses in [`sql.send()`](../../../enterprise-opa/reference/built-in-functions/sql) to produce the filtered array of objects.
+and uses the provided query together with those clauses in [`sql.send()`](../../../eopa/reference/built-in-functions/sql) to produce the filtered array of objects.
 
 If you want to manually explore the database tables that are created by the helper, pass the file name via the "db" key, like
 

@@ -17,7 +17,7 @@ The Pulsar integration is provided through the `data` plugin, and needs to be en
 ### Minimal
 
 ```yaml
-# enterprise-opa-conf.yaml
+# eopa-conf.yaml
 plugins:
   data:
     users:

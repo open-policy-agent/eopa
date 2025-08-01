@@ -5,7 +5,6 @@ title: Integrating with Envoy External Authorization | EOPA
 ---
 
 <!-- markdownlint-disable MD044 -->
-import LicenseTrialAdmonition from '../../../eopa/_license-trial-admonition.md';
 
 
 # Integrating with Envoy External Authorization
@@ -194,8 +193,8 @@ spec:
         app: bundle-server
     spec:
       initContainers:
-        - name: enterprise-opa-builder
-          image: ghcr.io/styrainc/enterprise-opa:latest
+        - name: eopa-builder
+          image: ghcr.io/open-policy-agent/eopa:latest
           args:
             - "build"
             - "--bundle"
@@ -421,7 +420,7 @@ spec:
             - name: ENVOY_UID
               value: "1111"
         - name: eopa
-          image: ghcr.io/styrainc/enterprise-opa:latest
+          image: ghcr.io/open-policy-agent/eopa:latest
           args:
             - "run"
             - "--server"
@@ -433,9 +432,6 @@ spec:
             - "--set=plugins.envoy_ext_authz_grpc.path=envoy/authz/allow"
             - "--set=decision_logs.console=true"
             - "--set=status.console=true"
-          env:
-            - name: EOPA_LICENSE_KEY
-              value: "$EOPA_LICENSE_KEY" # set in the following step
           livenessProbe:
             httpGet:
               path: /health?plugins
@@ -466,15 +462,6 @@ spec:
   - protocol: TCP
     port: 80
     targetPort: 8080
-```
-
-<LicenseTrialAdmonition />
-
-Set the `EOPA_LICENSE_KEY` environment variable to your license key:
-
-```shell
-# terminal-command
-export EOPA_LICENSE_KEY=...
 ```
 
 Deploy the application and Kubernetes Service to the cluster with:

@@ -28,12 +28,12 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - OPA_ADDR=http://enterprise-opa:8181
+      - OPA_ADDR=http://eopa:8181
       - POLICY_PATH=/v1/data/httpapi/authz
     depends_on:
-      - enterprise-opa
-  enterprise-opa:
-    image: ghcr.io/styrainc/enterprise-opa:latest
+      - eopa
+  eopa:
+    image: ghcr.io/open-policy-agent/eopa:latest
     expose:
       - "8181"
     ports:
@@ -48,14 +48,12 @@ services:
       - "--set=decision_logs.console=true"
       - "--addr=0.0.0.0:8181"
       - "/data/example.rego"
-    environment:
-      EOPA_LICENSE_KEY: ${EOPA_LICENSE_KEY}
 ```
 
 
 ## Creating our database
 
-EOPA currently supports [Microsoft SQL Server][sqlserver], [MySQL-compatible][mysql], [PostgreSQL-compatible][postgres], [Snowflake][]snowflake], and [SQLite][sqlite] databases, so we will use a small SQLite database for this tutorial to illustrate what is possible.
+EOPA currently supports [Microsoft SQL Server][sqlserver], [MySQL-compatible][mysql], [PostgreSQL-compatible][postgres], [Snowflake][snowflake], and [SQLite][sqlite] databases, so we will use a small SQLite database for this tutorial to illustrate what is possible.
 
 In a file name `init-database.sql`, insert the following SQL schema code and DDL statements:
 

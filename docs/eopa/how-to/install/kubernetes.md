@@ -34,7 +34,7 @@ This is a required step. This secret is used in the EOPA pods to enable them to 
 apiVersion: v1
 kind: Secret
 metadata:
-  name: enterprise-opa-license
+  name: eopa-license
   namespace: eopa
 type: Opaque
 stringData:
@@ -54,7 +54,7 @@ Create a `ConfigMap` for configuration. This will be loaded into the EOPA pods v
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: enterprise-opa-config
+  name: eopa-config
   namespace: eopa
 data:
   config.yaml: |
@@ -87,24 +87,24 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: enterprise-opa
+    app: eopa
   namespace: eopa
-  name: enterprise-opa
+  name: eopa
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: enterprise-opa
+      app: eopa
   template:
     metadata:
       labels:
-        app: enterprise-opa
-      name: enterprise-opa
+        app: eopa
+      name: eopa
     spec:
       containers:
-      - name: enterprise-opa
+      - name: eopa
         # Update this to the desired version
-        image: # docker pull ghcr.io/styrainc/enterprise-opa:$VERSION
+        image: # docker pull ghcr.io/open-policy-agent/eopa:$VERSION
         args:
         - "run"
         - "--server"
@@ -114,7 +114,7 @@ spec:
         - name: EOPA_LICENSE_KEY
           valueFrom:
             secretKeyRef:
-              name: enterprise-opa-license
+              name: eopa-license
               key: license
         volumeMounts:
         - name: config
@@ -136,7 +136,7 @@ spec:
       volumes:
       - name: config
         configMap:
-          name: enterprise-opa-config
+          name: eopa-config
           items:
           - key: "config.yaml"
             path: "config.yaml"
@@ -156,7 +156,7 @@ First, run the following command to forward port 8181 on your local machine to t
 
 ```shell-session
 # terminal-command
-kubectl -n eopa port-forward deployment/enterprise-opa 8181
+kubectl -n eopa port-forward deployment/eopa 8181
 Forwarding from 127.0.0.1:8181 -> 8181
 Forwarding from [::1]:8181 -> 8181
 ```
@@ -184,17 +184,17 @@ This method is more suitable in the following scenarios:
 - You want to run EOPA in production and have other services in the cluster that depend on it.
 - When benchmarking EOPA from within the cluster.
 
-First, create a Service resource. This will give EOPA a record in the Kubernetes DNS and make it accessible from other pods in the cluster at `enterprise-opa.eopa.svc.cluster.local:8181`.
+First, create a Service resource. This will give EOPA a record in the Kubernetes DNS and make it accessible from other pods in the cluster at `eopa.eopa.svc.cluster.local:8181`.
 
 ```yaml
 kind: Service
 apiVersion: v1
 metadata:
-  name: enterprise-opa
+  name: eopa
   namespace: eopa
 spec:
   selector:
-    app: enterprise-opa
+    app: eopa
   ports:
   - port: 8181
 ```
@@ -209,18 +209,18 @@ You will need to update the `host` field to hostname you wish to use.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: enterprise-opa
+  name: eopa
   namespace: eopa
 spec:
   rules:
-  - host: enterprise-opa.example.com
+  - host: eopa.example.com
     http:
       paths:
       - pathType: Prefix
         path: /
         backend:
           service:
-            name: enterprise-opa
+            name: eopa
             port:
               number: 8181
 ```
@@ -229,7 +229,7 @@ Next, in another terminal, run the following command to test the connection:
 
 ```json
 # terminal-command
-curl enterprise-opa.example.com/v1/data/system/version?pretty=true
+curl eopa.example.com/v1/data/system/version?pretty=true
 {
   "result": {
     "build_commit": "779a6b0b33fcaf1fc47b42728a610dba7dc5dcac",

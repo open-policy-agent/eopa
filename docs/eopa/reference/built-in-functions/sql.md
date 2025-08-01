@@ -63,10 +63,6 @@ Snowflake's `data_source_name` must omit the scheme, for example:
 user:password@my_org-my_account/mydb/myschema?warehouse=mywh
 ```
 
-<!-- NOTE(sr): when https://github.com/StyraInc/enterprise-opa-private/pull/2094 is merged and released,
-this restriction can be removed.-->
-
-
 #### MySQL
 
 MySQL is using its own variation of the URI format:

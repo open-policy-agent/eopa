@@ -858,7 +858,7 @@ eopa impact record [flags]
 ### Options
 
 ```
-  -a, --addr string                   EOPA address to connect to (e.g. "https://staging.enterprise-opa.example.com:8443") (default "http://127.0.0.1:8181")
+  -a, --addr string                   EOPA address to connect to (e.g. "https://staging.eopa.example.com:8443") (default "http://127.0.0.1:8181")
   -b, --bundle string                 Path to bundle to use for secondary evaluation
   -d, --duration duration             Live Impact Analysis duration (e.g. "5m") (default 30s)
       --equals                        Include equal results (e.g. for assessing performance differences)
@@ -1360,7 +1360,7 @@ eopa run [flags]
   -f, --format string                        set shell output format, i.e, pretty, json (default "pretty")
       --h2c                                  enable H2C for HTTP listeners
   -h, --help                                 help for run
-  -H, --history string                       set path of history file (default "$HOME/.enterprise opa_history")
+  -H, --history string                       set path of history file (default "$HOME/.eopa_history")
       --ignore strings                       set file and directory names to ignore during loading (e.g., '.*' excludes hidden files)
       --instruction-limit int                set instruction limit for VM (default 100000000)
       --license-discovery-timeout int        Timeout (in seconds) for discovery-based licensing check. (default 30)

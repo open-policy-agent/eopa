@@ -19,7 +19,7 @@ gRPC messages are serialized using Protocol Buffer definitions,
 as well as controlling the structure of messages they can also be used to generate
 SDKs to make integration easier in different languages - including Java.
 
-To use the [EOPA](/enterprise-opa)
+To use the [EOPA](/eopa)
 [gRPC API](/eopa/reference/api-reference/grpc-api)
 from Java, we will make use of the SDKs generated from the Protobuf Schema published
 on [Buf](https://buf.build/styra/enterprise-opa) rather than the

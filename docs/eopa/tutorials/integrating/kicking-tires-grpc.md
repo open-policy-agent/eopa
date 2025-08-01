@@ -27,7 +27,7 @@ This tutorial relies on the [`grpcurl`][grpcurl] tool. Binaries are available fr
 
 The gRPC service is provided by the `grpc` plug-in, and needs to be enabled in EOPA's configuration before the gRPC endpoints are made available to the network.
 
-`enterprise-opa-conf.yaml`
+`eopa-conf.yaml`
 
 ```yaml
 plugins:
@@ -173,7 +173,7 @@ To run EOPA with the configuration, run the command below:
 
 ```sh
 # terminal-command
-eopa run -s -c enterprise-opa-conf.yaml
+eopa run -s -c eopa-conf.yaml
 ```
 
 The policy will be pushed to the server as part of the steps below, so we do not include it at startup.

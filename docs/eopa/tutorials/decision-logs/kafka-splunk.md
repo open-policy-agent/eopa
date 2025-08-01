@@ -32,7 +32,7 @@ gives us chance to try most of the various available options.
 To enable all those decision log sinks, use the following config:
 
 ```yaml
-# enterprise-opa.yml
+# eopa.yml
 services:
 - name: dl
   url: http://127.0.0.1:4195/post
@@ -167,7 +167,7 @@ allow if {
 ```
 
 With the EOPA configuration above, and with a license set up properly, we can run
-EOPA via `eopa run --config-file enterprise-opa.yml --server policy.rego`.
+EOPA via `eopa run --config-file eopa.yml --server policy.rego`.
 
 To start up some auxiliary services, notably Apache Kafka and an HTTP sink,
 use  `docker compose up` with the provided `docker-compose.yml` file.
@@ -208,7 +208,7 @@ The HTTP service sports this output:
   },
   "labels": {
     "id": "6067027a-caf0-4601-8691-6a1ba0906b4b",
-    "type": "enterprise-opa",
+    "type": "eopa",
     "version": "0.52.0"
   },
   "metrics": {
@@ -244,7 +244,7 @@ e.g.
     },
     "labels": {
       "id": "6067027a-caf0-4601-8691-6a1ba0906b4b",
-      "type": "enterprise-opa",
+      "type": "eopa",
       "version": "0.52.0"
     },
     "metrics": {

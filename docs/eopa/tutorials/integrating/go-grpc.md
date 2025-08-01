@@ -64,11 +64,11 @@ To build the client bindings we will need for the demo application, we will need
 - Go plugins for the `protoc` compiler: [gRPC Quickstart guide for Go](https://grpc.io/docs/languages/go/quickstart/#prerequisites)
 - Buf (used for `buf generate` later): [Installation guide for Buf](https://buf.build/docs/installation/)
 
-We will also need to pull down the [`StyraInc/enterprise-opa` repository](https://github.com/StyraInc/enterprise-opa) with Git:
+We will also need to pull down the [`open-policy-agent/eopa` repository](https://github.com/Styraopen-policy-agentInc/eopa) with Git:
 
 ```shell
 # terminal-command
-git clone https://github.com/StyraInc/enterprise-opa && cp enterprise-opa/proto proto/
+git clone https://github.com/open-policy-agent/eopa && cp eopa/proto proto/
 ```
 
 This will clone the EOPA blueprints repository down, and copy out the protobuf definitions folder for use in our project.
@@ -357,7 +357,7 @@ Now that we have all of our setup work out of the way, we can finally run EOPA a
 
 ### Configuring and running EOPA locally
 
-Create a file called `enterprise-opa-conf.yaml` and insert the YAML configuration below.
+Create a file called `eopa-conf.yaml` and insert the YAML configuration below.
 
 ```yaml
 plugins:
@@ -379,7 +379,7 @@ We can now run EOPA in server mode, with the `grpc` plugin enabled:
 
 ```shell
 # terminal-command
-eopa run --server --config enterprise-opa-conf.yaml
+eopa run --server --config eopa-conf.yaml
 ```
 
 This will start up EOPA, and will provide an unsecured gRPC server at the address `localhost:9090`.

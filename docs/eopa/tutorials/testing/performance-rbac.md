@@ -133,9 +133,9 @@ To download the resources for EOPA performance testing, clone the GitHub reposit
 
 ```shell
 # terminal-command
-git clone https://github.com/StyraInc/enterprise-opa.git
+git clone https://github.com/open-policy-agent/eopa.git
 # terminal-command
-cd enterprise-opa/examples/performance-testing
+cd eopa/examples/performance-testing
 ```
 
 We are going to be using some sample data which as been generated based on the example domain outlined above.
@@ -159,14 +159,14 @@ Supply the filename of the query list and the OPA and EOPA Bundles.
 ```shell
 # terminal-command
 ./benchmark.sh
-Usage: benchmark.sh [opa-bundle] [enterprise-opa-bundle] [query_list]
+Usage: benchmark.sh [opa-bundle] [eopa-bundle] [query_list]
 ```
 
 Start a test using the 400 MB dataset using the following:
 
 ```shell
 # terminal-command
-./benchmark.sh bundle-opa-400.tar.gz bundle-enterprise-opa-400.tar.gz queries-400
+./benchmark.sh bundle-opa-400.tar.gz bundle-eopa-400.tar.gz queries-400
 ```
 
 The test will take some time to run.
@@ -181,7 +181,7 @@ opa version: 0.48.0
 eopa version: 0.48.0-1
 k6 version: v0.42.0
 OPA bundle: bundle-opa-400.tar.gz
-EOPA bundle: bundle-enterprise-opa-400.tar.gz
+EOPA bundle: bundle-eopa-400.tar.gz
 Query list: queries-400
 
 Waiting for OPA to start...
@@ -236,12 +236,12 @@ This will output a `queries` file and a bundle file: `bundle.tar.gz`, you can co
 
 ```shell
 # terminal-command
-eopa bundle convert bundle.tar.gz bundle-enterprise-opa.tar.gz
+eopa bundle convert bundle.tar.gz bundle-eopa.tar.gz
 ```
 
 You can then run the tests again using these files to make your own comparisons.
 
 ```shell
 # terminal-command
-./benchmark.sh bundle.tar.gz bundle-enterprise-opa.tar.gz queries
+./benchmark.sh bundle.tar.gz bundle-eopa.tar.gz queries
 ```
