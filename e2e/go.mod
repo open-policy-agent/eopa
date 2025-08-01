@@ -17,7 +17,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/microsoft/go-mssqldb v1.9.2
 	github.com/minio/minio-go/v7 v7.0.95
-	github.com/open-policy-agent/opa v1.7.0
+	github.com/open-policy-agent/opa v1.7.1
 	github.com/redpanda-data/benthos/v4 v4.54.0
 	github.com/redpanda-data/connect/v4 v4.61.0
 	github.com/rogpeppe/go-internal v1.14.1
