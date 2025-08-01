@@ -1,5 +1,5 @@
 # This test ensures that the `eopa run` command correctly accepts extra data to
-# insert into the `data.` hierarchy from the `.styra.yaml` config file.
+# insert into the `data.` hierarchy from the `.opa.yaml` config file.
 #
 # NOTE: port 61662 was chosen at random, so that if we run in parallel with
 # other tests, we won't fail to bind to the interface.
@@ -31,7 +31,7 @@ bar := "abc"
 -- cooldir/dummy2.rego --
 package coolstuff
 foobar := "quux"
--- .styra.yaml --
+-- .opa.yaml --
 data:
   ./dummy1.rego
   ./cooldir

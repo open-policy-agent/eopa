@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -121,7 +122,7 @@ func EOPACommand() *cobra.Command {
 	// cfg := viper.NewWithOptions(viper.WithLogger(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))))
 	cfg := viper.New()
 
-	cfg.SetConfigName(".styra")
+	cfg.SetConfigName(".opa")
 	cfg.SetConfigType("yaml")
 	paths := []string{"."}
 	if p := repoRootPath(); p != "" {
@@ -157,7 +158,7 @@ func EOPACommand() *cobra.Command {
 					return err
 				}
 
-				selectedPath, _ := cmd.Flags().GetString(styraConfig)
+				selectedPath, _ := cmd.Flags().GetString("eopa-config")
 				if err := readConfig(selectedPath, cfg, paths, logger); err != nil {
 					return err
 				}
@@ -199,7 +200,7 @@ func EOPACommand() *cobra.Command {
 					return err
 				}
 
-				selectedPath, _ := cmd.Flags().GetString(styraConfig)
+				selectedPath, _ := cmd.Flags().GetString("eopa-config")
 				if err := readConfig(selectedPath, cfg, paths, logger); err != nil {
 					return err
 				}
@@ -248,7 +249,7 @@ func EOPACommand() *cobra.Command {
 					return err
 				}
 
-				selectedPath, _ := cmd.Flags().GetString(styraConfig)
+				selectedPath, _ := cmd.Flags().GetString("eopa-config")
 				if err := readConfig(selectedPath, cfg, paths, logger); err != nil {
 					return err
 				}
@@ -327,8 +328,8 @@ func EOPACommand() *cobra.Command {
 	root.AddCommand(liaCtl())
 	root.AddCommand(regal())
 
-	root.AddCommand(loginCmd(cfg, paths))
-	root.AddCommand(pullCmd(cfg, paths))
+	root.AddCommand(loginCmd())
+	root.AddCommand(pullCmd())
 
 	licenseCmd := LicenseCmd()
 	addLicenseFlags(licenseCmd)
@@ -394,4 +395,31 @@ func getLogger(logLevel string, format, timestampFormat string) (logging.Logger,
 	logger.SetFormatter(internal_logging.GetFormatter(format, timestampFormat))
 
 	return logger, nil
+}
+
+func readConfig(flagPath string, config *viper.Viper, paths []string, logger logging.Logger) error {
+	if flagPath != "" {
+		config.SetConfigFile(flagPath)
+	} else {
+		for _, p := range paths {
+			config.AddConfigPath(p)
+		}
+	}
+
+	logger.Debug("looking for config in %v", paths)
+	if err := config.ReadInConfig(); err != nil {
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		if !ok {
+			return fmt.Errorf("config file %s: %w", config.ConfigFileUsed(), err)
+		}
+	}
+	if used := config.ConfigFileUsed(); used != "" {
+		logger.Debug("used config file %s", used)
+	}
+	return nil
+}
+
+func addEOPAConfigFlags(c *cobra.Command) {
+	c.Flags().String("log-level", "info", "log level")
+	c.Flags().String("log-format", "text", "log format")
 }

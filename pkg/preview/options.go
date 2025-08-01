@@ -202,8 +202,8 @@ func (q *QueryOpt) RegoOptions() []func(*rego.Rego) {
 // specific query was sent, it provides the full result expression value.
 // Otherwise it extracts the result, returning it without the extra context.
 //
-// Switching the result format in this way makes the return compatible with the
-// DAS data API.
+// Switching the result format in this way makes the return more compatible
+// with some control-plane APIs.
 func (q *QueryOpt) Result(_ *Preview, results rego.ResultSet, response types.PreviewResponseV1) (types.PreviewResponseV1, error) {
 	if q.query == "" && results != nil {
 		response.Result = &results[0].Expressions[0].Value
