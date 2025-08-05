@@ -28,7 +28,7 @@ const (
 )
 
 // ServeHTTP exposes the ability to run preview requests. The API is based primarily
-// off of OPAs v1DataPost method mixing in parts of the DAS data API.
+// off of OPAs v1DataPost method mixing in parts from public OPA control-plane APIs.
 func (p *PreviewHook) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 404 if preview is inactive
 	if !p.config.Enabled || p.manager == nil {

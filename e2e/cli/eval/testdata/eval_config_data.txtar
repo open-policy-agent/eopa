@@ -1,5 +1,5 @@
 # This test ensures that `eopa eval` correctly accepts extra data to insert
-# into the `data.` hierarchy from the .styra.yaml config file.
+# into the `data.` hierarchy from the .opa.yaml config file.
 #
 # We also make sure to test loading more than one path, one of which is a
 # directory, to make sure nothing in the way we handled the config file
@@ -20,7 +20,7 @@ package coolstuff
 foobar := "quux"
 -- cooldir/dummy2.json --
 {"foo2":"bear"}
--- .styra.yaml --
+-- .opa.yaml --
 data:
   ./dummy1.rego
   ./cooldir

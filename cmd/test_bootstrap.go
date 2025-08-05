@@ -32,19 +32,14 @@ and top-level rules:
 
     eopa test bootstrap -d policy/ my/policy/entrypoint
 
-Note: If using a standard Styra DAS bundle structure, the policy entrypoint
-should always be 'main/main':
-
-    eopa test bootstrap -d das-policy/ main/main
-
-Note: 'eopa test bootstrap' will look for .styra.yaml in the current
+Note: 'eopa test bootstrap' will look for .opa.yaml in the current
 directory, the repository root, and your home directory. To use a different
-config file location, pass --styra-config:
+config file location, pass --eopa-config:
 
     eopa test bootstrap \
-	  --styra-config ~/.styra-primary.yaml \
-	  -d das-policy/ \
-	  main/main
+	  --eopa-config ~/.eopa-primary.yaml \
+	  -d complex-policy/ \
+	  main/allow
 
 This command will attempt to generate test mocks automatically to exercise
 each top-level rule specified. For full test coverage, additional tests
@@ -67,24 +62,21 @@ and test cases may be required!
 			return nil
 		},
 		PreRunE: func(c *cobra.Command, _ []string) error {
-			bindDASFlags(config, c)
 			c.SilenceUsage = true
 
-			lvl, _ := c.Flags().GetString(logLevel)
+			lvl, _ := c.Flags().GetString("log-level")
 			format, _ := c.Flags().GetString("log-format")
 			logger, err = getLogger(lvl, format, "")
 			if err != nil {
 				return err
 			}
 
-			path, _ := c.Flags().GetString(styraConfig)
+			path, _ := c.Flags().GetString("eopa-config")
 			return readConfig(path, config, paths, logger)
 		},
 		RunE: func(c *cobra.Command, args []string) error {
 			ctx, cancel := context.WithCancel(c.Context())
 			defer cancel()
-
-			// TODO(philip): Add DAS/Styra config auto-detection or includes here.
 
 			entrypoints := args
 			forceOverwrite, _ := c.Flags().GetBool(force)
@@ -99,7 +91,7 @@ and test cases may be required!
 		},
 	}
 
-	addDASFlags(cmd) // TODO(philip): Do we want "bindDASFlags" here?
+	addEOPAConfigFlags(cmd) // TODO(philip): Do we want "bindDASFlags" here?
 	cmd.Flags().StringSliceVarP(&ignoreNames, "ignore", "", []string{}, "set file and directory names to ignore during loading (e.g., '.*' excludes hidden files)")
 	cmd.Flags().StringSliceVarP(&dataPaths, "data", "d", []string{}, "set policy or data file(s). Recursively traverses bundle folders. This flag can be repeated.")
 	cmd.Flags().BoolP("force", "f", false, "ignore if test files already exist, overwrite existing content on conflict")

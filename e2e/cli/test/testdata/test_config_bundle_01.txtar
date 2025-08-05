@@ -21,7 +21,7 @@ bar := "abc"
 -- cooldir/dummy2.rego --
 package coolstuff
 foobar := "quux"
--- .styra.yaml --
+-- .opa.yaml --
 data:
   ./niftydir
   ./cooldir
