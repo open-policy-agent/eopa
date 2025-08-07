@@ -53,29 +53,29 @@ plugins:
 			responders: []Responder{
 				{
 					Method: http.MethodGet,
-					URL:    "https://test-aws-s3-plugin.s3.amazonaws.com/?prefix=ds-test.json",
+					URL:    "https://test-aws-s3-plugin.s3.us-east-1.amazonaws.com/?list-type=2&prefix=ds-test.json",
 					Responder: func(*http.Request) (*http.Response, error) {
 						resp := httpmock.NewStringResponse(http.StatusOK, `
-<?xml version="1.0" encoding="UTF-8"?>
-<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-  <Name>test-aws-s3-plugin</Name>
-  <Prefix>ds-test.json</Prefix>
-  <Marker></Marker>
-  <MaxKeys>1000</MaxKeys>
-  <IsTruncated>false</IsTruncated>
-  <Contents>
-    <Key>ds-test.json</Key>
-    <LastModified>2023-02-24T18:47:19.000Z</LastModified>
-    <ETag>&quot;768ae5a7531a99b361010afae6870599&quot;</ETag>
-    <Size>16</Size>
-    <Owner>
-	  <ID>8775d31c6f84c7378cb08964a629796b119f605f67b9ca22310834adf5b2ec2f</ID>
-	  <DisplayName>platform+env-sergey-728919d27e</DisplayName>
-    </Owner>
-    <StorageClass>STANDARD</StorageClass>
-  </Contents>
-</ListBucketResult>
-`)
+		<?xml version="1.0" encoding="UTF-8"?>
+		<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+		  <Name>test-aws-s3-plugin</Name>
+		  <Prefix>ds-test.json</Prefix>
+		  <KeyCount>1</KeyCount>
+		  <MaxKeys>1000</MaxKeys>
+		  <IsTruncated>false</IsTruncated>
+		  <Contents>
+		    <Key>ds-test.json</Key>
+		    <LastModified>2023-02-24T18:47:19.000Z</LastModified>
+		    <ETag>&quot;768ae5a7531a99b361010afae6870599&quot;</ETag>
+		    <Size>16</Size>
+		    <Owner>
+		      <ID>8775d31c6f84c7378cb08964a629796b119f605f67b9ca22310834adf5b2ec2f</ID>
+		      <DisplayName>platform+env-sergey-728919d27e</DisplayName>
+		    </Owner>
+		    <StorageClass>STANDARD</StorageClass>
+		  </Contents>
+		</ListBucketResult>
+		`)
 						resp.Header.Set("Content-Type", "application/xml")
 						resp.Header.Set("Date", "Tue, 28 Feb 2023 23:45:32 GMT")
 						resp.Header.Set("Server", "AmazonS3")
@@ -87,7 +87,7 @@ plugins:
 				},
 				{
 					Method: http.MethodGet,
-					URL:    "https://test-aws-s3-plugin.s3.amazonaws.com/ds-test.json",
+					URL:    "https://test-aws-s3-plugin.s3.us-east-1.amazonaws.com/ds-test.json",
 					Responder: func(*http.Request) (*http.Response, error) {
 						resp := httpmock.NewStringResponse(http.StatusPartialContent, "{\"foo1\":\"bar1\"}\n")
 						resp.Header.Set("Accept-Ranges", "bytes")
@@ -122,49 +122,42 @@ plugins:
 			responders: []Responder{
 				{
 					Method: http.MethodGet,
-					URL:    "https://test-datasources.storage.googleapis.com/?prefix=data%2F",
+					URL:    "https://test-datasources.storage.googleapis.com/?list-type=2&prefix=data%2F",
 					Responder: func(*http.Request) (*http.Response, error) {
 						resp := httpmock.NewStringResponse(http.StatusOK, `
-<?xml version='1.0' encoding='UTF-8'?>
-<ListBucketResult xmlns='http://doc.s3.amazonaws.com/2006-03-01'>
-    <Name>test-datasources</Name>
-    <Prefix>data/</Prefix>
-    <Marker></Marker>
-    <IsTruncated>false</IsTruncated>
-    <Contents>
-        <Key>data/ds-test.json</Key>
-        <Generation>1677264514124860</Generation>
-        <MetaGeneration>1</MetaGeneration>
-        <LastModified>2023-02-24T18:48:34.169Z</LastModified>
-        <ETag>"768ae5a7531a99b361010afae6870599"</ETag>
-        <Size>16</Size>
-    </Contents>
-    <Contents>
-        <Key>data/ds-test.xml</Key>
-        <Generation>1677264514443685</Generation>
-        <MetaGeneration>1</MetaGeneration>
-        <LastModified>2023-02-24T18:48:34.488Z</LastModified>
-        <ETag>"73069ca25a7f2dedb970f8e37c91e956"</ETag>
-        <Size>18</Size>
-    </Contents>
-    <Contents>
-        <Key>data/ds-test.yaml</Key>
-        <Generation>1677264513991387</Generation>
-        <MetaGeneration>1</MetaGeneration>
-        <LastModified>2023-02-24T18:48:34.035Z</LastModified>
-        <ETag>"97f5157d6743d78116364595b6c73b10"</ETag>
-        <Size>11</Size>
-    </Contents>
-    <Contents>
-        <Key>data/ds-test.yml</Key>
-        <Generation>1677264514072786</Generation>
-        <MetaGeneration>1</MetaGeneration>
-        <LastModified>2023-02-24T18:48:34.117Z</LastModified>
-        <ETag>"a1ad1b3222a42892d43f4f9ef505e6a0"</ETag>
-        <Size>11</Size>
-    </Contents>
-</ListBucketResult>
-`)
+		<?xml version='1.0' encoding='UTF-8'?>
+		<ListBucketResult xmlns='http://s3.amazonaws.com/doc/2006-03-01/'>
+			<Name>test-datasources</Name>
+			<Prefix>data/</Prefix>
+			<KeyCount>4</KeyCount>
+			<MaxKeys>1000</MaxKeys>
+			<IsTruncated>false</IsTruncated>
+			<Contents>
+				<Key>data/ds-test.json</Key>
+				<LastModified>2023-02-24T18:48:34.169Z</LastModified>
+				<ETag>"768ae5a7531a99b361010afae6870599"</ETag>
+				<Size>16</Size>
+			</Contents>
+			<Contents>
+				<Key>data/ds-test.xml</Key>
+				<LastModified>2023-02-24T18:48:34.488Z</LastModified>
+				<ETag>"73069ca25a7f2dedb970f8e37c91e956"</ETag>
+				<Size>18</Size>
+			</Contents>
+			<Contents>
+				<Key>data/ds-test.yaml</Key>
+				<LastModified>2023-02-24T18:48:34.035Z</LastModified>
+				<ETag>"97f5157d6743d78116364595b6c73b10"</ETag>
+				<Size>11</Size>
+			</Contents>
+			<Contents>
+				<Key>data/ds-test.yml</Key>
+				<LastModified>2023-02-24T18:48:34.117Z</LastModified>
+				<ETag>"a1ad1b3222a42892d43f4f9ef505e6a0"</ETag>
+				<Size>11</Size>
+			</Contents>
+		</ListBucketResult>
+		`)
 						resp.Header.Set("Alt-Svc", `h3=":443"; ma=2592000,h3-29=":443"; ma=2592000,h3-Q050=":443"; ma=2592000,h3-Q046=":443"; ma=2592000,h3-Q043=":443"; ma=2592000,quic=":443"; ma=2592000; v="46,43"`)
 						resp.Header.Set("Cache-Control", "private, max-age=0")
 						resp.Header.Set("Content-Type", "application/xml; charset=UTF-8")
