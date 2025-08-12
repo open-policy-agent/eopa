@@ -7,7 +7,7 @@ sidebar_position: 1
 
 # UCAST Syntax
 
-The Enterprise OPA platform makes use of the [Universal Conditions AST (UCAST)](https://github.com/stalniy/ucast) project to represent (as JSON) a universal set of conditions that can be applied to filter data.
+The EOPA platform makes use of the [Universal Conditions AST (UCAST)](https://github.com/stalniy/ucast) project to represent (as JSON) a universal set of conditions that can be applied to filter data.
 
 UCAST allows 3 types of nodes in the tree:
 - **Document-level Condition** nodes: Used to apply an operator to the entire document/table, e.g. the EXISTS operator in SQL. These types of nodes are _not used_ by any of our interpreters.

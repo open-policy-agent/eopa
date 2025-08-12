@@ -76,7 +76,7 @@ For our running example, we will be adding column masking to a support ticket ap
 
 Our masking policy will mask the `tickets.description` field with the dummy value `"<description>"` by default, and will allow the real value through for users with the `admin` role.
 
-Roles are provided to Enterprise OPA via `roles/data.json`, and the SQL tables contain tickets and assignees.
+Roles are provided to EOPA via `roles/data.json`, and the SQL tables contain tickets and assignees.
 
 ```mermaid
 erDiagram

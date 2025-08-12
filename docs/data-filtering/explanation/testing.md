@@ -11,7 +11,7 @@ import SideBySideColumn from '@site/src/components/SideBySide/Column';
 
 # Data Filters Testing
 
-There are two approaches to testing data filter policies using Enterprise OPA:
+There are two approaches to testing data filter policies using EOPA:
 
 1. **Effects**-based tests: testing the **effects of filters against sample data**
 2. **Code**-based tests: testing the **compiled filters as code**
@@ -47,7 +47,7 @@ erDiagram
 
 ## Filter Effects Testing
 
-Enterprise OPA provides a helper method for testing the _effect of data filtering_ on provided data: the `filter.helper()` built-in function provided via `data.system.eopa.utils.tests.v1.filter`
+EOPA provides a helper method for testing the _effect of data filtering_ on provided data: the `filter.helper()` built-in function provided via `data.system.eopa.utils.tests.v1.filter`
 
 In the following Rego files, we have the filter rules, and a set of unit tests using those helpers:
 
@@ -343,7 +343,7 @@ ERROR: 1/1
 How does it all work?
 The test helper creates the provided tables in an in-memory SQLite database,
 uses `rego.compile()` ([see below](#filter-code-testing)) to compile the data filtering policy into SQL where clauses,
-and uses the provided query together with those clauses in [`sql.send()`](../../../enterprise-opa/reference/built-in-functions/sql) to produce the filtered array of objects.
+and uses the provided query together with those clauses in [`sql.send()`](../../../eopa/reference/built-in-functions/sql) to produce the filtered array of objects.
 
 If you want to manually explore the database tables that are created by the helper, pass the file name via the "db" key, like
 

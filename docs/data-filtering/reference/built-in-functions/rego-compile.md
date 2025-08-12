@@ -6,4 +6,4 @@ sidebar_label: rego.compile
 <!-- markdownlint-disable MD041 -->
 import {Redirect} from '@docusaurus/router';
 
-<Redirect to="/enterprise-opa/reference/built-in-functions/rego-compile" />
+<Redirect to="/eopa/reference/built-in-functions/rego-compile" />
