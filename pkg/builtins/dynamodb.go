@@ -612,10 +612,9 @@ func (p *dynamoDBClientPool) open(ctx context.Context, region string, endpoint s
 	if accessKey != "" && secretKey != "" {
 		// Static credentials provided
 		providers = append(providers, credentials.NewStaticCredentialsProvider(accessKey, secretKey, sessionToken))
-	} else {
-		// Use default credential chain which includes environment variables and IAM roles
-		// This is already handled by LoadDefaultConfig
 	}
+	// Else: Use default credential chain which includes environment variables and IAM roles
+	// This is already handled by LoadDefaultConfigs
 
 	// Append default credentials provider.
 	providers = append(providers, cfg.Credentials)
