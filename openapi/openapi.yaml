@@ -1,13 +1,13 @@
 openapi: 3.0.3
 info:
-  title: Enterprise OPA REST API
+  title: EOPA REST API
   version: 0.2.0
   contact:
-    name: Styra
-    url: "https://github.com/StyraInc/enterprise-opa"
+    name: Open Policy Agent
+    url: "https://github.com/open-policy-agent/eopa"
 externalDocs:
-  description: Enterprise OPA documentation
-  url: "https://docs.styra.com/enterprise-opa"
+  description: EOPA documentation
+  url: "https://github.com/open-policy-agent/eopa/docs"
   x-openpolicyagent-documentation-url: "https://www.openpolicyagent.org/docs/latest/"
 servers:
   - url: http://localhost:8181
@@ -536,7 +536,7 @@ components:
           $ref: "#/components/schemas/provenance"
     CompileOptions:
       type: object
-      description: Additional options to use during partial evaluation. Only the disableInlining option is currently supported in OPA. Enterprise OPA may support additional options.
+      description: Additional options to use during partial evaluation. Only the disableInlining option is currently supported in OPA. EOPA may support additional options.
       additionalProperties: true
       properties:
         disableInlining:
