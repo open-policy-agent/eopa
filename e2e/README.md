@@ -4,14 +4,14 @@
 
 ```
 make eopa
-export BINARY=<PathToEnterpriseOPAExecutable>
+export BINARY=<PathToEOPAExecutable>
 make e2e
 ```
 
 ## Run individual test
 
 ```
-export BINARY=<PathToEnterpriseOPAExecutable>
+export BINARY=<PathToEOPAExecutable>
 cd <test directory>
 go test -p 1 -tags e2e . -v -count=1
 ```
