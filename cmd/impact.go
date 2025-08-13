@@ -97,14 +97,14 @@ func record() *cobra.Command {
 			return lia.TUI(ctx, rec)
 		},
 	}
-	// Enterprise OPA connectivity and LIA request options
-	c.Flags().StringP(addr, "a", "http://127.0.0.1:8181", `Enterprise OPA address to connect to (e.g. "https://staging.enterprise-opa.example.com:8443")`)
+	// EOPA connectivity and LIA request options
+	c.Flags().StringP(addr, "a", "http://127.0.0.1:8181", `EOPA address to connect to (e.g. "https://staging.eopa.example.com:8443")`)
 	c.Flags().DurationP(duration, "d", 30*time.Second, `Live Impact Analysis duration (e.g. "5m")`)
 	c.Flags().Bool(equals, false, `Include equal results (e.g. for assessing performance differences)`)
 	c.Flags().Float64(rate, 0.1, "Sample rate of evaluations to include (e.g. 0.1 for 10%, or 1 for all requests)")
 	c.Flags().StringP(bndl, "b", "", "Path to bundle to use for secondary evaluation")
 	// TLS
-	c.Flags().Bool(tlsSkip, false, "Skip TLS verification when connecting to Enterprise OPA")
+	c.Flags().Bool(tlsSkip, false, "Skip TLS verification when connecting to EOPA")
 	c.Flags().String(tlsCACert, "", "TLS CA cert path")
 	c.Flags().String(tlsCert, "", "TLS client cert path")
 	c.Flags().String(tlsKey, "", "TLS key path")

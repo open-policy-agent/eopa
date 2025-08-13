@@ -19,8 +19,8 @@ import (
 func initVersion() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: `Print the version of Enterprise OPA`,
-		Long:  `Show version and build information for Enterprise OPA.`,
+		Short: `Print the version of EOPA`,
+		Long:  `Show version and build information for EOPA.`,
 		Run: func(*cobra.Command, []string) {
 			generateCmdOutput(os.Stdout)
 		},

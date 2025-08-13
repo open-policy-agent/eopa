@@ -132,7 +132,7 @@ func EOPACommand() *cobra.Command {
 
 	root := &cobra.Command{
 		Use:   "eopa",
-		Short: "Enterprise OPA",
+		Short: "EOPA",
 
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			if instructionLimit > 0 {
@@ -323,7 +323,7 @@ func EOPACommand() *cobra.Command {
 		}
 	}
 
-	// New Enterprise OPA commands
+	// New EOPA commands
 	root.AddCommand(initBundle())
 	root.AddCommand(liaCtl())
 	root.AddCommand(regal())
