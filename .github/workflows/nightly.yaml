@@ -24,30 +24,30 @@ jobs:
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
       - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # v2.2.0
-      - name: checkout Enterprise OPA
+      - name: checkout EOPA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
-          path: enterprise-opa
+          path: eopa
       - id: go_version
         name: Read go version
         run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
-        working-directory: enterprise-opa
+        working-directory: eopa
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ steps.go_version.outputs.go_version }}
-          cache-dependency-path: enterprise-opa/go.sum
+          cache-dependency-path: eopa/go.sum
       - uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d # v0.9
       - name: Build
         run: make build
         env:
           SKIP_IMAGES: true
-        working-directory: enterprise-opa
+        working-directory: eopa
       - name: Upload image tarball
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: image
-          path: enterprise-opa/local.tar
+          path: eopa/local.tar
 
   race:
     name: Race Detector
@@ -59,26 +59,26 @@ jobs:
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
       - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # v2.2.0
-      - name: checkout Enterprise OPA
+      - name: checkout EOPA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
-          path: enterprise-opa
+          path: eopa
       - id: go_version
         name: Read go version
         run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
-        working-directory: enterprise-opa
+        working-directory: eopa
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: ${{ steps.go_version.outputs.go_version }}
-          cache-dependency-path: enterprise-opa/go.sum
+          cache-dependency-path: eopa/go.sum
       - name: pick up eopa data
-        id: enterprise-opa
+        id: eopa
         run: |
           echo "opa_version=v$(build/get-opa-version.sh)" >> $GITHUB_OUTPUT
           echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
           echo "bundles=$(pwd)/e2e" >> $GITHUB_OUTPUT
-        working-directory: enterprise-opa
+        working-directory: eopa
       - name: pick up paths
         id: paths
         run: |
@@ -87,10 +87,10 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: open-policy-agent/opa
-          ref: ${{ steps.enterprise-opa.outputs.opa_version }}
+          ref: ${{ steps.eopa.outputs.opa_version }}
           path: opa
       - run: make test-race
-        working-directory: enterprise-opa
+        working-directory: eopa
         env:
           OPA_ROOT: ${{ steps.paths.outputs.opa_dir }}
 
@@ -273,15 +273,15 @@ jobs:
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: image
-      - name: Enterprise OPA image
-        id: enterprise-opa
+      - name: EOPA image
+        id: eopa
         run: echo "image=$(docker load --quiet --input local.tar | awk '{print $3}')" >> $GITHUB_OUTPUT
         # Equivalent to:
         # $ trivy image $IMAGE
       - name: Run Trivy scan on image
         uses: aquasecurity/trivy-action@dc5a429b52fcf669ce959baa2c2dd26090d2a6c4 # 0.32.0
         with:
-          image-ref: ${{ steps.enterprise-opa.outputs.image }}
+          image-ref: ${{ steps.eopa.outputs.image }}
           format: table
           exit-code: "1"
           ignore-unfixed: true
