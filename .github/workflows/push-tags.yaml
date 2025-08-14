@@ -153,7 +153,7 @@ jobs:
       - name: Check out code for the public repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          repository: StyraInc/enterprise-opa
+          repository: open-policy-agent/eopa
           path: _public
           persist-credentials: false
       # Copy files, generate commit on local branch, then push branch to remote.
