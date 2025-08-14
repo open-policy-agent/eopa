@@ -5,7 +5,6 @@ package time
 
 import "time"
 
-// Borrowed from StyraInc/fetchdb/utils/time.go:
 // TimerWithCancel exists because we had several memory leaks when using time.After in select statements.
 // Instead, we now manually create timers, wait on them, and manually free them. See this for more details:
 // https://www.arangodb.com/2020/09/a-story-of-a-memory-leak-in-go-how-to-properly-use-time-after/

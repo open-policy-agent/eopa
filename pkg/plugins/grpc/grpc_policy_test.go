@@ -118,8 +118,6 @@ y if { false }
 	}
 }
 
-// Note(philip): This serves as a regression test against the bug in Github issue #552.
-// Reference: https://github.com/StyraInc/load-private/issues/552
 func TestCreateAndOverwritePolicy(t *testing.T) {
 	// gRPC server setup/teardown boilerplate.
 	listener := setupTest(t, defaultGRPCConfig, `{}`, nil)
