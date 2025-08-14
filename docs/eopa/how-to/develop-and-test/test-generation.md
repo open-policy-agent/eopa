@@ -4,11 +4,6 @@ sidebar_label: Test Generation
 title: How to generate test scaffolding
 ---
 
-:::tip
-You **do not need** an EOPA license to use this functionality.
-:::
-
-
 # How to generate tests and test scaffolding
 
 This guide shows you how to use the EOPA CLI to generate new tests and
@@ -23,12 +18,7 @@ bootstrap an application with tests.
 
 ## Install the EOPA CLI
 
-```sh
-# terminal-command
-brew install styrainc/packages/eopa
-```
-
-See the [installation reference guide](/eopa/how-to/install) for alternatives.
+See the [installation reference guide](/eopa/how-to/install) for how to obtain the binaries.
 
 ---
 

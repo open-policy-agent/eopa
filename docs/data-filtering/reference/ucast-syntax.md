@@ -40,7 +40,7 @@ The `FIELD_NAME` corresponds to the field being referenced in the database. `COM
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "UCAST expanded syntax",
-    "description": "UCAST expanded syntax that is compatible with Styra supported integrations",
+    "description": "UCAST expanded syntax that is compatible with EOPA supported integrations",
     "$defs": {
         "compoundExpression": {
             "type": "object",
@@ -157,7 +157,7 @@ The `FIELD_NAME` corresponds to the field being referenced in the database.
 
 The `not` operation is not generally supported by all clients.
 
-Operation | `COMPOUND_OP_NAME` | Supported Types | [`@styra/ucast-prisma`](https://github.com/StyraInc/opa-typescript/tree/main/packages/ucast-prisma) | [`Styra.Ucast.Linq`](https://github.com/StyraInc/ucast-linq)
+Operation | `COMPOUND_OP_NAME` | Supported Types | [`@open-policy-agent/ucast-prisma`](https://github.com/open-policy-agent/opa-typescript/tree/main/packages/ucast-prisma) | [`OpenPolicyAgent.Ucast.Linq`](https://github.com/open-policy-agent/ucast-linq)
 ---|---|---|---|---
 And | `and` | `array` | :white_check_mark: | :white_check_mark:
 Or | `or` | `array` | :white_check_mark: | :white_check_mark:
@@ -166,9 +166,9 @@ Not | `not` | `array` with 1 entry | :white_check_mark: | :x:
 
 ## Field Operations
 
-Not all **field operations** are supported by every database integration. The following is a (non-comprehensive) compatibility matrix for the Styra supported UCAST interpreters.
+Not all **field operations** are supported by every database integration. The following is a (non-comprehensive) compatibility matrix for the EOPA supported UCAST interpreters.
 
-Operation | `FIELD_OP_NAME` | Supported `VALUE` Types | [`@styra/ucast-prisma`](https://github.com/StyraInc/opa-typescript/tree/main/packages/ucast-prisma) | [`Styra.Ucast.Linq`](https://github.com/StyraInc/ucast-linq)
+Operation | `FIELD_OP_NAME` | Supported `VALUE` Types | [`@open-policy-agent/ucast-prisma`](https://github.com/open-policy-agent/opa-typescript/tree/main/packages/ucast-prisma) | [`OpenPolicyAgent.Ucast.Linq`](https://github.com/open-policy-agent/ucast-linq)
 ---|---|---|---|---
 Equals | `eq` | `string`, `number`, `boolean`, `null` | :white_check_mark: | :white_check_mark:
 Not Equals | `ne` | `string`, `number`, `boolean`, `null` | :white_check_mark: | :white_check_mark:

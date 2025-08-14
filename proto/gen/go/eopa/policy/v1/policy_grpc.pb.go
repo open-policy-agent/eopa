@@ -8,6 +8,7 @@ package policyv1
 
 import (
 	context "context"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -28,7 +29,7 @@ type PolicyServiceClient interface {
 	// [Policy REST API List method](https://www.openpolicyagent.org/docs/latest/rest-api/#list-policies).
 	//
 	// Warning: This request will enumerate *all* policies stored by the
-	// Enterprise OPA instance. This can have substantial overheads if the
+	// EOPA instance. This can have substantial overheads if the
 	// policies are large in size.
 	ListPolicies(ctx context.Context, in *ListPoliciesRequest, opts ...grpc.CallOption) (*ListPoliciesResponse, error)
 	// CreatePolicy inserts a new policy module into the policy store.
@@ -180,7 +181,7 @@ type PolicyServiceServer interface {
 	// [Policy REST API List method](https://www.openpolicyagent.org/docs/latest/rest-api/#list-policies).
 	//
 	// Warning: This request will enumerate *all* policies stored by the
-	// Enterprise OPA instance. This can have substantial overheads if the
+	// EOPA instance. This can have substantial overheads if the
 	// policies are large in size.
 	ListPolicies(context.Context, *ListPoliciesRequest) (*ListPoliciesResponse, error)
 	// CreatePolicy inserts a new policy module into the policy store.

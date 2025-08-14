@@ -130,7 +130,7 @@ We have seen two different causes of failure so far for Quill signing and notari
 
 ## Release EOPA
 
-Setting the tag version will trigger the .github/workflows/push-tags.yaml action; which will publish 'eopa' release and 'enterprise-opa' containers to https://github.com/StyraInc/enterprise-opa
+Setting the tag version will trigger the .github/workflows/push-tags.yaml action; which will publish 'eopa' release and 'eopa' containers to https://github.com/open-policy-agent/eopa
 
 ### Current version
 

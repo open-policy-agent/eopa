@@ -151,7 +151,7 @@ Then the data retrieved by the HTTP API after transformation would be:
 
 ```json
 # terminal-command
-curl "${ENTERPRISE_OPA_URL}/v1/data/localfile/users?pretty"
+curl "${EOPA_URL}/v1/data/localfile/users?pretty"
 {
   "result": {
     "users": {

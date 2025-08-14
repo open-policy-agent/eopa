@@ -59,5 +59,5 @@ documentation for details.
 This how-to guide showed how you can embed EOPA into a Go application that
 uses the [SDK](https://pkg.go.dev/github.com/open-policy-agent/opa/sdk) package.
 The sample code is hosted on
-[GitHub](https://github.com/StyraInc/eopa/tree/main/examples/go-sdk).
+[GitHub](https://github.com/open-policy-agent/eopa/tree/main/examples/go-sdk).
 For additional examples see the `examples/sdk` directory from the tarball.

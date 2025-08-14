@@ -23,9 +23,9 @@ sidebar_label: CLI Reference
 title: CLI Reference
 ---
 
-# Enterprise OPA CLI Reference
+# EOPA OPA CLI Reference
 
-The Enterprise OPA executable provides the following commands.
+The EOPA executable provides the following commands.
 
 `
 

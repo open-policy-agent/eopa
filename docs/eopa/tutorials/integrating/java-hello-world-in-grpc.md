@@ -4,11 +4,6 @@ sidebar_label: Hello World using gRPC
 title: Hello World, getting started with OPA Java SDK using gRPC
 ---
 
-
-<!-- markdownlint-disable MD044 -->
-import LicenseTrialAdmonition from '../../../eopa/_license-trial-admonition.md';
-
-
 # OPA Java Tutorial: Hello World using gRPC
 
 EOPA offers a gRPC API for application use cases demanding low-latency
@@ -34,9 +29,7 @@ in integrating with the REST API instead, see the
 
 ## Setup
 
-First ensure you have installed the EOPA binary and have a valid key.
-
-<LicenseTrialAdmonition />
+First ensure you have installed the EOPA binary.
 
 Next, in a new directory, run `gradle init`. The prompts should be responded to as follows:
 
@@ -320,9 +313,6 @@ eopa run --server --config-file ./config.yaml ./policy
 {"addrs":["localhost:8181"],"diagnostic-addrs":[],"level":"info","msg":"Initializing server.","time":"2024-07-11T14:36:34-07:00"}
 {"level":"info","msg":"Starting gRPC server on port: localhost:9090","time":"2024-07-11T14:36:34-07:00"}
 ```
-
-If you see errors related to not having a license key, follow any instructions to resolve.
-
 :::tip
 Consider running OPA in a separate background terminal, as it will be necessary to run more shell commands.
 :::

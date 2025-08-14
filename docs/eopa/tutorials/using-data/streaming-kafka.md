@@ -131,15 +131,6 @@ transform[key] := val if {
 }
 ```
 
-Before running EOPA, we need to set the `EOPA_LICENSE_KEY` environment variable.
-
-<LicenseTrialAdmonition />
-
-``` shell
-# terminal-command
-export EOPA_LICENSE_KEY=<license key here>
-```
-
 We can now bring up the demo with the following command:
 
 ``` shell
@@ -242,5 +233,5 @@ curl -s "localhost:8181/v1/data/kafka/messages?pretty=true"
 
 ## Further Reading
 
-- The files used in the examples are also available in the EOPA [blueprints repo](https://github.com/StyraInc/eopa/tree/main/examples/kafka).
+- The files used in the examples are also available in the EOPA [blueprints repo](https://github.com/open-policy-agent/eopa/tree/main/examples/kafka).
 - View the [Kafka configuration](/eopa/reference/configuration/data/kafka) for EOPA.

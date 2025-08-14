@@ -9,7 +9,6 @@ title: Using Secrets from HashiCorp Vault | EOPA
 EOPA supports integrating with [HashiCorp Vault](https://www.vaultproject.io/use-cases/secrets-management) as a third-party External Key Manager.
 
 The EOPA Vault integration can be used to:
-- Retrieve the EOPA [License key](#license-keys) from a Vault secret
 - Override the configuration for an EOPA [service or key configuration](#services-and-keys-overrides)
 - Override the configuration of [`http.send`](#httpsend-overrides)
 
@@ -33,11 +32,11 @@ ekm:
     access_type: "token"
     token: "dev-only-token"
 
-    license: 
-      key: "kv/data/license:data/key"
+    keys:
+      rsa.key: "kv/data/discovery/rsa:data/key"
 ```
 
-This will configure EOPA to extract its license key from the Vault key-value store located at `kv/data/license:data/key`
+This will configure EOPA to override the RSA public key used for bundle signing with the value at `kv/data/discovery/rsa:data/key`
 
 
 #### Advanced
@@ -72,9 +71,6 @@ ekm:
       secret_id: "CAESIMi79bbSmYzNw-pgneGh4KHGh"
       wrapped: true
 
-    license: 
-      key: "kv/data/license:data/key"
-
     keys:
       rsa.key: "kv/data/discovery/rsa:data/key"
 
@@ -89,7 +85,6 @@ ekm:
 ```
 
 In this example, EOPA will:
-- Extract its license key from the Vault key-value store located at `kv/data/license:data/key`
 - Use the value looked up from `vault()` for the authorization bearer token used to retrieve the discovery and test bundles from the `acmecorp` service
 - Override the RSA public key used for bundle signing with `kv/data/discovery/rsa:data/key`
 - Override the `http.send` `tls_client_cert`, Authorization and Content-Type headers for requests to `https://www.acemecorp.com`
@@ -139,20 +134,9 @@ Configuration is required for the corresponding `ekm.vault.access_type`.
 | `ekm.vault.kubernetes.service_token` | `string` | No | The Service access token file path to use for Kubernetes authentication. | |
 
 
-#### Accessing Secrets from Vault
-
-
-##### License keys
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `ekm.vault.license.token` | `string` | No | License token to use for license verification. |
-| `ekm.vault.license.key` | `string` | No | License key to use for license verification. |
-
-
 #### Config Values
 
-Since [EOPA v1.26.0](https://github.com/StyraInc/eopa/releases/tag/v1.26.0), you can use _variable interpolation_ to put secrets into your configurations of services, keys, and plugins.
+Since [EOPA v1.26.0](https://github.com/open-policy-agent/eopa/releases/tag/v1.26.0), you can use _variable interpolation_ to put secrets into your configurations of services, keys, and plugins.
 
 For example, to configure the decision logs plugin to use a secret for posting logs to an HTTP endpoint:
 ```yaml
@@ -200,7 +184,7 @@ See OPA [`http.send`](https://www.openpolicyagent.org/docs/policy-reference/#htt
 
 ## Note: Addressing Vault Data
 
-EKM uses Vault logical reads to retrieve data and each lookup key is specified as a tuple `path:[object/]field` (e.g. `kv/data/license:data/key`) where:
+EKM uses Vault logical reads to retrieve data and each lookup key is specified as a tuple `path:[object/]field` (e.g. `kv/data/discovery/rsa:data/key`) where:
 - `path` is the Vault logical path
 - `field` is the field in the object response; Logical reads can return objects or an object of objects.
 - `object/` is the object wrapper (optional). _Note: The Vault KV V2 engine wraps all logical read responses with a `data/` object_

@@ -4,10 +4,6 @@ sidebar_label: Go with gRPC
 title: Integrating in Go with gRPC | EOPA
 ---
 
-<!-- markdownlint-disable MD044 -->
-import LicenseTrialAdmonition from '../../../eopa/_license-trial-admonition.md';
-
-
 # Integrating in Go with gRPC
 
 EOPA offers a gRPC API for low-latency communication between production systems.
@@ -23,7 +19,7 @@ Refer to the [gRPC API reference documentation](../../reference/api-reference/gr
 In this tutorial we'll be walking through how to use `buf` to generate Go client bindings for the EOPA gRPC API, and then dynamically update and query live data from EOPA over gRPC.
 To demo that functionality, we'll need to complete the following:
 
-- Generate the [EOPA gRPC API](https://github.com/StyraInc/eopa/tree/main/proto) client bindings.
+- Generate the [EOPA gRPC API](https://github.com/open-policy-agent/eopa/tree/main/proto) client bindings.
 - Create the policy and configuration data for the example.
 - Create the Go client program.
 - Run the client program and EOPA locally.
@@ -64,7 +60,7 @@ To build the client bindings we will need for the demo application, we will need
 - Go plugins for the `protoc` compiler: [gRPC Quickstart guide for Go](https://grpc.io/docs/languages/go/quickstart/#prerequisites)
 - Buf (used for `buf generate` later): [Installation guide for Buf](https://buf.build/docs/installation/)
 
-We will also need to pull down the [`open-policy-agent/eopa` repository](https://github.com/Styraopen-policy-agentInc/eopa) with Git:
+We will also need to pull down the [`open-policy-agent/eopa` repository](https://github.com/open-policy-agentInc/eopa) with Git:
 
 ```shell
 # terminal-command
@@ -104,9 +100,9 @@ To demonstrate live updating of policies and data, we will create a Go program t
 
 The program will make three types of gRPC API calls at runtime:
 
-- [`CreatePolicy`](https://buf.build/styra/eopa/docs/main:eopa.policy.v1#eopa.policy.v1.PolicyService.CreatePolicy): This call will upload the RBAC policy for the example.
-- [`CreateData`](https://buf.build/styra/eopa/docs/main:eopa.data.v1#eopa.data.v1.DataService.CreateData): This call will upload the RBAC configuration dataset for the policy to use.
-- [`GetData`](https://buf.build/styra/eopa/docs/main:eopa.data.v1#eopa.data.v1.DataService.GetData): These calls will be used to query the `/allow` rule from the policy.
+- `CreatePolicy`: This call will upload the RBAC policy for the example.
+- `CreateData`: This call will upload the RBAC configuration dataset for the policy to use.
+- `GetData`: These calls will be used to query the `/allow` rule from the policy.
 
 Create a file called `main.go` in the current directory, and insert the following Go code shown below:
 
@@ -365,16 +361,6 @@ plugins:
     addr: "127.0.0.1:9090"
 ```
 
-Before running EOPA, we will need to set the `EOPA_LICENSE_KEY` environment variable.
-
-<LicenseTrialAdmonition />
-
-
-```shell
-# terminal-command
-export EOPA_LICENSE_KEY=<license key here>
-```
-
 We can now run EOPA in server mode, with the `grpc` plugin enabled:
 
 ```shell
@@ -387,7 +373,7 @@ This will start up EOPA, and will provide an unsecured gRPC server at the addres
 
 ### Running the `grpcpush` program
 
-In a previous step, we created a Go program that consumes input data from standard input, and then sends [`GetData`](https://buf.build/styra/enterprise-ops/docs/main:eopa.data.v1#eopa.data.v1.DataService.GetData) gRPC requests using that data.
+In a previous step, we created a Go program that consumes input data from standard input, and then sends `GetData` gRPC requests using that data.
 
 To test several queries with differing input data against the PetStore RBAC example, we will create a file with one JSON object per line, named `input.jsonl`.
 

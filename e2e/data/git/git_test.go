@@ -93,23 +93,10 @@ func TestGitPlugin(t *testing.T) {
 	}{
 		{
 			name:     "github",
-			url:      "https://github.com/StyraInc/e2e-git-datasource.git",
+			url:      "https://github.com/open-policy-agent/e2e-git-datasource.git",
 			username: "git",
 			token:    os.Getenv("GIT_GITHUB_TOKEN"),
 		},
-		{
-			name:     "azure",
-			url:      "https://styrainc@dev.azure.com/styrainc/integration-testing/_git/integration-testing",
-			username: "sergey", //  TODO: change to styra-automation user
-			token:    os.Getenv("GIT_AZURE_TOKEN"),
-		},
-		// temporary disable because of the read only token
-		//{
-		//	name:     "gitlab",
-		//	url:      "https://gitlab.com/styrainc/e2e-git-datasource.git",
-		//	username: "git",
-		//	token:    os.Getenv("GIT_GITLAB_TOKEN"),
-		//},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.token == "" {
@@ -166,7 +153,7 @@ func TestGitPlugin(t *testing.T) {
 				}
 			})
 
-			// run enterprise OPA on the new branch
+			// run EOPA on the new branch
 			config := fmt.Sprintf(configTemplate, tt.url, tt.username, tt.token, branch)
 			eopa, eopaErr := eopaRun(t, config, "", eopaHTTPPort)
 			if err := eopa.Start(); err != nil {
@@ -293,7 +280,7 @@ func eopaRun(t *testing.T, config, policy string, httpPort int, extra ...string)
 		}
 		eopa.Wait()
 		if testing.Verbose() && t.Failed() {
-			t.Logf("enterprise OPA output:\n%s", buf.String())
+			t.Logf("EOPA output:\n%s", buf.String())
 		}
 	})
 

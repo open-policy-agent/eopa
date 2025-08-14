@@ -656,8 +656,6 @@ access.
   -i, --input string                                              set input file path
       --instruction-limit int                                     set instruction limit for VM (default 100000000)
       --instrument                                                enable query instrumentation metrics (implies --metrics)
-      --license-key string                                        Location of file containing EOPA_LICENSE_KEY
-      --license-token string                                      Location of file containing EOPA_LICENSE_TOKEN
       --log-format {json,json-pretty}                             set log format (default json)
   -l, --log-level {debug,info,error}                              set log level (default info)
       --metrics                                                   report query performance metrics
@@ -755,12 +753,9 @@ eopa exec <path> [<path> [...]] [flags]
   -f, --format {json}                        set output format (default json)
   -h, --help                                 help for exec
       --instruction-limit int                set instruction limit for VM (default 100000000)
-      --license-key string                   Location of file containing EOPA_LICENSE_KEY
-      --license-token string                 Location of file containing EOPA_LICENSE_TOKEN
       --log-format {text,json,json-pretty}   set log format (default json)
   -l, --log-level {debug,info,error}         set log level (default error)
       --log-timestamp-format string          set log timestamp format (OPA_LOG_TIMESTAMP_FORMAT environment variable)
-      --no-license-fallback                  Don't fall back to OPA-mode when no license provided.
   -O, --optimize int                         set optimization level
       --set stringArray                      override config values on the command line (use commas to specify multiple values)
       --set-file stringArray                 override config values with files on the command line (use commas to specify multiple values)
@@ -927,57 +922,6 @@ eopa inspect <path> [<path> [...]] [flags]
 
 ------------------------------------------------------------------------
 
-## eopa license
-
-License status
-
-### Synopsis
-
-View details about an EOPA license key or token.
-
-```
-eopa license [flags]
-```
-
-### Options
-
-```
-  -h, --help                   help for license
-      --license-key string     Location of file containing EOPA_LICENSE_KEY
-      --license-token string   Location of file containing EOPA_LICENSE_TOKEN
-```
-
-------------------------------------------------------------------------
-
-## eopa license trial
-
-Create a new EOPA trial license.
-
-### Synopsis
-
-Gather all of the data needed to create a new EOPA trial
-license and create one. Any information not provided via flags is
-collected interactively. Upon success, the new trial license key is
-printed to stdout.
-
-```
-eopa license trial [flags]
-```
-
-### Options
-
-```
-      --company string      the company name to attach to the trial license
-      --country string      the country to attach to the trial license
-      --email string        a work email address to attach to the trial license
-      --first-name string   first name to attach to the trial license
-  -h, --help                help for trial
-      --key-only            on success, print only the license key to stdout
-      --last-name string    last name to attach to the trial license
-```
-
-------------------------------------------------------------------------
-
 ## eopa lint
 
 Lint Rego source files
@@ -1018,62 +962,6 @@ eopa lint <path> [path [...]] [flags]
 
 ------------------------------------------------------------------------
 
-## eopa login
-
-Sign-in to DAS instance
-
-```
-eopa login [flags]
-```
-
-### Examples
-
-```
-
-Create a new browser session that is shared with EOPA.
-
-Using settings from .styra.yaml:
-
-    eopa login
-
-Note: 'eopa login' will look for .styra.yaml in the current directory,
-the repository root, and your home directory. To use a different config
-file location, pass --styra-config:
-
-    eopa login --styra-config ~/.strya-primary.yaml
-
-You can also provide your DAS endpoint via a flag:
-
-    eopa login --url https://my-tenant.styra.com
-
-On successful login, a .styra.yaml file will be generated in your current
-working directory.
-
-If the automatic token transfer fails, the browser tab will show you the
-token to use. Paste the token into the following command to have it stored
-manually:
-
-    eopa login --read-token
-
-```
-
-### Options
-
-```
-  -h, --help                  help for login
-      --libraries string      where to copy libraries to (default ".styra/include")
-      --log-format string     log format (default "text")
-      --log-level string      log level (default "info")
-      --no-open               do not attempt to open a browser window
-      --read-token            read token from stdin
-      --secret-file string    file to store the secret in
-      --styra-config string   Styra DAS config file to use
-      --timeout duration      timeout waiting for a browser callback event (default 1m0s)
-      --url string            DAS address to connect to (e.g. "https://my-tenant.styra.com")
-```
-
-------------------------------------------------------------------------
-
 ## eopa parse
 
 Parse Rego source file
@@ -1093,58 +981,6 @@ eopa parse <path> [flags]
   -h, --help                   help for parse
       --json-include string    include or exclude optional elements. By default comments are included. Current options: locations, comments. E.g. --json-include locations,-comments will include locations and exclude comments.
       --v0-compatible          opt-in to OPA features and behaviors prior to the OPA v1.0 release
-```
-
-------------------------------------------------------------------------
-
-## eopa pull
-
-Pull libraries from DAS instance
-
-```
-eopa pull [flags]
-```
-
-### Examples
-
-```
-
-Download all DAS libraries using settings from .styra.yaml:
-
-    eopa pull
-
-Note: 'eopa pull' will look for .styra.yaml in the current directory,
-the repository root, and your home directory. To use a different config
-file location, pass --styra-config:
-
-    eopa pull --styra-config ~/.styra-primary.yaml
-
-If the environment varable EOPA_STYRA_DAS_TOKEN is set, 'eopa pull'
-will use it as an API token to talk to the configured DAS instance:
-
-    EOPA_STYRA_DAS_TOKEN="..." eopa pull
-
-Write all libraries to to libs/, with debug logging enabled:
-
-    eopa pull --libraries libs --log-level debug
-
-Remove files that aren't expected in the target directory:
-
-    eopa pull --force
-
-```
-
-### Options
-
-```
-  -f, --force                 ignore if libraries folder exists, overwrite existing content on conflict
-  -h, --help                  help for pull
-      --libraries string      where to copy libraries to (default ".styra/include")
-      --log-format string     log format (default "text")
-      --log-level string      log level (default "info")
-      --secret-file string    file to store the secret in
-      --styra-config string   Styra DAS config file to use
-      --url string            DAS address to connect to (e.g. "https://my-tenant.styra.com")
 ```
 
 ------------------------------------------------------------------------
@@ -1363,16 +1199,11 @@ eopa run [flags]
   -H, --history string                       set path of history file (default "$HOME/.eopa_history")
       --ignore strings                       set file and directory names to ignore during loading (e.g., '.*' excludes hidden files)
       --instruction-limit int                set instruction limit for VM (default 100000000)
-      --license-discovery-timeout int        Timeout (in seconds) for discovery-based licensing check. (default 30)
-      --license-key string                   Location of file containing EOPA_LICENSE_KEY
-      --license-token string                 Location of file containing EOPA_LICENSE_TOKEN
       --log-format {text,json,json-pretty}   set log format (default json)
   -l, --log-level {debug,info,error}         set log level (default info)
       --log-timestamp-format string          set log timestamp format (OPA_LOG_TIMESTAMP_FORMAT environment variable)
   -m, --max-errors int                       set the number of errors to allow before compilation fails early (default 10)
       --min-tls-version {1.0,1.1,1.2,1.3}    set minimum TLS version to be used by EOPA's server (default 1.2)
-      --no-discovery-license-check           Disable discovery-based licensing check.
-      --no-license-fallback                  Don't fall back to OPA-mode when no license provided.
   -O, --optimize int                         set optimization level
       --optimize-store-for-read-speed        optimize default in-memory store for read speed. Has possible negative impact on memory footprint and write speed. See https://www.openpolicyagent.org/docs/latest/policy-performance/#storage-optimization for more details.
       --pprof                                enables pprof endpoints
@@ -1625,8 +1456,6 @@ eopa test <path> [path [...]] [flags]
   -f, --format {pretty,json,gobench}       set output format (default pretty)
   -h, --help                               help for test
       --ignore strings                     set file and directory names to ignore during loading (e.g., '.*' excludes hidden files)
-      --license-key string                 Location of file containing EOPA_LICENSE_KEY
-      --license-token string               Location of file containing EOPA_LICENSE_TOKEN
       --log-format {json,json-pretty}      set log format (default json)
   -l, --log-level {debug,info,error}       set log level (default info)
   -m, --max-errors int                     set the number of errors to allow before compilation fails early (default 10)
@@ -1661,19 +1490,14 @@ and top-level rules:
 
     eopa test bootstrap -d policy/ my/policy/entrypoint
 
-Note: If using a standard Styra DAS bundle structure, the policy entrypoint
-should always be 'main/main':
-
-    eopa test bootstrap -d das-policy/ main/main
-
-Note: 'eopa test bootstrap' will look for .styra.yaml in the current
+Note: 'eopa test bootstrap' will look for .opa.yaml in the current
 directory, the repository root, and your home directory. To use a different
-config file location, pass --styra-config:
+config file location, pass --eopa-config:
 
     eopa test bootstrap \
-      --styra-config ~/.styra-primary.yaml \
-      -d das-policy/ \
-      main/main
+      --eopa-config ~/.eopa-primary.yaml \
+      -d complex-policy/ \
+      main/allow
 
 This command will attempt to generate test mocks automatically to exercise
 each top-level rule specified. For full test coverage, additional tests
@@ -1688,12 +1512,8 @@ and test cases may be required!
   -f, --force                 ignore if test files already exist, overwrite existing content on conflict
   -h, --help                  help for bootstrap
       --ignore strings        set file and directory names to ignore during loading (e.g., '.*' excludes hidden files)
-      --libraries string      where to copy libraries to (default ".styra/include")
       --log-format string     log format (default "text")
       --log-level string      log level (default "info")
-      --secret-file string    file to store the secret in
-      --styra-config string   Styra DAS config file to use
-      --url string            DAS address to connect to (e.g. "https://my-tenant.styra.com")
 ```
 
 ------------------------------------------------------------------------
@@ -1724,17 +1544,12 @@ We can add the rule to the test file using the command:
 
     eopa test new -d policy/ -e my/policy/allow 'my-allow-rule'
 
-Note: If using a standard Styra DAS bundle structure, the policy entrypoint
-should always be 'main/main':
-
-    eopa test new -d das-policy/ -e main/main 'my-allow-rule'
-
-Note: 'eopa test new' will look for .styra.yaml in the current
+Note: 'eopa test new' will look for .opa.yaml in the current
 directory, the repository root, and your home directory. To use a different
-config file location, pass --styra-config:
+config file location, pass --eopa-config:
 
     eopa test new \
-      --styra-config ~/.styra-primary.yaml \
+      --eopa-config ~/.eopa-primary.yaml \
       -d das-policy/ \
       -e main/main \
       'my-allow-rule'
@@ -1751,12 +1566,8 @@ be required beyond those generated by this command!
   -e, --entrypoint string     entrypoint rule or package to use for discovering the annotated test
   -h, --help                  help for new
       --ignore strings        set file and directory names to ignore during loading (e.g., '.*' excludes hidden files)
-      --libraries string      where to copy libraries to (default ".styra/include")
       --log-format string     log format (default "text")
       --log-level string      log level (default "info")
-      --secret-file string    file to store the secret in
-      --styra-config string   Styra DAS config file to use
-      --url string            DAS address to connect to (e.g. "https://my-tenant.styra.com")
 ```
 
 ------------------------------------------------------------------------

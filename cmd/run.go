@@ -220,7 +220,7 @@ func newRunParams(c *cobra.Command) (*runCmdParams, error) {
 	// NOTE(sr): We can't wrap these into the stringslice loop above because p.rt.Addrs and
 	// p.rt.DiagnosticAddrs are pointers to slices
 
-	// NOTE: Enterprise OPA has a different default: if the --addr parameter was NOT provided,
+	// NOTE: EOPA has a different default: if the --addr parameter was NOT provided,
 	// we'll default to localhost:8181 instead of 0.0.0.0:8181 (OPA).
 	if c.Flags().Lookup("addr").Changed {
 		s, err := c.Flags().GetStringSlice("addr")
@@ -316,11 +316,11 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 
 	params.rt.NDBCacheEnabled = true // We need this for LIA.
 
-	params.rt.AddrSetByUser = true // silence the warning: Enterprise OPA's default isn't unsafe
+	params.rt.AddrSetByUser = true // silence the warning: EOPA's default isn't unsafe
 
 	a := &bundle.CustomActivator{}
-	bundleApi.RegisterActivator("_enterprise_opa", a)
-	params.rt.BundleActivatorPlugin = "_enterprise_opa"
+	bundleApi.RegisterActivator("_eopa", a)
+	params.rt.BundleActivatorPlugin = "_eopa"
 
 	ekmHook := ekm.NewEKM()
 	previewHook := preview.NewHook()

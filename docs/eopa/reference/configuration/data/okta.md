@@ -58,8 +58,7 @@ account's rolling rate limit.
 
 Users should be aware that deploying many EOPA instances all connected to Okta may
 result in the Okta account's rate limit being exceeded, and users with this use case
-may wish to poll Okta from a central location (such as the [Styra DAS](/das) Datasource Agent), and
-distribute the resulting data internally.
+may wish to poll Okta from a central location and distribute the resulting data internally.
 :::
 
 
@@ -185,10 +184,10 @@ curl "http://127.0.0.1:8181/v1/data/okta/corp?pretty"
           "lastUpdated": "2023-05-22T11:28:26Z",
           "passwordChanged": "2023-05-22T11:28:26Z",
           "profile": {
-            "email": "alice@styra.com",
+            "email": "alice@example.com",
             "firstName": "Alice",
             "lastName": "Schmidt",
-            "login": "alice@styra.com",
+            "login": "alice@example.com",
             "mobilePhone": null,
             "secondEmail": null
           },
@@ -288,10 +287,10 @@ curl "http://127.0.0.1:8181/v1/data/okta/corp?pretty"
         "lastUpdated": "2023-05-22T11:28:26Z",
         "passwordChanged": "2023-05-22T11:28:26Z",
         "profile": {
-          "email": "alice@styra.com",
+          "email": "alice@example.com",
           "firstName": "Alice",
           "lastName": "Schmidt",
-          "login": "alice@styra.com",
+          "login": "alice@example.com",
           "mobilePhone": null,
           "secondEmail": null
         },
@@ -338,12 +337,12 @@ Then the data retrieved by the Okta plugin would be transformed by the above int
 
 ```json
 # terminal-command
-curl "${ENTERPRISE_OPA_URL}/v1/data/okta/corp?pretty"
+curl "${EOPA_URL}/v1/data/okta/corp?pretty"
 {
   "result": {
     "users": {
       "00u9nhiwi1YaBEgA75d7": {
-        "email": "alice@styra.com",
+        "email": "alice@example.com",
         "firstName": "Alice"
       }
     }

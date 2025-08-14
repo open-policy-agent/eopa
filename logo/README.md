@@ -2,7 +2,7 @@
 
 The logo was created by the following steps:
 
- 1. Download the blue Styra icon logo in SVG format.
+ 1. Download the icon logo in SVG format.
  1. In Inkscape or other vector image editor, crop icon to content.
     - In Inkscape: `File > Document Properties > Resize page to content`
  1. Import the cropped SVG into GIMP, and export to PNG at the following resolutions:

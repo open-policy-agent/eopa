@@ -80,13 +80,7 @@ func IncludeLicenseEnvVars(e *testscript.Env) error {
 //	iteration.
 //
 //	defaults:  retries=8 interval=128 backoff=2
-//
-// For historical context:
-//
-// * https://styra.slack.com/archives/C03TW1U15R8/p1702595711025849
-// * https://github.com/StyraInc/enterprise-opa-private/pull/1284#issuecomment-1858525031
 func TestscriptExtraFunctions() map[string]func(*testscript.TestScript, bool, []string) {
-
 	// I implemented this as a function that returns the map, since you
 	// can't have a const map, and I don't want to create a global variable
 	// that could potentially be mutated at runtime.
@@ -95,7 +89,6 @@ func TestscriptExtraFunctions() map[string]func(*testscript.TestScript, bool, []
 
 	return map[string]func(*testscript.TestScript, bool, []string){
 		"httpwait": func(ts *testscript.TestScript, neg bool, args []string) {
-
 			usage := func() {
 				ts.Fatalf("usage: httpwait <url> <expected value> [<retries>] [<interval>] [<backoff coefficient>]")
 				return
@@ -181,8 +174,6 @@ func TestscriptExtraFunctions() map[string]func(*testscript.TestScript, bool, []
 					continue
 				}
 			}
-
 		},
 	}
-
 }

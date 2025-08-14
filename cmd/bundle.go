@@ -8,7 +8,7 @@ import "github.com/spf13/cobra"
 func initBundle() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "bundle",
-		Short: "Enterprise OPA Bundle commands",
+		Short: "EOPA Bundle commands",
 	}
 	cmd.AddCommand(Convert())
 	cmd.AddCommand(Dump())

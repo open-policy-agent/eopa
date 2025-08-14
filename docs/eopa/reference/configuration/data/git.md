@@ -168,7 +168,7 @@ Then the data retrieved by the Git plugin would be transformed by the above into
 
 ```json
 # terminal-command
-curl "${ENTERPRISE_OPA_URL}/v1/data/git/users?pretty"
+curl "${EOPA_URL}/v1/data/git/users?pretty"
 {
   "result": {
     "roles": {

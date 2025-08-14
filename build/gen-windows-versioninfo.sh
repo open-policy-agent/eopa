@@ -2,7 +2,7 @@
 # Run goversioninfo to generate the resource.syso to embed version info.
 set -eux
 
-NAME="Enterprise OPA"
+NAME="EOPA"
 VERSION=$(git describe --abbrev=0 --tags | sed s/^v//)
 FLAGS=()
 
@@ -20,8 +20,6 @@ fi
 goversioninfo "${FLAGS[@]}" \
     -product-name "$NAME" \
     -product-version "$VERSION" \
-    -company "Styra, Inc" \
-    -copyright "Styra, Inc" \
+    -copyright "Open Policy Agent" \
     -skip-versioninfo \
-    -icon=logo/logo.ico \
     -o resource.syso
