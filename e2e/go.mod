@@ -7,7 +7,7 @@ godebug x509negativeserial=1 // mssql docker container: https://github.com/micro
 replace github.com/open-policy-agent/eopa => ../
 
 require (
-	github.com/docker/go-connections v0.5.0
+	github.com/docker/go-connections v0.6.0
 	github.com/fsouza/fake-gcs-server v1.52.2
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/go-sql-driver/mysql v1.9.3
@@ -18,7 +18,7 @@ require (
 	github.com/microsoft/go-mssqldb v1.9.2
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/open-policy-agent/opa v1.7.1
-	github.com/redpanda-data/benthos/v4 v4.54.0
+	github.com/redpanda-data/benthos/v4 v4.55.0
 	github.com/redpanda-data/connect/v4 v4.61.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/testcontainers/testcontainers-go v0.38.0
