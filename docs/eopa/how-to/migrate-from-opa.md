@@ -7,7 +7,6 @@ title: How to migrate from Open Policy Agent to EOPA
 # Migrating to EOPA from OPA
 
 1. [Convert bundles to EOPA format](#convert-bundles)
-2. [Run with a license](#run-with-a-license)
 3. [Validate your networking](#validate-networking)
 
 
@@ -25,12 +24,6 @@ Discovery bundles should not be converted to the EOPA format.
 :::
 
 Refer to the [`eopa bundle convert` CLI reference](/eopa/reference/cli-reference#eopa-bundle-convert) for a full list of options
-
-
-## Run with a license
-
-Refer to the [How to run EOPA with a license guide](/eopa/how-to/run/with-a-license)
-
 
 ## Validate networking
 

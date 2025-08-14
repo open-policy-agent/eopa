@@ -47,7 +47,7 @@ This will output some results we can review to make sure our policy change is wo
 
 Please ensure that you have the following installed before continuing.
 
-- [EOPA](/eopa/how-to/install/local) - installed and [licensed](/eopa/how-to/run/with-a-license).
+- [EOPA](/eopa/how-to/install/local) - installed.
   We'll be running EOPA locally for this demo but the process for running LIA against a remote deployment is much the same.
 - [Benthos](https://www.benthos.dev/docs/guides/getting_started#install) - an open source stream generator and processor.
   We'll be using this for traffic generation in our demo, but it'll likely be useful for your own testing too.

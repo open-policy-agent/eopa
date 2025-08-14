@@ -131,15 +131,6 @@ transform[key] := val if {
 }
 ```
 
-Before running EOPA, we need to set the `EOPA_LICENSE_KEY` environment variable.
-
-<LicenseTrialAdmonition />
-
-``` shell
-# terminal-command
-export EOPA_LICENSE_KEY=<license key here>
-```
-
 We can now bring up the demo with the following command:
 
 ``` shell

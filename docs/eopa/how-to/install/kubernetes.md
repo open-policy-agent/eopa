@@ -25,28 +25,7 @@ metadata:
   name: eopa
 ```
 
-
-## 2. Store the license in a secret
-
-This is a required step. This secret is used in the EOPA pods to enable them to start.
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: eopa-license
-  namespace: eopa
-type: Opaque
-stringData:
-  license: "..." # <-- set license key here
-```
-
-:::tip
-If you are storing your EOPA license key in [HashiCorp Vault](/eopa/reference/configuration/using-secrets/from-hashicorp-vault), you can skip this step and instead use the EOPA configuration file.
-:::
-
-
-## 3. Create the configuration file
+## 2. Create the configuration file
 
 Create a `ConfigMap` for configuration. This will be loaded into the EOPA pods via a volume mount.
 
@@ -73,7 +52,7 @@ If you're providing anything sensitive in your EOPA configuration—like tokens 
 :::
 
 
-## 4. Create the deployment
+## 3. Create the deployment
 
 Finally, we can run EOPA by creating a Deployment resource.
 
@@ -110,12 +89,6 @@ spec:
         - "--server"
         - "--addr=0.0.0.0:8181"
         - "--config-file=/etc/config/config.yaml"
-        env:
-        - name: EOPA_LICENSE_KEY
-          valueFrom:
-            secretKeyRef:
-              name: eopa-license
-              key: license
         volumeMounts:
         - name: config
           mountPath: /etc/config
@@ -143,7 +116,7 @@ spec:
 ```
 
 
-## 5. Access the EOPA API
+## 4. Access the EOPA API
 
 
 ### Connecting to the EOPA API using `kubectl port-forward`

@@ -368,7 +368,6 @@ There are a few things to note:
   created earlier.
 - The EOPA container is configured to download policy bundles from
   the in-cluster bundle server (`bundle-server.default.svc.cluster.local`).
-- The EOPA license key must be set. We show how to do this in the next step.
 
 ```yaml
 # app.yaml
@@ -468,7 +467,7 @@ Deploy the application and Kubernetes Service to the cluster with:
 
 ```shell
 # terminal-command
-cat app.yaml | envsubst '$EOPA_LICENSE_KEY' | kubectl apply -f -
+cat app.yaml | kubectl apply -f -
 ```
 
 Check that everything is working by listing the pod (make sure that

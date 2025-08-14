@@ -99,8 +99,6 @@ The following prerequisites are required for performance testing:
 - The k6 benchmarking tool, [k6 Install](https://k6.io/docs/get-started/installation/) provides installation instructions.
 - Git Large File Storage (to use pre-built bundles), [Git Large File Storage](https://git-lfs.com/) provides installation instructions.
 
-Confirm that the `EOPA_LICENSE_KEY` environment variable is set in every terminal that will run EOPA.
-
 Check the binaries are present in your path:
 
 ```shell

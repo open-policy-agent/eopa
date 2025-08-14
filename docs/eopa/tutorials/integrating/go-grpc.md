@@ -4,10 +4,6 @@ sidebar_label: Go with gRPC
 title: Integrating in Go with gRPC | EOPA
 ---
 
-<!-- markdownlint-disable MD044 -->
-import LicenseTrialAdmonition from '../../../eopa/_license-trial-admonition.md';
-
-
 # Integrating in Go with gRPC
 
 EOPA offers a gRPC API for low-latency communication between production systems.
@@ -363,16 +359,6 @@ Create a file called `eopa-conf.yaml` and insert the YAML configuration below.
 plugins:
   grpc:
     addr: "127.0.0.1:9090"
-```
-
-Before running EOPA, we will need to set the `EOPA_LICENSE_KEY` environment variable.
-
-<LicenseTrialAdmonition />
-
-
-```shell
-# terminal-command
-export EOPA_LICENSE_KEY=<license key here>
 ```
 
 We can now run EOPA in server mode, with the `grpc` plugin enabled:

@@ -166,7 +166,7 @@ allow if {
 }
 ```
 
-With the EOPA configuration above, and with a license set up properly, we can run
+With the EOPA configuration above, we can run
 EOPA via `eopa run --config-file eopa.yml --server policy.rego`.
 
 To start up some auxiliary services, notably Apache Kafka and an HTTP sink,
