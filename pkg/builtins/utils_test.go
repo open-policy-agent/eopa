@@ -13,10 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/go-cmp/cmp"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/localstack"
@@ -751,33 +752,39 @@ func startDynamoDB(t *testing.T) (testcontainers.Container, string) {
 	// retrying as the container is occasionally incomplete even
 	// with the wait-port-strategy above.
 
-	svc := dynamodb.New(session.Must(session.NewSession((&aws.Config{
-		Endpoint: aws.String(endpoint),
-		Region:   aws.String("us-west-2"),
-	}).WithCredentials(credentials.NewStaticCredentials("dummy", "dummy", "")))))
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-west-2"),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("dummy", "dummy", "")),
+		config.WithBaseEndpoint(endpoint),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	svc := dynamodb.NewFromConfig(cfg)
 
 	for {
-		if _, err := svc.CreateTable(&dynamodb.CreateTableInput{
-			BillingMode: aws.String("PAY_PER_REQUEST"),
+		if _, err := svc.CreateTable(ctx, &dynamodb.CreateTableInput{
+			BillingMode: types.BillingModePayPerRequest,
 			TableName:   aws.String("foo"),
-			KeySchema: []*dynamodb.KeySchemaElement{
+			KeySchema: []types.KeySchemaElement{
 				{
 					AttributeName: aws.String("p"),
-					KeyType:       aws.String("HASH"),
+					KeyType:       types.KeyTypeHash,
 				},
 				{
 					AttributeName: aws.String("s"),
-					KeyType:       aws.String("RANGE"),
+					KeyType:       types.KeyTypeRange,
 				},
 			},
-			AttributeDefinitions: []*dynamodb.AttributeDefinition{
+			AttributeDefinitions: []types.AttributeDefinition{
 				{
 					AttributeName: aws.String("p"),
-					AttributeType: aws.String("S"),
+					AttributeType: types.ScalarAttributeTypeS,
 				},
 				{
 					AttributeName: aws.String("s"),
-					AttributeType: aws.String("N"),
+					AttributeType: types.ScalarAttributeTypeN,
 				},
 			},
 		}); err != nil {
@@ -789,35 +796,36 @@ func startDynamoDB(t *testing.T) (testcontainers.Container, string) {
 		break
 	}
 
-	if err := svc.WaitUntilTableExists(&dynamodb.DescribeTableInput{
+	waiter := dynamodb.NewTableExistsWaiter(svc)
+	if err := waiter.Wait(ctx, &dynamodb.DescribeTableInput{
 		TableName: aws.String("foo"),
-	}); err != nil {
+	}, 1*time.Minute); err != nil {
 		t.Fatal(err)
 	}
 
 	putItems := []dynamodb.PutItemInput{
 		{
 			TableName: aws.String("foo"),
-			Item: map[string]*dynamodb.AttributeValue{
-				"p":      {S: aws.String("x")},
-				"s":      {N: aws.String("1")},
-				"string": {S: aws.String("value")},
-				"number": {N: aws.String("1234")},
+			Item: map[string]types.AttributeValue{
+				"p":      &types.AttributeValueMemberS{Value: "x"},
+				"s":      &types.AttributeValueMemberN{Value: "1"},
+				"string": &types.AttributeValueMemberS{Value: "value"},
+				"number": &types.AttributeValueMemberN{Value: "1234"},
 			},
 		},
 		{
 			TableName: aws.String("foo"),
-			Item: map[string]*dynamodb.AttributeValue{
-				"p":      {S: aws.String("x")},
-				"s":      {N: aws.String("2")},
-				"string": {S: aws.String("value2")},
-				"number": {N: aws.String("4321")},
+			Item: map[string]types.AttributeValue{
+				"p":      &types.AttributeValueMemberS{Value: "x"},
+				"s":      &types.AttributeValueMemberN{Value: "2"},
+				"string": &types.AttributeValueMemberS{Value: "value2"},
+				"number": &types.AttributeValueMemberN{Value: "4321"},
 			},
 		},
 	}
 
 	for _, input := range putItems {
-		if _, err := svc.PutItem(&input); err != nil {
+		if _, err := svc.PutItem(ctx, &input); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -6,29 +6,31 @@ package builtins
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/defaults"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	smithyendpoints "github.com/aws/smithy-go/endpoints"
+
+	"github.com/aws/smithy-go"
 	"go.opentelemetry.io/otel"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
-	"github.com/open-policy-agent/opa/v1/types"
+	opaTypes "github.com/open-policy-agent/opa/v1/types"
 )
 
 const (
@@ -44,7 +46,7 @@ const (
 )
 
 var (
-	dynamoDBClients = dynamoDBClientPool{clients: make(map[dynamoDBClientKey]dynamodbiface.DynamoDBAPI)}
+	dynamoDBClients = dynamoDBClientPool{clients: make(map[dynamoDBClientKey]*dynamodb.Client)}
 
 	dynamoDBGetAllowedKeys = ast.NewSet(
 		ast.StringTerm("cache"),
@@ -86,11 +88,11 @@ var (
 	dynamoDBGet = &ast.Builtin{
 		Name:        dynamoDBGetName,
 		Description: "Returns DynamoDB get result row.",
-		Decl: types.NewFunction(
-			types.Args(
-				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))).Description("query object"),
+		Decl: opaTypes.NewFunction(
+			opaTypes.Args(
+				opaTypes.Named("request", opaTypes.NewObject(nil, opaTypes.NewDynamicProperty(opaTypes.S, opaTypes.A))).Description("query object"),
 			),
-			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("result row"),
+			opaTypes.Named("response", opaTypes.NewObject(nil, opaTypes.NewDynamicProperty(opaTypes.A, opaTypes.A))).Description("result row"),
 		),
 		Nondeterministic: true,
 		Categories:       docs("https://docs.styra.com/enterprise-opa/reference/built-in-functions/dynamodb"),
@@ -99,11 +101,11 @@ var (
 	dynamoDBQuery = &ast.Builtin{
 		Name:        dynamoDBQueryName,
 		Description: "Returns DynamoDB query result rows.",
-		Decl: types.NewFunction(
-			types.Args(
-				types.Named("request", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))).Description("query object"),
+		Decl: opaTypes.NewFunction(
+			opaTypes.Args(
+				opaTypes.Named("request", opaTypes.NewObject(nil, opaTypes.NewDynamicProperty(opaTypes.S, opaTypes.A))).Description("query object"),
 			),
-			types.Named("response", types.NewObject(nil, types.NewDynamicProperty(types.A, types.A))).Description("result row"),
+			opaTypes.Named("response", opaTypes.NewObject(nil, opaTypes.NewDynamicProperty(opaTypes.A, opaTypes.A))).Description("result row"),
 		),
 		Nondeterministic: true,
 		Categories:       docs("https://docs.styra.com/enterprise-opa/reference/built-in-functions/dynamodb"),
@@ -117,7 +119,7 @@ var (
 
 type (
 	dynamoDBClientPool struct {
-		clients map[dynamoDBClientKey]dynamodbiface.DynamoDBAPI
+		clients map[dynamoDBClientKey]*dynamodb.Client
 		mu      sync.Mutex
 	}
 
@@ -227,7 +229,7 @@ func builtinDynamoDBGet(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 		return iter(ast.NewTerm(responseObj))
 	}
 
-	m := map[string]interface{}{}
+	m := map[string]any{}
 	var queryErr error
 
 	key, err := getRequestAttributeValuesWithDefault(obj, "key", nil)
@@ -241,19 +243,19 @@ func builtinDynamoDBGet(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 			return err
 		}
 
-		request := dynamodb.GetItemInput{
-			ConsistentRead: &consistentRead,
+		request := &dynamodb.GetItemInput{
+			ConsistentRead: aws.Bool(consistentRead),
 			Key:            key,
-			TableName:      &table,
+			TableName:      aws.String(table),
 		}
 
-		response, err := client.GetItemWithContext(bctx.Context, &request)
+		response, err := client.GetItem(bctx.Context, request)
 		if err != nil {
 			return err
 		}
 
-		row := make(map[string]interface{})
-		err = dynamodbattribute.UnmarshalMap(response.Item, &row)
+		row := make(map[string]any)
+		err = attributevalue.UnmarshalMap(response.Item, &row)
 
 		if len(row) > 0 {
 			m["row"] = row
@@ -263,23 +265,25 @@ func builtinDynamoDBGet(bctx topdown.BuiltinContext, operands []*ast.Term, iter 
 	}()
 
 	if queryErr != nil {
+		var ae smithy.APIError
 		if !raiseError {
 			// Unpack the driver specific error type to
 			// get more details, if possible.
+			e := map[string]any{}
 
-			e := map[string]interface{}{}
-
-			switch queryErr := queryErr.(type) {
-			case awserr.Error:
-				e["code"] = queryErr.Code()
-				e["message"] = queryErr.Message()
-			default:
+			if errors.As(queryErr, &ae) {
+				e["code"] = ae.ErrorCode()
+				e["message"] = ae.ErrorMessage()
+			} else {
 				e["message"] = string(queryErr.Error())
 			}
 
 			m["error"] = e
 			queryErr = nil
 		} else {
+			if errors.As(queryErr, &ae) {
+				return ae
+			}
 			return queryErr
 		}
 	}
@@ -392,7 +396,7 @@ func builtinDynamoDBQuery(bctx topdown.BuiltinContext, operands []*ast.Term, ite
 		return iter(ast.NewTerm(responseObj))
 	}
 
-	m := map[string]interface{}{}
+	m := map[string]any{}
 	var queryErr error
 
 	exclusiveStartKey, err := getRequestAttributeValuesWithDefault(obj, "exclusive_start_key", nil)
@@ -448,13 +452,20 @@ func builtinDynamoDBQuery(bctx topdown.BuiltinContext, operands []*ast.Term, ite
 		return &s
 	}
 
-	paramInt := func(i int) *int64 {
+	paramInt := func(i int) *int32 {
 		if i <= 0 {
 			return nil
 		}
 
-		j := int64(i)
+		j := int32(i)
 		return &j
+	}
+
+	paramSelect := func(s string) types.Select {
+		if s == "" {
+			return ""
+		}
+		return types.Select(s)
 	}
 
 	queryErr = func() error {
@@ -463,8 +474,8 @@ func builtinDynamoDBQuery(bctx topdown.BuiltinContext, operands []*ast.Term, ite
 			return err
 		}
 
-		request := dynamodb.QueryInput{
-			ConsistentRead:            &consistentRead,
+		request := &dynamodb.QueryInput{
+			ConsistentRead:            aws.Bool(consistentRead),
 			ExclusiveStartKey:         exclusiveStartKey,
 			ExpressionAttributeNames:  expressionAttributeNames,
 			ExpressionAttributeValues: expressionAttributeValues,
@@ -472,59 +483,56 @@ func builtinDynamoDBQuery(bctx topdown.BuiltinContext, operands []*ast.Term, ite
 			KeyConditionExpression:    paramString(keyConditionExpression),
 			Limit:                     paramInt(limit),
 			ProjectionExpression:      paramString(projectionExpression),
-			ScanIndexForward:          &scanIndexForward,
-			Select:                    paramString(selekt),
-			TableName:                 &table,
+			ScanIndexForward:          aws.Bool(scanIndexForward),
+			Select:                    paramSelect(selekt),
+			TableName:                 aws.String(table),
 		}
 
-		var (
-			rows []map[string]interface{}
-			err2 error
-		)
+		// Use v2 paginator
+		paginator := dynamodb.NewQueryPaginator(client, request)
+		var rows []map[string]any
 
-		if err := client.QueryPagesWithContext(bctx.Context, &request, func(output *dynamodb.QueryOutput, _last bool) bool {
+		for paginator.HasMorePages() {
+			output, err := paginator.NextPage(bctx.Context)
+			if err != nil {
+				return err
+			}
 			for _, item := range output.Items {
-				row := make(map[string]interface{})
-				err2 = dynamodbattribute.UnmarshalMap(item, &row)
-				if err2 != nil {
-					return false
+				row := make(map[string]any)
+				if err := attributevalue.UnmarshalMap(item, &row); err != nil {
+					return err
 				}
-
 				rows = append(rows, row)
 			}
-
-			return true
-		}); err != nil {
-			return err
-		} else if err2 != nil {
-			return err2
 		}
 
 		if len(rows) > 0 {
 			m["rows"] = rows
 		}
 
-		return err
+		return nil
 	}()
 
 	if queryErr != nil {
+		var ae smithy.APIError
 		if !raiseError {
 			// Unpack the driver specific error type to
 			// get more details, if possible.
+			e := map[string]any{}
 
-			e := map[string]interface{}{}
-
-			switch queryErr := queryErr.(type) {
-			case awserr.Error:
-				e["code"] = queryErr.Code()
-				e["message"] = queryErr.Message()
-			default:
+			if errors.As(queryErr, &ae) {
+				e["code"] = ae.ErrorCode()
+				e["message"] = ae.ErrorMessage()
+			} else {
 				e["message"] = string(queryErr.Error())
 			}
 
 			m["error"] = e
 			queryErr = nil
 		} else {
+			if errors.As(queryErr, &ae) {
+				return ae
+			}
 			return queryErr
 		}
 	}
@@ -543,7 +551,7 @@ func builtinDynamoDBQuery(bctx topdown.BuiltinContext, operands []*ast.Term, ite
 	return iter(ast.NewTerm(responseObj))
 }
 
-func (p *dynamoDBClientPool) Get(_ context.Context, region string, endpoint string, accessKey string, secretKey string, sessionToken string) (dynamodbiface.DynamoDBAPI, error) {
+func (p *dynamoDBClientPool) Get(ctx context.Context, region string, endpoint string, accessKey string, secretKey string, sessionToken string) (*dynamodb.Client, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -562,7 +570,7 @@ func (p *dynamoDBClientPool) Get(_ context.Context, region string, endpoint stri
 	// Do not hold the lock during open, in case it requires I/O.
 
 	p.mu.Unlock()
-	client, err := p.open(region, endpoint, accessKey, secretKey, sessionToken)
+	client, err := p.open(ctx, region, endpoint, accessKey, secretKey, sessionToken)
 	p.mu.Lock()
 
 	if err != nil {
@@ -577,51 +585,96 @@ func (p *dynamoDBClientPool) Get(_ context.Context, region string, endpoint stri
 	return client, nil
 }
 
-func (p *dynamoDBClientPool) open(region string, endpoint string, accessKey string, secretKey string, sessionToken string) (dynamodbiface.DynamoDBAPI, error) {
-	if endpoint == "" {
-		re, err := endpoints.AwsPartition().EndpointFor("dynamodb", region)
-		if err != nil {
-			return nil, err
-		}
-
-		endpoint = re.URL
+func (p *dynamoDBClientPool) open(ctx context.Context, region string, endpoint string, accessKey string, secretKey string, sessionToken string) (*dynamodb.Client, error) {
+	// Start with default config
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion(region),
+		config.WithHTTPClient(defaultClient()),
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	cfg := aws.NewConfig().WithRegion(region)
+	// Note(philip): Originally, we checked credentials in this chain order:
+	// - Statically provided credentials
+	// - Environment variables
+	// - ECS/EC2 role providers
+	// However, after migrating to the AWS SDK v2, we use the default credential
+	// chain order because we're forced to, and work around that.
+	// The new order:
+	// - Statically provided credentials
+	// - Default chain
+	//   - Environment variables
+	//   - Shared Configuration and Shared Credentials files
+	// - ECS/EC2 role providers
+	var providers []aws.CredentialsProvider
 
-	var providers []credentials.Provider
-
-	// Statically provided credentials are always tried and used
-	// first.  After which standard AWS environment variables and
-	// ECS/EC2 role provider is checked.
-
+	// Handle credentials
 	if accessKey != "" && secretKey != "" {
-		providers = append(providers, &credentials.StaticProvider{
-			Value: credentials.Value{
-				AccessKeyID:     accessKey,
-				SecretAccessKey: secretKey,
-				SessionToken:    sessionToken,
-			},
+		// Static credentials provided
+		providers = append(providers, credentials.NewStaticCredentialsProvider(accessKey, secretKey, sessionToken))
+	}
+	// Else: Use default credential chain which includes environment variables and IAM roles
+	// This is already handled by LoadDefaultConfigs
+
+	// Append default credentials provider.
+	providers = append(providers, cfg.Credentials)
+
+	// Handle web identity token for service accounts
+	if tokenFile := os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE"); tokenFile != "" {
+		if roleARN := os.Getenv("AWS_ROLE_ARN"); roleARN != "" {
+			roleSessionName := os.Getenv("AWS_ROLE_SESSION_NAME")
+			if roleSessionName == "" {
+				roleSessionName = "eopa-session" // TODO(philip): Is this really needed?
+			}
+
+			stsClient := sts.NewFromConfig(cfg)
+			providers = append(providers, stscreds.NewWebIdentityRoleProvider(
+				stsClient,
+				roleARN,
+				stscreds.IdentityTokenFile(tokenFile),
+				func(o *stscreds.WebIdentityRoleOptions) {
+					o.RoleSessionName = roleSessionName
+				},
+			))
+		}
+	}
+
+	// Update config's credentials provider with our homemade chain
+	cfg.Credentials = newChainProvider(providers...)
+
+	// Create DynamoDB client with optional custom endpoint
+	var opts []func(*dynamodb.Options)
+	if endpoint != "" {
+		opts = append(opts, func(o *dynamodb.Options) {
+			o.BaseEndpoint = aws.String(endpoint)
+		})
+		opts = append(opts, func(o *dynamodb.Options) {
+			o.EndpointResolverV2 = newCustomEndpointResolver(endpoint)
 		})
 	}
 
-	providers = append(providers, &credentials.EnvProvider{})
-	remoteProviders, err := remoteCredProviders(cfg)
-	if err != nil {
-		return nil, err
-	}
+	return dynamodb.NewFromConfig(cfg, opts...), nil
+}
 
-	providers = append(providers, remoteProviders...) // Config can't have endpoints set, as it used for STS.
+// In AWS SDK v2, there's no equivalent to the original credentials.NewChainCredentials() func.
+// Ref: https://github.com/aws/aws-sdk-go-v2/issues/1433#issuecomment-939537514
+func newChainProvider(providers ...aws.CredentialsProvider) aws.CredentialsProvider {
+	return aws.NewCredentialsCache(
+		aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
+			var errs []error
 
-	cfg = cfg.WithEndpoint(endpoint).WithCredentials(credentials.NewChainCredentials(providers))
-	cfg = cfg.WithHTTPClient(defaultClient())
+			for _, p := range providers {
+				if creds, err := p.Retrieve(ctx); err == nil {
+					return creds, nil
+				} else {
+					errs = append(errs, err)
+				}
+			}
 
-	awsSession, err := session.NewSession(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	return dynamodb.New(awsSession), nil
+			return aws.Credentials{}, fmt.Errorf("no valid providers in chain: %s", errs)
+		}),
+	)
 }
 
 // defaultClient is the HTTP client used with all AWS SDK sessions. It is as http.DefaultClient with one exception: MaxIdleConnsPerHost is increased from default golang value of 2.
@@ -646,30 +699,31 @@ func defaultClient() *http.Client {
 	}
 }
 
-func remoteCredProviders(config *aws.Config) ([]credentials.Provider, error) {
-	s, err := session.NewSession(config)
-	if err != nil {
-		return nil, err
-	}
-
-	tokenFile := os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE")
-	roleARN := os.Getenv("AWS_ROLE_ARN")
-
-	var providers []credentials.Provider
-
-	if tokenFile != "" && roleARN != "" {
-		roleSessionName := os.Getenv("AWS_ROLE_SESSION_NAME")
-		providers = append(
-			providers,
-			stscreds.NewWebIdentityRoleProviderWithOptions(sts.New(s), roleARN, roleSessionName, stscreds.FetchTokenPath(tokenFile)))
-	}
-
-	providers = append(providers, defaults.RemoteCredProvider(*config, s.Handlers))
-
-	return providers, nil
+type customEndpointResolver struct {
+	endpoint string // Endpoint value provided from plugin config logic.
 }
 
-func getRequestAttributeValuesWithDefault(obj ast.Object, key string, def map[string]*dynamodb.AttributeValue) (map[string]*dynamodb.AttributeValue, error) {
+func newCustomEndpointResolver(endpoint string) *customEndpointResolver {
+	return &customEndpointResolver{
+		endpoint: endpoint,
+	}
+}
+
+// Note(philip): This resolver implementation is the workaround needed with the
+// AWS SDK v2 to set the endpoint directly like how we were doing in AWS SDK v1.
+// If we ever decide to not compute the exact endpoint in our plugin config
+// logic, then this implementation might need to change.
+func (r *customEndpointResolver) ResolveEndpoint(ctx context.Context, params dynamodb.EndpointParameters) (
+	smithyendpoints.Endpoint, error,
+) {
+	if r.endpoint != "" {
+		params.Endpoint = aws.String(r.endpoint)
+	}
+
+	return dynamodb.NewDefaultEndpointResolverV2().ResolveEndpoint(ctx, params)
+}
+
+func getRequestAttributeValuesWithDefault(obj ast.Object, key string, def map[string]types.AttributeValue) (map[string]types.AttributeValue, error) {
 	v, err := getRequestObjectWithDefault(obj, key, nil)
 	if err != nil {
 		return nil, err
@@ -682,30 +736,29 @@ func getRequestAttributeValuesWithDefault(obj ast.Object, key string, def map[st
 		return nil, err
 	}
 
-	o, ok := j.(map[string]interface{})
+	o, ok := j.(map[string]any)
 	if !ok {
 		return nil, builtins.NewOperandErr(1, "'%s' must be object", key)
 	}
 
-	m := make(map[string]*dynamodb.AttributeValue)
+	m := make(map[string]types.AttributeValue)
 	for k, v := range o {
 		data, err := json.Marshal(v)
 		if err != nil {
 			return nil, err
 		}
 
-		var a dynamodb.AttributeValue
-		if err := json.Unmarshal(data, &a); err != nil {
+		if a, err := attributevalue.UnmarshalJSON(data); err != nil {
 			return nil, err
+		} else {
+			m[k] = a
 		}
-
-		m[k] = &a
 	}
 
 	return m, nil
 }
 
-func getRequestAttributeNamesWithDefault(obj ast.Object, key string, def map[string]*string) (map[string]*string, error) {
+func getRequestAttributeNamesWithDefault(obj ast.Object, key string, def map[string]string) (map[string]string, error) {
 	v, err := getRequestObjectWithDefault(obj, key, nil)
 	if err != nil {
 		return nil, err
@@ -718,19 +771,19 @@ func getRequestAttributeNamesWithDefault(obj ast.Object, key string, def map[str
 		return nil, err
 	}
 
-	o, ok := j.(map[string]interface{})
+	o, ok := j.(map[string]any)
 	if !ok {
 		return nil, builtins.NewOperandErr(1, "'%s' must be object of strings", key)
 	}
 
-	m := make(map[string]*string)
+	m := make(map[string]string)
 	for k, v := range o {
 		s, ok := v.(string)
 		if !ok {
 			return nil, builtins.NewOperandErr(1, "'%s' must be object of strings", key)
 		}
 
-		m[k] = &s
+		m[k] = s
 	}
 
 	return m, nil

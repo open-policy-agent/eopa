@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/open-policy-agent/opa/v1/logging"
 	"github.com/open-policy-agent/opa/v1/plugins"
@@ -40,7 +40,8 @@ type Data struct {
 	log            logging.Logger
 	Config         Config
 	hc             *http.Client
-	session        *session.Session
+	awsConfig      *aws.Config
+	s3Options      []func(*s3.Options)
 	exit, doneExit chan struct{}
 
 	*transform.Rego
@@ -50,39 +51,35 @@ type Data struct {
 // because it implements types.Triggerer.
 var _ types.Triggerer = (*Data)(nil)
 
-type credentialsProvider struct {
-	accessID, secret string
-}
-
-func (p *credentialsProvider) Retrieve() (credentials.Value, error) {
-	return credentials.Value{
-		AccessKeyID:     p.accessID,
-		SecretAccessKey: p.secret,
-	}, nil
-}
-
-func (p *credentialsProvider) IsExpired() bool {
-	return false
-}
-
 func (c *Data) Start(ctx context.Context) error {
 	if err := c.Prepare(ctx); err != nil {
 		return fmt.Errorf("prepare rego_transform: %w", err)
 	}
 	c.hc = &http.Client{}
-	cfg := aws.NewConfig().
-		WithHTTPClient(c.hc).
-		WithCredentials(credentials.NewCredentials(&credentialsProvider{c.Config.AccessID, c.Config.Secret})).
-		WithRegion(c.Config.region).
-		WithS3ForcePathStyle(c.Config.ForcePath)
-	if c.Config.endpoint != "" {
-		cfg = cfg.WithEndpoint(c.Config.endpoint)
-	}
-	s, err := session.NewSession(cfg)
+	cfg, err := config.LoadDefaultConfig(
+		ctx,
+		config.WithHTTPClient(c.hc),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(c.Config.AccessID, c.Config.Secret, "")),
+		config.WithRegion(c.Config.region),
+	)
 	if err != nil {
 		return err
 	}
-	c.session = s
+
+	// endpoint and ForcePath should be populated by the config logic.
+	s3Options := []func(*s3.Options){}
+	if c.Config.endpoint != "" {
+		s3Options = append(s3Options, func(o *s3.Options) {
+			o.EndpointResolverV2 = newCustomEndpointResolver(c.Config.endpoint)
+		})
+	}
+	if c.Config.ForcePath {
+		s3Options = append(s3Options, func(o *s3.Options) { o.UsePathStyle = true })
+	}
+
+	c.awsConfig = &cfg
+	c.s3Options = s3Options
+
 	c.exit = make(chan struct{})
 	if err := storage.Txn(ctx, c.manager.Store, storage.WriteParams, func(txn storage.Transaction) error {
 		return storage.MakeDir(ctx, c.manager.Store, txn, c.Config.path)
@@ -148,7 +145,7 @@ LOOP:
 }
 
 func (c *Data) poll(ctx context.Context) error {
-	svc := s3.New(c.session)
+	svc := s3.NewFromConfig(*c.awsConfig, c.s3Options...)
 	keys, err := c.getKeys(ctx, svc)
 	if err != nil {
 		return fmt.Errorf("list objects: %w", err)
@@ -168,26 +165,30 @@ func (c *Data) poll(ctx context.Context) error {
 	return nil
 }
 
-func (c *Data) getKeys(ctx context.Context, svc *s3.S3) ([]string, error) {
-	input := &s3.ListObjectsInput{
+func (c *Data) getKeys(ctx context.Context, svc *s3.Client) ([]string, error) {
+	input := &s3.ListObjectsV2Input{
 		Bucket: aws.String(c.Config.bucket),
 		Prefix: aws.String(c.Config.filepath),
 	}
 
 	var keys []string
-	err := svc.ListObjectsPagesWithContext(ctx, input, func(page *s3.ListObjectsOutput, lastPage bool) bool {
+	paginator := s3.NewListObjectsV2Paginator(svc, input)
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get the list of objects: %w", err)
+		}
+
 		for _, o := range page.Contents {
 			keys = append(keys, *o.Key)
 		}
-		return !lastPage
-	})
-	if err != nil {
-		return nil, fmt.Errorf("unable to get the list of objects: %w", err)
 	}
+
 	return keys, nil
 }
 
-func (c *Data) process(ctx context.Context, svc *s3.S3, keys []string) (any, error) {
+func (c *Data) process(ctx context.Context, svc *s3.Client, keys []string) (any, error) {
 	switch len(keys) {
 	case 0:
 		return nil, nil
@@ -201,7 +202,7 @@ func (c *Data) process(ctx context.Context, svc *s3.S3, keys []string) (any, err
 		return utils.ParseFile(keys[0], r)
 	}
 
-	files := make(map[string]interface{})
+	files := make(map[string]any)
 	for _, key := range keys {
 		r, err := c.download(ctx, svc, key)
 		if err != nil {
@@ -224,13 +225,14 @@ func (c *Data) process(ctx context.Context, svc *s3.S3, keys []string) (any, err
 	return files, nil
 }
 
-func (c *Data) download(ctx context.Context, svc *s3.S3, key string) (io.Reader, error) {
-	downloader := s3manager.NewDownloaderWithClient(svc, func(d *s3manager.Downloader) {
+func (c *Data) download(ctx context.Context, svc *s3.Client, key string) (io.Reader, error) {
+	downloader := manager.NewDownloader(svc, func(d *manager.Downloader) {
 		d.Concurrency = DownloaderMaxConcurrency
 		d.PartSize = DownloaderMaxPartSize
 	})
-	buf := &aws.WriteAtBuffer{}
-	if _, err := downloader.DownloadWithContext(ctx, buf, &s3.GetObjectInput{
+
+	buf := &manager.WriteAtBuffer{}
+	if _, err := downloader.Download(ctx, buf, &s3.GetObjectInput{
 		Bucket: aws.String(c.Config.bucket),
 		Key:    aws.String(key),
 	}); err != nil {
