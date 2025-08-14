@@ -7,7 +7,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Styra Inc.",
+  "author": "The OPA Authors",
   "license": "Apache-2.0",
   "dependencies": {
     "@buf/styra_enterprise-opa.connectrpc_es": "^1.4.0-20230630064235-ab943e577ec8.3",
