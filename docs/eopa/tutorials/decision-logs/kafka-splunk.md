@@ -271,19 +271,8 @@ The event's fields can all be used for searching and filtering via Splunk's
 services.
 
 
-## Outlook
-
-What's next? Soon, additional sinks will be available, enabling seamless
-integration of EOPA into observability and analytics data pipelines
-such as AWS Kinesis and Google BigQuery.
-
-Looking for something else? Feel free to contact us for further decision log
-outputs! Use the feedback form below or message us on
-[Slack](https://inviter.co/styra).
-
-
 ## Further Reading
 
 - Please see the [reference documentation for all details](/eopa/reference/configuration/decision-logs).
-- The files used in the examples are also available in the EOPA [blueprints repo](https://github.com/StyraInc/eopa/tree/main/examples/decision-logs).
+- The files used in the examples are also available in the EOPA [blueprints repo](https://github.com/open-policy-agent/eopa/tree/main/examples/decision-logs).
 - Documentation about the used Splunk Endpoint can be found here: [HTTP Event Collector](https://docs.splunk.com/Documentation/Splunk/9.0.4/RESTREF/RESTinput#services.2Fcollector).

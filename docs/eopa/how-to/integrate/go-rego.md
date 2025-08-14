@@ -58,5 +58,5 @@ Enable EOPA's optimized evaluation engine by passing the
 This how-to guide showed how you can embed EOPA into a Go application that
 uses the [rego](https://pkg.go.dev/github.com/open-policy-agent/opa/rego)
 package. The sample code is hosted on
-[GitHub](https://github.com/StyraInc/eopa/tree/main/examples/go-rego).
+[GitHub](https://github.com/open-policy-agent/eopa/tree/main/examples/go-rego).
 For additional examples see the `examples/rego` directory from the tarball.

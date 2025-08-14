@@ -117,7 +117,7 @@ Then the data retrieved by the S3 plugin would be transformed by the above into:
 
 ```json
 # terminal-command
-curl "${ENTERPRISE_OPA_URL}/v1/data/employees/hr?pretty"
+curl "${EOPA_URL}/v1/data/employees/hr?pretty"
 {
   "result": {
     "DE": {

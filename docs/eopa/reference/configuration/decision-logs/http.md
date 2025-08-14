@@ -20,7 +20,7 @@ plugins:
   eopa_dl:
     output:
     - type: http
-      url: https://mytenant.styra.com/v1/logs
+      url: https://mytenant.example.com/v1/logs
       retry:
         period: 1s
         max_attempts: 10

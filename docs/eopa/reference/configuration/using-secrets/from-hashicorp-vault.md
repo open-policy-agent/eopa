@@ -152,7 +152,7 @@ Configuration is required for the corresponding `ekm.vault.access_type`.
 
 #### Config Values
 
-Since [EOPA v1.26.0](https://github.com/StyraInc/eopa/releases/tag/v1.26.0), you can use _variable interpolation_ to put secrets into your configurations of services, keys, and plugins.
+Since [EOPA v1.26.0](https://github.com/open-policy-agent/eopa/releases/tag/v1.26.0), you can use _variable interpolation_ to put secrets into your configurations of services, keys, and plugins.
 
 For example, to configure the decision logs plugin to use a secret for posting logs to an HTTP endpoint:
 ```yaml

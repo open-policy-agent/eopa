@@ -257,10 +257,10 @@ If your policies return different values for the same input you might want to re
 
 Please refer to the following resources for more information.
 
-- Find the code from this tutorial [on GitHub](https://github.com/StyraInc/eopa/tree/main/examples/live-impact-analysis).
+- Find the code from this tutorial [on GitHub](https://github.com/open-policy-agent/eopa/tree/main/examples/live-impact-analysis).
 - Watch a LIA demo [on YouTube](https://www.youtube.com/watch?v=MV9vhQCElkE).
-- Read about impact [policy testing](/das/policies/policy-authoring/test-policies) in Styra DAS.
+- Read about impact [policy testing](/das/policies/policy-authoring/test-policies).
 
 :::caution Compatibility
-Live Impact Analysis is currently limited to policies and data contained in the bundle provided by the client. If you want to run LIA against policies that depend on dynamically injected data (e.g., from the Kafka plugin) please [contact us](mailto:devrel@styra.com)
+Live Impact Analysis is currently limited to policies and data contained in the bundle provided by the client. It does not support running LIA against policies that depend on dynamically injected data (e.g., from the Kafka plugin) yet.
 :::

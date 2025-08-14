@@ -242,5 +242,5 @@ curl -s "localhost:8181/v1/data/kafka/messages?pretty=true"
 
 ## Further Reading
 
-- The files used in the examples are also available in the EOPA [blueprints repo](https://github.com/StyraInc/eopa/tree/main/examples/kafka).
+- The files used in the examples are also available in the EOPA [blueprints repo](https://github.com/open-policy-agent/eopa/tree/main/examples/kafka).
 - View the [Kafka configuration](/eopa/reference/configuration/data/kafka) for EOPA.
