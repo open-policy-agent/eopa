@@ -5,88 +5,32 @@ package s3
 
 import (
 	"context"
-	"net/url"
-	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	smithyendpoints "github.com/aws/smithy-go/endpoints"
 )
 
-type MultiSchemeEndpointResolver struct {
-	originalURL string // Store the original gs://, s3://, or localhost URL
+type customEndpointResolver struct {
+	endpoint string // Endpoint value provided from plugin config logic.
 }
 
-func NewMultiSchemeEndpointResolver(originalURL string) *MultiSchemeEndpointResolver {
-	return &MultiSchemeEndpointResolver{
-		originalURL: originalURL,
+func newCustomEndpointResolver(endpoint string) *customEndpointResolver {
+	return &customEndpointResolver{
+		endpoint: endpoint,
 	}
 }
 
-func (r *MultiSchemeEndpointResolver) ResolveEndpoint(ctx context.Context, params s3.EndpointParameters) (
+// Note(philip): This resolver implementation is the workaround needed with the
+// AWS SDK v2 to set the endpoint directly like how we were doing in AWS SDK v1.
+// If we ever decide to not compute the exact endpoint in our plugin config
+// logic, then this implementation might need to change.
+func (r *customEndpointResolver) ResolveEndpoint(ctx context.Context, params s3.EndpointParameters) (
 	smithyendpoints.Endpoint, error,
 ) {
-	bucketName := ""
-	if params.Bucket != nil {
-		bucketName = *params.Bucket
+	if r.endpoint != "" {
+		params.Endpoint = aws.String(r.endpoint)
 	}
 
-	// Parse the original URL to determine scheme
-	parsedURL, err := url.Parse(r.originalURL)
-	if err != nil {
-		// Fall back to default AWS behavior
-		return s3.NewDefaultEndpointResolverV2().ResolveEndpoint(ctx, params)
-	}
-
-	switch parsedURL.Scheme {
-	case "gs":
-		// Google Cloud Storage: gs://bucket-name/path -> https://bucket-name.storage.googleapis.com
-		endpoint := smithyendpoints.Endpoint{
-			URI: url.URL{
-				Scheme: "https",
-				Host:   bucketName + ".storage.googleapis.com",
-			},
-		}
-		return endpoint, nil
-
-	case "http", "https":
-		// localhost or custom HTTP endpoints: http://localhost:9000 or https://custom.endpoint.com
-		endpoint := smithyendpoints.Endpoint{
-			URI: url.URL{
-				Scheme: parsedURL.Scheme,
-				Host:   parsedURL.Host,
-			},
-		}
-		return endpoint, nil
-
-	case "s3":
-		// Standard S3: s3://bucket-name/path -> use default AWS endpoint resolution
-		return s3.NewDefaultEndpointResolverV2().ResolveEndpoint(ctx, params)
-
-	default:
-		// Unknown scheme - fall back to default AWS behavior
-		return s3.NewDefaultEndpointResolverV2().ResolveEndpoint(ctx, params)
-	}
-}
-
-// Choose resolver based on URL scheme
-func getEndpointResolver(rawURL string) func(o *s3.Options) {
-	parsedURL, _ := url.Parse(rawURL)
-	usePathStyle := false
-
-	// Determine if path-style is needed based on URL scheme
-	switch parsedURL.Scheme {
-	case "gs":
-		usePathStyle = false // GCS uses virtual-hosted style
-	case "http", "https":
-		if strings.Contains(parsedURL.Host, "localhost") {
-			usePathStyle = true // localhost/MinIO typically uses path-style
-		}
-	case "s3":
-		usePathStyle = false // AWS S3 default
-	}
-
-	return func(o *s3.Options) {
-		o.EndpointResolverV2 = NewMultiSchemeEndpointResolver(rawURL)
-		o.UsePathStyle = usePathStyle
-	}
+	return s3.NewDefaultEndpointResolverV2().ResolveEndpoint(ctx, params)
 }

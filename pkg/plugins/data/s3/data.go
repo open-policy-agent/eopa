@@ -66,9 +66,15 @@ func (c *Data) Start(ctx context.Context) error {
 		return err
 	}
 
+	// endpoint and ForcePath should be populated by the config logic.
 	s3Options := []func(*s3.Options){}
-	if c.Config.URL != "" {
-		s3Options = append(s3Options, getEndpointResolver(c.Config.URL))
+	if c.Config.endpoint != "" {
+		s3Options = append(s3Options, func(o *s3.Options) {
+			o.EndpointResolverV2 = newCustomEndpointResolver(c.Config.endpoint)
+		})
+	}
+	if c.Config.ForcePath {
+		s3Options = append(s3Options, func(o *s3.Options) { o.UsePathStyle = true })
 	}
 
 	c.awsConfig = &cfg

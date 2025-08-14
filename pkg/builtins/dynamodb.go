@@ -22,6 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	smithyendpoints "github.com/aws/smithy-go/endpoints"
 
 	"github.com/aws/smithy-go"
 	"go.opentelemetry.io/otel"
@@ -648,6 +649,9 @@ func (p *dynamoDBClientPool) open(ctx context.Context, region string, endpoint s
 		opts = append(opts, func(o *dynamodb.Options) {
 			o.BaseEndpoint = aws.String(endpoint)
 		})
+		opts = append(opts, func(o *dynamodb.Options) {
+			o.EndpointResolverV2 = newCustomEndpointResolver(endpoint)
+		})
 	}
 
 	return dynamodb.NewFromConfig(cfg, opts...), nil
@@ -693,6 +697,30 @@ func defaultClient() *http.Client {
 			ExpectContinueTimeout: 1 * time.Second,
 		},
 	}
+}
+
+type customEndpointResolver struct {
+	endpoint string // Endpoint value provided from plugin config logic.
+}
+
+func newCustomEndpointResolver(endpoint string) *customEndpointResolver {
+	return &customEndpointResolver{
+		endpoint: endpoint,
+	}
+}
+
+// Note(philip): This resolver implementation is the workaround needed with the
+// AWS SDK v2 to set the endpoint directly like how we were doing in AWS SDK v1.
+// If we ever decide to not compute the exact endpoint in our plugin config
+// logic, then this implementation might need to change.
+func (r *customEndpointResolver) ResolveEndpoint(ctx context.Context, params dynamodb.EndpointParameters) (
+	smithyendpoints.Endpoint, error,
+) {
+	if r.endpoint != "" {
+		params.Endpoint = aws.String(r.endpoint)
+	}
+
+	return dynamodb.NewDefaultEndpointResolverV2().ResolveEndpoint(ctx, params)
 }
 
 func getRequestAttributeValuesWithDefault(obj ast.Object, key string, def map[string]types.AttributeValue) (map[string]types.AttributeValue, error) {
