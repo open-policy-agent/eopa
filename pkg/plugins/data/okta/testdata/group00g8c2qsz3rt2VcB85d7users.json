@@ -28,8 +28,8 @@
     "profile": {
       "email": "sergey@styra.com",
       "firstName": "Sergey",
-      "lastName": "Styra",
-      "login": "sergey@styra.com",
+      "lastName": "Example",
+      "login": "sergey@example.com",
       "mobilePhone": null,
       "secondEmail": null
     },
