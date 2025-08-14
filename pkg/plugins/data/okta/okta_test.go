@@ -846,7 +846,7 @@ plugins:
 			expectedData: map[string]any{
 				"users": map[string]any{
 					"00u8c2qt45hW8VYPO5d7": map[string]any{
-						"email":     "sergey@styra.com",
+						"email":     "sergey@example.com",
 						"firstName": "Sergey",
 					},
 				},
