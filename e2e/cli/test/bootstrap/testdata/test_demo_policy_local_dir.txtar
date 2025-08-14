@@ -1,5 +1,5 @@
-# This test ensures that `eopa test bootstrap` works with the StyraInc/demo
-# policy, and can handle the `.` dir.
+# This test ensures that `eopa test bootstrap` works with preexisting demo
+# policies, and can handle the `.` dir.
 
 exec eopa test bootstrap -d main.rego main/main/allow
 ! stdout .

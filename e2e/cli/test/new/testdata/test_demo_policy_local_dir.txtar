@@ -1,5 +1,5 @@
 # This test is for `eopa test new`, and has the following concerns:
-# - StyraInc/demo policy handled correctly.
+# - Demo policy handled correctly.
 # - The `.` dir is handled correctly.
 # - Context: single Rego file.
 
