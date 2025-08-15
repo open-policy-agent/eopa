@@ -48,7 +48,7 @@ require (
 	github.com/mithrandie/csvq v1.18.1
 	github.com/mithrandie/csvq-driver v1.7.0
 	github.com/mithrandie/go-text v1.6.0
-	github.com/neo4j/neo4j-go-driver/v5 v5.28.1
+	github.com/neo4j/neo4j-go-driver/v5 v5.28.2
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/olivere/elastic/v7 v7.0.32
 	github.com/open-policy-agent/opa v1.7.1
@@ -60,7 +60,7 @@ require (
 	github.com/sbabiv/xml2map v1.2.1
 	github.com/sijms/go-ora/v2 v2.9.0
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
-	github.com/snowflakedb/gosnowflake v1.15.0
+	github.com/snowflakedb/gosnowflake v1.16.0
 	github.com/sourcegraph/conc v0.3.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.7
@@ -144,13 +144,13 @@ require (
 	github.com/arl/statsviz v0.6.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.0 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.3
+	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.4
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.47.0
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.48.0
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.8.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.3 // indirect

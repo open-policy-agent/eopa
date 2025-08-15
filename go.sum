@@ -131,8 +131,8 @@ github.com/aws/aws-sdk-go-v2/config v1.31.0 h1:9yH0xiY5fUnVNLRWO0AtayqwU1ndriZdN
 github.com/aws/aws-sdk-go-v2/config v1.31.0/go.mod h1:VeV3K72nXnhbe4EuxxhzsDc/ByrCSlZwUnWH52Nde/I=
 github.com/aws/aws-sdk-go-v2/credentials v1.18.4 h1:IPd0Algf1b+Qy9BcDp0sCUcIWdCQPSzDoMK3a8pcbUM=
 github.com/aws/aws-sdk-go-v2/credentials v1.18.4/go.mod h1:nwg78FjH2qvsRM1EVZlX9WuGUJOL5od+0qvm0adEzHk=
-github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.3 h1:RrxJ6g7+jG1lY2nhn7GlRiW4vITuYlfwh/PrW5d84S0=
-github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.3/go.mod h1:e4y84j44vA9IFksSDDuAtNj9t3W20iJlsbXhbo/JU10=
+github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.4 h1:Qr7ZpZfkYBhpVcY5Y/KkuuxnaCR7PVMDkeyq8EqiPEw=
+github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.4/go.mod h1:OTxeF2oF+6jjlL+rvWlancGaRP3pQx71cr0/bNqLnGs=
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.3 h1:GicIdnekoJsjq9wqnvyi2elW6CGMSYKhdozE7/Svh78=
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.3/go.mod h1:R7BIi6WNC5mc1kfRM7XM/VHC3uRWkjc396sfabq4iOo=
 github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.18.4 h1:0SzCLoPRSK3qSydsaFQWugP+lOBCTPwfcBOm6222+UA=
@@ -145,8 +145,8 @@ github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 h1:bIqFDwgGXXN1Kpp99pDOdKMTTb5d
 github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3/go.mod h1:H5O/EsxDWyU+LP/V8i5sm8cxoZgc2fdNR9bxlOFrQTo=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.3 h1:ZV2XK2L3HBq9sCKQiQ/MdhZJppH/rH0vddEAamsHUIs=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.3/go.mod h1:b9F9tk2HdHpbf3xbN7rUZcfmJI26N6NcJu/8OsBFI/0=
-github.com/aws/aws-sdk-go-v2/service/dynamodb v1.47.0 h1:A5zeikrrAgz3YtNzhMat4K8hK/CFzOjFKLVk8pI7Cz8=
-github.com/aws/aws-sdk-go-v2/service/dynamodb v1.47.0/go.mod h1:tMQ/Edfn5xLcBFSVd3JDreJPias8GqBq0dVbCbMz9vs=
+github.com/aws/aws-sdk-go-v2/service/dynamodb v1.48.0 h1:6QbNrD5/LaVqsbvw+XZkUwRfJuPh11Y6cmUT/Umva2o=
+github.com/aws/aws-sdk-go-v2/service/dynamodb v1.48.0/go.mod h1:tMQ/Edfn5xLcBFSVd3JDreJPias8GqBq0dVbCbMz9vs=
 github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.29.0 h1:SNys2IbAlovw/c/7Q+f0GXlSMnY/vML5Ex9LStTF0Zc=
 github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.29.0/go.mod h1:GoaIvEhueZB2eDyU7wV8m9K6Wez1e3Pt4f0JrAyIr08=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.0 h1:6+lZi2JeGKtCraAj1rpoZfKqnQ9SptseRZioejfUOLM=
@@ -668,8 +668,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/ncruces/go-strftime v0.1.9 h1:bY0MQC28UADQmHmaF5dgpLmImcShSi2kHU9XLdhx/f4=
 github.com/ncruces/go-strftime v0.1.9/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
-github.com/neo4j/neo4j-go-driver/v5 v5.28.1 h1:RKWQW7wTgYAY2fU9S+9LaJ9OwRPbRc0I17tlT7nDmAY=
-github.com/neo4j/neo4j-go-driver/v5 v5.28.1/go.mod h1:Vff8OwT7QpLm7L2yYr85XNWe9Rbqlbeb9asNXJTHO4k=
+github.com/neo4j/neo4j-go-driver/v5 v5.28.2 h1:uG7nMK0zS/a/iSWMZgCIY40SfYzWBc6uSrMONhiIS0U=
+github.com/neo4j/neo4j-go-driver/v5 v5.28.2/go.mod h1:Vff8OwT7QpLm7L2yYr85XNWe9Rbqlbeb9asNXJTHO4k=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249 h1:NHrXEjTNQY7P0Zfx1aMrNhpgxHmow66XQtm0aQLY0AE=
 github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249/go.mod h1:mpRZBD8SJ55OIICQ3iWH0Yz3cjzA61JdqMLoWXeB2+8=
@@ -791,8 +791,8 @@ github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af h1:Sp5TG9f7K39yf
 github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/skeema/knownhosts v1.3.1 h1:X2osQ+RAjK76shCbvhHHHVl3ZlgDm8apHEHFqRjnBY8=
 github.com/skeema/knownhosts v1.3.1/go.mod h1:r7KTdC8l4uxWRyK2TpQZ/1o5HaSzh06ePQNxPwTcfiY=
-github.com/snowflakedb/gosnowflake v1.15.0 h1:1V4dG1EmJ9O81Hv8y1LAE9koZebmx4tnRAPKWvDf8xA=
-github.com/snowflakedb/gosnowflake v1.15.0/go.mod h1:+3Eh8swS12G6Fbt/wb5Vcse2Id7VU9HGgKSH8ydiumU=
+github.com/snowflakedb/gosnowflake v1.16.0 h1:EfrAPVjWcBHzr2oiwEUz0dwFUiFlwftj9/YB6NktY9Q=
+github.com/snowflakedb/gosnowflake v1.16.0/go.mod h1:XJ2z3SckeW+juZzjuYNcAJM7i4ZgIZNmepFm5foO3Vc=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/sourcegraph/jsonrpc2 v0.2.1 h1:2GtljixMQYUYCmIg7W9aF2dFmniq/mOr2T9tFRh6zSQ=
