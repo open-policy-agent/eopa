@@ -4,4 +4,4 @@ files:
   - pattern: "^\\.github/workflows/.*\\.ya?ml$"
 
 ignore_actions:
-  - name: StyraInc/styra-init-action
+  - name: StyraOSS/styra-init-action
