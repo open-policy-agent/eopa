@@ -10,7 +10,7 @@ jobs:
     name: Prereqs
     runs-on: ubuntu-24.04
     steps:
-      - uses: StyraInc/styra-init-action@main
+      - uses: StyraOSS/styra-init-action@main
 
   # goreleaser:
   #   name: GoReleaser
