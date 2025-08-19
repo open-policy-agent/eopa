@@ -19,7 +19,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/open-policy-agent/opa v1.7.1
 	github.com/redpanda-data/benthos/v4 v4.55.0
-	github.com/redpanda-data/connect/v4 v4.61.0
+	github.com/redpanda-data/connect/v4 v4.62.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/testcontainers/testcontainers-go v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.38.0
