@@ -72,7 +72,7 @@ const (
 	AuthenticationTLS
 )
 
-var supportedTLSVersions = []uint16{tls.VersionTLS10, tls.VersionTLS11, tls.VersionTLS12, tls.VersionTLS13}
+var supportedTLSVersions = []uint16{tls.VersionTLS12, tls.VersionTLS13}
 
 // AuthorizationScheme enumerates the supported authorization schemes. The authorization
 // scheme determines how access to OPA is controlled.
@@ -394,10 +394,6 @@ func getAuthorizationScheme(k string) AuthorizationScheme {
 // Note(philip): Relies on (factory).Validate being called upstream.
 func getMinTLSVersion(k string) uint16 {
 	switch k {
-	case "1.0":
-		return tls.VersionTLS10
-	case "1.1":
-		return tls.VersionTLS11
 	case "1.2":
 		return tls.VersionTLS12
 	case "1.3":

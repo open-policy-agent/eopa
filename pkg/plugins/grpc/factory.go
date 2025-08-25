@@ -59,7 +59,7 @@ func (factory) Validate(_ *plugins.Manager, config []byte) (any, error) {
 	}
 	// Check minimum allowed TLS version.
 	switch c.TLS.MinVersion {
-	case "", "1.0", "1.1", "1.2", "1.3":
+	case "", "1.2", "1.3":
 	default:
 		return nil, fmt.Errorf("unknown TLS version: %s", c.TLS.MinVersion)
 	}
