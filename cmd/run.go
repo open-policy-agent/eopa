@@ -256,8 +256,6 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	}
 
 	minTLSVersions := map[string]uint16{
-		"1.0": tls.VersionTLS10,
-		"1.1": tls.VersionTLS11,
 		"1.2": tls.VersionTLS12,
 		"1.3": tls.VersionTLS13,
 	}
@@ -281,7 +279,12 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 
 	params.rt.Authentication = authenticationSchemes[params.authentication.Value.String()]
 	params.rt.Authorization = authorizationScheme[params.authorization.Value.String()]
-	params.rt.MinTLSVersion = minTLSVersions[params.minTLSVersion.Value.String()]
+	var ok bool
+	params.rt.MinTLSVersion, ok = minTLSVersions[params.minTLSVersion.Value.String()]
+	if !ok {
+		return nil, fmt.Errorf("--min-tls-version must specify a TLS version 1.2 or higher")
+	}
+
 	params.rt.Certificate = cert
 
 	timestampFormat := params.logTimestampFormat
