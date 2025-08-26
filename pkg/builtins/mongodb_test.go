@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -429,8 +430,15 @@ func startMongoDB(t *testing.T, username, password string) (testcontainers.Conta
 		t.Fatal(err)
 	}
 
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	u.User = url.UserPassword(username, password)
+
 	// Create the test content.
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(authMongoURI(endpoint, username, password)))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(u.String()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -442,8 +450,4 @@ func startMongoDB(t *testing.T, username, password string) (testcontainers.Conta
 	}
 
 	return container, endpoint
-}
-
-func authMongoURI(uri string, username string, password string) string {
-	return strings.ReplaceAll(uri, "localhost", username+":"+password+"@localhost")
 }

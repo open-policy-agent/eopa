@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -249,11 +250,19 @@ func startMongoDB(t *testing.T, username, password string) (testcontainers.Conta
 	if err != nil {
 		t.Fatal(err)
 	}
-	return container, endpoint
+
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	u.User = url.UserPassword(username, password)
+
+	return container, u.String()
 }
 
 func createCollections(ctx context.Context, t *testing.T, endpoint string) {
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(authMongoURI(endpoint, username, password)))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(endpoint))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,10 +274,6 @@ func createCollections(ctx context.Context, t *testing.T, endpoint string) {
 	if _, err := collection.InsertOne(ctx, bson.D{{Key: "_id", Value: "b"}, {Key: "bar", Value: 1}}); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func authMongoURI(uri string, username string, password string) string {
-	return strings.ReplaceAll(uri, "localhost", username+":"+password+"@localhost")
 }
 
 func storeWithPolicy(ctx context.Context, t *testing.T, transform string) storage.Store {
