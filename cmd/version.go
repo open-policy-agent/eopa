@@ -41,7 +41,7 @@ func regalVersion() string {
 		return ""
 	}
 	for _, x := range bi.Deps {
-		if x.Path == "github.com/styrainc/regal" {
+		if x.Path == "github.com/open-policy-agent/regal" {
 			return strings.TrimLeft(x.Version, "v")
 		}
 	}
