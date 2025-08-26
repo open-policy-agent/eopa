@@ -7,8 +7,8 @@ replace github.com/open-policy-agent/eopa => ../../
 require (
 	github.com/open-policy-agent/eopa v0.0.0-00010101000000-000000000000
 	github.com/shirou/gopsutil/v3 v3.24.5
-	google.golang.org/grpc v1.74.2
-	google.golang.org/protobuf v1.36.7
+	google.golang.org/grpc v1.75.0
+	google.golang.org/protobuf v1.36.8
 )
 
 require (
