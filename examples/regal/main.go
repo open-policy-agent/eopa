@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/styrainc/regal/cmd"
+	"github.com/open-policy-agent/regal/cmd"
 
 	"github.com/open-policy-agent/eopa/pkg/rego_vm"
 )

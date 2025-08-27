@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GOLANGCI_VERSION: 2.1.6
+  GOLANGCI_VERSION: 2.4.0
 
 jobs:
   prereqs:

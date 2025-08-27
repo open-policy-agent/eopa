@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	regal_hints "github.com/styrainc/regal/pkg/hints"
+	regal_hints "github.com/open-policy-agent/regal/pkg/hints"
 )
 
 const styra = `https://docs.styra.com/opa/errors/`

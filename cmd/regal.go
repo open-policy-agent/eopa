@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	opa_cmd "github.com/open-policy-agent/opa/cmd"
-	regal_cmd "github.com/styrainc/regal/cmd"
+	regal_cmd "github.com/open-policy-agent/regal/cmd"
 )
 
 func regal() *cobra.Command {

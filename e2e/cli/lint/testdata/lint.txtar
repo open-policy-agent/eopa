@@ -1,4 +1,4 @@
-! exec eopa lint policies/
+! exec eopa lint --no-color policies/
 ! stderr .
 stdout 'Rule:\s+opa-fmt'
 stdout 'Description:\s+File should be formatted with `opa fmt`'
