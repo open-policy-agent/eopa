@@ -3,9 +3,9 @@
 # that: the translation of startwith into LIKE would therefore
 # be incorrect.
 # Instead, we have internal-only builtins
-#  * styra_startswith(string, string): bool
-#  * styra_endswith(string, string): bool
-#  * styra_contains(string, string): bool
+#  * internal_startswith(string, string): bool
+#  * internal_endswith(string, string): bool
+#  * internal_contains(string, string): bool
 # which check their strings case-sensitively.
 exec eopa test .
 ! stderr .
