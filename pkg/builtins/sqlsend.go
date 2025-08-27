@@ -549,9 +549,9 @@ func init() {
 	snowflake.GetLogger().SetOutput(io.Discard)
 
 	// register our styra-internal functions
-	sqlite.RegisterDeterministicScalarFunction("styra_startswith", 2, arity2StringFunc(strings.HasPrefix))
-	sqlite.RegisterDeterministicScalarFunction("styra_endswith", 2, arity2StringFunc(strings.HasSuffix))
-	sqlite.RegisterDeterministicScalarFunction("styra_contains", 2, arity2StringFunc(strings.Contains))
+	sqlite.RegisterDeterministicScalarFunction("internal_startswith", 2, arity2StringFunc(strings.HasPrefix))
+	sqlite.RegisterDeterministicScalarFunction("internal_endswith", 2, arity2StringFunc(strings.HasSuffix))
+	sqlite.RegisterDeterministicScalarFunction("internal_contains", 2, arity2StringFunc(strings.Contains))
 }
 
 // Suppress error messages from Go MySQL driver like "[mysql] 2023/07/27 15:59:30 packets.go:37: unexpected EOF"

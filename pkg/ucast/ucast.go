@@ -118,7 +118,7 @@ func (u *UCASTNode) asSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 			return "", fmt.Errorf("field operator 'in' requires collection argument")
 		case "startswith":
 			if dialect == "sqlite-internal" {
-				return cond.Var(sqlbuilder.Build("styra_startswith($?, $?)", sqlbuilder.Raw(field), value)), nil
+				return cond.Var(sqlbuilder.Build("internal_startswith($?, $?)", sqlbuilder.Raw(field), value)), nil
 			}
 			pattern, err := prefix(value)
 			if err != nil {
@@ -127,7 +127,7 @@ func (u *UCASTNode) asSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 			return cond.Like(field, pattern), nil
 		case "endswith":
 			if dialect == "sqlite-internal" {
-				return cond.Var(sqlbuilder.Build("styra_endswith($?, $?)", sqlbuilder.Raw(field), value)), nil
+				return cond.Var(sqlbuilder.Build("internal_endswith($?, $?)", sqlbuilder.Raw(field), value)), nil
 			}
 			pattern, err := suffix(value)
 			if err != nil {
@@ -136,7 +136,7 @@ func (u *UCASTNode) asSQL(cond *sqlbuilder.Cond, dialect string) (string, error)
 			return cond.Like(field, pattern), nil
 		case "contains":
 			if dialect == "sqlite-internal" {
-				return cond.Var(sqlbuilder.Build("styra_contains($?, $?)", sqlbuilder.Raw(field), value)), nil
+				return cond.Var(sqlbuilder.Build("internal_contains($?, $?)", sqlbuilder.Raw(field), value)), nil
 			}
 			pattern, err := infix(value)
 			if err != nil {
