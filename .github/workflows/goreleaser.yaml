@@ -87,7 +87,6 @@ jobs:
           TAP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_NOTES: ../release-notes.md
-          EOPA_TELEMETRY_URL: https://load-telemetry.corp.styra.com
       - name: Upload binary artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

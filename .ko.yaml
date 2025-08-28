@@ -5,4 +5,4 @@ builds:
     ldflags:
       - -X github.com/open-policy-agent/eopa/internal/version.Version={{.Env.EOPA_VERSION}}
       - -X github.com/open-policy-agent/eopa/internal/version.Hostname=github.actions.local
-      - -X github.com/open-policy-agent/opa/internal/report.ExternalServiceURL={{.Env.EOPA_TELEMETRY_URL}}
+      - -X github.com/open-policy-agent/opa/internal/report.GHRepo={{.Env.EOPA_GH_REPO}}

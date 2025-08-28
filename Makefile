@@ -49,13 +49,12 @@ VERSION := $(EOPA_VERSION)$(shell ./build/get-plugin-rev.sh)
 export OPA_VERSION := $(shell ./build/get-opa-version.sh)
 HOSTNAME ?= $(shell hostname -f)
 
-VERSION_LDFLAGS := -X=github.com/open-policy-agent/eopa/internal/version.Version=$(EOPA_VERSION)
-TELEMETRY_LDFLAGS := -X=github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=$(EOPA_TELEMETRY_URL)
-HOSTNAME_LDFLAGS := -X=github.com/open-policy-agent/eopa/internal/version.Hostname=$(HOSTNAME)
-# goreleaser reads this via .goreleaser.yaml
-# TODO(sr): remove all refs, this shouldn't be needed anymore
-export EOPA_TELEMETRY_URL ?= https://load-telemetry.corp.styra.com
+# This is used to check for newer versions from github releases
+export EOPA_GH_REPO=open-policy-agent/eopa
 
+VERSION_LDFLAGS := -X=github.com/open-policy-agent/eopa/internal/version.Version=$(EOPA_VERSION)
+TELEMETRY_LDFLAGS := -X=github.com/open-policy-agent/opa/internal/report.GHRepo=$(EOPA_GH_REPO)
+HOSTNAME_LDFLAGS := -X=github.com/open-policy-agent/eopa/internal/version.Hostname=$(HOSTNAME)
 LDFLAGS := $(VERSION_LDFLAGS) $(TELEMETRY_LDFLAGS) $(HOSTNAME_LDFLAGS)
 
 .PHONY: eopa
