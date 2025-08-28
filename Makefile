@@ -53,6 +53,7 @@ VERSION_LDFLAGS := -X=github.com/open-policy-agent/eopa/internal/version.Version
 TELEMETRY_LDFLAGS := -X=github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=$(EOPA_TELEMETRY_URL)
 HOSTNAME_LDFLAGS := -X=github.com/open-policy-agent/eopa/internal/version.Hostname=$(HOSTNAME)
 # goreleaser reads this via .goreleaser.yaml
+# TODO(sr): remove all refs, this shouldn't be needed anymore
 export EOPA_TELEMETRY_URL ?= https://load-telemetry.corp.styra.com
 
 LDFLAGS := $(VERSION_LDFLAGS) $(TELEMETRY_LDFLAGS) $(HOSTNAME_LDFLAGS)
@@ -118,7 +119,7 @@ auth-deploy-ci-debug:
 	KO_DEFAULTBASEIMAGE=$(KO_DEBUG_BASE_IMAGE) $(KO_BUILD_DEPLOY) --disable-optimizations --tags $(EOPA_VERSION)-debug $(LATEST_DEBUG)
 
 # goreleaser uses latest version tag.
-.PHONY: release release-ci release-wasm release-single
+.PHONY: release release-ci release-single
 release:
 	HOSTNAME=$(HOSTNAME) goreleaser release --snapshot --skip=publish --clean --timeout=60m
 
@@ -129,11 +130,6 @@ release-ci:
 	./build/latest-release-notes.sh --output="${RELEASE_NOTES}"
 	HOSTNAME=$(HOSTNAME) goreleaser release --clean --release-notes "${RELEASE_NOTES}" --timeout=60m
 
-# enterprise OPA docker image ghcr.io/goreleaser/goreleaser-cross:v1.19 and run goreleaser (build eopa and eopa_wasm)
-release-wasm:
-	go mod vendor
-	docker run --rm -v $$(PWD):/cwd -w /cwd ghcr.io/goreleaser/goreleaser-cross:v1.19 release -f .goreleaser-wasm.yaml --snapshot --skip-publish --rm-dist
-
 # utilities
 .PHONY: test test-race e2e benchmark fmt check fuzz update
 test:
@@ -141,7 +137,7 @@ test:
 
 test-examples-%:
 	cd examples/$* && \
-	  GOPRIVATE=github.com/open-policy-agent/eopa go mod tidy && \
+	  go mod tidy && \
 	  go test -vet=off .
 
 test-race:
