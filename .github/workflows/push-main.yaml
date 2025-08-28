@@ -31,7 +31,7 @@ jobs:
         with:
           go-version: ${{ steps.go_version.outputs.go_version }}
       - uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d # v0.9
-      - name: Build
-        run: make build-local
+      - name: Build and push
+        run: make deploy-ci
       - name: Debug Build
-        run: make build-local-debug
+        run: make deploy-ci-debug
