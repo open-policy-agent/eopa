@@ -1,6 +1,6 @@
 # EOPA
 
-[![OPA v1.7.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.7.1)](https://github.com/open-policy-agent/opa/releases/tag/v1.7.1)
+[![OPA v1.8.0](https://openpolicyagent.org/badge/v1.8.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.8.0)
 [![Regal v0.35.1](https://img.shields.io/github/v/release/open-policy-agent/regal?filter=v0.35.1&label=Regal)](https://github.com/open-policy-agent/regal/releases/tag/v0.35.1)
 
 A version of OPA designed for data heavy workloads, with data-filtering functionality included.
