@@ -1,7 +1,7 @@
 # EOPA
 
-![OPA v1.4.0](https://openpolicyagent.org/badge/v1.4.0)
-[![Regal v0.33.1](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.33.1&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.33.1)
+[![OPA v1.7.1](https://img.shields.io/endpoint?url=https://openpolicyagent.org/badge-endpoint/v1.7.1)](https://github.com/open-policy-agent/opa/releases/tag/v1.7.1)
+[![Regal v0.35.1](https://img.shields.io/github/v/release/open-policy-agent/regal?filter=v0.35.1&label=Regal)](https://github.com/open-policy-agent/regal/releases/tag/v0.35.1)
 
 ## Build
 
