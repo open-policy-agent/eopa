@@ -19,7 +19,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/open-policy-agent/opa v1.7.1
 	github.com/redpanda-data/benthos/v4 v4.55.0
-	github.com/redpanda-data/connect/v4 v4.62.0
+	github.com/redpanda-data/connect/v4 v4.63.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/testcontainers/testcontainers-go v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.38.0
@@ -33,6 +33,8 @@ require (
 )
 
 require (
+	buf.build/gen/go/bufbuild/reflect/connectrpc/go v1.18.1-20240117202343-bf8f65e8876c.1 // indirect
+	buf.build/gen/go/bufbuild/reflect/protocolbuffers/go v1.36.2-20240117202343-bf8f65e8876c.1 // indirect
 	cel.dev/expr v0.24.0 // indirect
 	cloud.google.com/go v0.121.4 // indirect
 	cloud.google.com/go/auth v0.16.3 // indirect
@@ -42,6 +44,7 @@ require (
 	cloud.google.com/go/monitoring v1.24.2 // indirect
 	cloud.google.com/go/pubsub/v2 v2.0.0 // indirect
 	cloud.google.com/go/storage v1.56.0 // indirect
+	connectrpc.com/connect v1.18.1 // indirect
 	cuelang.org/go v0.13.2 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -67,6 +70,7 @@ require (
 	github.com/benhoyt/goawk v1.29.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bufbuild/protocompile v0.14.1 // indirect
+	github.com/bufbuild/prototransform v0.4.0 // indirect
 	github.com/bwmarrin/snowflake v0.3.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
