@@ -38,7 +38,7 @@ require (
 	github.com/hashicorp/vault/api v1.20.0
 	github.com/hashicorp/vault/api/auth/approle v0.10.0
 	github.com/hashicorp/vault/api/auth/kubernetes v0.10.0
-	github.com/huandu/go-sqlbuilder v1.36.0
+	github.com/huandu/go-sqlbuilder v1.36.1
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/jarcoal/httpmock v1.4.1
 	github.com/json-iterator/go v1.1.12
@@ -51,7 +51,7 @@ require (
 	github.com/neo4j/neo4j-go-driver/v5 v5.28.2
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/olivere/elastic/v7 v7.0.32
-	github.com/open-policy-agent/opa v1.7.1
+	github.com/open-policy-agent/opa v1.8.0
 	github.com/open-policy-agent/opa-envoy-plugin v1.7.1-envoy
 	github.com/open-policy-agent/regal v0.35.2-0.20250826194016-c761047a0473
 	github.com/ory/dockertest/v3 v3.12.0
@@ -105,6 +105,15 @@ require (
 require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.30.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.11.5 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
+	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
+	github.com/lestrrat-go/httpcc v1.0.1 // indirect
+	github.com/lestrrat-go/httprc/v3 v3.0.0 // indirect
+	github.com/lestrrat-go/jwx/v3 v3.0.10 // indirect
+	github.com/lestrrat-go/option v1.0.1 // indirect
+	github.com/lestrrat-go/option/v2 v2.0.0 // indirect
+	github.com/segmentio/asm v1.2.0 // indirect
+	github.com/valyala/fastjson v1.6.4 // indirect
 )
 
 require (
@@ -172,7 +181,7 @@ require (
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cncf/xds/go v0.0.0-20250501225837-2ac532fd4443 // indirect
 	github.com/cockroachdb/apd/v3 v3.2.1 // indirect
-	github.com/containerd/containerd/v2 v2.1.3 // indirect
+	github.com/containerd/containerd/v2 v2.1.4 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
