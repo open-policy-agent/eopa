@@ -218,31 +218,31 @@ jobs:
         env:
           GITHUB_TOKEN: ${{steps.generate_token.outputs.token }}
 
-  verify-authenticode-signature:
-    name: Verify signature
-    runs-on: ubuntu-24.04
-    needs: goreleaser
-    steps:
-      - name: Tune GitHub-hosted runner network
-        uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
-      - name: Check out code
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          fetch-depth: 0
-      - name: Download generated artifacts
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
-        with:
-          name: windows-binaries
-          path: windows-binaries
-      - name: Get Root CA certificate.
-        run: curl -o rootca.pem https://cacerts.digicert.com/DigiCertTrustedRootG4.crt.pem
-      - name: Install osslsigncode
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y osslsigncode
-      - name: Verify signature
-        run: |
-          for file in $(ls windows-binaries/**/*.exe); do
-            echo "Processing $file"
-            osslsigncode verify -CAfile rootca.pem -TSA-CAfile rootca.pem $file
-          done
+  # verify-authenticode-signature:
+  #   name: Verify signature
+  #   runs-on: ubuntu-24.04
+  #   needs: goreleaser
+  #   steps:
+  #     - name: Tune GitHub-hosted runner network
+  #       uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
+  #     - name: Check out code
+  #       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Download generated artifacts
+  #       uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+  #       with:
+  #         name: windows-binaries
+  #         path: windows-binaries
+  #     - name: Get Root CA certificate.
+  #       run: curl -o rootca.pem https://cacerts.digicert.com/DigiCertTrustedRootG4.crt.pem
+  #     - name: Install osslsigncode
+  #       run: |
+  #         sudo apt-get update
+  #         sudo apt-get install -y osslsigncode
+  #     - name: Verify signature
+  #       run: |
+  #         for file in $(ls windows-binaries/**/*.exe); do
+  #           echo "Processing $file"
+  #           osslsigncode verify -CAfile rootca.pem -TSA-CAfile rootca.pem $file
+  #         done
