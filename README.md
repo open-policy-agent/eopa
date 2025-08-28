@@ -9,9 +9,9 @@ A version of OPA designed for data heavy workloads, with data-filtering function
 
 **EOPA has been donated to the OPA community**, and we invite you to take a look around.
 
-- Existing OPA users can and should continue to use [OPA](https://github.com/open-policy-agent/opa) as before.
+- Try EOPA if you have to integrate with databases including DynamoDB, Postgres, and Neo4j. See the full list[here](./docs/eopa/_eopa-introduction.md)
+- Experiment with EOPA's performance improvements and share feedback in `#help` on [Slack](slack.openpolicyagent.org)
 - See the [A Note from Teemu, Tim and Torin](https://blog.openpolicyagent.org/note-from-teemu-tim-and-torin-to-the-open-policy-agent-community-2dbbfe494371)
   for more information.
-- If you have questions about EOPA, please ask in [Slack](http://slack.openpolicyagent.org/).
 
 See also, [Developer Documentation](./DEVELOPMENT.md).
