@@ -25,20 +25,20 @@ builds:
       - arm64
     tags:
     ldflags: *ldflags
-    hooks:
-      post:
-        # The binary is signed and notarized when running a production release,
-        # but for snapshot builds notarization is skipped and only ad-hoc
-        # signing is performed (not cryptographic material is needed).
-        #
-        # note: environment variables required for signing
-        #   QUILL_SIGN_P12, QUILL_SIGN_PASSWORD
-        # Don't sign snapshots, signing is beneficial if you do
-        # download the snapshot/pr build from the GHA artifact,
-        # but it also adds extra time to each build.
-        - cmd: quill sign-and-notarize "{{ .Path }}" --dry-run={{ .IsSnapshot }} --ad-hoc={{ .IsSnapshot }} -vv
-          env:
-            - QUILL_LOG_FILE=/tmp/quill-{{ .Target }}.log
+    # hooks:
+    #   post:
+    #     # The binary is signed and notarized when running a production release,
+    #     # but for snapshot builds notarization is skipped and only ad-hoc
+    #     # signing is performed (not cryptographic material is needed).
+    #     #
+    #     # note: environment variables required for signing
+    #     #   QUILL_SIGN_P12, QUILL_SIGN_PASSWORD
+    #     # Don't sign snapshots, signing is beneficial if you do
+    #     # download the snapshot/pr build from the GHA artifact,
+    #     # but it also adds extra time to each build.
+    #     - cmd: quill sign-and-notarize "{{ .Path }}" --dry-run={{ .IsSnapshot }} --ad-hoc={{ .IsSnapshot }} -vv
+    #       env:
+    #         - QUILL_LOG_FILE=/tmp/quill-{{ .Target }}.log
   - id: windows-build
     goos:
       - windows
@@ -50,15 +50,15 @@ builds:
       pre:
         # Embeds metadata and an icon into the executable at build-time.
         - cmd: build/gen-windows-versioninfo.sh
-      post:
-        # The binary is signed / timestamped when running a production release,
-        # but for snapshot builds we skip it.
-        #
-        # note: environment variables required for signing
-        #   CERT_ID, SM_API_KEY, SM_CLIENT_CERT_FILE, SM_CLIENT_CERT_PASSWORD JSIGN_JAR_PATH
-        # Don't sign snapshots, because the remote cert has a limited
-        # quota of remote signings per year.
-        - cmd: ./build/jsign-authenticode.sh "{{ .Path }}" --dry-run={{ .IsSnapshot }} --jar-path="{{ indexOrDefault .Env "JSIGN_JAR_PATH" "" }}"
+      # post:
+      #   # The binary is signed / timestamped when running a production release,
+      #   # but for snapshot builds we skip it.
+      #   #
+      #   # note: environment variables required for signing
+      #   #   CERT_ID, SM_API_KEY, SM_CLIENT_CERT_FILE, SM_CLIENT_CERT_PASSWORD JSIGN_JAR_PATH
+      #   # Don't sign snapshots, because the remote cert has a limited
+      #   # quota of remote signings per year.
+      #   - cmd: ./build/jsign-authenticode.sh "{{ .Path }}" --dry-run={{ .IsSnapshot }} --jar-path="{{ indexOrDefault .Env "JSIGN_JAR_PATH" "" }}"
 
 archives:
   - id: binary
