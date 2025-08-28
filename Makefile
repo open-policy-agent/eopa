@@ -53,6 +53,7 @@ VERSION_LDFLAGS := -X=github.com/open-policy-agent/eopa/internal/version.Version
 TELEMETRY_LDFLAGS := -X=github.com/open-policy-agent/opa/internal/report.ExternalServiceURL=$(EOPA_TELEMETRY_URL)
 HOSTNAME_LDFLAGS := -X=github.com/open-policy-agent/eopa/internal/version.Hostname=$(HOSTNAME)
 # goreleaser reads this via .goreleaser.yaml
+# TODO(sr): remove all refs, this shouldn't be needed anymore
 export EOPA_TELEMETRY_URL ?= https://load-telemetry.corp.styra.com
 
 LDFLAGS := $(VERSION_LDFLAGS) $(TELEMETRY_LDFLAGS) $(HOSTNAME_LDFLAGS)
