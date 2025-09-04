@@ -84,6 +84,9 @@ func (h *hndl) SetManager(m *plugins.Manager) error {
 	m.ExtraRoute("POST /v1/batch/data/{path...}", PrometheusHandle, h.ServeHTTP)
 	m.ExtraRoute("POST /v1/batch/data", PrometheusHandle, h.ServeHTTP)
 	m.ExtraAuthorizerRoute(func(method string, path []any) bool {
+		if len(path) < 3 {
+			return false
+		}
 		s0 := path[0].(string)
 		s1 := path[1].(string)
 		s2 := path[2].(string)
