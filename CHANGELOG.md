@@ -11,6 +11,14 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.43.2
+
+[![OPA v1.8.0](https://openpolicyagent.org/badge/v1.8.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.8.0)
+[![Regal v0.35.1](https://img.shields.io/github/v/release/styrainc/regal?filter=v0.35.1&label=Regal)](https://github.com/StyraInc/regal/releases/tag/v0.35.1)
+
+This release fixes a path validation bug that could cause panics when EOPA was run in server mode with `--authorization=basic`.
+
+
 ## v1.43.1
 
 [![OPA v1.8.0](https://openpolicyagent.org/badge/v1.8.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.8.0)
