@@ -53,10 +53,10 @@ require (
 	github.com/olivere/elastic/v7 v7.0.32
 	github.com/open-policy-agent/opa v1.8.0
 	github.com/open-policy-agent/opa-envoy-plugin v1.8.0-envoy
-	github.com/open-policy-agent/regal v0.35.2-0.20250826194016-c761047a0473
+	github.com/open-policy-agent/regal v0.36.1
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/redis/go-redis/v9 v9.13.0
+	github.com/redis/go-redis/v9 v9.14.0
 	github.com/redpanda-data/benthos/v4 v4.55.0
 	github.com/sbabiv/xml2map v1.2.1
 	github.com/sijms/go-ora/v2 v2.9.0
@@ -96,7 +96,7 @@ require (
 	golang.org/x/sync v0.17.0
 	golang.org/x/term v0.35.0
 	google.golang.org/api v0.249.0
-	google.golang.org/grpc v1.75.0
+	google.golang.org/grpc v1.75.1
 	google.golang.org/protobuf v1.36.9
 	modernc.org/sqlite v1.38.2
 	sigs.k8s.io/yaml v1.6.0
