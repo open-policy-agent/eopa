@@ -25,14 +25,14 @@ jobs:
           fetch-depth: 0
       - name: Build & Publish OCI
         id: apko
-        uses: chainguard-images/actions/apko-publish@4152bcd8956b25d626ff64f542335451ae0e3502
+        uses: chainguard-images/actions/apko-publish@6a83c8d22c10155d7bc0105615a01b0770134dfd
         with:
           config: apko.yaml
           archs: x86_64,aarch64
           tag: ghcr.io/open-policy-agent/eopa-base:latest
       - name: Build & Publish OCI (Debug)
         id: apko-debug
-        uses: chainguard-images/actions/apko-publish@4152bcd8956b25d626ff64f542335451ae0e3502
+        uses: chainguard-images/actions/apko-publish@6a83c8d22c10155d7bc0105615a01b0770134dfd
         with:
           config: apko-debug.yaml
           archs: x86_64,aarch64
