@@ -19,12 +19,12 @@ require (
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/open-policy-agent/opa v1.8.0
 	github.com/redpanda-data/benthos/v4 v4.56.0
-	github.com/redpanda-data/connect/v4 v4.63.0
+	github.com/redpanda-data/connect/v4 v4.64.0
 	github.com/rogpeppe/go-internal v1.14.1
-	github.com/testcontainers/testcontainers-go v0.38.0
-	github.com/testcontainers/testcontainers-go/modules/kafka v0.38.0
-	github.com/testcontainers/testcontainers-go/modules/redpanda v0.38.0
-	github.com/testcontainers/testcontainers-go/modules/vault v0.38.0
+	github.com/testcontainers/testcontainers-go v0.39.0
+	github.com/testcontainers/testcontainers-go/modules/kafka v0.39.0
+	github.com/testcontainers/testcontainers-go/modules/redpanda v0.39.0
+	github.com/testcontainers/testcontainers-go/modules/vault v0.39.0
 	github.com/twmb/franz-go v1.19.5
 	github.com/twmb/franz-go/pkg/kadm v1.16.1
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
@@ -52,7 +52,7 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.27.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.53.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.53.0 // indirect
-	github.com/IBM/sarama v1.43.3 // indirect
+	github.com/IBM/sarama v1.46.0 // indirect
 	github.com/Jeffail/checkpoint v1.1.0 // indirect
 	github.com/Jeffail/gabs/v2 v2.7.0 // indirect
 	github.com/Jeffail/grok v1.1.0 // indirect
@@ -217,12 +217,12 @@ require (
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
-	github.com/shirou/gopsutil/v4 v4.25.5 // indirect
+	github.com/shirou/gopsutil/v4 v4.25.6 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.5.0 // indirect
-	github.com/stretchr/testify v1.10.0 // indirect
+	github.com/stretchr/testify v1.11.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.3 // indirect
 	github.com/tilinna/z85 v1.0.0 // indirect
 	github.com/tinylib/msgp v1.3.0 // indirect
@@ -260,15 +260,15 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.37.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	golang.org/x/crypto v0.40.0 // indirect
-	golang.org/x/mod v0.25.0 // indirect
-	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/crypto v0.41.0 // indirect
+	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.34.0 // indirect
+	golang.org/x/tools v0.35.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	gonum.org/v1/gonum v0.16.0 // indirect
 	google.golang.org/api v0.243.0 // indirect
