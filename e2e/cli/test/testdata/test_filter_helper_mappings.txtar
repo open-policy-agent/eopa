@@ -7,7 +7,7 @@ package filters
 
 # METADATA
 # scope: document
-# custom:
+# compile:
 #   unknowns: ["input.fruits", "input.name"]
 include if input.name == input.username
 -- filters_test.rego --

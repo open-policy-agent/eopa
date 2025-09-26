@@ -16,7 +16,7 @@ package filters
 
 # METADATA
 # scope: document
-# custom:
+# compile:
 #   unknowns: ["input.fruits"]
 include if startswith(input.fruits.name, input.fruit_prefix)
 

@@ -7,7 +7,7 @@ package filters
 
 # METADATA
 # scope: document
-# custom:
+# compile:
 #   unknowns: ["input.fruits", "input.users"]
 include if input.users.name == input.username
 -- clash_of_column_names/filters_test.rego --

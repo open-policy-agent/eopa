@@ -239,10 +239,6 @@ jobs:
           echo "binary=$(pwd)/eopa" >> $GITHUB_OUTPUT
           pwd >> $GITHUB_PATH
           chmod +x eopa
-      - name: Prep e2e prisma tests
-        run: npm ci
-        working-directory: e2e/prisma
-        if: matrix.package == 'compile'
       - name: Get EOPA version for e2e tests
         id: eopa-version
         run: |

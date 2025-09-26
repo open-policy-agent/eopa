@@ -11,78 +11,78 @@ cmp stdout exp/conflict/json/stdout
 # resursive rule: two errors, one hint
 ! exec eopa eval --format pretty --data recursive.rego data.p
 # NOTE(sr): unstable output ordering, can't use file
-stdout '2 errors occurred:'
-stdout 'recursive\.rego:2: rego_recursion_error: rule data\.p\.a is recursive: data\.p\.a -> data\.p\.b -> data\.p\.a'
-stdout 'recursive\.rego:3: rego_recursion_error: rule data\.p\.b is recursive: data\.p\.b -> data\.p\.a -> data\.p\.b'
-cmp stderr exp/resursive/pretty/stderr
+stderr '2 errors occurred:'
+stderr 'recursive\.rego:2: rego_recursion_error: rule data\.p\.a is recursive: data\.p\.a -> data\.p\.b -> data\.p\.a'
+stderr 'recursive\.rego:3: rego_recursion_error: rule data\.p\.b is recursive: data\.p\.b -> data\.p\.a -> data\.p\.b'
+stderr 'For more information, see: https://docs.styra.com/opa/errors/rego-recursion-error/rule-name-is-recursive'
 
 # object keys conflict
 ! exec eopa eval --format pretty --data key-conflict.rego data.p
+! stdout .
 cmp stderr exp/key-conflict/stderr
-cmp stdout exp/key-conflict/stdout
 
 # unsafe var
 ! exec eopa eval --format pretty --data unsafe.rego data.p
+! stdout .
 cmp stderr exp/unsafe/stderr
-cmp stdout exp/unsafe/stdout
 
 # var as rule name
 ! exec eopa eval --format pretty --data var-as-rule.rego data.p
+! stdout .
 cmp stderr exp/var-as-rule/stderr
-cmp stdout exp/var-as-rule/stdout
 
 # conflicting rules
 ! exec eopa eval --format pretty --data conflicting-rules.rego data.p
+! stdout .
 cmp stderr exp/conflicting-rules/stderr
-cmp stdout exp/conflicting-rules/stdout
 
 # match error
 ! exec eopa eval --format pretty --data match.rego data.p
+! stdout .
 cmp stderr exp/match/stderr
-cmp stdout exp/match/stdout
 
 # arity mismatch
 ! exec eopa eval --format pretty --data arity-mismatch.rego data.p
-cmp stdout exp/arity-mismatch/stdout
+! stdout .
 cmp stderr exp/arity-mismatch/stderr
 
 # user-defined function arity mismatch
 ! exec eopa eval --format pretty --data func-mismatch.rego data.p
-cmp stdout exp/func-mismatch/stdout
+! stdout .
 cmp stderr exp/func-mismatch/stderr
 
 # unused var (strict mode)
 ! exec eopa eval --format pretty --data unused-var.rego --strict data.p
-cmp stdout exp/unused-var/stdout
+! stdout .
 cmp stderr exp/unused-var/stderr
 
 # not too interesting parser errors below
 ! exec eopa eval --format pretty --data parse-assign.rego data.p
-cmp stdout exp/parse-assign/stdout
+! stdout .
 cmp stderr exp/parse-assign/stderr
 
 ! exec eopa eval --format pretty --data parse-identifier.rego data.p
-cmp stdout exp/parse-identifier/stdout
+! stdout .
 cmp stderr exp/parse-identifier/stderr
 
 ! exec eopa eval --format pretty --data parse-left-curly.rego data.p
-cmp stdout exp/parse-left-curly/stdout
+! stdout .
 cmp stderr exp/parse-left-curly/stderr
 
 ! exec eopa eval --format pretty --data parse-right-curly.rego data.p
-cmp stdout exp/parse-right-curly/stdout
+! stdout .
 cmp stderr exp/parse-right-curly/stderr
 
 ! exec eopa eval --format pretty --data parse-kw.rego data.p
-cmp stdout exp/parse-kw/stdout
+! stdout .
 cmp stderr exp/parse-kw/stderr
 
 ! exec eopa eval --format pretty --data parse-string.rego data.p
-cmp stdout exp/parse-string/stdout
+! stdout .
 cmp stderr exp/parse-string/stderr
 
 ! exec eopa eval --format pretty --data parse-multi-default.rego data.p
-cmp stdout exp/parse-multi-default/stdout
+! stdout .
 cmp stderr exp/parse-multi-default/stderr
 
 -- conflict.rego --
@@ -90,8 +90,8 @@ package p
 x := 1
 x := 2
 -- exp/conflict/stdout --
-1 error occurred: eval_conflict_error: complete rules must not produce multiple outputs
 -- exp/conflict/stderr --
+1 error occurred: eval_conflict_error: complete rules must not produce multiple outputs
 For more information, see: https://docs.styra.com/opa/errors/eval-conflict-error/complete-rules-must-not-produce-multiple-outputs
 -- exp/conflict/json/stdout --
 {
@@ -106,71 +106,62 @@ For more information, see: https://docs.styra.com/opa/errors/eval-conflict-error
 package p
 a := b
 b := a
--- exp/resursive/pretty/stderr --
-For more information, see: https://docs.styra.com/opa/errors/rego-recursion-error/rule-name-is-recursive
 -- key-conflict.rego --
 package p
 obj := {k: v |
 	k := "foo"
 	some v in [1, 2]
 }
--- exp/key-conflict/stdout --
-1 error occurred: object insert conflict
 -- exp/key-conflict/stderr --
+1 error occurred: object insert conflict
 For more information, see: https://docs.styra.com/opa/errors/eval-conflict-error/object-keys-must-be-unique
 -- unsafe.rego --
 package p
 allow if foo
--- exp/unsafe/stdout --
-1 error occurred: unsafe.rego:2: rego_unsafe_var_error: var foo is unsafe
 -- exp/unsafe/stderr --
+1 error occurred: unsafe.rego:2: rego_unsafe_var_error: var foo is unsafe
 For more information, see: https://docs.styra.com/opa/errors/rego-unsafe-var-error/var-name-is-unsafe
 -- var-as-rule.rego --
 package p
 allow only if {
 	true
 }
--- exp/var-as-rule/stdout --
-1 error occurred: var-as-rule.rego:2: rego_parse_error: var cannot be used for rule name
 -- exp/var-as-rule/stderr --
+1 error occurred: var-as-rule.rego:2: rego_parse_error: var cannot be used for rule name
 For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/var-cannot-be-used-for-rule-name
 -- conflicting-rules.rego --
 package p
 import future.keywords
 deny contains "reason"
 deny := "reason"
--- exp/conflicting-rules/stdout --
-1 error occurred: conflicting-rules.rego:3: rego_type_error: conflicting rules data.p.deny found
 -- exp/conflicting-rules/stderr --
+1 error occurred: conflicting-rules.rego:3: rego_type_error: conflicting rules data.p.deny found
 For more information, see: https://docs.styra.com/opa/errors/rego-type-error/conflicting-rules-name-found
 -- match.rego --
 package p
 import future.keywords
 same if 1 == "1"
--- exp/match/stdout --
+-- exp/match/stderr --
 1 error occurred: match.rego:3: rego_type_error: match error
 	left  : number
 	right : string
--- exp/match/stderr --
 For more information, see: https://docs.styra.com/opa/errors/rego-type-error/match-error
 -- arity-mismatch.rego --
 package p
 import future.keywords
 q if "admin" in split("admin,member")
--- exp/arity-mismatch/stdout --
+-- exp/arity-mismatch/stderr --
 1 error occurred: arity-mismatch.rego:3: rego_type_error: split: arity mismatch
 	have: (string, ???)
 	want: (x: string, delimiter: string)
--- exp/arity-mismatch/stderr --
 For more information, see: https://docs.styra.com/opa/errors/rego-type-error/arity-mismatch
 -- func-mismatch.rego --
 package p
 import future.keywords
 default f(_, _) := false
 q := f(input)
--- exp/func-mismatch/stdout --
-1 error occurred: func-mismatch.rego:4: rego_type_error: function data.p.f has arity 2, got 1 argument
 -- exp/func-mismatch/stderr --
+1 error occurred: func-mismatch.rego:4: rego_type_error: function data.p.f has arity 2, got 1 argument
 For more information, see: https://docs.styra.com/opa/errors/rego-type-error/function-has-arity-got-argument
 -- unused-var.rego --
 package p
@@ -178,14 +169,13 @@ import future.keywords
 q if {
     user := input.user
 }
--- exp/unused-var/stdout --
-1 error occurred: unused-var.rego:4: rego_compile_error: assigned var user unused
 -- exp/unused-var/stderr --
+1 error occurred: unused-var.rego:4: rego_compile_error: assigned var user unused
 For more information, see: https://docs.styra.com/opa/errors/rego-compile-error/assigned-var-name-unused
 -- parse-assign.rego --
 package p
 q := "
--- exp/parse-assign/stdout --
+-- exp/parse-assign/stderr --
 3 errors occurred:
 parse-assign.rego:2: rego_parse_error: non-terminated string
 	q := "
@@ -196,67 +186,60 @@ parse-assign.rego:2: rego_parse_error: illegal token
 parse-assign.rego:2: rego_parse_error: illegal token
 	q := "
 	     ^
--- exp/parse-assign/stderr --
 -- parse-identifier.rego --
 package p
 allow if {
 	"admin" in input roles
 }
--- exp/parse-identifier/stdout --
+-- exp/parse-identifier/stderr --
 1 error occurred: parse-identifier.rego:3: rego_parse_error: unexpected identifier token: expected \n or ; or }
 	"admin" in input roles
 	                 ^
--- exp/parse-identifier/stderr --
 For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-identifier-token
 -- parse-left-curly.rego --
 package p
 allow if {
     input.roles == {}{
 }
--- exp/parse-left-curly/stdout --
+-- exp/parse-left-curly/stderr --
 1 error occurred: parse-left-curly.rego:3: rego_parse_error: unexpected { token: expected \n or ; or }
 	    input.roles == {}{
 	                     ^
--- exp/parse-left-curly/stderr --
 For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-left-curly-token
 -- parse-right-curly.rego --
 package p
 allow if {
     input.roles == {}}
 }
--- exp/parse-right-curly/stdout --
+-- exp/parse-right-curly/stderr --
 1 error occurred: parse-right-curly.rego:4: rego_parse_error: unexpected } token
 	}
 	^
--- exp/parse-right-curly/stderr --
 For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-right-curly-token
 -- parse-kw.rego --
 package p
 allow if {
 	input.admin true
 }
--- exp/parse-kw/stdout --
+-- exp/parse-kw/stderr --
 1 error occurred: parse-kw.rego:3: rego_parse_error: unexpected true keyword: expected \n or ; or }
 	input.admin true
 	            ^
--- exp/parse-kw/stderr --
 For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-name-keyword
 -- parse-string.rego --
 package p
 allow if {
 	input.role "admin"
 }
--- exp/parse-string/stdout --
+-- exp/parse-string/stderr --
 1 error occurred: parse-string.rego:3: rego_parse_error: unexpected string token: expected \n or ; or }
 	input.role "admin"
 	           ^
--- exp/parse-string/stderr --
 For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-string-token
 -- parse-multi-default.rego --
 package p
 default q := true
 default q := true
--- exp/parse-multi-default/stdout --
-1 error occurred: parse-multi-default.rego:1: rego_type_error: multiple default rules data.p.q found at parse-multi-default.rego:2, parse-multi-default.rego:3
 -- exp/parse-multi-default/stderr --
+1 error occurred: parse-multi-default.rego:1: rego_type_error: multiple default rules data.p.q found at parse-multi-default.rego:2, parse-multi-default.rego:3
 For more information, see: https://docs.styra.com/opa/errors/rego-type-error/multiple-default-rules-name-found

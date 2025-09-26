@@ -7,7 +7,7 @@ package filters
 
 # METADATA
 # scope: document
-# custom:
+# compile:
 #   unknowns: ["input.fruits", "input.user"]
 include if input.user == input.username
 
@@ -34,7 +34,7 @@ package filters
 
 # METADATA
 # scope: document
-# custom:
+# compile:
 #   unknowns: ["input.fruits", "input.users"]
 include if input.users.name == object.get(input, "username", "unknown")
 
@@ -56,7 +56,7 @@ package filters
 
 # METADATA
 # scope: document
-# custom:
+# compile:
 #   unknowns: ["input.fruits", "input.users"]
 include if 2 + 2 == 4
 
@@ -72,7 +72,7 @@ package filters
 
 # METADATA
 # scope: document
-# custom:
+# compile:
 #   unknowns: ["input.fruits", "input.users"]
 include if false
 

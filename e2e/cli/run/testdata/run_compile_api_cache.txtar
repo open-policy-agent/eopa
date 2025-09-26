@@ -7,17 +7,17 @@
 httpwait 'http://localhost:61700/health' '{}'
 
 # query the policy that has metadata
-exec curl -Ss --url http://localhost:61700/v1/compile/filters/include?pretty -H 'Accept: application/vnd.styra.sql.postgresql+json'
+exec curl -Ss --url http://localhost:61700/v1/compile/filters/include?pretty -H 'Accept: application/vnd.opa.sql.postgresql+json'
 ! stderr .
 cmp stdout exp/filters/stdout
 
 # query the policy that has no metadata, expect error related to no unknowns
-exec curl -Ss --url http://localhost:61700/v1/compile/filters_no_md/include?pretty -H 'Accept: application/vnd.styra.sql.postgresql+json'
+exec curl -Ss --url http://localhost:61700/v1/compile/filters_no_md/include?pretty -H 'Accept: application/vnd.opa.sql.postgresql+json'
 ! stderr .
 cmp stdout exp/filters_no_md/stdout-error
 
-# query the policy without metadata, prividing unknowns, expect no masks
-exec curl -Ss --url http://localhost:61700/v1/compile/filters_no_md/include?pretty -d '{"unknowns": ["input.fruits"]}' -H 'Accept: application/vnd.styra.sql.postgresql+json'
+# query the policy without metadata, providing unknowns, expect no masks
+exec curl -Ss --url http://localhost:61700/v1/compile/filters_no_md/include?pretty -d '{"unknowns": ["input.fruits"]}' -H 'Accept: application/vnd.opa.sql.postgresql+json'
 ! stderr .
 cmp stdout exp/filters_no_md/stdout-no-error
 
@@ -29,7 +29,7 @@ stop eopa
 package filters
 # METADATA
 # scope: document
-# custom:
+# compile:
 #   unknowns: [input.fruits]
 #   mask_rule: data.filters.mask
 include if input.fruits.colour in input.fav_colours
@@ -62,30 +62,7 @@ include if {
   }
 }
 -- exp/filters_no_md/stdout-error --
-{
-  "code": "evaluation_error",
-  "message": "error(s) occurred while evaluating query",
-  "errors": [
-    {
-      "code": "pe_fragment_error",
-      "message": "internal.member_2: invalid ref operand: input.fav_colours",
-      "location": {
-        "file": "filters_no_md.rego",
-        "row": 2,
-        "col": 32
-      }
-    },
-    {
-      "code": "pe_fragment_error",
-      "message": "\"not\" not permitted",
-      "location": {
-        "file": "filters_no_md.rego",
-        "row": 4,
-        "col": 3
-      }
-    }
-  ]
-}
+{}
 -- exp/filters_no_md/stdout-no-error --
 {
   "result": {
