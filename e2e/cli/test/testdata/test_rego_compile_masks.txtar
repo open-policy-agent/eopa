@@ -11,7 +11,7 @@ package filters
 
 # METADATA
 # scope: document
-# custom:
+# compile:
 #   unknowns: ["input.fruits", "input.users"]
 #   mask_rule: data.filters.mask
 include if input.users.name == input.username
@@ -45,7 +45,7 @@ package filters
 
 # METADATA
 # scope: document
-# custom:
+# compile:
 #   unknowns: ["input.fruits", "input.users"]
 include if input.users.name == input.username
 

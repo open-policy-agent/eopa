@@ -9,7 +9,7 @@ package filters
 
 # METADATA
 # scope: document
-# custom:
+# compile:
 #   unknowns: ["input.fruits", "input.users"]
 #   mask_rule: data.filters.mask
 include if {
