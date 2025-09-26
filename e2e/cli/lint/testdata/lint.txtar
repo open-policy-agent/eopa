@@ -5,7 +5,7 @@ stdout 'Description:\s+File should be formatted with `opa fmt`'
 stdout 'Category:\s+style'
 [windows] stdout 'Location:\s+policies\\test.rego'
 [!windows] stdout 'Location:\s+policies/test.rego'
-stdout 'Documentation:\s+https://docs\.styra\.com/regal/rules/style/opa-fmt'
+stdout 'Documentation:\s+https://www\.openpolicyagent\.org/projects/regal/rules/style/opa-fmt'
 stdout '1 file linted\. 2 violations found\.'
 
 exec eopa lint policies_pass
