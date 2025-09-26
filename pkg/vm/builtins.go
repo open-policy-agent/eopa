@@ -993,7 +993,7 @@ func numbersRangeStepBuiltin(state *State, args []Value) error {
 	if step <= 0 {
 		state.Globals.BuiltinErrors = append(state.Globals.BuiltinErrors, &topdown.Error{
 			Code:    topdown.BuiltinErr,
-			Message: builtins.NewOperandErr(3, "step must be a positive number above zero").Error(),
+			Message: builtins.NewOperandErr(3, "step must be a positive integer").Error(),
 		})
 		return nil
 	}
