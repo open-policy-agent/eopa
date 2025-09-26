@@ -26,7 +26,6 @@ import (
 	opa_envoy "github.com/open-policy-agent/opa-envoy-plugin/plugin"
 
 	"github.com/open-policy-agent/eopa/pkg/batchquery"
-	"github.com/open-policy-agent/eopa/pkg/compile"
 	"github.com/open-policy-agent/eopa/pkg/ekm"
 	"github.com/open-policy-agent/eopa/pkg/plugins/bundle"
 	"github.com/open-policy-agent/eopa/pkg/plugins/data"
@@ -328,8 +327,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	ekmHook := ekm.NewEKM()
 	previewHook := preview.NewHook()
 	evalCacheHook := vm.NewCacheHook()
-	compileHook := compile.NewHook()
-	hs := hooks.New(ekmHook, previewHook, evalCacheHook, compileHook)
+	hs := hooks.New(ekmHook, previewHook, evalCacheHook)
 
 	params.rt.Hooks = hs
 
@@ -356,10 +354,7 @@ func initRuntime(ctx context.Context, params *runCmdParams, args []string) (*run
 	if err != nil {
 		return nil, err
 	}
-	compileHndlr := compile.Handler(rt.Manager.Logger(), compileHook.InterQueryCache, compileHook.InterQueryValueCache)
-	if err := compileHndlr.SetManager(rt.Manager); err != nil {
-		return nil, err
-	}
+
 	batchQueryHndlr := batchquery.Handler(rt.Manager.Logger()).WithLicensedMode(true)
 	if err := batchQueryHndlr.SetManager(rt.Manager); err != nil {
 		return nil, err

@@ -11,7 +11,7 @@ exec eopa build --bundle --v0-compatible bundle
 httpwait 'http://localhost:61701/health' '{}'
 
 # curl with input
-exec curl -Ss --url http://localhost:61701/v1/compile/filters/include?pretty -d '{"input": {"fav_colours": ["yellow", "green"]}}' -H 'Accept: application/vnd.styra.sql.postgresql+json'
+exec curl -Ss --url http://localhost:61701/v1/compile/filters/include?pretty -d '{"input": {"fav_colours": ["yellow", "green"]}}' -H 'Accept: application/vnd.opa.sql.postgresql+json'
 ! stderr .
 cmp stdout exp/stdout
 
@@ -27,7 +27,7 @@ import future.keywords.in
 
 # METADATA
 # scope: document
-# custom:
+# compile:
 #   unknowns: [input.fruits]
 include { input.fruits.colour in input.fav_colours }
 -- exp/stdout --

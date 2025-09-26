@@ -125,8 +125,13 @@ func regoCompileBuiltin(outer, state *State, args []Value) error {
 		return err
 	}
 
+	puTerms := make([]*ast.Term, len(parsedUnknowns))
+	for i := range parsedUnknowns {
+		puTerms[i] = ast.NewTerm(parsedUnknowns[i])
+	}
+
 	evalOpts := []rego.EvalOption{
-		rego.EvalParsedUnknowns(parsedUnknowns),
+		rego.EvalParsedUnknowns(puTerms),
 		rego.EvalNondeterministicBuiltins(true),
 		rego.EvalParsedInput(inputVal),
 		rego.EvalPrintHook(state.Globals.PrintHook), // TODO(sr): differentiate mask and PE print()s

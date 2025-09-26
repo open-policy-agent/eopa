@@ -1,6 +1,5 @@
 grpcurl 1.9.3
 protoc 24.3
-node 22
 apko 0.29.10
 ko 0.18
 opa 1.6.0

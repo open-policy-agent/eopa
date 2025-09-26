@@ -7,12 +7,12 @@
 httpwait 'http://localhost:61699/health' '{}'
 
 # curl with input
-exec curl -Ss --url http://localhost:61699/v1/compile/filters/include?pretty -d '{"input": {"favorite": "banana"}}' -H 'Accept: application/vnd.styra.sql.postgresql+json'
+exec curl -Ss --url http://localhost:61699/v1/compile/filters/include?pretty -d '{"input": {"favorite": "banana"}}' -H 'Accept: application/vnd.opa.sql.postgresql+json'
 ! stderr .
 cmp stdout exp/stdout_banana
 
 # curl without input (will use GET)
-exec curl -Ss --url http://localhost:61699/v1/compile/filters/include?pretty -H 'Accept: application/vnd.styra.sql.postgresql+json'
+exec curl -Ss --url http://localhost:61699/v1/compile/filters/include?pretty -H 'Accept: application/vnd.opa.sql.postgresql+json'
 ! stderr .
 cmp stdout exp/stdout_apple
 
@@ -24,7 +24,7 @@ stop eopa
 package filters
 # METADATA
 # scope: document
-# custom:
+# compile:
 #   unknowns: [input.fruits]
 include if input.fruits.name == input.favorite
 include if {
