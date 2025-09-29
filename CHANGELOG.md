@@ -11,6 +11,55 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+
+## v1.44.0
+
+[![OPA v1.9.0](https://openpolicyagent.org/badge/v1.9.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.9.0)
+[![Regal v0.36.1](https://img.shields.io/github/v/release/open-policy-agent/regal?filter=v0.36.1&label=Regal)](https://github.com/open-policy-agent/regal/releases/tag/v0.36.1)
+
+This release pulls in [OPA v1.9.0](https://github.com/open-policy-agent/opa/releases/tag/v1.9.0) and the latest Regal release, [v0.36.1](https://github.com/open-policy-agent/regal/releases/tag/v0.36.1).
+
+The Compile API extensions have been ported from EOPA to OPA, and are now feature in EOPA as a standard OPA feature.
+Concretely, this means that the **headers** and **annotations** expected for Compile API usage need to follow the OPA requirements.
+If you have used EOPA's Compile API extensions to generate data filters before, you need to replace:
+
+1. Compile metadata no longer resides in "custom section"
+
+Before:
+
+```rego
+package filters
+
+# METADATA
+# scope: document
+# custom:
+#   unknowns:
+#   - input.fruits
+#   mask_rule: masks
+```
+
+After:
+
+```rego
+package filters
+
+# METADATA
+# scope: document
+# compile: # <-------- replace custom with compile
+#   unknowns:
+#   - input.fruits
+#   mask_rule: masks
+```
+
+(If you have other `custom` annotations, those can stay in the "custom" section. Only the compile-related keys have been moved into their own section.)
+
+2. Headers
+
+The target and dialect selection was driven by Accept headers.
+Previously, these used a prefix of "application/vnd.styra".
+Now, they use "application/vnd.opa", e.g. "application/vnd.opa.postgresql+json".
+
+
 ## v1.43.2
 
 [![OPA v1.8.0](https://openpolicyagent.org/badge/v1.8.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.8.0)
