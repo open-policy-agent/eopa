@@ -14,7 +14,7 @@ cmp stdout exp/conflict/json/stdout
 stderr '2 errors occurred:'
 stderr 'recursive\.rego:2: rego_recursion_error: rule data\.p\.a is recursive: data\.p\.a -> data\.p\.b -> data\.p\.a'
 stderr 'recursive\.rego:3: rego_recursion_error: rule data\.p\.b is recursive: data\.p\.b -> data\.p\.a -> data\.p\.b'
-stderr 'For more information, see: https://docs.styra.com/opa/errors/rego-recursion-error/rule-name-is-recursive'
+stderr 'For more information, see: https://www.openpolicyagent.org/docs/errors/rego-recursion-error/rule-name-is-recursive'
 
 # object keys conflict
 ! exec eopa eval --format pretty --data key-conflict.rego data.p
@@ -92,7 +92,7 @@ x := 2
 -- exp/conflict/stdout --
 -- exp/conflict/stderr --
 1 error occurred: eval_conflict_error: complete rules must not produce multiple outputs
-For more information, see: https://docs.styra.com/opa/errors/eval-conflict-error/complete-rules-must-not-produce-multiple-outputs
+For more information, see: https://www.openpolicyagent.org/docs/errors/eval-conflict-error/complete-rules-must-not-produce-multiple-outputs
 -- exp/conflict/json/stdout --
 {
   "errors": [
@@ -114,13 +114,13 @@ obj := {k: v |
 }
 -- exp/key-conflict/stderr --
 1 error occurred: object insert conflict
-For more information, see: https://docs.styra.com/opa/errors/eval-conflict-error/object-keys-must-be-unique
+For more information, see: https://www.openpolicyagent.org/docs/errors/eval-conflict-error/object-keys-must-be-unique
 -- unsafe.rego --
 package p
 allow if foo
 -- exp/unsafe/stderr --
 1 error occurred: unsafe.rego:2: rego_unsafe_var_error: var foo is unsafe
-For more information, see: https://docs.styra.com/opa/errors/rego-unsafe-var-error/var-name-is-unsafe
+For more information, see: https://www.openpolicyagent.org/docs/errors/rego-unsafe-var-error/var-name-is-unsafe
 -- var-as-rule.rego --
 package p
 allow only if {
@@ -128,7 +128,7 @@ allow only if {
 }
 -- exp/var-as-rule/stderr --
 1 error occurred: var-as-rule.rego:2: rego_parse_error: var cannot be used for rule name
-For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/var-cannot-be-used-for-rule-name
+For more information, see: https://www.openpolicyagent.org/docs/errors/rego-parse-error/var-cannot-be-used-for-rule-name
 -- conflicting-rules.rego --
 package p
 import future.keywords
@@ -136,7 +136,7 @@ deny contains "reason"
 deny := "reason"
 -- exp/conflicting-rules/stderr --
 1 error occurred: conflicting-rules.rego:3: rego_type_error: conflicting rules data.p.deny found
-For more information, see: https://docs.styra.com/opa/errors/rego-type-error/conflicting-rules-name-found
+For more information, see: https://www.openpolicyagent.org/docs/errors/rego-type-error/conflicting-rules-name-found
 -- match.rego --
 package p
 import future.keywords
@@ -145,7 +145,7 @@ same if 1 == "1"
 1 error occurred: match.rego:3: rego_type_error: match error
 	left  : number
 	right : string
-For more information, see: https://docs.styra.com/opa/errors/rego-type-error/match-error
+For more information, see: https://www.openpolicyagent.org/docs/errors/rego-type-error/match-error
 -- arity-mismatch.rego --
 package p
 import future.keywords
@@ -154,7 +154,7 @@ q if "admin" in split("admin,member")
 1 error occurred: arity-mismatch.rego:3: rego_type_error: split: arity mismatch
 	have: (string, ???)
 	want: (x: string, delimiter: string)
-For more information, see: https://docs.styra.com/opa/errors/rego-type-error/arity-mismatch
+For more information, see: https://www.openpolicyagent.org/docs/errors/rego-type-error/arity-mismatch
 -- func-mismatch.rego --
 package p
 import future.keywords
@@ -162,7 +162,7 @@ default f(_, _) := false
 q := f(input)
 -- exp/func-mismatch/stderr --
 1 error occurred: func-mismatch.rego:4: rego_type_error: function data.p.f has arity 2, got 1 argument
-For more information, see: https://docs.styra.com/opa/errors/rego-type-error/function-has-arity-got-argument
+For more information, see: https://www.openpolicyagent.org/docs/errors/rego-type-error/function-has-arity-got-argument
 -- unused-var.rego --
 package p
 import future.keywords
@@ -171,7 +171,7 @@ q if {
 }
 -- exp/unused-var/stderr --
 1 error occurred: unused-var.rego:4: rego_compile_error: assigned var user unused
-For more information, see: https://docs.styra.com/opa/errors/rego-compile-error/assigned-var-name-unused
+For more information, see: https://www.openpolicyagent.org/docs/errors/rego-compile-error/assigned-var-name-unused
 -- parse-assign.rego --
 package p
 q := "
@@ -195,7 +195,7 @@ allow if {
 1 error occurred: parse-identifier.rego:3: rego_parse_error: unexpected identifier token: expected \n or ; or }
 	"admin" in input roles
 	                 ^
-For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-identifier-token
+For more information, see: https://www.openpolicyagent.org/docs/errors/rego-parse-error/unexpected-identifier-token
 -- parse-left-curly.rego --
 package p
 allow if {
@@ -205,7 +205,7 @@ allow if {
 1 error occurred: parse-left-curly.rego:3: rego_parse_error: unexpected { token: expected \n or ; or }
 	    input.roles == {}{
 	                     ^
-For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-left-curly-token
+For more information, see: https://www.openpolicyagent.org/docs/errors/rego-parse-error/unexpected-left-curly-token
 -- parse-right-curly.rego --
 package p
 allow if {
@@ -215,7 +215,7 @@ allow if {
 1 error occurred: parse-right-curly.rego:4: rego_parse_error: unexpected } token
 	}
 	^
-For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-right-curly-token
+For more information, see: https://www.openpolicyagent.org/docs/errors/rego-parse-error/unexpected-right-curly-token
 -- parse-kw.rego --
 package p
 allow if {
@@ -225,7 +225,7 @@ allow if {
 1 error occurred: parse-kw.rego:3: rego_parse_error: unexpected true keyword: expected \n or ; or }
 	input.admin true
 	            ^
-For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-name-keyword
+For more information, see: https://www.openpolicyagent.org/docs/errors/rego-parse-error/unexpected-name-keyword
 -- parse-string.rego --
 package p
 allow if {
@@ -235,11 +235,11 @@ allow if {
 1 error occurred: parse-string.rego:3: rego_parse_error: unexpected string token: expected \n or ; or }
 	input.role "admin"
 	           ^
-For more information, see: https://docs.styra.com/opa/errors/rego-parse-error/unexpected-string-token
+For more information, see: https://www.openpolicyagent.org/docs/errors/rego-parse-error/unexpected-string-token
 -- parse-multi-default.rego --
 package p
 default q := true
 default q := true
 -- exp/parse-multi-default/stderr --
 1 error occurred: parse-multi-default.rego:1: rego_type_error: multiple default rules data.p.q found at parse-multi-default.rego:2, parse-multi-default.rego:3
-For more information, see: https://docs.styra.com/opa/errors/rego-type-error/multiple-default-rules-name-found
+For more information, see: https://www.openpolicyagent.org/docs/errors/rego-type-error/multiple-default-rules-name-found

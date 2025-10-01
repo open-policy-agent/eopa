@@ -14,7 +14,7 @@ import (
 	regal_hints "github.com/open-policy-agent/regal/pkg/hints"
 )
 
-const styra = `https://docs.styra.com/opa/errors/`
+const opa = "https://www.openpolicyagent.org/docs/errors/"
 
 func extraHints(c *cobra.Command, e error) error {
 	f := c.Flag("format")
@@ -42,7 +42,7 @@ func extraHints(c *cobra.Command, e error) error {
 		} else {
 			h.WriteRune(' ')
 		}
-		h.WriteString(styra)
+		h.WriteString(opa)
 		h.WriteString(hints[i])
 		h.WriteRune('\n')
 	}
