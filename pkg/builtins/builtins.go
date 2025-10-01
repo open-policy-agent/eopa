@@ -436,6 +436,7 @@ func Init() {
 	})
 }
 
-func docs(u string, extra ...string) []string {
-	return append(extra, fmt.Sprintf("url=%s", u))
+func docs(string, ...string) []string {
+	// TODO(sr): bring this back when we've moved the builtin docs to the OPA website
+	return nil
 }

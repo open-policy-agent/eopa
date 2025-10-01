@@ -6,8 +6,6 @@ package builtins_test
 import (
 	"fmt"
 	"os"
-	"slices"
-	"strings"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/types"
@@ -28,20 +26,10 @@ func TestMain(m *testing.M) {
 }
 
 func TestAllBuiltinsHaveMetadata(t *testing.T) {
-	docsExceptions := []string{"rego.eval", "rego.compile"} // these don't have public docs (yet)
 	for _, b := range builtins.Builtins {
 		t.Run(b.Name, func(t *testing.T) {
 			namedAndDescribed(t, "arg", b.Decl.NamedFuncArgs().Args...)
 			namedAndDescribed(t, "res", b.Decl.NamedResult())
-			found := false
-			for _, c := range b.Categories {
-				if strings.HasPrefix(c, "url=") {
-					found = true
-				}
-			}
-			if !found && !slices.Contains(docsExceptions, b.Name) {
-				t.Error("missing 'url=' category")
-			}
 		})
 	}
 }
