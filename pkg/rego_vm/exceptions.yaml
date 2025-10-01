@@ -1,15 +1,2 @@
 "baseandvirtualdocs/enumerate virtual errors": test case has both expected error and result
 "baseandvirtualdocs/base/virtual: conflicts": compile error in PrepareForEval
-"functions/default": unsupported in topdown
-"withkeyword/function: indirect call, arity 1, replacement is value that needs eval (array comprehension)": "https://github.com/open-policy-agent/opa/issues/5311"
-"withkeyword/builtin: indirect call, arity 1, replacement is value that needs eval (array comprehension)": "https://github.com/open-policy-agent/opa/issues/5311"
-"refheads/general, deep query": general ref heads not supported in rego_vm yet
-"refheads/general, external non-ground var": general ref heads not supported in rego_vm yet
-"refheads/general, input var": general ref heads not supported in rego_vm yet
-"refheads/general, multiple result-set entries": general ref heads not supported in rego_vm yet
-"refheads/general, multiple vars": general ref heads not supported in rego_vm yet
-"refheads/general, overlapping rule, no conflict": general ref heads not supported in rego_vm yet
-"refheads/general, set leaf": general ref heads not supported in rego_vm yet
-"refheads/general, set leaf, deep query": general ref heads not supported in rego_vm yet
-"refheads/general, single var": general ref heads not supported in rego_vm yet
-"refheads/general, overlapping rule, conflict": general ref heads not supported in rego_vm yet
