@@ -1,6 +1,6 @@
 module github.com/open-policy-agent/eopa/e2e
 
-go 1.24.6
+go 1.25.1
 
 godebug x509negativeserial=1 // mssql docker container: https://github.com/microsoft/mssql-docker/issues/895
 
@@ -15,7 +15,7 @@ require (
 	github.com/hashicorp/vault/api v1.21.0
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/open-policy-agent/opa v1.9.0
-	github.com/redpanda-data/benthos/v4 v4.57.0
+	github.com/redpanda-data/benthos/v4 v4.57.1
 	github.com/redpanda-data/connect/v4 v4.65.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/testcontainers/testcontainers-go v0.39.0

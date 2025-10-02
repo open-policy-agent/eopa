@@ -920,8 +920,8 @@ github.com/quipo/dependencysolver v0.0.0-20170801134659-2b009cb4ddcc h1:hK577yxE
 github.com/quipo/dependencysolver v0.0.0-20170801134659-2b009cb4ddcc/go.mod h1:OQt6Zo5B3Zs+C49xul8kcHo+fZ1mCLPvd0LFxiZ2DHc=
 github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 h1:bsUq1dX0N8AOIL7EB/X911+m4EHsnWEHeJ0c+3TTBrg=
 github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
-github.com/redpanda-data/benthos/v4 v4.57.0 h1:oxhKhB/Ha5MJQEDhITs5yE8vvofvjW5aU/+yhClgAWU=
-github.com/redpanda-data/benthos/v4 v4.57.0/go.mod h1:NQBR+ek5JR3QICSV9S3UNcj9z/0Mww2+/1JkKt/3Ino=
+github.com/redpanda-data/benthos/v4 v4.57.1 h1:XEHeqON8UIpqUeDBwaMmYFtjhiIphJgCRLy91IqNW8w=
+github.com/redpanda-data/benthos/v4 v4.57.1/go.mod h1:i6bHXMyFLykvGzyVC0ekoRMDM3zfVOSeh+GWwqfp0mU=
 github.com/redpanda-data/connect/v4 v4.65.0 h1:zhpq+7eXTzcFvJYypzWYX05vlF6btENE1ny/GFTTE3c=
 github.com/redpanda-data/connect/v4 v4.65.0/go.mod h1:eY9bXK5Cv3eHy3ufZd3nySdclQJGR9R0Iw8mGDWoRgw=
 github.com/rickb777/expect v0.24.0 h1:IzFxn4jINkVuCmx4jdQP7LxaIBhG60bDVbeGWk3xnzo=
