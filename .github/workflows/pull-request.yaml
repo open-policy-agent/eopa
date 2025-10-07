@@ -41,7 +41,7 @@ jobs:
           df -h
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Install tools
-        uses: jdx/mise-action@156251fcc627ac4e26cb0f93dd47d1d4979abf24 # v3.3.0
+        uses: jdx/mise-action@e3d7b8d67a7958d1207f6ed871e83b1ea780e7b0 # v3.3.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: golangci-lint
@@ -123,7 +123,7 @@ jobs:
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
-      - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # v2.2.0
+      - uses: open-policy-agent/setup-opa@950f159a49aa91f9323f36f1de81c7f6b5de9576 # v2.3.0
       - name: checkout EOPA
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -179,12 +179,12 @@ jobs:
         run: ../build/github-actions/gen-go-test-job-matrix.sh
         env:
           TAGS: e2e
-      - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # v2.2.0
+      - uses: open-policy-agent/setup-opa@950f159a49aa91f9323f36f1de81c7f6b5de9576 # v2.3.0
       - name: Check out code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
-      - uses: jdx/mise-action@156251fcc627ac4e26cb0f93dd47d1d4979abf24 # v3.3.0
+      - uses: jdx/mise-action@e3d7b8d67a7958d1207f6ed871e83b1ea780e7b0 # v3.3.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Run go mod tidy
@@ -221,12 +221,12 @@ jobs:
           sudo apt clean
           docker image ls -aq | xargs -r docker rmi
           df -h
-      - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # v2.2.0
+      - uses: open-policy-agent/setup-opa@950f159a49aa91f9323f36f1de81c7f6b5de9576 # v2.3.0
       - name: Check out code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
-      - uses: jdx/mise-action@156251fcc627ac4e26cb0f93dd47d1d4979abf24 # v3.3.0
+      - uses: jdx/mise-action@e3d7b8d67a7958d1207f6ed871e83b1ea780e7b0 # v3.3.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Download binary tarball
@@ -347,7 +347,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Install tools
-        uses: jdx/mise-action@156251fcc627ac4e26cb0f93dd47d1d4979abf24 # v3.3.0
+        uses: jdx/mise-action@e3d7b8d67a7958d1207f6ed871e83b1ea780e7b0 # v3.3.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup github api token
@@ -393,7 +393,7 @@ jobs:
           sudo apt clean
           docker image ls -aq | xargs -r docker rmi
           df -h
-      - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # v2.2.0
+      - uses: open-policy-agent/setup-opa@950f159a49aa91f9323f36f1de81c7f6b5de9576 # v2.3.0
       - name: Check out code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -468,7 +468,7 @@ jobs:
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: binary
-      - uses: open-policy-agent/setup-opa@34a30e8a924d1b03ce2cf7abe97250bbb1f332b5 # version doesn't matter, latest is fine v2
+      - uses: open-policy-agent/setup-opa@950f159a49aa91f9323f36f1de81c7f6b5de9576 # version doesn't matter, latest is fine v2
         with:
           version: "1.0.0"
       - name: build bundle with OPA
@@ -576,7 +576,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Install tools
-        uses: jdx/mise-action@156251fcc627ac4e26cb0f93dd47d1d4979abf24 # v3.3.0
+        uses: jdx/mise-action@e3d7b8d67a7958d1207f6ed871e83b1ea780e7b0 # v3.3.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: bb build/cross-build
