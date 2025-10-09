@@ -9,7 +9,7 @@ replace github.com/open-policy-agent/eopa => ../
 require (
 	github.com/docker/go-connections v0.6.0
 	github.com/fsouza/fake-gcs-server v1.52.3
-	github.com/go-git/go-git/v5 v5.16.2
+	github.com/go-git/go-git/v5 v5.16.3
 	github.com/google/go-cmp v0.7.0
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/hashicorp/vault/api v1.22.0
