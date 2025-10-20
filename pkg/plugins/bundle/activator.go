@@ -5,6 +5,7 @@
 package bundle
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -394,7 +395,13 @@ func activateBundles(opts *bundleApi.ActivateOpts) error {
 		for idx, item := range b.Raw {
 			path := filepath.ToSlash(item.Path)
 			if filepath.Base(path) == "data.json" {
-				val, err := BjsonFromBinary(item.Value)
+				// Skip if already in BJSON format
+				if bjson.IsBJson(item.Value) {
+					continue
+				}
+
+				// Convert JSON to BJSON
+				val, err := bjson.NewDecoder(bytes.NewReader(item.Value)).Decode()
 				if err != nil {
 					return err
 				}
