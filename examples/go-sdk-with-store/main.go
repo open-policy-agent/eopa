@@ -8,14 +8,22 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/open-policy-agent/opa/v1/bundle"
 	"github.com/open-policy-agent/opa/v1/sdk"
 	sdktest "github.com/open-policy-agent/opa/v1/sdk/test"
 
+	eopa_bundle "github.com/open-policy-agent/eopa/pkg/plugins/bundle"
 	eopa_sdk "github.com/open-policy-agent/eopa/pkg/sdk"
 )
 
 func main() {
 	ctx := context.Background()
+
+	// Use EOPA's bundle activator, ensuring EOPA's default
+	// storage layer will be used.
+	a := &eopa_bundle.CustomActivator{}
+	bundle.RegisterActivator("_eopa", a)
+	bundle.RegisterDefaultBundleActivator("_eopa")
 
 	// create a mock HTTP bundle server
 	server, err := sdktest.NewServer(sdktest.MockBundle("/bundles/bundle.tar.gz", map[string]string{
