@@ -10,14 +10,22 @@ import (
 	"log"
 	"os"
 
+	"github.com/open-policy-agent/opa/v1/bundle"
 	"github.com/open-policy-agent/opa/v1/rego"
 
+	eopa_bundle "github.com/open-policy-agent/eopa/pkg/plugins/bundle"
 	eopa_vm "github.com/open-policy-agent/eopa/pkg/rego_vm"
 )
 
 func main() {
 
 	ctx := context.Background()
+
+	// Use EOPA's bundle activator, ensuring EOPA's default
+	// storage layer will be used.
+	a := &eopa_bundle.CustomActivator{}
+	bundle.RegisterActivator("_eopa", a)
+	bundle.RegisterDefaultBundleActivator("_eopa")
 
 	// Construct a Rego object that can be prepared or evaluated.
 	r := rego.New(
@@ -33,7 +41,7 @@ func main() {
 	}
 
 	// Load the input document from stdin.
-	var input interface{}
+	var input any
 	dec := json.NewDecoder(os.Stdin)
 	dec.UseNumber()
 	if err := dec.Decode(&input); err != nil {
