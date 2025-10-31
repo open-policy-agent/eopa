@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/hashicorp/vault/api v1.22.0
 	github.com/minio/minio-go/v7 v7.0.95
-	github.com/open-policy-agent/opa v1.9.0
+	github.com/open-policy-agent/opa v1.10.0
 	github.com/redpanda-data/benthos/v4 v4.58.0
 	github.com/redpanda-data/connect/v4 v4.68.0
 	github.com/rogpeppe/go-internal v1.14.1
@@ -22,7 +22,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.39.0
 	github.com/testcontainers/testcontainers-go/modules/redpanda v0.39.0
 	github.com/testcontainers/testcontainers-go/modules/vault v0.39.0
-	github.com/twmb/franz-go v1.20.1
+	github.com/twmb/franz-go v1.20.2
 	github.com/twmb/franz-go/pkg/kadm v1.17.1
 	github.com/twmb/franz-go/plugin/kslog v1.0.0
 	golang.org/x/exp v0.0.0-20251002181428-27f1f14c8bb9
