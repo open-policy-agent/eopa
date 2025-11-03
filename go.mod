@@ -53,7 +53,7 @@ require (
 	github.com/olivere/elastic/v7 v7.0.32
 	github.com/open-policy-agent/opa v1.10.0
 	github.com/open-policy-agent/opa-envoy-plugin v1.10.0-envoy
-	github.com/open-policy-agent/regal v0.36.2-0.20251103072342-371508597f55
+	github.com/open-policy-agent/regal v0.36.2-0.20251103105926-781f809f9cdd
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.16.0
@@ -129,7 +129,6 @@ require (
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/valyala/fastjson v1.6.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/telemetry v0.0.0-20251008203120-078029d740a8 // indirect
 )
 
@@ -375,7 +374,7 @@ require (
 	github.com/tklauser/numcpus v0.7.0 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.12.0 // indirect
 	github.com/urfave/cli/v2 v2.27.7 // indirect
-	github.com/vektah/gqlparser/v2 v2.5.31 // indirect
+	github.com/vektah/gqlparser/v2 v2.5.30 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
