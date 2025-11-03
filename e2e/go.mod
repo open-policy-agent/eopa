@@ -15,7 +15,7 @@ require (
 	github.com/hashicorp/vault/api v1.22.0
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/open-policy-agent/opa v1.10.0
-	github.com/redpanda-data/benthos/v4 v4.58.0
+	github.com/redpanda-data/benthos/v4 v4.59.0
 	github.com/redpanda-data/connect/v4 v4.68.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/testcontainers/testcontainers-go v0.39.0
