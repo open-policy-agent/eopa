@@ -1,18 +1,18 @@
 exec eopa eval --profile --format pretty true
 stdout '^true$'
-stdout 'TIME'
-stdout 'NUM EVAL'
-stdout 'NUM REDO'
-stdout 'NUM GEN EXPR'
-stdout 'LOCATION'
+stdout 'Time'
+stdout 'Num Eval'
+stdout 'Num Redo'
+stdout 'Num Gen Expr'
+stdout 'Location'
 stderr '^{"level":"warning","msg":"profiling is not supported in EOPA, switching to OPA''s evaluation mode","time":' # omit timestamp
 
 # No warnings if the user requested topdown anyways
 exec eopa eval --profile --format pretty --target rego true
 stdout '^true$'
-stdout 'TIME'
-stdout 'NUM EVAL'
-stdout 'NUM REDO'
-stdout 'NUM GEN EXPR'
-stdout 'LOCATION'
+stdout 'Time'
+stdout 'Num Eval'
+stdout 'Num Redo'
+stdout 'Num Gen Expr'
+stdout 'Location'
 ! stderr '^{"level":"warning","msg":"profiling is not supported in EOPA, switching to OPA''s evaluation mode","time":' # omit timestamp
