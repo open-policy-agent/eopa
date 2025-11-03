@@ -16,19 +16,18 @@ jobs:
     name: GoReleaser
     runs-on: ubuntu-24.04
     needs: prereqs
-  #   env:
-  #     QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }} # base64 encoded contents
-  #     QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }} # p12 password
-  #     QUILL_NOTARY_KEY: ${{ secrets.QUILL_NOTARY_KEY }}
-  #     QUILL_NOTARY_KEY_ID: ${{ secrets.QUILL_NOTARY_KEY_ID }}
-  #     QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
-  #     CERT_ID: ${{ secrets.CERT_ID }}
-  #     SM_API_KEY: ${{ secrets.SM_API_KEY }}
-  #     SM_CLIENT_CERT_FILE: ${{ github.workspace }}/bot-client-auth-cert.p12
-  #     SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo apt clean
+          docker image ls -aq | xargs -r docker rmi
+          df -h
       - uses: open-policy-agent/setup-opa@950f159a49aa91f9323f36f1de81c7f6b5de9576 # v2.3.0
       - name: Check out code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -47,21 +46,6 @@ jobs:
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
           install-only: true
-      - name: Install anchore/quill (macos signing)
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/quill/main/install.sh |\
-          sh -s -- -b /usr/local/bin
-      - name: Set up Java
-        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
-        with:
-          java-version: 17
-          distribution: "temurin"
-      - name: Download Jsign
-        run: curl -L https://github.com/ebourg/jsign/releases/download/7.1/jsign-7.1.jar -o jsign.jar
-      # - name: Extract client authentication cert
-      #   run: echo $SM_CLIENT_CERT_FILE_BASE64 | base64 --decode > bot-client-auth-cert.p12
-      #   env:
-      #     SM_CLIENT_CERT_FILE_BASE64: ${{ secrets.SM_CLIENT_CERT_FILE_BASE64 }}
       - name: Install goversioninfo for Windows binary icon and version
         run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0
       - name: Run GoReleaser
@@ -72,14 +56,6 @@ jobs:
           TAP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_NOTES: ../release-notes.md
-          # JSIGN_JAR_PATH: ${{ github.workspace }}/jsign.jar
-      # - name: Upload binary artifact
-      #   uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-      #   with:
-      #     name: windows-binaries
-      #     if-no-files-found: error
-      #     path: |
-      #       enterprise-opa/dist/windows*/*.exe
 
   kopush:
     name: Ko Push
@@ -217,32 +193,3 @@ jobs:
           gh pr create -B main --head artifacts-${{ github.ref_name }} --title "$message for ${{ github.ref_name }} release" --body 'Created by Github action'
         env:
           GITHUB_TOKEN: ${{steps.generate_token.outputs.token }}
-
-  # verify-authenticode-signature:
-  #   name: Verify signature
-  #   runs-on: ubuntu-24.04
-  #   needs: goreleaser
-  #   steps:
-  #     - name: Tune GitHub-hosted runner network
-  #       uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
-  #     - name: Check out code
-  #       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-  #       with:
-  #         fetch-depth: 0
-  #     - name: Download generated artifacts
-  #       uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
-  #       with:
-  #         name: windows-binaries
-  #         path: windows-binaries
-  #     - name: Get Root CA certificate.
-  #       run: curl -o rootca.pem https://cacerts.digicert.com/DigiCertTrustedRootG4.crt.pem
-  #     - name: Install osslsigncode
-  #       run: |
-  #         sudo apt-get update
-  #         sudo apt-get install -y osslsigncode
-  #     - name: Verify signature
-  #       run: |
-  #         for file in $(ls windows-binaries/**/*.exe); do
-  #           echo "Processing $file"
-  #           osslsigncode verify -CAfile rootca.pem -TSA-CAfile rootca.pem $file
-  #         done
