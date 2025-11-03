@@ -66,3 +66,4 @@ jobs:
           TAP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_NOTES: ../release-notes.md
+          EOPA_GH_REPO: open-policy-agent/eopa
