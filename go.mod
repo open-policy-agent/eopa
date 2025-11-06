@@ -51,7 +51,7 @@ require (
 	github.com/neo4j/neo4j-go-driver/v5 v5.28.4
 	github.com/okta/okta-sdk-golang/v3 v3.0.19
 	github.com/olivere/elastic/v7 v7.0.32
-	github.com/open-policy-agent/opa v1.10.0
+	github.com/open-policy-agent/opa v1.10.1
 	github.com/open-policy-agent/opa-envoy-plugin v1.10.0-envoy
 	github.com/open-policy-agent/regal v0.36.2-0.20251103105926-781f809f9cdd
 	github.com/ory/dockertest/v3 v3.12.0
