@@ -11,6 +11,13 @@ In iteration-heavy policies, the speedups can be dramatic.
 
 This optimization is now enabled by default, so your policies will immediately benefit upon upgrading to the latest Enterprise OPA version.
 
+## v1.45.1
+
+[![OPA v1.10.1](https://openpolicyagent.org/badge/v1.10.1)](https://github.com/open-policy-agent/opa/releases/tag/v1.10.1)
+[![Regal v0.36.1](https://img.shields.io/github/v/release/open-policy-agent/regal?filter=v0.36.1&label=Regal)](https://github.com/open-policy-agent/regal/releases/tag/v0.36.1)
+
+This release pulls in [OPA v1.10.1](https://github.com/open-policy-agent/opa/releases/tag/v1.10.1).
+
 
 ## v1.45.0
 
