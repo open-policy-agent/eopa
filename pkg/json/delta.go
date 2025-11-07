@@ -10,7 +10,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
+	"github.com/open-policy-agent/eopa/pkg/json/utils"
 )
 
 const (
@@ -236,6 +236,10 @@ func (d *deltaObjectReader) ObjectValueOffset(name string) (int64, bool, error) 
 
 func (d *deltaObjectReader) objectNameValueOffsets() ([]objectEntry, []int64, error) {
 	return d.impl.objectNameValueOffsets()
+}
+
+func (d *deltaObjectReader) objectValueOffset(i int) (int64, error) {
+	return d.impl.objectValueOffset(i)
 }
 
 func (d *deltaObjectReader) objectNameOffsetsValueOffsets() ([]objectEntry, []int64, []int64, error) {
@@ -818,7 +822,7 @@ func diffImpl(a contentReader, aoff int64, alen int64, b contentReader, boff int
 			value int64
 		}
 
-		namesValues := make(map[string]offsets)
+		namesValues := make(map[string]offsets, max(len(alla), len(allb)))
 
 		for i, entry := range alla {
 			name := entry.name
@@ -1019,7 +1023,7 @@ func reserialize(src contentReader, alen int64, off int64, embeddingAllowed bool
 		offsets := buffer.Len()
 		buffer.Write(make([]byte, 4*l))
 
-		for i := 0; i < l; i++ {
+		for i := range l {
 			voff, err := a.ArrayValueOffset(i)
 			if err != nil {
 				return 0, err

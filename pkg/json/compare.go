@@ -76,7 +76,7 @@ func equalOp(a, b Json) bool {
 	}
 }
 
-func equalObject(a, b interface{}) bool {
+func equalObject(a, b any) bool {
 	switch a := a.(type) {
 	case Object:
 		switch b := b.(type) {

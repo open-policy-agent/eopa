@@ -16,7 +16,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
+	"github.com/open-policy-agent/eopa/pkg/json/utils"
 )
 
 func TestNil(t *testing.T) {
@@ -117,7 +117,7 @@ func TestFloat(t *testing.T) {
 func TestArray(t *testing.T) {
 	// Empty array
 
-	a := []interface{}{}
+	a := []any{}
 
 	j, err := buildJSON(a)
 	if err != nil {
@@ -137,7 +137,7 @@ func TestArray(t *testing.T) {
 
 	// Trivial array
 
-	a = []interface{}{"a"}
+	a = []any{"a"}
 
 	j, err = buildJSON(a)
 	if err != nil {
@@ -162,7 +162,7 @@ func TestArray(t *testing.T) {
 
 	// Longer array.
 
-	a = []interface{}{"a", "b", "c"}
+	a = []any{"a", "b", "c"}
 	j, err = buildJSON(a)
 	if err != nil {
 		t.Fatalf("Construction error: %v", err)
@@ -216,7 +216,7 @@ func TestArray(t *testing.T) {
 func TestObjectFull(t *testing.T) {
 	// Empty object
 
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 
 	j, err := buildJSON(m)
 	if err != nil {
@@ -227,7 +227,7 @@ func TestObjectFull(t *testing.T) {
 
 	// Trivial object
 
-	m = make(map[string]interface{})
+	m = make(map[string]any)
 	m["a"] = "b"
 
 	j, err = buildJSON(m)
@@ -302,15 +302,15 @@ func TestObjectFull(t *testing.T) {
 func TestObjectThin(t *testing.T) {
 	// An array with with two objects with the same names.
 
-	mx := make(map[string]interface{})
+	mx := make(map[string]any)
 	mx["a"] = "xa"
 	mx["b"] = "xb"
 
-	my := make(map[string]interface{})
+	my := make(map[string]any)
 	my["a"] = "ya"
 	my["b"] = "yb"
 
-	a := []interface{}{mx, my}
+	a := []any{mx, my}
 
 	j, err := buildJSON(a)
 	if err != nil {
@@ -386,10 +386,10 @@ func TestObjectThin(t *testing.T) {
 
 	// An array with with two empty objects (the latter will be thin).
 
-	mx = make(map[string]interface{})
-	my = make(map[string]interface{})
+	mx = make(map[string]any)
+	my = make(map[string]any)
 
-	a = []interface{}{mx, my}
+	a = []any{mx, my}
 
 	j, err = buildJSON(a)
 	if err != nil {
@@ -440,7 +440,7 @@ func TestObjectThin(t *testing.T) {
 func TestDeduplication(t *testing.T) {
 	// Test the strings and floats are dedup'ed.
 
-	a := []interface{}{"a", "a", float64(0.1234), float64(0.1234)}
+	a := []any{"a", "a", float64(0.1234), float64(0.1234)}
 	j, err := buildJSON(a)
 	if err != nil {
 		t.Fatalf("Construction error: %v", err)
@@ -492,7 +492,7 @@ func TestDeduplication(t *testing.T) {
 func TestEmbeddingArray(t *testing.T) {
 	// Test nils and booleans are properly embedded into offsets within arrays.
 
-	a := []interface{}{nil, false, true}
+	a := []any{nil, false, true}
 	j, err := buildJSON(a)
 	if err != nil {
 		t.Fatalf("Construction error: %v", err)
@@ -534,13 +534,13 @@ func TestEmbeddingArray(t *testing.T) {
 func TestEmbeddingObject(t *testing.T) {
 	// Test nils and booleans are properly embedded into offsets within objects.
 
-	a := []interface{}{
-		map[string]interface{}{
+	a := []any{
+		map[string]any{
 			"a": nil,
 			"b": false,
 			"c": true,
 		},
-		map[string]interface{}{
+		map[string]any{
 			"a": nil,
 			"b": false,
 			"c": true,
@@ -648,10 +648,10 @@ func TestEmbeddingObject(t *testing.T) {
 
 func TestNewWriteTo(t *testing.T) {
 	str := "string"
-	var empty interface{}
-	var i interface{} = str
+	var empty any
+	var i any = str
 	//var bigint *big.Int
-	for n, test := range []interface{}{
+	for n, test := range []any{
 		// Golang JSON native types
 		testBuildJSON(`null`),
 		testBuildJSON(`1234`),
@@ -677,10 +677,10 @@ func TestNewWriteTo(t *testing.T) {
 		[]string{},
 		[]string{"foo", "bar"},
 		[2]string{"foo", "bar"},
-		[]interface{}(nil),
-		[]interface{}{},
-		[]interface{}{"foo", "bar"},
-		[2]interface{}{"foo", "bar"},
+		[]any(nil),
+		[]any{},
+		[]any{"foo", "bar"},
+		[2]any{"foo", "bar"},
 		int(1),
 		int16(16),
 		int32(32),
@@ -694,26 +694,26 @@ func TestNewWriteTo(t *testing.T) {
 		map[string]string(nil),
 		map[string]string{},
 		map[string]string{"foo": "bar"},
-		map[string]interface{}(nil),
-		map[string]interface{}{},
-		map[string]interface{}{"foo": "bar"},
+		map[string]any(nil),
+		map[string]any{},
+		map[string]any{"foo": "bar"},
 		time.Now(), // time.Time has MarshalJSON interface.
 		(*textMarshaler)(nil),
 		textMarshaler{},
 		textMarshaler2{},
 		&textMarshaler2{},
 		struct {
-			A1    []interface{}
-			A2    []interface{}
-			A3    []interface{}
+			A1    []any
+			A2    []any
+			A3    []any
 			A4    [2]string
 			B1    bool `json:"Bool1"`
 			B2    bool `json:"Bool2,omitempty"`
 			F1    float32
 			F2    float64
-			I1    interface{}
-			I2    interface{}
-			I3    *interface{}
+			I1    any
+			I2    any
+			I3    *any
 			Int   int
 			Int16 int16
 			Int32 int32
@@ -740,8 +740,8 @@ func TestNewWriteTo(t *testing.T) {
 			UInt8  uint8
 		}{
 			// A1 has null value
-			A2: []interface{}{},
-			A3: []interface{}{"bar", "foo"},
+			A2: []any{},
+			A3: []any{"bar", "foo"},
 			A4: [2]string{"foo", "bar"},
 			B1: true,
 			B2: false,
@@ -880,7 +880,7 @@ func TestObject(t *testing.T) {
 	}
 }
 
-func buildJSON(data interface{}) (Json, error) {
+func buildJSON(data any) (Json, error) {
 	cache := newEncodingCache()
 	buffer := new(bytes.Buffer)
 
@@ -908,7 +908,7 @@ func validateSerialization(t *testing.T, j File, valid []byte) {
 func TestAST(t *testing.T) {
 	tests := []struct {
 		note  string
-		value interface{}
+		value any
 	}{
 		{
 			value: nil,
@@ -923,15 +923,15 @@ func TestAST(t *testing.T) {
 			value: "string",
 		},
 		{
-			value: []interface{}{"a", "b"},
+			value: []any{"a", "b"},
 		},
 		{
-			value: map[string]interface{}{"a": "b"},
+			value: map[string]any{"a": "b"},
 		},
 		{
-			value: map[string]interface{}{
-				"a": []interface{}{
-					map[string]interface{}{
+			value: map[string]any{
+				"a": []any{
+					map[string]any{
 						"foo": "bar",
 					},
 				},

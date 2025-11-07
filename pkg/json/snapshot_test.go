@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
+	"github.com/open-policy-agent/eopa/pkg/json/utils"
 )
 
 func TestCollectionsSerialization(t *testing.T) {
@@ -24,7 +24,7 @@ func testCollectionsSerialization(t *testing.T, jsonStr string) {
 	collections := NewCollections()
 
 	if jsonStr != "" {
-		var data interface{}
+		var data any
 		gojson.Unmarshal([]byte(jsonStr), &data)
 
 		c, err := New(data)
@@ -97,9 +97,9 @@ func TestCollectionsDeltaSerialization(t *testing.T) {
 func TestCollectionsNamespace(t *testing.T) {
 	// Populate a writable collection with three collections.
 
-	data1 := map[string]interface{}{"foo": "foo"}
-	data2 := map[string]interface{}{"foo": "bar"}
-	data3 := map[string]interface{}{"foo": "foobar"}
+	data1 := map[string]any{"foo": "foo"}
+	data2 := map[string]any{"foo": "bar"}
+	data3 := map[string]any{"foo": "foobar"}
 
 	wcollections := NewCollections()
 	coll1, err := New(data1)

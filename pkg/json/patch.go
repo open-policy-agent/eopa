@@ -31,7 +31,7 @@ type Op struct {
 	From        string  `json:"from"` // Note, only marshaled if operation is either copy or move.
 }
 
-type JsonPatchSpec []map[string]interface{}
+type JsonPatchSpec []map[string]any
 
 func NewPatch(spec JsonPatchSpec) (Patch, error) {
 	patch := make(Patch, 0, len(spec))
@@ -45,7 +45,7 @@ func NewPatch(spec JsonPatchSpec) (Patch, error) {
 	return patch, nil
 }
 
-func newOpFromMap(spec map[string]interface{}) (Op, error) {
+func newOpFromMap(spec map[string]any) (Op, error) {
 	op, ok := spec["op"]
 	if !ok {
 		return Op{}, errors.New("json patch: op is missing")
@@ -106,7 +106,7 @@ func (p *Patch) UnmarshalJSON(data []byte) error {
 func (p *Patch) Unmarshal(decoder *Decoder) error {
 	*p = make([]Op, 0)
 	return decoder.UnmarshalArray(func(decoder *Decoder) error {
-		opData := map[string]interface{}{}
+		opData := map[string]any{}
 
 		if err := decoder.UnmarshalObject(func(property string, decoder *Decoder) error {
 			var err error
@@ -126,7 +126,7 @@ func (p *Patch) Unmarshal(decoder *Decoder) error {
 				}
 
 			case "value":
-				var value interface{}
+				var value any
 				value, err = decoder.Decode()
 				if err == nil {
 					opData["value"] = value

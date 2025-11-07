@@ -19,57 +19,94 @@ import (
 )
 
 func TestInMemoryRead(t *testing.T) {
+	t.Run("Normal types", func(t *testing.T) {
+		data := loadSmallTestData()
 
-	data := loadSmallTestData()
+		tests := []struct {
+			path     string
+			expected interface{}
+		}{
+			{"/a/0", json.Number("1")},
+			{"/a/3", json.Number("4")},
+			{"/b/v1", "hello"},
+			{"/b/v2", "goodbye"},
+			{"/c/0/x/1", false},
+			{"/c/0/y/0", nil},
+			{"/c/0/y/1", json.Number("3.14159")},
+			{"/d/e/1", "baz"},
+			{"/d/e", []interface{}{"bar", "baz"}},
+			{"/c/0/z", map[string]interface{}{"p": true, "q": false}},
+			{"/a/0/beef", errors.NewNotFoundError(storage.MustParsePath("/a/0/beef"))},
+			{"/d/100", errors.NewNotFoundError(storage.MustParsePath("/d/100"))},
+			{"/dead/beef", errors.NewNotFoundError(storage.MustParsePath("/dead/beef"))},
+			{"/a/str", errors.NewNotFoundErrorWithHint(storage.MustParsePath("/a/str"), errors.ArrayIndexTypeMsg)},
+			{"/a/100", errors.NewNotFoundErrorWithHint(storage.MustParsePath("/a/100"), errors.OutOfRangeMsg)},
+			{"/a/-1", errors.NewNotFoundErrorWithHint(storage.MustParsePath("/a/-1"), errors.OutOfRangeMsg)},
+		}
 
-	var tests = []struct {
-		path     string
-		expected interface{}
-	}{
-		{"/a/0", json.Number("1")},
-		{"/a/3", json.Number("4")},
-		{"/b/v1", "hello"},
-		{"/b/v2", "goodbye"},
-		{"/c/0/x/1", false},
-		{"/c/0/y/0", nil},
-		{"/c/0/y/1", json.Number("3.14159")},
-		{"/d/e/1", "baz"},
-		{"/d/e", []interface{}{"bar", "baz"}},
-		{"/c/0/z", map[string]interface{}{"p": true, "q": false}},
-		{"/a/0/beef", errors.NewNotFoundError(storage.MustParsePath("/a/0/beef"))},
-		{"/d/100", errors.NewNotFoundError(storage.MustParsePath("/d/100"))},
-		{"/dead/beef", errors.NewNotFoundError(storage.MustParsePath("/dead/beef"))},
-		{"/a/str", errors.NewNotFoundErrorWithHint(storage.MustParsePath("/a/str"), errors.ArrayIndexTypeMsg)},
-		{"/a/100", errors.NewNotFoundErrorWithHint(storage.MustParsePath("/a/100"), errors.OutOfRangeMsg)},
-		{"/a/-1", errors.NewNotFoundErrorWithHint(storage.MustParsePath("/a/-1"), errors.OutOfRangeMsg)},
-	}
+		store := NewFromObject(data).(*store)
+		ctx := context.Background()
 
-	store := NewFromObject(data).(*store)
-	ctx := context.Background()
-
-	for idx, tc := range tests {
-		result, err := readOne(ctx, store, storage.MustParsePath(tc.path))
-		switch e := tc.expected.(type) {
-		case error:
-			if err == nil {
-				t.Errorf("Test case %d: expected error for %v but got %v", idx+1, tc.path, result)
-			} else if !reflect.DeepEqual(err, tc.expected) {
-				t.Errorf("Test case %d: unexpected error for %v: %v, expected: %v", idx+1, tc.path, err, e)
-			}
-		default:
-			if err != nil {
-				t.Errorf("Test case %d: expected success for %v but got %v", idx+1, tc.path, err)
-			}
-			if bjson.MustNew(tc.expected).Compare(result) != 0 {
-				t.Errorf("Test case %d: expected %f but got %f", idx+1, tc.expected, result)
+		for idx, tc := range tests {
+			result, err := readOne(ctx, store, storage.MustParsePath(tc.path))
+			switch e := tc.expected.(type) {
+			case error:
+				if err == nil {
+					t.Errorf("Test case %d: expected error for %v but got %v", idx+1, tc.path, result)
+				} else if !reflect.DeepEqual(err, tc.expected) {
+					t.Errorf("Test case %d: unexpected error for %v: %v, expected: %v", idx+1, tc.path, err, e)
+				}
+			default:
+				if err != nil {
+					t.Errorf("Test case %d: expected success for %v but got %v", idx+1, tc.path, err)
+				}
+				if bjson.MustNew(tc.expected).Compare(result) != 0 {
+					t.Errorf("Test case %d: expected %f but got %f", idx+1, tc.expected, result)
+				}
 			}
 		}
-	}
+	})
 
+	t.Run("ObjectBinary snapshot types", func(t *testing.T) {
+		// TODO: Remove this skip once we have the functionality landed.
+		t.Skip("Skipping until we implement ObjectBinary snapshot types for ReadBJSON.")
+
+		data := loadObjectBinaryTestData()
+
+		tests := []struct {
+			path     string
+			expected interface{}
+		}{
+			{"/f/i/j/3", errors.NewNotFoundError(storage.MustParsePath("/f/i/j/3"))},
+			{"/f/i", json.Number("1")},
+			{"/f/j", json.Number("2")},
+		}
+
+		store := NewFromObject(data).(*store)
+		ctx := context.Background()
+
+		for idx, tc := range tests {
+			result, err := readOne(ctx, store, storage.MustParsePath(tc.path))
+			switch e := tc.expected.(type) {
+			case error:
+				if err == nil {
+					t.Errorf("Test case %d: expected error for %v but got %v", idx+1, tc.path, result)
+				} else if !reflect.DeepEqual(err, tc.expected) {
+					t.Errorf("Test case %d: unexpected error for %v: %v, expected: %v", idx+1, tc.path, err, e)
+				}
+			default:
+				if err != nil {
+					t.Errorf("Test case %d: expected success for %v but got %v", idx+1, tc.path, err)
+				}
+				if bjson.MustNew(tc.expected).Compare(result) != 0 {
+					t.Errorf("Test case %d: expected %f but got %f", idx+1, tc.expected, result)
+				}
+			}
+		}
+	})
 }
 
 func TestInMemoryWrite(t *testing.T) {
-
 	tests := []struct {
 		note        string
 		op          string
@@ -194,7 +231,6 @@ func TestInMemoryWrite(t *testing.T) {
 		}
 
 	}
-
 }
 
 func TestInMemoryWriteOfStruct(t *testing.T) {
@@ -216,7 +252,8 @@ func TestInMemoryWriteOfStruct(t *testing.T) {
 			func() interface{} {
 				a := &A{&B{10}}
 				return &a
-			}(), `{"foo": {"bar": 10 } }`},
+			}(), `{"foo": {"bar": 10 } }`,
+		},
 	}
 
 	for name, tc := range cases {
@@ -243,7 +280,6 @@ func TestInMemoryWriteOfStruct(t *testing.T) {
 }
 
 func TestInMemoryTxnMultipleWrites(t *testing.T) {
-
 	ctx := context.Background()
 	store := NewFromObject(loadSmallTestData()).(*store)
 	txn := storage.NewTransactionOrDie(ctx, store, storage.WriteParams)
@@ -325,7 +361,6 @@ func TestInMemoryTxnMultipleWrites(t *testing.T) {
 }
 
 func TestInMemoryTxnWriteFailures(t *testing.T) {
-
 	ctx := context.Background()
 	store := NewFromObject(loadSmallTestData())
 	txn := storage.NewTransactionOrDie(ctx, store, storage.WriteParams)
@@ -359,7 +394,6 @@ func TestInMemoryTxnWriteFailures(t *testing.T) {
 }
 
 func TestInMemoryTxnReadFailures(t *testing.T) {
-
 	ctx := context.Background()
 	store := NewFromObject(loadSmallTestData())
 	txn := storage.NewTransactionOrDie(ctx, store, storage.WriteParams)
@@ -379,7 +413,6 @@ func TestInMemoryTxnReadFailures(t *testing.T) {
 	if result, err := store.Read(ctx, txn, storage.MustParsePath("/a/0/beef")); !storage.IsNotFound(err) {
 		t.Fatalf("Expected NotFoundErr for /c/0/y but got: %v (err: %v)", result, err)
 	}
-
 }
 
 func TestInMemoryTxnBadWrite(t *testing.T) {
@@ -392,7 +425,6 @@ func TestInMemoryTxnBadWrite(t *testing.T) {
 }
 
 func TestInMemoryTxnPolicies(t *testing.T) {
-
 	ctx := context.Background()
 	store := New()
 
@@ -482,11 +514,9 @@ func TestInMemoryTxnPolicies(t *testing.T) {
 	if ids, err := store.ListPolicies(ctx, txn); err != nil || len(ids) != 0 {
 		t.Fatalf("Expected list policies to be empty but got: %v (err: %v)", ids, err)
 	}
-
 }
 
 func TestInMemoryTriggers(t *testing.T) {
-
 	ctx := context.Background()
 	store := NewFromObject(loadSmallTestData()).(*store)
 	writeTxn := storage.NewTransactionOrDie(ctx, store, storage.WriteParams)
@@ -598,7 +628,6 @@ func TestInMemoryTriggersUnregister(t *testing.T) {
 }
 
 func TestInMemoryContext(t *testing.T) {
-
 	ctx := context.Background()
 	store := New()
 	params := storage.WriteParams
@@ -626,7 +655,6 @@ func TestInMemoryContext(t *testing.T) {
 	if err := store.Commit(ctx, txn); err != nil {
 		t.Fatal(err)
 	}
-
 }
 
 func loadExpectedResult(input string) interface{} {
@@ -680,6 +708,55 @@ func loadSmallTestData() bjson.Object {
 		panic(err)
 	}
 	return bjson.MustNew(data).(bjson.Object)
+}
+
+func loadObjectBinaryTestData() bjson.Object {
+	var data, data2 map[string]interface{}
+	if err := util.UnmarshalJSON([]byte(`{
+        "a": [1,2,3,4],
+        "b": {
+            "v1": "hello",
+            "v2": "goodbye"
+        },
+        "c": [{
+            "x": [true, false, "foo"],
+            "y": [null, 3.14159],
+            "z": {"p": true, "q": false}
+        }],
+        "d": {
+            "e": ["bar", "baz"]
+        },
+		"g": {
+			"a": [1, 0, 0, 0],
+			"b": [0, 2, 0, 0],
+			"c": [0, 0, 0, 4]
+		},
+		"h": [
+			[1,2,3],
+			[2,3,4]
+		]
+    }`), &data); err != nil {
+		panic(err)
+	}
+	obj := bjson.MustNew(data).(bjson.Object)
+	// Create ObjectBinary with nested structure.
+	if err := util.UnmarshalJSON([]byte(`{
+	    "f": {
+		    "i": 1,
+			"j": 2,
+			"k": 3
+		}
+	}`), &data2); err != nil {
+		panic(err)
+	}
+	obj2 := bjson.MustNew(data2).(bjson.Object)
+	objBinary, err := bjson.NewObjectBinary(obj2)
+	if err != nil {
+		panic(err)
+	}
+	// Embed ObjectBinary into the tree.
+	obj3, _ := obj.Set("i", objBinary)
+	return obj3
 }
 
 func readOne(ctx context.Context, db *store, path storage.Path) (bjson.Json, error) {

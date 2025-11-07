@@ -18,7 +18,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
+	"github.com/open-policy-agent/eopa/pkg/json/utils"
 )
 
 // testTime is for unit tests to control the time.
@@ -32,12 +32,14 @@ func Debug(c Collections) Object {
 // Internally, it is a hierarchical namespace of resources, organized around nested maps. A leaf map represents a resource and holds the meta data for the particular resource.
 type snapshot struct {
 	ObjectBinary
-	objects []interface{} // Storage objects used to construct the collection, if any.
+	objects []any // Storage objects used to construct the collection, if any.
 	slen    int64
 	blen    int64 // Length in bytes for the entire snapshot.
 }
 
-func NewCollectionsFromReaders(snapshotReader *utils.MultiReader, slen int64, dr *utils.MultiReader, dlen int64, objects ...interface{}) (collections Collections, err error) {
+var _ Json = &snapshot{}
+
+func NewCollectionsFromReaders(snapshotReader *utils.MultiReader, slen int64, dr *utils.MultiReader, dlen int64, objects ...any) (collections Collections, err error) {
 	if dr != nil {
 		var impl *deltaReader
 		impl, err = newDeltaReader(snapshotReader, slen, dr)
@@ -113,7 +115,7 @@ func (s snapshot) Len() int64 {
 	return s.blen
 }
 
-func (s snapshot) Objects() []interface{} {
+func (s snapshot) Objects() []any {
 	return s.objects
 }
 
@@ -474,7 +476,7 @@ func (s *writableSnapshot) Prepare(timestamp time.Time) Collections {
 		corrupted(err)
 	}
 
-	return &snapshot{ObjectBinary: newObject(content, 0), blen: slen, slen: slen, objects: []interface{}{nil}}
+	return &snapshot{ObjectBinary: newObject(content, 0), blen: slen, slen: slen, objects: []any{nil}}
 }
 
 func (s *writableSnapshot) setMetaRecursively(r Resource, key string, value string) {
@@ -501,7 +503,7 @@ func (s *writableSnapshot) create(name string) *resourceImpl {
 	return r
 }
 
-func translate(data interface{}) (*snapshotReader, int64, error) {
+func translate(data any) (*snapshotReader, int64, error) {
 	cache := newEncodingCache()
 	buffer := new(bytes.Buffer)
 
@@ -516,7 +518,7 @@ func translate(data interface{}) (*snapshotReader, int64, error) {
 }
 
 // serialize transforms the provided native representation to the storage byte format.
-func serialize(data interface{}, cache *encodingCache, buffer *bytes.Buffer, base int32) (int32, error) {
+func serialize(data any, cache *encodingCache, buffer *bytes.Buffer, base int32) (int32, error) {
 	// Note: below Write and WriteByte to buffer never return an error even if their function signature would allow so.
 	offset := base + int32(buffer.Len())
 
@@ -582,11 +584,11 @@ func serialize(data interface{}, cache *encodingCache, buffer *bytes.Buffer, bas
 		buffer.WriteByte(typeNumber)
 		writeString(n, buffer)
 
-	case []interface{}:
+	case []any:
 		return serializeArray(v, cache, buffer, base)
 
 	case Array:
-		array := make([]interface{}, 0, v.Len())
+		array := make([]any, 0, v.Len())
 
 		for i := 0; i < v.Len(); i++ {
 			array = append(array, v.Value(i))
@@ -594,7 +596,7 @@ func serialize(data interface{}, cache *encodingCache, buffer *bytes.Buffer, bas
 
 		return serializeArray(array, cache, buffer, base)
 
-	case map[string]interface{}:
+	case map[string]any:
 		properties := make([]objectEntry, 0, len(v))
 		for name, value := range v {
 			properties = append(properties, objectEntry{name: name, value: value})
@@ -674,7 +676,7 @@ func serializeNumber(v json.Number, cache *encodingCache, buffer *bytes.Buffer, 
 	return offset
 }
 
-func serializeArray(v []interface{}, cache *encodingCache, buffer *bytes.Buffer, base int32) (int32, error) {
+func serializeArray(v []any, cache *encodingCache, buffer *bytes.Buffer, base int32) (int32, error) {
 	offset := base + int32(buffer.Len())
 
 	// Write type, # of array elements.
@@ -1244,6 +1246,19 @@ func (s *snapshotObjectReader) objectNameValueOffsets() ([]objectEntry, []int64,
 	}
 
 	return properties, offsets, nil
+}
+
+func (s *snapshotObjectReader) objectValueOffset(i int) (int64, error) {
+	if i >= s.n {
+		return 0, fmt.Errorf("index out of range: %d >= %d", i, s.n)
+	}
+
+	boffset, err := s.content.Bytes(s.voffsets+int64(i*4), 4)
+	if len(boffset) < 4 {
+		return 0, fmt.Errorf("object value offset not read: %w", err)
+	}
+
+	return int64(int32(order.Uint32(boffset))), nil
 }
 
 func (s *snapshotObjectReader) objectNameOffsetsValueOffsets() ([]objectEntry, []int64, []int64, error) {

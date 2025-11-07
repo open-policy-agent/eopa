@@ -20,13 +20,13 @@ const (
 	typeHashSet
 )
 
-func hash(value interface{}) uint64 {
+func hash(value any) uint64 {
 	hasher := xxhash.New()
 	hashImpl(value, hasher)
 	return hasher.Sum64()
 }
 
-func hashImpl(value interface{}, hasher *xxhash.Digest) {
+func hashImpl(value any, hasher *xxhash.Digest) {
 	// Note Hasher writer below never returns an error.
 
 	switch value := value.(type) {
@@ -67,7 +67,7 @@ func hashImpl(value interface{}, hasher *xxhash.Digest) {
 
 	case Array:
 		n := value.Len()
-		for i := 0; i < n; i++ {
+		for i := range n {
 			hashImpl(value.Iterate(i), hasher)
 		}
 
@@ -85,7 +85,7 @@ func hashImpl(value interface{}, hasher *xxhash.Digest) {
 	case Object:
 		var m uint64
 		names := value.Names()
-		for i := 0; i < len(names); i++ {
+		for i := range names {
 			m = objectHashEntry(m, NewString(names[i]), value.Iterate(i))
 		}
 
@@ -108,7 +108,7 @@ func hashImpl(value interface{}, hasher *xxhash.Digest) {
 // objectHashEntry hashes an object key-value pair. To be used with
 // any object implementation, to guarantee identical hashing across
 // different object implementations.
-func objectHashEntry(h uint64, k, v interface{}) uint64 {
+func objectHashEntry(h uint64, k, v any) uint64 {
 	hasher := xxhash.New()
 	hashImpl(k, hasher)
 	hashImpl(v, hasher)

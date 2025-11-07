@@ -4,12 +4,11 @@
 package utils
 
 import (
-	"bytes"
 	"errors"
 	"io"
 )
 
-// SafeRead reads len(data) bytes from reader to data. It also guarantees that if not all data was not read, there is an error, but masks the io.EOF error out if all the data requested was read.
+// SafeRead reads len(data) bytes from reader to data. It also guarantees that if not all data was not read, there is an error, but masks the [io.EOF] error out if all the data requested was read.
 // In other words, it guarantees there is an error returned, if not all bytes requested were read, and only then there is an error.
 func SafeRead(reader io.Reader, data []byte) (int, error) {
 	offset := 0
@@ -32,7 +31,7 @@ func SafeRead(reader io.Reader, data []byte) (int, error) {
 	}
 }
 
-// SafeReadAt reads len(data) bytes from reader at offset to data. It also guarantees that if not all data was not read, there is an error, but masks the io.EOF error out if all the data
+// SafeReadAt reads len(data) bytes from reader at offset to data. It also guarantees that if not all data was not read, there is an error, but masks the [io.EOF] error out if all the data
 // requested was read. In other words, it guarantees there is an error returned, if not all bytes requested were read, and only then there is an error.
 func SafeReadAt(reader *MultiReader, data []byte, offset int64) (int, error) {
 	read := 0
@@ -57,7 +56,7 @@ func SafeReadAt(reader *MultiReader, data []byte, offset int64) (int, error) {
 }
 
 // MultiReader supports reading from two concatenated readers, which have to be either bytes readers or multi readers. The static
-// typing of the readers (instead of using io.ReaderAt interface) makes this escape analysis compatible: the buffers passed for Read
+// typing of the readers (instead of using [io.ReaderAt] interface) makes this escape analysis compatible: the buffers passed for Read
 // don't escape because of the MultiReader.
 type MultiReader struct {
 	base int64 // To use with the multireader am.
@@ -68,29 +67,64 @@ type MultiReader struct {
 	bm   *MultiReader
 }
 
+// Creates a new MultiReader from an existing MultiReader.
 func NewMultiReaderFromMultiReader(a *MultiReader, off int64, n int64) *MultiReader {
 	return &MultiReader{am: a, base: off, n: n, bm: nil}
 }
 
+// Creates a new MultiReader from a pair of existing MultiReaders.
 func NewMultiReaderFromMultiReaders(a *MultiReader, off int64, n int64, b *MultiReader) *MultiReader {
 	return &MultiReader{am: a, base: off, n: n, bm: b}
 }
 
+// Creates a new MultiReader from an existing BytesReader.
 func NewMultiReaderFromBytesReader(a *BytesReader) *MultiReader {
 	return &MultiReader{ab: a, base: 0, n: int64(a.Len()), bb: NewBytesReader(nil)}
 }
 
+// Creates a new MultiReader from a pair of existing BytesReaders.
 func NewMultiReaderFromBytesReaders(a, b *BytesReader) *MultiReader {
 	return &MultiReader{ab: a, base: 0, n: int64(a.Len()), bb: b}
 }
 
-// Bytes returns the slice of n bytes at the provided offset. It returns io.EOF if n bytes are not available.
+// Is this MultiReader built from 1+ MultiReaders?
+func (r *MultiReader) HasMultiReaders() bool {
+	return r.am != nil
+}
+
+// Is this MultiReader built from 1+ BytesReaders?
+func (r *MultiReader) HasBytesReaders() bool {
+	return r.ab != nil
+}
+
+// UnpackMultiReaders extracts the MultiReader instance(s) in use by the MultiReader.
+func (r *MultiReader) UnpackMultiReaders() (*MultiReader, *MultiReader) {
+	var am, bm *MultiReader
+	if r.am != nil {
+		am, bm = r.am, r.bm
+	}
+	return am, bm
+}
+
+// UnpackBytesReaders extracts the BytesReader instance(s) in use by the MultiReader.
+func (r *MultiReader) UnpackBytesReaders() (*BytesReader, *BytesReader) {
+	var ab, bb *BytesReader
+	if r.ab != nil {
+		ab, bb = r.ab, r.bb
+	}
+	return ab, bb
+}
+
+// Bytes returns the slice of n bytes at the provided offset. It returns [io.EOF] if n bytes are not available.
 func (r *MultiReader) Bytes(offset int64, n int) ([]byte, error) {
+	// BytesReader cases.
 	if r.ab != nil {
 		switch {
+		// Slice available from the 'a' BytesReader.
 		case offset+int64(n) <= int64(r.ab.Len()):
 			return r.ab.bytes(offset, n), nil
 
+		// Slice may stretch across both 'a' and 'b' BytesReaders.
 		case offset < int64(r.ab.Len()):
 			m := r.ab.bytes(offset, int(r.n-offset))
 
@@ -103,17 +137,21 @@ func (r *MultiReader) Bytes(offset int64, n int) ([]byte, error) {
 			copy(result, m)
 			return append(result, k...), nil
 
+		// Offset past the end of total bytes available in BytesReader 'a', so pull entire slice from BytesReader 'b'.
 		default: // offset >= r.n:
 			return r.bb.Bytes(offset-r.n, n)
 		}
 	}
 
+	// MultiReader cases.
 	baseOffset := r.base + offset
 
 	switch {
+	// Slice available from the 'a' MultiReader.
 	case baseOffset < r.n && baseOffset+int64(n) <= r.n:
 		return r.am.Bytes(baseOffset, n)
 
+	// Slice may stretch across both 'a' and 'b' MultiReaders.
 	case baseOffset < r.n:
 		m, err := r.am.Bytes(baseOffset, int(r.n-baseOffset))
 		if int64(len(m)) < r.n-baseOffset {
@@ -131,6 +169,7 @@ func (r *MultiReader) Bytes(offset int64, n int) ([]byte, error) {
 		k, err := r.bm.Bytes(0, n-len(m))
 		return append(result, k...), err
 
+	// Offset past the end of total bytes available in MultiReader 'a', so pull entire slice from MultiReader 'b'.
 	default: // baseOffset >= r.n:
 		if r.bm != nil {
 			return r.bm.Bytes(baseOffset-r.n, n)
@@ -140,6 +179,7 @@ func (r *MultiReader) Bytes(offset int64, n int) ([]byte, error) {
 	}
 }
 
+// Implements [io.ReaderAt]
 func (r *MultiReader) ReadAt(p []byte, offset int64) (n int, err error) {
 	if r.ab != nil {
 		switch {
@@ -210,20 +250,14 @@ func (r *MultiReader) Len() int {
 }
 
 func (r *MultiReader) Append(data []byte) {
-	// TODO: Remove this unnecessary copy (which requires changing interfaces).
-
 	if r.bb != nil {
-		buffer := bytes.NewBuffer(make([]byte, 0, r.bb.Len()+len(data)))
-		buffer.Write(r.bb.s)
-		r.bb = NewBytesReader(append(buffer.Bytes(), data...))
+		r.bb.Append(data)
 		return
 	}
 
 	if r.ab != nil {
 		r.n += int64(len(data))
-		buffer := bytes.NewBuffer(make([]byte, 0, r.n))
-		buffer.Write(r.ab.s)
-		r.ab = NewBytesReader(append(buffer.Bytes(), data...))
+		r.ab.Append(data)
 		return
 	}
 
@@ -242,7 +276,7 @@ type BytesReader struct {
 
 func NewBytesReader(b []byte) *BytesReader { return &BytesReader{b} }
 
-// ReadAt implements the io.ReaderAt interface.
+// ReadAt implements the [io.ReaderAt] interface.
 func (r *BytesReader) ReadAt(b []byte, off int64) (n int, err error) {
 	// cannot modify state - see io.ReaderAt
 	if off < 0 {
@@ -264,7 +298,7 @@ func (r *BytesReader) Len() int {
 	return len(r.s)
 }
 
-// Bytes returns the slice of n bytes at the provided offset. It returns io.EOF if n bytes are not available.
+// Bytes returns the slice of n bytes at the provided offset. It returns [io.EOF] if n bytes are not available.
 func (r *BytesReader) Bytes(offset int64, n int) ([]byte, error) {
 	if offset+int64(n) > int64(len(r.s)) {
 		return nil, io.EOF
@@ -275,4 +309,8 @@ func (r *BytesReader) Bytes(offset int64, n int) ([]byte, error) {
 
 func (r *BytesReader) bytes(offset int64, n int) []byte {
 	return r.s[offset : offset+int64(n)]
+}
+
+func (r *BytesReader) Append(data []byte) {
+	r.s = append(r.s, data...) // Note(philip): May silently realloc under-the-hood.
 }

@@ -54,7 +54,7 @@ func (arraySliceBase[T]) extractImpl(a T, ptr []string) (Json, error) {
 
 func (arraySliceBase[T]) clone(a T, deepCopy bool) Array {
 	j := make([]File, a.Len())
-	for i := 0; i < len(j); i++ {
+	for i := range j {
 		v := a.valueImpl(i)
 		if deepCopy {
 			v = v.Clone(true)
@@ -65,9 +65,9 @@ func (arraySliceBase[T]) clone(a T, deepCopy bool) Array {
 	return NewArray(j, len(j))
 }
 
-func (arraySliceBase[T]) JSON(a T) interface{} {
-	array := make([]interface{}, a.Len())
-	for i := 0; i < len(array); i++ {
+func (arraySliceBase[T]) JSON(a T) any {
+	array := make([]any, a.Len())
+	for i := range array {
 		j, ok := a.valueImpl(i).(Json)
 		if ok {
 			array[i] = j.JSON()
@@ -79,7 +79,7 @@ func (arraySliceBase[T]) JSON(a T) interface{} {
 
 func (arraySliceBase[T]) AST(a T) ast.Value {
 	array := make([]*ast.Term, a.Len())
-	for i := 0; i < len(array); i++ {
+	for i := range array {
 		j, ok := a.valueImpl(i).(Json)
 		if ok {
 			array[i] = ast.NewTerm(j.AST())
@@ -91,7 +91,7 @@ func (arraySliceBase[T]) AST(a T) ast.Value {
 
 func (arraySliceBase[T]) String(a T) string {
 	s := make([]string, a.Len())
-	for i := 0; i < len(s); i++ {
+	for i := range s {
 		s[i] = a.Value(i).String()
 	}
 	return "[" + strings.Join(s, ",") + "]"
@@ -193,7 +193,7 @@ func (a *ArraySliceCompact[T]) WriteTo(w io.Writer) (int64, error) {
 	return writeArrayJSON(w, a)
 }
 
-func (a *ArraySliceCompact[T]) Contents() interface{} {
+func (a *ArraySliceCompact[T]) Contents() any {
 	return a.JSON()
 }
 
@@ -226,11 +226,12 @@ func (a *ArraySliceCompact[T]) append(elements ...File) Array {
 	m := a.n + len(elements)
 	n := make([]File, m)
 	j := 0
+	// TODO: Replace with 2x copy() calls?
 	for i := 0; i < a.n; i++ {
 		n[j] = a.elements[i]
 		j++
 	}
-	for i := 0; i < len(elements); i++ {
+	for i := range elements {
 		n[j] = elements[i]
 		j++
 	}
@@ -245,7 +246,8 @@ func (a *ArraySliceCompact[T]) append(elements ...File) Array {
 
 func (a *ArraySliceCompact[T]) Slice(i, j int) Array {
 	elements := make([]File, j-i)
-	for k := 0; k < len(elements); k++ {
+	// TODO: Replace this with copy()?
+	for k := range elements {
 		elements[k] = a.elements[i+k]
 	}
 
@@ -288,6 +290,7 @@ func (a *ArraySliceCompact[T]) RemoveIdx(i int) Json {
 		return zeroArray
 	}
 
+	// TODO: Replace this with copy() + nil the last element?
 	for ; i < a.n-1; i++ {
 		a.elements[i] = a.elements[i+1]
 	}
@@ -306,7 +309,7 @@ func (a *ArraySliceCompact[T]) SetIdx(i int, j File) Json {
 	return a
 }
 
-func (a *ArraySliceCompact[T]) JSON() interface{} {
+func (a *ArraySliceCompact[T]) JSON() any {
 	return arraySliceBase[*ArraySliceCompact[T]]{}.JSON(a)
 }
 

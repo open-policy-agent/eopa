@@ -31,13 +31,13 @@ type ai struct {
 }
 
 func testArrayDiff(t *testing.T, a string, b string, result []ai) {
-	var data1 interface{}
+	var data1 any
 	err := gojson.Unmarshal([]byte(a), &data1)
 	if err != nil {
 		t.Fatalf("Unable to unmarshal: %v", err)
 	}
 
-	var data2 interface{}
+	var data2 any
 	err = gojson.Unmarshal([]byte(b), &data2)
 	if err != nil {
 		t.Fatalf("Unable to unmarshal: %v", err)
@@ -84,7 +84,7 @@ func testArrayDiff(t *testing.T, a string, b string, result []ai) {
 		t.Fatalf("diff resulted in wrong results: %d vs %d, %v", len(ai), len(result), changed)
 	}
 
-	for i := 0; i < len(ai); i++ {
+	for i := range ai {
 		if ai[i].b != result[i].b {
 			t.Fatalf("diff did not detect value reuse")
 		}
@@ -259,13 +259,13 @@ func TestHashCache(t *testing.T) {
 }
 
 func testEqual(t *testing.T, a string, b string) {
-	var data1 interface{}
+	var data1 any
 	err := gojson.Unmarshal([]byte(a), &data1)
 	if err != nil {
 		t.Fatalf("Unable to unmarshal: %v", err)
 	}
 
-	var data2 interface{}
+	var data2 any
 	err = gojson.Unmarshal([]byte(b), &data2)
 	if err != nil {
 		t.Fatalf("Unable to unmarshal: %v", err)

@@ -53,7 +53,7 @@ type indexableStrings interface {
 		[32]*String
 }
 
-func NewObjectMapCompactStrings(properties map[string]File, interning map[interface{}]*[]string) Object {
+func NewObjectMapCompactStrings(properties map[string]File, interning map[any]*[]string) Object {
 	n := len(properties)
 	if n == 0 || n > 32 {
 		return nil
@@ -137,7 +137,7 @@ func NewObjectMapCompactStrings(properties map[string]File, interning map[interf
 	panic("not reached")
 }
 
-func newObjectMapCompactStrings[T indexableStrings](properties map[string]File, interning map[interface{}]*[]string) Object {
+func newObjectMapCompactStrings[T indexableStrings](properties map[string]File, interning map[any]*[]string) Object {
 	var obj ObjectMapCompactStrings[T]
 
 	i := 0
@@ -176,7 +176,7 @@ func (o *ObjectMapCompactStrings[T]) WriteTo(w io.Writer) (int64, error) {
 	return objectMapBase[*ObjectMapCompactStrings[T]]{}.WriteTo(o, w)
 }
 
-func (o *ObjectMapCompactStrings[T]) Contents() interface{} {
+func (o *ObjectMapCompactStrings[T]) Contents() any {
 	return o.JSON()
 }
 
@@ -252,7 +252,7 @@ func (o *ObjectMapCompactStrings[T]) Len() int {
 	return len(o.values)
 }
 
-func (o *ObjectMapCompactStrings[T]) JSON() interface{} {
+func (o *ObjectMapCompactStrings[T]) JSON() any {
 	return objectMapBase[*ObjectMapCompactStrings[T]]{}.JSON(o)
 }
 
@@ -292,7 +292,7 @@ func (o *ObjectMapCompactStrings[T]) Union(other Json) Json {
 	return objectMapBase[*ObjectMapCompactStrings[T]]{}.Union(o, other)
 }
 
-func (o *ObjectMapCompactStrings[T]) intern(s []string, keys map[interface{}]*[]string) *[]string {
+func (o *ObjectMapCompactStrings[T]) intern(s []string, keys map[any]*[]string) *[]string {
 	return objectMapBase[*ObjectMapCompactStrings[T]]{}.intern(s, keys)
 }
 

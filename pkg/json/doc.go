@@ -7,7 +7,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
+	"github.com/open-policy-agent/eopa/pkg/json/utils"
 )
 
 type Kind uint
@@ -23,7 +23,7 @@ const (
 // metadata is to be accessed over the Resource interface (which represents a single entity in the namespace).
 type File interface {
 	io.WriterTo
-	Contents() interface{}
+	Contents() any
 
 	// Clone returns a (deep) copy of the file.
 	Clone(deepCopy bool) File
@@ -60,7 +60,7 @@ type Collections interface {
 
 	// Objects returns the storage objects below. 	If a snapshot based collection, the slice will hold only one entry, the snapshot object. If a
 	// delta based collection, the first entity will be the delta object and the second for the snapshot. Note the meta data may be nil, if it was not provided at the construction time.
-	Objects() []interface{}
+	Objects() []any
 
 	// Write operations. With binary collections they operate on the deltas.
 
