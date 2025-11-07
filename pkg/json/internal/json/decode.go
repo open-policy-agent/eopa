@@ -542,10 +542,7 @@ func (d *decodeState) array(v reflect.Value) error {
 		if v.Kind() == reflect.Slice {
 			// Grow slice if necessary
 			if i >= v.Cap() {
-				newcap := v.Cap() + v.Cap()/2
-				if newcap < 4 {
-					newcap = 4
-				}
+				newcap := max(v.Cap()+v.Cap()/2, 4)
 				newv := reflect.MakeSlice(v.Type(), v.Len(), newcap)
 				reflect.Copy(newv, v)
 				v.Set(newv)

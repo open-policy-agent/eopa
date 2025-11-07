@@ -12,7 +12,7 @@ import (
 func TestObject2(t *testing.T) {
 	obj := zeroObject2
 
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		t.Run("", func(t *testing.T) {
 			expected := make(map[string]string)
 			for j := 0; j < i; j++ {

@@ -5,7 +5,9 @@ package json
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -15,7 +17,7 @@ import (
 )
 
 type testResource struct {
-	V interface{}
+	V any
 }
 
 func (t *testResource) Meta(now time.Time) (string, string) {
@@ -34,7 +36,7 @@ func testWriteBlob(path string, v []byte) testOperation {
 	}
 }
 
-func testWriteJSON(path string, v interface{}) testOperation {
+func testWriteJSON(path string, v any) testOperation {
 	return func(c Collections) Collections {
 		c.WriteJSON(path, MustNew(v))
 		return c
@@ -126,9 +128,7 @@ func testCollectionOperation(c Collections, operations []testOperation, _ time.T
 // testCollectionVerify the resulting collection is as as expected.
 func testCollectionVerify(t *testing.T, c Collections, expected map[string]testResource, now time.Time) {
 	files := make(map[string]testResource)
-	for n, r := range expected {
-		files[n] = r
-	}
+	maps.Copy(files, expected)
 
 	f := func(r Resource) bool {
 		hit, ok := files[r.Name()]
@@ -157,14 +157,14 @@ func testCollectionVerify(t *testing.T, c Collections, expected map[string]testR
 		// Check the resource has valid keys: "data" or "data:<name>" and "kind" for non-directories.
 
 		names := r.(*resourceImpl).obj.Names()
-		if utils.Contains(names, "data") {
+		if slices.Contains(names, "data") {
 			for _, name := range names {
 				if strings.HasPrefix(name, "data:") {
 					t.Errorf("data and data: both defined")
 				}
 			}
 
-			if !utils.Contains(names, "kind") {
+			if !slices.Contains(names, "kind") {
 				t.Errorf("data without kind")
 			}
 		}
@@ -297,9 +297,9 @@ func TestDeltaPatchSnapshot(t *testing.T) {
 		},
 		{
 			Description:   "Patch JSON root",
-			PreCollection: testCollection{"a": testResource{V: map[string]interface{}{"foo": "abc"}}},
+			PreCollection: testCollection{"a": testResource{V: map[string]any{"foo": "abc"}}},
 			Operations: []testOperation{testPatchJSON("a", JsonPatchSpec{
-				map[string]interface{}{
+				map[string]any{
 					"op":    "add",
 					"path":  "/foo",
 					"value": "def",
@@ -307,14 +307,14 @@ func TestDeltaPatchSnapshot(t *testing.T) {
 			})},
 			PostCollection: testCollection{
 				"":  testResource{},
-				"a": testResource{V: map[string]interface{}{"foo": "def"}},
+				"a": testResource{V: map[string]any{"foo": "def"}},
 			},
 		},
 		{
 			Description:   "Patch JSON non-root (add)",
-			PreCollection: testCollection{"a": testResource{V: map[string]interface{}{"foo": "abc"}}},
+			PreCollection: testCollection{"a": testResource{V: map[string]any{"foo": "abc"}}},
 			Operations: []testOperation{testPatchJSON("a", JsonPatchSpec{
-				map[string]interface{}{
+				map[string]any{
 					"op":    "add",
 					"path":  "/foo",
 					"value": "def",
@@ -322,14 +322,14 @@ func TestDeltaPatchSnapshot(t *testing.T) {
 			})},
 			PostCollection: testCollection{
 				"":  testResource{},
-				"a": testResource{V: map[string]interface{}{"foo": "def"}},
+				"a": testResource{V: map[string]any{"foo": "def"}},
 			},
 		},
 		{
 			Description:   "Patch JSON non-root (create 1)",
-			PreCollection: testCollection{"a": testResource{V: map[string]interface{}{}}},
+			PreCollection: testCollection{"a": testResource{V: map[string]any{}}},
 			Operations: []testOperation{testPatchJSON("a", JsonPatchSpec{
-				map[string]interface{}{
+				map[string]any{
 					"op":    "create",
 					"path":  "/a",
 					"value": "value",
@@ -337,14 +337,14 @@ func TestDeltaPatchSnapshot(t *testing.T) {
 			})},
 			PostCollection: testCollection{
 				"":  testResource{},
-				"a": testResource{V: map[string]interface{}{"a": "value"}},
+				"a": testResource{V: map[string]any{"a": "value"}},
 			},
 		},
 		{
 			Description:   "Patch JSON non-root (create 2)",
-			PreCollection: testCollection{"a": testResource{V: map[string]interface{}{}}},
+			PreCollection: testCollection{"a": testResource{V: map[string]any{}}},
 			Operations: []testOperation{testPatchJSON("a", JsonPatchSpec{
-				map[string]interface{}{
+				map[string]any{
 					"op":    "create",
 					"path":  "/a/b",
 					"value": "value",
@@ -352,14 +352,14 @@ func TestDeltaPatchSnapshot(t *testing.T) {
 			})},
 			PostCollection: testCollection{
 				"":  testResource{},
-				"a": testResource{V: map[string]interface{}{"a": map[string]interface{}{"b": "value"}}},
+				"a": testResource{V: map[string]any{"a": map[string]any{"b": "value"}}},
 			},
 		},
 		{
 			Description:   "Patch JSON non-root (create 3)",
-			PreCollection: testCollection{"a": testResource{V: map[string]interface{}{}}},
+			PreCollection: testCollection{"a": testResource{V: map[string]any{}}},
 			Operations: []testOperation{testPatchJSON("a", JsonPatchSpec{
-				map[string]interface{}{
+				map[string]any{
 					"op":    "create",
 					"path":  "/a/b/c",
 					"value": "value",
@@ -367,22 +367,22 @@ func TestDeltaPatchSnapshot(t *testing.T) {
 			})},
 			PostCollection: testCollection{
 				"":  testResource{},
-				"a": testResource{V: map[string]interface{}{"a": map[string]interface{}{"b": map[string]interface{}{"c": "value"}}}},
+				"a": testResource{V: map[string]any{"a": map[string]any{"b": map[string]any{"c": "value"}}}},
 			},
 		},
 		{
 			Description: "Patch JSON non-root (two non-overlapping patches)",
-			PreCollection: testCollection{"a": testResource{V: map[string]interface{}{
+			PreCollection: testCollection{"a": testResource{V: map[string]any{
 				"foo": "abc",
 				"bar": "def",
 			}}},
 			Operations: []testOperation{testPatchJSON("a", JsonPatchSpec{
-				map[string]interface{}{
+				map[string]any{
 					"op":    "add",
 					"path":  "/foo",
 					"value": "def",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"op":    "add",
 					"path":  "/bar",
 					"value": "ghi",
@@ -390,7 +390,7 @@ func TestDeltaPatchSnapshot(t *testing.T) {
 			})},
 			PostCollection: testCollection{
 				"": testResource{},
-				"a": testResource{V: map[string]interface{}{
+				"a": testResource{V: map[string]any{
 					"foo": "def",
 					"bar": "ghi",
 				}},
@@ -398,46 +398,46 @@ func TestDeltaPatchSnapshot(t *testing.T) {
 		},
 		{
 			Description: "Patch JSON non-root (two overlapping patches #1)",
-			PreCollection: testCollection{"a": testResource{V: map[string]interface{}{
+			PreCollection: testCollection{"a": testResource{V: map[string]any{
 				"foo": "abc",
 				"bar": "def",
 			}}},
 			Operations: []testOperation{testPatchJSON("a", JsonPatchSpec{
-				map[string]interface{}{
+				map[string]any{
 					"op":    "add",
 					"path":  "/foo",
 					"value": "def",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"op":   "add",
 					"path": "",
-					"value": map[string]interface{}{
+					"value": map[string]any{
 						"foo": "bar",
 					},
 				},
 			})},
 			PostCollection: testCollection{
 				"": testResource{},
-				"a": testResource{V: map[string]interface{}{
+				"a": testResource{V: map[string]any{
 					"foo": "bar",
 				}},
 			},
 		},
 		{
 			Description: "Patch JSON non-root (two overlapping patches #2)",
-			PreCollection: testCollection{"a": testResource{V: map[string]interface{}{
+			PreCollection: testCollection{"a": testResource{V: map[string]any{
 				"foo": "abc",
 				"bar": "def",
 			}}},
 			Operations: []testOperation{testPatchJSON("a", JsonPatchSpec{
-				map[string]interface{}{
+				map[string]any{
 					"op":   "add",
 					"path": "",
-					"value": map[string]interface{}{
+					"value": map[string]any{
 						"foo": "bar",
 					},
 				},
-				map[string]interface{}{
+				map[string]any{
 					"op":    "add",
 					"path":  "/foo",
 					"value": "def",
@@ -445,35 +445,35 @@ func TestDeltaPatchSnapshot(t *testing.T) {
 			})},
 			PostCollection: testCollection{
 				"": testResource{},
-				"a": testResource{V: map[string]interface{}{
+				"a": testResource{V: map[string]any{
 					"foo": "def",
 				}},
 			},
 		},
 		{
 			Description: "Patch JSON root (nested patches #1)",
-			PreCollection: testCollection{"": testResource{V: map[string]interface{}{
-				"foo": map[string]interface{}{
+			PreCollection: testCollection{"": testResource{V: map[string]any{
+				"foo": map[string]any{
 					"nested": "abc",
 				},
 				"bar": "def",
 			}}},
 			Operations: []testOperation{testPatchJSON("", JsonPatchSpec{
-				map[string]interface{}{
+				map[string]any{
 					"op":    "add",
 					"path":  "/new",
 					"value": "value",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"op":    "add",
 					"path":  "/foo/nested",
 					"value": "patched", // This value will be incorrectly included, unless patches are recursively removed.
 				},
-				map[string]interface{}{
+				map[string]any{
 					"op":   "add",
 					"path": "",
-					"value": map[string]interface{}{
-						"foo": map[string]interface{}{
+					"value": map[string]any{
+						"foo": map[string]any{
 							"nested": "abc",
 						},
 
@@ -482,8 +482,8 @@ func TestDeltaPatchSnapshot(t *testing.T) {
 				},
 			})},
 			PostCollection: testCollection{
-				"": testResource{V: map[string]interface{}{
-					"foo": map[string]interface{}{
+				"": testResource{V: map[string]any{
+					"foo": map[string]any{
 						"nested": "abc",
 					},
 					"bar": "patched",
@@ -492,23 +492,23 @@ func TestDeltaPatchSnapshot(t *testing.T) {
 		},
 		{
 			Description: "Patch JSON root (nested patches #2)",
-			PreCollection: testCollection{"": testResource{V: map[string]interface{}{
+			PreCollection: testCollection{"": testResource{V: map[string]any{
 				"abc": "123",
 			}}},
 			Operations: []testOperation{testPatchJSON("", JsonPatchSpec{
-				map[string]interface{}{
+				map[string]any{
 					"op":    "add",
 					"path":  "/abc",
 					"value": "456",
 				},
-				map[string]interface{}{ // This operation should not remove the previous patch, even though it'll modify the root.
+				map[string]any{ // This operation should not remove the previous patch, even though it'll modify the root.
 					"op":    "add",
 					"path":  "/def",
 					"value": "789",
 				},
 			})},
 			PostCollection: testCollection{
-				"": testResource{V: map[string]interface{}{
+				"": testResource{V: map[string]any{
 					"abc": "456",
 					"def": "789",
 				}},
@@ -516,26 +516,26 @@ func TestDeltaPatchSnapshot(t *testing.T) {
 		},
 		{
 			Description: "Patch JSON root (embedded types patched)",
-			PreCollection: testCollection{"": testResource{V: map[string]interface{}{
+			PreCollection: testCollection{"": testResource{V: map[string]any{
 				"abc": nil, // Embedded types (nil, booleans), have no offsets to remove.
 			}}},
 			Operations: []testOperation{testPatchJSON("", JsonPatchSpec{
-				map[string]interface{}{
+				map[string]any{
 					"op":   "add",
 					"path": "/abc",
-					"value": map[string]interface{}{
+					"value": map[string]any{
 						"def": true,
 						"ghi": false,
 					},
 				},
-				map[string]interface{}{
+				map[string]any{
 					"op":    "add",
 					"path":  "",
-					"value": map[string]interface{}{},
+					"value": map[string]any{},
 				},
 			})},
 			PostCollection: testCollection{
-				"": testResource{V: map[string]interface{}{}},
+				"": testResource{V: map[string]any{}},
 			},
 		},
 		{
@@ -686,15 +686,15 @@ func TestDeltaPatchSnapshot(t *testing.T) {
 
 // BenchmarkDeltaPatchWrite benchmarks patching a large delta snapshot with a small patch.
 func BenchmarkDeltaPatchWrite(b *testing.B) {
-	obj := make(map[string]interface{})
-	for i := 0; i < 10000; i++ {
+	obj := make(map[string]any)
+	for i := range 10000 {
 		obj[fmt.Sprintf("key:%d", i)] = fmt.Sprintf("value:%d", i)
 	}
 
 	now := time.Now()
 	snapshot := testCollectionCreate(testCollection{"": testResource{V: obj}}, now)
 	delta := testPatchJSON("", JsonPatchSpec{
-		map[string]interface{}{
+		map[string]any{
 			"op":    "add",
 			"path":  "/key:0",
 			"value": "patched",
@@ -703,7 +703,7 @@ func BenchmarkDeltaPatchWrite(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		testPatchJSON("", JsonPatchSpec{
-			map[string]interface{}{
+			map[string]any{
 				"op":    "add",
 				"path":  "/key:1",
 				"value": "patched",

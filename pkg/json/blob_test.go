@@ -36,7 +36,7 @@ func TestBlob(t *testing.T) {
 	}
 }
 
-func buildBinary(data interface{}) (File, error) {
+func buildBinary(data any) (File, error) {
 	cache := newEncodingCache()
 	buffer := new(bytes.Buffer)
 

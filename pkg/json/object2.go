@@ -15,7 +15,7 @@ var (
 	zeroObject2 Object2 = &objectCompact[[0]hashObjectCompactEntry]{}
 )
 
-type T = interface{}
+type T = any
 
 type Object2 interface {
 	Json
@@ -27,7 +27,7 @@ type Object2 interface {
 	get(hash uint64, k Json) (Json, bool)
 	Iter(iter func(key, value Json) (bool, error)) error
 	iter(iter func(hash uint64, key, value Json))
-	Iter2(iter func(key, value interface{}) (bool, error)) error
+	Iter2(iter func(key, value any) (bool, error)) error
 	Equal(other Object2) bool
 	Diff(other Object2) Object2
 	Len() int
@@ -152,7 +152,7 @@ func (o *objectLarge) iter(iter func(hash uint64, key, value Json)) {
 	}
 }
 
-func (o *objectLarge) Iter2(iter func(key, value interface{}) (bool, error)) error {
+func (o *objectLarge) Iter2(iter func(key, value any) (bool, error)) error {
 	for _, entry := range o.table {
 		for ; entry != nil; entry = entry.next {
 			if stop, err := iter(entry.k, entry.v); err != nil {
@@ -248,7 +248,7 @@ func (o *objectLarge) Union(other Object2) Object2 {
 	return result
 }
 
-func (o *objectLarge) hash(k interface{}) uint64 {
+func (o *objectLarge) hash(k any) uint64 {
 	return hash(k)
 }
 
@@ -388,7 +388,7 @@ func (o *objectCompact[T]) iter(iter func(hash uint64, key, value Json)) {
 	}
 }
 
-func (o *objectCompact[T]) Iter2(iter func(key, value interface{}) (bool, error)) error {
+func (o *objectCompact[T]) Iter2(iter func(key, value any) (bool, error)) error {
 	var (
 		stop bool
 		err  error
@@ -477,7 +477,7 @@ func (o *objectCompact[T]) Union(other Object2) Object2 {
 	return result
 }
 
-func (o *objectCompact[T]) hash(k interface{}) uint64 {
+func (o *objectCompact[T]) hash(k any) uint64 {
 	return hash(k)
 }
 

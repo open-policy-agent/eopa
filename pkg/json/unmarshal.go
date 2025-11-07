@@ -10,7 +10,7 @@ import (
 )
 
 // Unmarshal stores the JSON data in the value pointed to by v.
-func Unmarshal(data Json, v interface{}) error {
+func Unmarshal(data Json, v any) error {
 	var buf bytes.Buffer
 	if _, err := data.WriteTo(&buf); err != nil {
 		return err
@@ -20,7 +20,7 @@ func Unmarshal(data Json, v interface{}) error {
 }
 
 // UnmarshalUseNumber stores the JSON data in the value pointed to by v. Numbers are stored as json.Number
-func UnmarshalUseNumber(data Json, v interface{}) error {
+func UnmarshalUseNumber(data Json, v any) error {
 	var buf bytes.Buffer
 	if _, err := data.WriteTo(&buf); err != nil {
 		return err

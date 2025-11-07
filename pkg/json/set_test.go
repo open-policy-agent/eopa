@@ -14,7 +14,7 @@ import (
 func TestSet(t *testing.T) {
 	set := zeroSet
 
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		t.Run("", func(t *testing.T) {
 			expected := make(map[string]struct{})
 			for j := 0; j < i; j++ {
@@ -42,7 +42,7 @@ func TestSet(t *testing.T) {
 
 			// Iter2
 			contents = make(map[string]struct{})
-			set.Iter2(func(v, vv interface{}) (bool, error) {
+			set.Iter2(func(v, vv any) (bool, error) {
 				if v.(*String).Value() != vv.(*String).Value() {
 					t.Fatal("unexpected iteration")
 				}
@@ -50,7 +50,7 @@ func TestSet(t *testing.T) {
 				return false, nil
 			})
 			c = 0
-			set.Iter2(func(_, _ interface{}) (bool, error) {
+			set.Iter2(func(_, _ any) (bool, error) {
 				c++
 				return true, nil
 			})

@@ -76,7 +76,7 @@ func EscapePointerSeg(ptr string) string {
 // The function returns an error if no element found (to separate from
 // the case value being a nil). That is, it is up to the caller to
 // determine the exact semantics of no element found.
-func Extract(json interface{}, ptr string) (interface{}, error) {
+func Extract(json any, ptr string) (any, error) {
 	if doc, ok := json.(Json); ok {
 		return doc.Extract(ptr)
 	}

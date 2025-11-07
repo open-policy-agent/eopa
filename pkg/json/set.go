@@ -23,7 +23,7 @@ type Set interface {
 	add(hash uint64, v Json) Set
 	Get(v Json) (Json, bool)
 	Iter(iter func(v Json) (bool, error)) (bool, error)
-	Iter2(iter func(v, vv interface{}) (bool, error)) (bool, error)
+	Iter2(iter func(v, vv any) (bool, error)) (bool, error)
 	Equal(other Set) bool
 	Len() int
 	Hash() uint64
@@ -125,7 +125,7 @@ func (o *setLarge) Iter(iter func(v Json) (bool, error)) (bool, error) {
 
 	return false, nil
 }
-func (o *setLarge) Iter2(iter func(v, vv interface{}) (bool, error)) (bool, error) {
+func (o *setLarge) Iter2(iter func(v, vv any) (bool, error)) (bool, error) {
 	for _, entry := range o.table {
 		for ; entry != nil; entry = entry.next {
 			if stop, err := iter(entry.v, entry.v); err != nil {
@@ -193,7 +193,7 @@ func (o *setLarge) AST() ast.Value {
 	return ast.NewSet(terms...)
 }
 
-func (o *setLarge) hash(k interface{}) uint64 {
+func (o *setLarge) hash(k any) uint64 {
 	return hash(k)
 }
 
@@ -284,7 +284,7 @@ func (o *setCompact[T]) Iter(iter func(v Json) (bool, error)) (bool, error) {
 	return stop, err
 }
 
-func (o *setCompact[T]) Iter2(iter func(v, vv interface{}) (bool, error)) (bool, error) {
+func (o *setCompact[T]) Iter2(iter func(v, vv any) (bool, error)) (bool, error) {
 	var (
 		stop bool
 		err  error
@@ -345,7 +345,7 @@ func (o *setCompact[T]) AST() ast.Value {
 	return ast.NewSet(terms...)
 }
 
-func (o *setCompact[T]) hash(k interface{}) uint64 {
+func (o *setCompact[T]) hash(k any) uint64 {
 	return hash(k)
 }
 

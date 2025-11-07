@@ -15,7 +15,7 @@ import (
 	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
 )
 
-func testDiff(t *testing.T, a interface{}, b interface{}) *deltaReader {
+func testDiff(t *testing.T, a any, b any) *deltaReader {
 	var x *snapshotReader
 	var y contentReader
 	var xn int64
@@ -859,12 +859,12 @@ func TestDeltaObject(t *testing.T) {
 func TestDeltaObjectTypes(t *testing.T) {
 	// An array with with two objects with the same names: 1) full definition, and 2) thinned one.
 
-	j, _ := buildJSON([]interface{}{
-		map[string]interface{}{
+	j, _ := buildJSON([]any{
+		map[string]any{
 			"a": "a",
 			"b": "b",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"a": "a",
 			"b": "b",
 		},
@@ -1025,7 +1025,7 @@ func TestDeltaEmbedding(t *testing.T) {
 }
 
 func getContent(t *testing.T, jsonStr string) (*snapshotReader, int64) {
-	var data interface{}
+	var data any
 	json.Unmarshal([]byte(jsonStr), &data)
 
 	c, n, err := translate(data)
@@ -1047,9 +1047,9 @@ func getBinaryContent(t *testing.T, data []byte) (*snapshotReader, int64) {
 
 // BenchmarkDeltaWrite benchmarks patching a large delta snapshot with a small patch.
 func BenchmarkDeltaWrite(b *testing.B) {
-	obj := make(map[string]interface{})
+	obj := make(map[string]any)
 
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		obj[fmt.Sprintf("key:%d", i)] = fmt.Sprintf("value:%d", i)
 	}
 

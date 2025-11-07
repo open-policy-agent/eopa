@@ -118,14 +118,14 @@ func newEncodingCache() *encodingCache {
 
 func (c *encodingCache) CacheObjectType(typeName []objectEntry, offset int32) int32 {
 	h := uint64(0)
-	for i := 0; i < len(typeName); i++ {
+	for i := range typeName {
 		h += xxhash.Sum64String(typeName[i].name)
 	}
 
 	objects, ok := c.objectTypes[h]
 	if ok {
 	next:
-		for i := 0; i < len(objects); i++ {
+		for i := range objects {
 			if len(typeName) != len(objects[i].properties) {
 				continue
 			}
@@ -154,7 +154,7 @@ func (c *encodingCache) CacheString(str string, offset int32) int32 {
 
 	strings, ok := c.strings[h]
 	if ok {
-		for i := 0; i < len(strings); i++ {
+		for i := range strings {
 			if strings[i].s == str {
 				return strings[i].offset
 			}

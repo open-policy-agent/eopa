@@ -113,7 +113,7 @@ func (a *ArraySliceCompactStrings[T]) WriteTo(w io.Writer) (int64, error) {
 	return writeArrayJSON(w, a)
 }
 
-func (a *ArraySliceCompactStrings[T]) Contents() interface{} {
+func (a *ArraySliceCompactStrings[T]) Contents() any {
 	return a.JSON()
 }
 
@@ -159,7 +159,7 @@ func (a *ArraySliceCompactStrings[T]) append(elements ...File) Array {
 		n[j] = a.elements[i]
 		j++
 	}
-	for i := 0; i < len(elements); i++ {
+	for i := range elements {
 		n[j] = elements[i]
 		j++
 	}
@@ -174,7 +174,7 @@ func (a *ArraySliceCompactStrings[T]) append(elements ...File) Array {
 
 func (a *ArraySliceCompactStrings[T]) Slice(i, j int) Array {
 	elements := make([]File, j-i)
-	for k := 0; k < len(elements); k++ {
+	for k := range elements {
 		elements[k] = a.elements[i+k]
 	}
 
@@ -234,7 +234,7 @@ func (a *ArraySliceCompactStrings[T]) SetIdx(i int, j File) Json {
 	}
 
 	f := make([]File, a.Len())
-	for k := 0; k < len(f); k++ {
+	for k := range f {
 		if k == i {
 			f[k] = j
 		} else {
@@ -245,7 +245,7 @@ func (a *ArraySliceCompactStrings[T]) SetIdx(i int, j File) Json {
 	return NewArray(f, len(f))
 }
 
-func (a *ArraySliceCompactStrings[T]) JSON() interface{} {
+func (a *ArraySliceCompactStrings[T]) JSON() any {
 	return arraySliceBase[*ArraySliceCompactStrings[T]]{}.JSON(a)
 }
 

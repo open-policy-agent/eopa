@@ -48,18 +48,18 @@ func TestJSONPointer(t *testing.T) {
 	s := t1{"x", &i, t2{"z"}, t2{"w"}, t3{"q"}}
 	str := "v"
 	pstr := &str
-	var iface, iface2 interface{}
+	var iface, iface2 any
 	iface = str
 	iface2 = &str
 
 	tests := []struct {
-		doc      interface{}
+		doc      any
 		pointer  string
-		expected interface{}
+		expected any
 	}{
 		// Test document and paths from RFC 6901.
 		{rfc6901, "", rfc6901},
-		{rfc6901, "/foo", []interface{}{"bar", "baz"}},
+		{rfc6901, "/foo", []any{"bar", "baz"}},
 		{rfc6901, "/foo/0", "bar"},
 		{rfc6901, "/", float64(0)},
 		{rfc6901, "/a~1b", float64(1)},
@@ -82,11 +82,11 @@ func TestJSONPointer(t *testing.T) {
 		// Exercise both map field access and more complicated primitive values.
 		{map[int]string{1: "v"}, "/1", "v"},
 		{map[int]*string{1: &str}, "/1", "v"},
-		{map[int]interface{}{1: &str}, "/1", "v"},
-		{map[int]interface{}{1: iface}, "/1", "v"},
-		{map[int]interface{}{1: iface2}, "/1", "v"},
-		{map[int]interface{}{1: &iface}, "/1", "v"},
-		{map[int]interface{}{1: &iface2}, "/1", "v"},
+		{map[int]any{1: &str}, "/1", "v"},
+		{map[int]any{1: iface}, "/1", "v"},
+		{map[int]any{1: iface2}, "/1", "v"},
+		{map[int]any{1: &iface}, "/1", "v"},
+		{map[int]any{1: &iface2}, "/1", "v"},
 		{map[int8]string{1: "v"}, "/1", "v"},
 		{map[int16]string{1: "v"}, "/1", "v"},
 		{map[int32]string{1: "v"}, "/1", "v"},
@@ -150,9 +150,9 @@ func TestJSONPointerNotFound(t *testing.T) {
 	v := testBuildJSON(`{"foo": ["bar", "baz"], "a": true, "b": null, "c": 0}`)
 
 	tests := []struct {
-		doc      interface{}
+		doc      any
 		pointer  string
-		expected interface{}
+		expected any
 	}{
 		{v, "/bar", nil},
 		{v, "/foo/2", nil},
@@ -202,8 +202,8 @@ func TestJSONPointerNotFound(t *testing.T) {
 	}
 }
 
-func testBuildJSON(s string) interface{} {
-	var v interface{}
+func testBuildJSON(s string) any {
+	var v any
 	if err := json.Unmarshal([]byte(s), &v); err != nil {
 		panic("Invalid JSON snippet")
 	}

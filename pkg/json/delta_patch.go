@@ -17,7 +17,7 @@ import (
 
 // deltaPatch transforms a JSON patch to a delta to apply over a snapshot or merges the JSON patch to an existing delta.
 type deltaPatch struct {
-	dependency interface{}        // Storage level object
+	dependency any                // Storage level object
 	snapshot   *utils.MultiReader // Content without any deltas. Not modified.
 	delta      *utils.MultiReader // Plain deltas. As patches are applied, this is appended with new patches.
 	content    *utils.MultiReader // Entire content, a mere facade over the snapshot and deltas.
@@ -25,7 +25,7 @@ type deltaPatch struct {
 	slen       int64
 }
 
-func newDeltaPatch(snapshot *utils.MultiReader, slen int64, delta *utils.MultiReader, objects []interface{}) *deltaPatch {
+func newDeltaPatch(snapshot *utils.MultiReader, slen int64, delta *utils.MultiReader, objects []any) *deltaPatch {
 	if delta == nil {
 		buffer := new(bytes.Buffer)
 		buffer.Write(make([]byte, 4))
@@ -301,7 +301,7 @@ func (d *deltaPatch) create(name string) []string {
 
 	segs := PathSegments(name)
 	var path []string
-	for i := 0; i < len(segs); i++ {
+	for i := range segs {
 		// Non-leafs in the hierarchy must be directories.
 
 		if i < len(segs)-1 && kindImpl(obj) != Directory {
@@ -577,7 +577,7 @@ func (d *deltaPatch) remove(offset int64, removed map[int64]struct{}) error {
 		l, err := content.ArrayLen()
 		checkError(err)
 
-		for i := 0; i < l; i++ {
+		for i := range l {
 			offset, err := content.ArrayValueOffset(i)
 			if err != nil {
 				return err
@@ -674,7 +674,7 @@ func (d *deltaPatch) collections() *snapshot {
 	err := d.apply(d.setMetaRecursively(nil, newObject(d, 0), "timestamp", fmt.Sprintf("%d", now.UnixNano())))
 	checkError(err)
 
-	return &snapshot{ObjectBinary: newObject(d, 0), slen: d.slen, blen: int64(d.content.Len()), objects: []interface{}{nil, d.dependency}}
+	return &snapshot{ObjectBinary: newObject(d, 0), slen: d.slen, blen: int64(d.content.Len()), objects: []any{nil, d.dependency}}
 }
 
 func (d *deltaPatch) setMetaRecursively(path []string, obj Object, key string, value string) Patch {

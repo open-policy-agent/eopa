@@ -1019,7 +1019,7 @@ func reserialize(src contentReader, alen int64, off int64, embeddingAllowed bool
 		offsets := buffer.Len()
 		buffer.Write(make([]byte, 4*l))
 
-		for i := 0; i < l; i++ {
+		for i := range l {
 			voff, err := a.ArrayValueOffset(i)
 			if err != nil {
 				return 0, err

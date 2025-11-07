@@ -31,7 +31,7 @@ func TestUnmarshalObject(t *testing.T) {
 		t.Errorf("parsing failure: %s", err)
 	}
 
-	correct, _ := New(map[string]interface{}{"a": "x", "b": "y"})
+	correct, _ := New(map[string]any{"a": "x", "b": "y"})
 	if correct.Compare(parsed) != 0 {
 		t.Error("parsing failure: not equal")
 	}
@@ -51,7 +51,7 @@ func TestUnmarshalArray(t *testing.T) {
 		t.Errorf("parsing failure: %s", err)
 	}
 
-	correct, _ := New([]interface{}{"a", "b"})
+	correct, _ := New([]any{"a", "b"})
 	if correct.Compare(parsed) != 0 {
 		t.Error("parsing failure: not equal")
 	}

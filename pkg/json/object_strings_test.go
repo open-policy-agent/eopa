@@ -59,7 +59,7 @@ func TestObjectStringsSizes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			var native interface{}
+			var native any
 			if err := util.NewJSONDecoder(bytes.NewBufferString(test.json)).Decode(&native); err != nil {
 				t.Fatal(err)
 			}
@@ -75,7 +75,7 @@ func TestObjectStringsSizes(t *testing.T) {
 				t.Errorf("incorrect json marshaling: %s", doc.String())
 			}
 
-			var nativeObj = native.(map[string]interface{})
+			var nativeObj = native.(map[string]any)
 			var obj = doc.(Object)
 
 			obj = obj.Clone(true).(Object)
