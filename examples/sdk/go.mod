@@ -82,7 +82,7 @@ require (
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cncf/xds/go v0.0.0-20250501225837-2ac532fd4443 // indirect
 	github.com/cockroachdb/apd/v3 v3.2.1 // indirect
-	github.com/containerd/containerd/v2 v2.1.4 // indirect
+	github.com/containerd/containerd/v2 v2.1.5 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
@@ -102,7 +102,7 @@ require (
 	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
+	github.com/dvsekhvalnov/jose2go v1.7.0 // indirect
 	github.com/ebitengine/purego v0.8.4 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.35.0 // indirect
