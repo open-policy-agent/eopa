@@ -4,7 +4,7 @@ go 1.25.2
 
 require (
 	github.com/open-policy-agent/eopa v0.0.0-00010101000000-000000000000
-	github.com/open-policy-agent/opa v1.10.0
+	github.com/open-policy-agent/opa v1.10.1
 )
 
 require (
@@ -83,7 +83,7 @@ require (
 	github.com/containerd/platforms v1.0.0-rc.1 // indirect
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
-	github.com/cyphar/filepath-securejoin v0.5.0 // indirect
+	github.com/cyphar/filepath-securejoin v0.5.1 // indirect
 	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/dgraph-io/badger/v4 v4.8.0 // indirect
