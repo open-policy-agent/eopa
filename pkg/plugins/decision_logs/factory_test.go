@@ -1159,6 +1159,66 @@ output:
 			},
 		},
 		{
+			note: "s3 output with role arn",
+			config: `
+output:
+  type: s3
+  endpoint: "https://local.minio:9000"
+  region: us-underwater-1
+  bucket: dl
+  role: arn:aws:iam::123456789012:role/some-role
+  role_external_id: some_external_id
+  batching:
+    at_count: 42
+    at_bytes: 43
+    at_period: "300ms"
+    format: array
+    compress: true
+`,
+			checks: func(t testing.TB, a any, err error) {
+				isConfig(Config{
+					memoryBuffer: &memBufferOpts{
+						MaxBytes: defaultMemoryMaxBytes,
+					},
+					outputs: []output{&outputS3Opts{
+						Endpoint:   "https://local.minio:9000",
+						Region:     "us-underwater-1",
+						Bucket:     "dl",
+						Role:       "arn:aws:iam::123456789012:role/some-role",
+						ExternalId: "some_external_id",
+						Batching: &batchOpts{
+							Period:   "300ms",
+							Count:    42,
+							Bytes:    43,
+							Format:   "array",
+							Compress: true,
+						},
+					}},
+				})(t, a, err)
+
+				isBenthos(map[string]any{
+					"aws_s3": map[string]any{
+						"batching": map[string]any{
+							"byte_size": 43,
+							"count":     42,
+							"period":    "300ms",
+							"processors": []map[string]any{
+								{"mutation": s3MetaMapping},
+								{"archive": map[string]any{"format": string("json_array")}},
+								{"compress": map[string]any{"algorithm": string("gzip")}},
+							},
+						},
+						"bucket":       "dl",
+						"path":         `eopa=${!@eopa_id}/first_ts=${!@first_ts}/last_ts=${!@last_ts}/batch_id=${!uuid_v4()}.json.gz`,
+						"endpoint":     "https://local.minio:9000",
+						"content_type": "application/json",
+						"region":       "us-underwater-1",
+						"credentials":  map[string]any{"role": "arn:aws:iam::123456789012:role/some-role", "role_external_id": "some_external_id", "id": "", "secret": ""},
+					},
+				})(t, a, err)
+			},
+		},
+		{
 			note: "s3 output missing bucket",
 			config: `
 output:

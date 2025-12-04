@@ -478,8 +478,11 @@ type outputS3Opts struct {
 	Region       string `json:"region"`
 	ForcePath    bool   `json:"force_path"`
 	Bucket       string `json:"bucket"`
-	AccessKeyID  string `json:"access_key_id"`
-	AccessSecret string `json:"access_secret"`
+	AccessKeyID  string `json:"access_key_id,omitempty"`
+	AccessSecret string `json:"access_secret,omitempty"`
+	Role         string `json:"role,omitempty"`
+	ExternalId   string `json:"role_external_id,omitempty"`
+
 	// TODO(sr): support more automatic methods, ec2 role, kms etc
 
 	TLS      *tlsOpts   `json:"tls,omitempty"`
@@ -541,10 +544,17 @@ func (s *outputS3Opts) Benthos() map[string]any {
 	if s.tls != nil {
 		m["tls"] = s.tls.Benthos()
 	}
-	m["credentials"] = map[string]any{
+	cred := map[string]any{
 		"id":     s.AccessKeyID,
 		"secret": s.AccessSecret,
 	}
+	if s.Role != "" {
+		cred["role"] = s.Role
+	}
+	if s.ExternalId != "" {
+		cred["role_external_id"] = s.ExternalId
+	}
+	m["credentials"] = cred
 	return map[string]any{"aws_s3": m}
 }
 
