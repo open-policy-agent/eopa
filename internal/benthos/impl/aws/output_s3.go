@@ -14,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-
 	"github.com/redpanda-data/benthos/v4/public/bloblang"
 	"github.com/redpanda-data/benthos/v4/public/service"
 
@@ -282,6 +281,7 @@ func init() {
 			}
 			var wConf s3oConfig
 			if wConf, err = s3oConfigFromParsed(conf); err != nil {
+				mgr.Logger().Errorf("failed to parse S3 output config: %v", err)
 				return
 			}
 			out, err = newAmazonS3Writer(wConf, mgr)
@@ -432,6 +432,7 @@ func (a *amazonS3Writer) WriteBatch(wctx context.Context, msg service.MessageBat
 		}
 
 		if _, err := a.uploader.Upload(ctx, uploadInput); err != nil {
+			a.log.Errorf("failed to upload object to S3: %v", err)
 			return err
 		}
 		return nil
