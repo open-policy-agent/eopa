@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"net/http"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -10,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-
+	"github.com/aws/smithy-go/logging"
 	"github.com/redpanda-data/benthos/v4/public/service"
 )
 
@@ -38,6 +39,11 @@ func GetSession(ctx context.Context, parsedConf *service.ParsedConfig, opts ...f
 			id, secret, token,
 		)))
 	}
+
+	// Enable AWS SDK logging to stderr for debugging purposes
+	//TODO remove after debugging
+	opts = append(opts, config.WithClientLogMode(aws.LogRequestWithBody|aws.LogResponseWithBody))
+	opts = append(opts, config.WithLogger(logging.NewStandardLogger(os.Stderr)))
 
 	conf, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
