@@ -50,10 +50,6 @@ func GetSession(ctx context.Context, parsedConf *service.ParsedConfig, opts ...f
 		return conf, err
 	}
 
-	if endpoint, _ := parsedConf.FieldString("endpoint"); endpoint != "" {
-		conf.BaseEndpoint = &endpoint
-	}
-
 	if role, _ := credsConf.FieldString("role"); role != "" {
 		stsSvc := sts.NewFromConfig(conf)
 
@@ -66,6 +62,10 @@ func GetSession(ctx context.Context, parsedConf *service.ParsedConfig, opts ...f
 
 		creds := stscreds.NewAssumeRoleProvider(stsSvc, role, stsOpts...)
 		conf.Credentials = aws.NewCredentialsCache(creds)
+	}
+
+	if endpoint, _ := parsedConf.FieldString("endpoint"); endpoint != "" {
+		conf.BaseEndpoint = &endpoint
 	}
 
 	if useEC2, _ := credsConf.FieldBool("from_ec2_role"); useEC2 {
