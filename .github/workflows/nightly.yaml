@@ -25,7 +25,7 @@ jobs:
         uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
       - uses: open-policy-agent/setup-opa@950f159a49aa91f9323f36f1de81c7f6b5de9576 # v2.3.0
       - name: checkout EOPA
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 0
           path: eopa
@@ -60,7 +60,7 @@ jobs:
         uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # v1.3.1
       - uses: open-policy-agent/setup-opa@950f159a49aa91f9323f36f1de81c7f6b5de9576 # v2.3.0
       - name: checkout EOPA
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 0
           path: eopa
@@ -84,7 +84,7 @@ jobs:
         run: |
           echo "opa_dir=$(pwd)/opa" >> $GITHUB_OUTPUT
       - name: checkout OPA
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           repository: open-policy-agent/opa
           ref: ${{ steps.eopa.outputs.opa_version }}
@@ -118,7 +118,7 @@ jobs:
           df -h
       - uses: open-policy-agent/setup-opa@950f159a49aa91f9323f36f1de81c7f6b5de9576 # v2.3.0
       - name: Check out code
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 0
       - id: go_version
@@ -180,7 +180,7 @@ jobs:
           df -h
         if: matrix.os == 'ubuntu-24.04'
       - name: Check out code
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - id: go_version
         name: Read go version
         run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
@@ -266,7 +266,7 @@ jobs:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
       - name: Checkout code # needed for .trivyignore file
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 0
       - name: Download image tarball
@@ -299,7 +299,7 @@ jobs:
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
 
       - name: Checkout code
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       # Equivalent to:
       # $ trivy fs .
@@ -321,7 +321,7 @@ jobs:
     steps:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - id: go_version
         name: Read go version
         run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
@@ -348,7 +348,7 @@ jobs:
           docker image ls -aq | xargs -r docker rmi
           df -h
       - name: Check out code
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - id: go_version
         name: Read go version
         run: echo "go_version=$(cat .go-version)" >> $GITHUB_OUTPUT
@@ -377,18 +377,18 @@ jobs:
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
 
       - name: Checkout repository
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@fe4161a26a8629af62121b670040955b330f9af2 # v3.29.5
+        uses: github/codeql-action/init@cf1bb45a277cb3c205638b2cd5c984db1c46a412 # v3.29.5
         with:
           languages: go
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@fe4161a26a8629af62121b670040955b330f9af2 # v3.29.5
+        uses: github/codeql-action/autobuild@cf1bb45a277cb3c205638b2cd5c984db1c46a412 # v3.29.5
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@fe4161a26a8629af62121b670040955b330f9af2 # v3.29.5
+        uses: github/codeql-action/analyze@cf1bb45a277cb3c205638b2cd5c984db1c46a412 # v3.29.5
         with:
           category: "/language:go"
