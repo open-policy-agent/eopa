@@ -697,12 +697,6 @@ func getRevisions(ctx context.Context, store storage.Store, txn storage.Transact
 	var br bundleRevisions
 	br.Revisions = map[string]string{}
 
-	// Check if we still have a legacy bundle manifest in the store
-	br.LegacyRevision, err = bundle.LegacyReadRevisionFromStore(ctx, store, txn)
-	if err != nil && !storage.IsNotFound(err) {
-		return br, err
-	}
-
 	// read all bundle revisions from storage (if any exist)
 	names, err := bundle.ReadBundleNamesFromStore(ctx, store, txn)
 	if err != nil && !storage.IsNotFound(err) {

@@ -5,6 +5,7 @@ package batchquery
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -429,13 +430,13 @@ func (h *hndl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writer.JSONOK(w, output, formatPretty)
 	// Some succeeded, some failed.
 	case errCount > 0 && resultsCount > 0:
-		writer.JSON(w, 207, output, formatPretty)
+		JSON(w, 207, output, formatPretty)
 	// All failed.
 	case errCount > 0 && resultsCount == 0:
-		writer.JSON(w, 500, output, formatPretty)
+		JSON(w, 500, output, formatPretty)
 	// No inputs / all other cases:
 	default:
-		writer.JSON(w, 200, output, formatPretty)
+		JSON(w, 200, output, formatPretty)
 	}
 }
 
@@ -830,4 +831,37 @@ func (h *hndl) getDecisionLogger(legacyRevision string, revisions map[string]ser
 	}
 
 	return logger
+}
+
+// Adapted from upstream OPA: v1/server/writer/writer.go
+// JSON writes a response with the specified status code and
+// object. The object will be JSON serialized.
+//
+// Note(philip): If JSON encoding the payload fails, we may end
+// up with an incorrect status code for the error payload. This
+// happens because we cannot update the status code header after
+// setting it; that header is sent over first, before the payload.
+//
+// This is a conscious tradeoff for the Batch Query use case
+// because it allows us to avoid buffering a potentially massive
+// JSON response in memory multiple times before sending it.
+// The current design pays the buffering cost just once, in the
+// json.Encoder, versus twice or more in other approaches, like
+// using json.Marshal (which copies its buffer contents to a new
+// byte slice before returning), or using a bytes.Buffer as the
+// io.Writer target for the json.Encoder.
+func JSON(w http.ResponseWriter, code int, v any, pretty bool) {
+	enc := json.NewEncoder(w)
+	if pretty {
+		enc.SetIndent("", "  ")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+
+	if err := enc.Encode(v); err != nil {
+		// Inlined version of writer.ErrorString:
+		_, _ = w.Write(append(types.NewErrorV1(types.CodeInternal, "%s", err.Error()).Bytes(), byte('\n')))
+		return
+	}
 }
