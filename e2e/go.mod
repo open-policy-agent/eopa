@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/hashicorp/vault/api v1.22.0
 	github.com/minio/minio-go/v7 v7.0.97
-	github.com/open-policy-agent/opa v1.11.0
+	github.com/open-policy-agent/opa v1.11.1
 	github.com/redpanda-data/benthos/v4 v4.62.0
 	github.com/redpanda-data/connect/v4 v4.75.1
 	github.com/rogpeppe/go-internal v1.14.1
