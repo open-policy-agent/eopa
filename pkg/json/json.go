@@ -16,7 +16,7 @@ import (
 	"strings"
 
 	internal "github.com/open-policy-agent/eopa/pkg/json/internal/json"
-	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
+	"github.com/open-policy-agent/eopa/pkg/json/utils"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 )
@@ -27,7 +27,7 @@ type Json interface {
 	fmt.Stringer
 
 	// JSON returns Go JSON object. This is same as File.Contents().
-	JSON() interface{}
+	JSON() any
 
 	// AST return OPA ast.Value.
 	AST() ast.Value
@@ -96,11 +96,11 @@ func (n Null) WriteTo(w io.Writer) (int64, error) {
 	return int64(written), err
 }
 
-func (n Null) Contents() interface{} {
+func (n Null) Contents() any {
 	return n.JSON()
 }
 
-func (n Null) JSON() interface{} {
+func (n Null) JSON() any {
 	return nil
 }
 
@@ -160,7 +160,7 @@ func (b Bool) WriteTo(w io.Writer) (int64, error) {
 	return int64(written), err
 }
 
-func (b Bool) Contents() interface{} {
+func (b Bool) Contents() any {
 	return b.JSON()
 }
 
@@ -168,7 +168,7 @@ func (b Bool) Value() bool {
 	return b.value
 }
 
-func (b Bool) JSON() interface{} {
+func (b Bool) JSON() any {
 	return b.Value()
 }
 
@@ -229,7 +229,7 @@ func (f Float) WriteTo(w io.Writer) (int64, error) {
 	return writeStringJSON(w, string(f.value), false)
 }
 
-func (f Float) Contents() interface{} {
+func (f Float) Contents() any {
 	return f.JSON()
 }
 
@@ -237,7 +237,7 @@ func (f Float) Value() gojson.Number {
 	return f.value
 }
 
-func (f Float) JSON() interface{} {
+func (f Float) JSON() any {
 	return f.Value()
 }
 
@@ -415,7 +415,7 @@ func (s *String) WriteTo(w io.Writer) (int64, error) {
 	return writeStringJSON(w, string(*s), true)
 }
 
-func (s *String) Contents() interface{} {
+func (s *String) Contents() any {
 	return s.JSON()
 }
 
@@ -423,7 +423,7 @@ func (s *String) Value() string {
 	return string(*s)
 }
 
-func (s *String) JSON() interface{} {
+func (s *String) JSON() any {
 	return s.Value()
 }
 
@@ -487,7 +487,7 @@ func (a ArrayBinary) WriteTo(w io.Writer) (int64, error) {
 	return writeArrayJSON(w, a)
 }
 
-func (a ArrayBinary) Contents() interface{} {
+func (a ArrayBinary) Contents() any {
 	return a.JSON()
 }
 
@@ -556,8 +556,8 @@ func (a ArrayBinary) SetIdx(i int, value File) Json {
 	return a.clone().SetIdx(i, value)
 }
 
-func (a ArrayBinary) JSON() interface{} {
-	array := make([]interface{}, a.Len())
+func (a ArrayBinary) JSON() any {
+	array := make([]any, a.Len())
 	for i := 0; i < a.Len(); i++ {
 		array[i] = a.Value(i).JSON()
 	}
@@ -610,7 +610,7 @@ func (a ArrayBinary) Clone(bool) File {
 
 func (a ArrayBinary) clone() Array {
 	c := make([]File, a.Len())
-	for i := 0; i < len(c); i++ {
+	for i := range c {
 		c[i] = a.valueImpl(i)
 	}
 
@@ -619,7 +619,7 @@ func (a ArrayBinary) clone() Array {
 
 func (a ArrayBinary) String() string {
 	s := make([]string, a.Len())
-	for i := 0; i < len(s); i++ {
+	for i := range s {
 		s[i] = a.Value(i).String()
 	}
 	return "[" + strings.Join(s, ",") + "]"
@@ -633,7 +633,7 @@ func (a *ArraySlice) WriteTo(w io.Writer) (int64, error) {
 	return writeArrayJSON(w, a)
 }
 
-func (a *ArraySlice) Contents() interface{} {
+func (a *ArraySlice) Contents() any {
 	return a.JSON()
 }
 
@@ -702,7 +702,7 @@ func (a *ArraySlice) SetIdx(i int, j File) Json {
 	return a
 }
 
-func (a *ArraySlice) JSON() interface{} {
+func (a *ArraySlice) JSON() any {
 	return arraySliceBase[*ArraySlice]{}.JSON(a)
 }
 
@@ -750,6 +750,24 @@ type ObjectBinary struct {
 	content objectReader
 }
 
+// NewObjectBinary creates an ObjectBinary by serializing
+// the provided value to the binary format, and then wrapping
+// the buffer of bytes in an ObjectBinary.
+func NewObjectBinary(value any) (ObjectBinary, error) {
+	snapshotR, _, err := translate(value)
+	return newObject(snapshotR, 0), err
+}
+
+// NewObjectBinary creates an ObjectBinary by serializing
+// the provided value to the binary format, and then wrapping
+// the buffer of bytes in an ObjectBinary. The BytesReader
+// can be used later for delta patching the ObjectBinary.
+func NewObjectBinaryWithBytesReader(value any) (ObjectBinary, *utils.BytesReader, error) {
+	snapshotR, _, err := translate(value)
+	ab, _ := snapshotR.content.UnpackBytesReaders()
+	return newObject(snapshotR, 0), ab, err
+}
+
 func newObject(reader contentReader, offset int64) ObjectBinary {
 	content, err := reader.ReadObject(offset)
 	checkError(err)
@@ -765,7 +783,7 @@ func (o ObjectBinary) WriteTo(w io.Writer) (int64, error) {
 	properties, offsets, err := o.content.objectNameValueOffsets()
 	checkError(err)
 
-	for i := 0; i < len(properties); i++ {
+	for i := range properties {
 		if err := writeValueSeparator(w, i, &written); err != nil {
 			return written, err
 		}
@@ -789,7 +807,7 @@ func (o ObjectBinary) WriteTo(w io.Writer) (int64, error) {
 	return written, err
 }
 
-func (o ObjectBinary) Contents() interface{} {
+func (o ObjectBinary) Contents() any {
 	return o.JSON()
 }
 
@@ -862,9 +880,9 @@ func (o ObjectBinary) Len() int {
 	return o.content.ObjectLen()
 }
 
-func (o ObjectBinary) JSON() interface{} {
+func (o ObjectBinary) JSON() any {
 	properties, offsets, err := o.content.objectNameValueOffsets()
-	object := make(map[string]interface{}, len(properties))
+	object := make(map[string]any, len(properties))
 	checkError(err)
 
 	for i := range properties {
@@ -927,7 +945,7 @@ func (o ObjectBinary) Clone(bool) File {
 func (o ObjectBinary) clone() Object {
 	n := o.Len()
 	p := make(map[string]File, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		name := o.NamesIndex(i)
 		p[name] = o.valueImpl(name)
 	}
@@ -966,11 +984,11 @@ func (o ObjectBinary) Union(other Json) Json {
 
 type ObjectMap struct {
 	internedKeys *[]string
-	values       []interface{}
+	values       []any
 }
 
 type objectEntry struct {
-	value interface{}
+	value any
 	name  string
 }
 
@@ -978,9 +996,9 @@ func NewObject(properties map[string]File) Object {
 	return newObjectImpl(properties, nil)
 }
 
-func newObjectImpl(properties map[string]File, interning map[interface{}]*[]string) Object {
+func newObjectImpl(properties map[string]File, interning map[any]*[]string) Object {
 	keys := make([]string, len(properties))
-	values := make([]interface{}, len(properties))
+	values := make([]any, len(properties))
 
 	i := 0
 	for key, value := range properties {
@@ -998,7 +1016,7 @@ func newObjectImpl(properties map[string]File, interning map[interface{}]*[]stri
 
 type keyValueSlices struct {
 	keys   []string
-	values []interface{}
+	values []any
 }
 
 func (kv *keyValueSlices) Len() int {
@@ -1018,7 +1036,7 @@ func (o *ObjectMap) WriteTo(w io.Writer) (int64, error) {
 	return objectMapBase[*ObjectMap]{}.WriteTo(o, w)
 }
 
-func (o *ObjectMap) Contents() interface{} {
+func (o *ObjectMap) Contents() any {
 	return o.JSON()
 }
 
@@ -1038,16 +1056,14 @@ func (o *ObjectMap) setImpl(name string, value File) (Object, bool) {
 	}
 
 	curr := o.keys()
-	keys := make([]string, len(curr)+1)
-	copy(keys, curr[0:i])
-	keys[i] = name
-	copy(keys[i+1:], curr[i:])
-	o.internedKeys = o.intern(keys, nil) // No interning.
+	curr = append(curr, name)
+	copy(curr[i+1:], curr[i:])
+	curr[i] = name
+	o.internedKeys = o.intern(curr, nil) // No interning.
 
-	values := make([]interface{}, len(o.values)+1)
-	copy(values, o.values[0:i])
+	values := append(o.values, nil)
+	copy(values[i+1:], values[i:])
 	values[i] = value
-	copy(values[i+1:], o.values[i:])
 	o.values = values
 	return o, false
 }
@@ -1087,7 +1103,7 @@ func (o *ObjectMap) RemoveIdx(i int) Json {
 	copy(keys, curr[0:i])
 	copy(keys[i:], curr[i+1:])
 
-	values := make([]interface{}, len(o.values)-1)
+	values := make([]any, len(o.values)-1)
 	copy(values, o.values[0:i])
 	copy(values[i:], o.values[i+1:])
 
@@ -1116,7 +1132,7 @@ func (o *ObjectMap) Len() int {
 	return len(o.values)
 }
 
-func (o *ObjectMap) JSON() interface{} {
+func (o *ObjectMap) JSON() any {
 	return objectMapBase[*ObjectMap]{}.JSON(o)
 }
 
@@ -1152,7 +1168,7 @@ func (o *ObjectMap) Union(other Json) Json {
 	return objectMapBase[*ObjectMap]{}.Union(o, other)
 }
 
-func (o *ObjectMap) intern(s []string, keys map[interface{}]*[]string) *[]string {
+func (o *ObjectMap) intern(s []string, keys map[any]*[]string) *[]string {
 	return objectMapBase[*ObjectMap]{}.intern(s, keys)
 }
 
@@ -1284,7 +1300,7 @@ func jsonType(j File) int {
 
 type unmarshaller struct {
 	strings map[string]*String
-	keys    map[interface{}]*[]string
+	keys    map[any]*[]string
 }
 
 func (u *unmarshaller) intern(v string) *String {
@@ -1292,8 +1308,28 @@ func (u *unmarshaller) intern(v string) *String {
 }
 
 // New constructs a JSON object out of go native types. It supports the struct tags.
-func New(value interface{}) (Json, error) {
-	u := unmarshaller{strings: make(map[string]*String), keys: make(map[interface{}]*[]string)}
+func New(value any) (Json, error) {
+	u := unmarshaller{strings: make(map[string]*String), keys: make(map[any]*[]string)}
+	doc, err := u.unmarshal(reflect.ValueOf(value), reflect.TypeOf(value))
+	if err != nil {
+		return nil, fmt.Errorf("json: unable to encode to JSON: %w", err)
+	}
+
+	return doc, nil
+}
+
+func NewWithStringCache(value any, stringCache map[string]*String) (Json, error) {
+	u := unmarshaller{strings: stringCache, keys: make(map[any]*[]string)}
+	doc, err := u.unmarshal(reflect.ValueOf(value), reflect.TypeOf(value))
+	if err != nil {
+		return nil, fmt.Errorf("json: unable to encode to JSON: %w", err)
+	}
+
+	return doc, nil
+}
+
+func NewWithCaches(value any, stringCache map[string]*String, keyCache map[any]*[]string) (Json, error) {
+	u := unmarshaller{strings: stringCache, keys: keyCache}
 	doc, err := u.unmarshal(reflect.ValueOf(value), reflect.TypeOf(value))
 	if err != nil {
 		return nil, fmt.Errorf("json: unable to encode to JSON: %w", err)
@@ -1303,7 +1339,7 @@ func New(value interface{}) (Json, error) {
 }
 
 // MustNew constructs a JSON object out of go native types. It supports the struct tags. It panics if the provided value does not convert to JSON.
-func MustNew(value interface{}) Json {
+func MustNew(value any) Json {
 	doc, err := New(value)
 	if err != nil {
 		panic("cannot build JSON")
@@ -1458,7 +1494,7 @@ func (u *unmarshaller) unmarshalArray(values reflect.Value, typ reflect.Type) (J
 	n := values.Len()
 	a := make([]File, 0, n)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		var err error
 		value, err := u.unmarshal(values.Index(i), typ)
 		if err != nil {
@@ -1476,7 +1512,8 @@ func (u *unmarshaller) unmarshalMap(values reflect.Value) (Json, error) {
 		return NewNull(), nil
 	}
 
-	m := make(map[string]File)
+	m := make(map[string]File, values.Len())
+
 	iter := values.MapRange()
 
 	elem := values.Type().Elem()
@@ -1617,7 +1654,7 @@ func writeArrayJSON(w io.Writer, a Array) (int64, error) {
 	}
 
 	l := a.Len()
-	for i := 0; i < l; i++ {
+	for i := range l {
 		if err := writeValueSeparator(w, i, &written); err != nil {
 			return written, err
 		}

@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
+	"github.com/open-policy-agent/eopa/pkg/json/utils"
 )
 
 func TestBlob(t *testing.T) {
@@ -36,7 +36,7 @@ func TestBlob(t *testing.T) {
 	}
 }
 
-func buildBinary(data interface{}) (File, error) {
+func buildBinary(data any) (File, error) {
 	cache := newEncodingCache()
 	buffer := new(bytes.Buffer)
 

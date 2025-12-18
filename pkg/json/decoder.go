@@ -26,14 +26,14 @@ func IsJSON(bs []byte) bool {
 // standard package.
 type Decoder struct {
 	strings map[string]*String // for string interning.
-	keys    map[interface{}]*[]string
+	keys    map[any]*[]string
 	iter    *jsoniter.Iterator
 }
 
 func newDecoder(iter *jsoniter.Iterator) *Decoder {
 	return &Decoder{
 		strings: make(map[string]*String),
-		keys:    make(map[interface{}]*[]string),
+		keys:    make(map[any]*[]string),
 		iter:    iter,
 	}
 }

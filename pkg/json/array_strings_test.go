@@ -59,7 +59,7 @@ func TestArrayStringsSizes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			var native interface{}
+			var native any
 			if err := json.NewDecoder(bytes.NewBufferString(test.json)).Decode(&native); err != nil {
 				t.Fatal(err)
 			}
@@ -75,7 +75,7 @@ func TestArrayStringsSizes(t *testing.T) {
 				t.Errorf("incorrect json marshaling: %s", doc.String())
 			}
 
-			var nativeArr = native.([]interface{})
+			var nativeArr = native.([]any)
 			var arr = doc.(Array)
 
 			arr = arr.Clone(true).(Array)
@@ -122,14 +122,14 @@ func TestArrayStringsSizes(t *testing.T) {
 				arr = a
 			}
 
-			if !reflect.DeepEqual(arr.JSON(), append(nativeArr, []interface{}{"a", "b", "c"}...)) {
+			if !reflect.DeepEqual(arr.JSON(), append(nativeArr, []any{"a", "b", "c"}...)) {
 				t.Error("broken append or append single")
 			}
 
 			// SetIdx, RemoveIdx
 
 			arr = arr.SetIdx(arr.Len()-1, NewString("c updated")).(Array)
-			if !reflect.DeepEqual(arr.JSON(), append(nativeArr, []interface{}{"a", "b", "c updated"}...)) {
+			if !reflect.DeepEqual(arr.JSON(), append(nativeArr, []any{"a", "b", "c updated"}...)) {
 				t.Error("broken set idx")
 			}
 
@@ -146,9 +146,9 @@ func TestArrayStringsSizes(t *testing.T) {
 // TestArrayStringsAppend stresses the append implementation.
 func TestArrayStringsAppend(t *testing.T) {
 	arr := newArrayCompactStrings[[1]*String](nil)
-	var expected []interface{}
+	expected := make([]any, 0, 64*2)
 
-	for i := int64(0); i < 64; i++ {
+	for i := range int64(64) {
 		arr = arr.Append(NewString(fmt.Sprintf("%d", i)), NewString(fmt.Sprintf("%d", i*2)))
 		expected = append(expected, fmt.Sprintf("%d", i))
 		expected = append(expected, fmt.Sprintf("%d", i*2))

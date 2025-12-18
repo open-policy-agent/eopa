@@ -8,16 +8,16 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
-	"github.com/open-policy-agent/eopa/pkg/json/internal/utils"
+	"github.com/open-policy-agent/eopa/pkg/json/utils"
 )
 
 // deltaPatch transforms a JSON patch to a delta to apply over a snapshot or merges the JSON patch to an existing delta.
 type deltaPatch struct {
-	dependency interface{}        // Storage level object
+	dependency any                // Storage level object
 	snapshot   *utils.MultiReader // Content without any deltas. Not modified.
 	delta      *utils.MultiReader // Plain deltas. As patches are applied, this is appended with new patches.
 	content    *utils.MultiReader // Entire content, a mere facade over the snapshot and deltas.
@@ -25,7 +25,7 @@ type deltaPatch struct {
 	slen       int64
 }
 
-func newDeltaPatch(snapshot *utils.MultiReader, slen int64, delta *utils.MultiReader, objects []interface{}) *deltaPatch {
+func newDeltaPatch(snapshot *utils.MultiReader, slen int64, delta *utils.MultiReader, objects []any) *deltaPatch {
 	if delta == nil {
 		buffer := new(bytes.Buffer)
 		buffer.Write(make([]byte, 4))
@@ -300,8 +300,8 @@ func (d *deltaPatch) create(name string) []string {
 	var obj Object = newObject(d, 0)
 
 	segs := PathSegments(name)
-	var path []string
-	for i := 0; i < len(segs); i++ {
+	path := make([]string, 0, len(segs))
+	for i := range segs {
 		// Non-leafs in the hierarchy must be directories.
 
 		if i < len(segs)-1 && kindImpl(obj) != Directory {
@@ -577,7 +577,7 @@ func (d *deltaPatch) remove(offset int64, removed map[int64]struct{}) error {
 		l, err := content.ArrayLen()
 		checkError(err)
 
-		for i := 0; i < l; i++ {
+		for i := range l {
 			offset, err := content.ArrayValueOffset(i)
 			if err != nil {
 				return err
@@ -595,10 +595,13 @@ func (d *deltaPatch) remove(offset int64, removed map[int64]struct{}) error {
 		content, err := d.ReadObject(offset)
 		checkError(err)
 
-		_, offsets, err := content.objectNameValueOffsets()
-		checkError(err)
+		objLen := content.ObjectLen()
+		for i := range objLen {
+			offset, err := content.objectValueOffset(i)
+			if err != nil {
+				return err
+			}
 
-		for _, offset := range offsets {
 			if err := d.remove(offset, removed); err != nil {
 				return err
 			}
@@ -626,7 +629,7 @@ func (d *deltaPatch) serialize() (*utils.BytesReader, error) {
 		offsets = append(offsets, off)
 	}
 
-	sort.Slice(offsets, func(i, j int) bool { return offsets[i] < offsets[j] })
+	slices.Sort(offsets)
 
 	patches := make(map[int64]int64)
 	encodingCache, hashCacheA := newEncodingCache(), newHashCache(d)
@@ -652,7 +655,7 @@ func (d *deltaPatch) serialize() (*utils.BytesReader, error) {
 		offsets = append(offsets, off)
 	}
 
-	sort.Slice(offsets, func(i, j int) bool { return offsets[i] < offsets[j] })
+	slices.Sort(offsets)
 
 	for _, ooff := range offsets {
 		writeInt32(buffer, int32(ooff))
@@ -674,7 +677,7 @@ func (d *deltaPatch) collections() *snapshot {
 	err := d.apply(d.setMetaRecursively(nil, newObject(d, 0), "timestamp", fmt.Sprintf("%d", now.UnixNano())))
 	checkError(err)
 
-	return &snapshot{ObjectBinary: newObject(d, 0), slen: d.slen, blen: int64(d.content.Len()), objects: []interface{}{nil, d.dependency}}
+	return &snapshot{ObjectBinary: newObject(d, 0), slen: d.slen, blen: int64(d.content.Len()), objects: []any{nil, d.dependency}}
 }
 
 func (d *deltaPatch) setMetaRecursively(path []string, obj Object, key string, value string) Patch {
@@ -781,6 +784,43 @@ func (d *deltaPatchObjectReader) objectNameValueOffsets() ([]objectEntry, []int6
 	return d.impl.objectNameValueOffsets()
 }
 
+func (d *deltaPatchObjectReader) objectValueOffset(i int) (int64, error) {
+	return d.impl.objectValueOffset(i)
+}
+
 func (d *deltaPatchObjectReader) objectNameOffsetsValueOffsets() ([]objectEntry, []int64, []int64, error) {
 	return d.impl.objectNameOffsetsValueOffsets()
+}
+
+// PatchObjectSnapshot takes a snapshot and an optional delta's
+// BytesReaders, along with a Patch, and returns an updated
+// BinaryObject snapshot, and a BytesReader containing an updated
+// delta.
+func PatchObjectBinary(snapshotBytesReader *utils.BytesReader, deltaBytesReader *utils.BytesReader, patches Patch) (ObjectBinary, *utils.BytesReader, error) {
+	snapshotBytesR := snapshotBytesReader
+
+	deltaBytesR := deltaBytesReader
+	if deltaBytesReader == nil {
+		deltaBytesR = utils.NewBytesReader([]byte{})
+	}
+
+	// Construct current delta patch state from readers, then apply the patches.
+	deltaPatch := newDeltaPatch(utils.NewMultiReaderFromBytesReaders(snapshotBytesR, deltaBytesR), int64(snapshotBytesR.Len()), nil, []any{nil, nil})
+	if err := deltaPatch.apply(patches); err != nil {
+		return ObjectBinary{}, nil, fmt.Errorf("failed to apply binary patch: %v", err)
+	}
+
+	// Serialize the updated delta patch to the binary format.
+	delta, err := deltaPatch.serialize()
+	if err != nil {
+		return ObjectBinary{}, nil, fmt.Errorf("failed to serialize delta: %v", err)
+	}
+
+	// Construct a new deltaReader for the updated BinaryObject to read from.
+	deltaReader, err := newDeltaReader(utils.NewMultiReaderFromBytesReader(snapshotBytesR), int64(snapshotBytesR.Len()), utils.NewMultiReaderFromBytesReader(delta))
+	if err != nil {
+		return ObjectBinary{}, nil, fmt.Errorf("failed to create deltaReader: %v", err)
+	}
+
+	return newObject(deltaReader, 0), delta, nil
 }

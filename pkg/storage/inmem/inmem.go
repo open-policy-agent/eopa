@@ -119,7 +119,7 @@ func (db *store) Truncate(ctx context.Context, txn storage.Transaction, params s
 	for {
 		update, err = it.Next()
 		if err != nil {
-			break
+			break // break when we run out of items and io.EOF happens.
 		}
 
 		if update.IsPolicy {
@@ -154,6 +154,7 @@ func (db *store) Truncate(ctx context.Context, txn storage.Transaction, params s
 		}
 	}
 
+	// Bail out if the iterator had an unexpected error.
 	if err != nil && err != io.EOF {
 		return err
 	}
@@ -277,6 +278,40 @@ func (db *store) Read(_ context.Context, txn storage.Transaction, path storage.P
 		return nil, err
 	}
 	u, err := underlying.Read(path)
+	// Try reading the parent(s), in case it's a binary snapshot:
+	if err != nil && storage.IsNotFound(err) {
+		for i := len(path) - 1; i >= 0; i-- {
+			p := path[:i]
+			if len(p) == 0 {
+				p = nil
+			}
+			u, err = underlying.Read(p)
+			if err != nil {
+				continue // Backtrack up the path until we find a value.
+			}
+			// If the value at the current path is a BJSON type,
+			// try extracting out the rest of the path. If it's a binary
+			// snapshot, this will do the nested key lookup for us.
+			if v, ok := u.(bjson.Json); ok {
+				result, err := v.Extract("/" + strings.Join(path[i:], "/"))
+				if err != nil {
+					return nil, &storage.Error{
+						Code:    storage.NotFoundErr,
+						Message: fmt.Sprintf("%v: document does not exist", path),
+					}
+				}
+				return result, nil
+			}
+			// If the value at the current path was not a BJSON type, then
+			// the original path is not present in the store at all.
+			break
+		}
+		return nil, &storage.Error{
+			Code:    storage.NotFoundErr,
+			Message: fmt.Sprintf("%v: document does not exist", path),
+		}
+	}
+	// Return all other error types.
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +389,7 @@ func (db *store) underlying(txn storage.Transaction) (*transaction, error) {
 const rootMustBeObjectMsg = "root must be object"
 const rootCannotBeRemovedMsg = "root cannot be removed"
 
-func invalidPatchError(f string, a ...interface{}) *storage.Error {
+func invalidPatchError(f string, a ...any) *storage.Error {
 	return &storage.Error{
 		Code:    storage.InvalidPatchErr,
 		Message: fmt.Sprintf(f, a...),
@@ -386,7 +421,7 @@ func lookup(path storage.Path, data bjson.Object) (bjson.Json, bool) {
 	if len(path) == 0 {
 		return data, true
 	}
-	for i := 0; i < len(path)-1; i++ {
+	for i := range len(path) - 1 {
 		value := data.Value(path[i])
 		if value == nil {
 			return nil, false

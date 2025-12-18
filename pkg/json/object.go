@@ -34,9 +34,9 @@ func (objectMapBase[T]) Value(o T, name string) Json {
 	return nil
 }
 
-func (objectMapBase[T]) JSON(o T) interface{} {
+func (objectMapBase[T]) JSON(o T) any {
 	keys := o.Names()
-	object := make(map[string]interface{}, len(keys))
+	object := make(map[string]any, len(keys))
 	for i := range keys {
 		j, ok := o.iterate(i).(Json)
 		if ok {
@@ -205,8 +205,8 @@ func (objectMapBase[T]) Union(o T, other Json) Json {
 }
 
 func (objectMapBase[T]) clone(o T, internedKeys *[]string, deepCopy bool) *ObjectMap {
-	values := make([]interface{}, len(*internedKeys))
-	for i := 0; i < len(values); i++ {
+	values := make([]any, len(*internedKeys))
+	for i := range values {
 		v := o.iterate(i)
 		if deepCopy {
 			v = v.Clone(true)
@@ -218,7 +218,7 @@ func (objectMapBase[T]) clone(o T, internedKeys *[]string, deepCopy bool) *Objec
 	return &ObjectMap{internedKeys, values}
 }
 
-func (objectMapBase[T]) intern(s []string, keys map[interface{}]*[]string) *[]string {
+func (objectMapBase[T]) intern(s []string, keys map[any]*[]string) *[]string {
 	if keys == nil {
 		return &s
 	}
@@ -243,7 +243,7 @@ type ObjectMapCompact[T indexable] struct {
 	values       T
 }
 
-func NewObjectMapCompact(properties map[string]File, interning map[interface{}]*[]string) Object {
+func NewObjectMapCompact(properties map[string]File, interning map[any]*[]string) Object {
 	if o := NewObjectMapCompactStrings(properties, interning); o != nil {
 		return o
 	}
@@ -356,7 +356,7 @@ type indexable interface {
 		~[32]File
 }
 
-func newObjectMapCompact[T indexable](properties map[string]File, interning map[interface{}]*[]string) Object {
+func newObjectMapCompact[T indexable](properties map[string]File, interning map[any]*[]string) Object {
 	var obj ObjectMapCompact[T]
 
 	i := 0
@@ -395,7 +395,7 @@ func (o *ObjectMapCompact[T]) WriteTo(w io.Writer) (int64, error) {
 	return objectMapBase[*ObjectMapCompact[T]]{}.WriteTo(o, w)
 }
 
-func (o *ObjectMapCompact[T]) Contents() interface{} {
+func (o *ObjectMapCompact[T]) Contents() any {
 	return o.JSON()
 }
 
@@ -465,7 +465,7 @@ func (o *ObjectMapCompact[T]) Len() int {
 	return len(o.values)
 }
 
-func (o *ObjectMapCompact[T]) JSON() interface{} {
+func (o *ObjectMapCompact[T]) JSON() any {
 	return objectMapBase[*ObjectMapCompact[T]]{}.JSON(o)
 }
 
@@ -505,7 +505,7 @@ func (o *ObjectMapCompact[T]) Union(other Json) Json {
 	return objectMapBase[*ObjectMapCompact[T]]{}.Union(o, other)
 }
 
-func (o *ObjectMapCompact[T]) intern(s []string, keys map[interface{}]*[]string) *[]string {
+func (o *ObjectMapCompact[T]) intern(s []string, keys map[any]*[]string) *[]string {
 	return objectMapBase[*ObjectMapCompact[T]]{}.intern(s, keys)
 }
 

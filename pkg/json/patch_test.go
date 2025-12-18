@@ -523,9 +523,9 @@ func TestPatch(t *testing.T) {
 
 	var tests []struct {
 		Comment  string        `json:"comment"`
-		Doc      interface{}   `json:"doc"`
+		Doc      any           `json:"doc"`
 		Patch    JsonPatchSpec `json:"patch"`
-		Expected interface{}   `json:"expected"`
+		Expected any           `json:"expected"`
 		Error    string        `json:"error"`
 		Disabled bool          `json:"disabled"`
 	}
@@ -590,7 +590,7 @@ func TestPatch(t *testing.T) {
 				t.Fatalf("marshaling/unmarshaling round trip didn't result to equal result")
 			}
 
-			for i := 0; i < len(patch); i++ {
+			for i := range patch {
 				if patch[i].Op != patch2[i].Op ||
 					patch[i].Path != patch2[i].Path ||
 					!((patch[i].Value == nil && patch2[i].Value == nil) || patch[i].Value.Compare(patch2[i].Value) == 0) || // nolint:staticcheck

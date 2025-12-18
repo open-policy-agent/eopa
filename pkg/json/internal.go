@@ -78,6 +78,9 @@ type objectReader interface {
 
 	// objectNameOffsetsValueOffsets returns the property name and the offsets to key and value. The property has to exist.
 	objectNameOffsetsValueOffsets() ([]objectEntry, []int64, []int64, error)
+
+	// objectValueOffset returns the value offset at the given index.
+	objectValueOffset(i int) (int64, error)
 }
 
 // objectReader provides a convenient access to an array at offset. The rest of the content can be accessed through contentReader.
@@ -118,14 +121,14 @@ func newEncodingCache() *encodingCache {
 
 func (c *encodingCache) CacheObjectType(typeName []objectEntry, offset int32) int32 {
 	h := uint64(0)
-	for i := 0; i < len(typeName); i++ {
+	for i := range typeName {
 		h += xxhash.Sum64String(typeName[i].name)
 	}
 
 	objects, ok := c.objectTypes[h]
 	if ok {
 	next:
-		for i := 0; i < len(objects); i++ {
+		for i := range objects {
 			if len(typeName) != len(objects[i].properties) {
 				continue
 			}
@@ -154,7 +157,7 @@ func (c *encodingCache) CacheString(str string, offset int32) int32 {
 
 	strings, ok := c.strings[h]
 	if ok {
-		for i := 0; i < len(strings); i++ {
+		for i := range strings {
 			if strings[i].s == str {
 				return strings[i].offset
 			}

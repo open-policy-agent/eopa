@@ -33,7 +33,7 @@ func (b *blobImpl) WriteTo(w io.Writer) (int64, error) {
 	return int64(n), err
 }
 
-func (b *blobImpl) Contents() interface{} {
+func (b *blobImpl) Contents() any {
 	return b.Value()
 }
 

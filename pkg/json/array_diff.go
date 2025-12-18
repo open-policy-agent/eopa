@@ -34,7 +34,7 @@ func arrayDiff(a contentReader, ar arrayReader, b contentReader, br arrayReader,
 	bh := make(map[uint64][]int, bl)
 	bhl := make([]uint64, bl)
 
-	for i := 0; i < al; i++ {
+	for i := range al {
 		off, err := ar.ArrayValueOffset(i)
 		if err != nil {
 			return nil, false, err
@@ -50,7 +50,7 @@ func arrayDiff(a contentReader, ar arrayReader, b contentReader, br arrayReader,
 		ah[h] = append(ah[h], i)
 	}
 
-	for i := 0; i < bl; i++ {
+	for i := range bl {
 		off, err := br.ArrayValueOffset(i)
 		if err != nil {
 			return nil, false, err
@@ -194,7 +194,7 @@ func elementEqual(a contentReader, aoff int64, b contentReader, boff int64) (boo
 			return false, nil
 		}
 
-		for i := 0; i < al; i++ {
+		for i := range al {
 			aoff, err := aa.ArrayValueOffset(i)
 			if err != nil {
 				return false, err
