@@ -353,5 +353,9 @@ func writeFile(path, contents string) error {
 		return err
 	}
 
+	if err := f.Close(); err != nil {
+		return err
+	}
+
 	return nil
 }
