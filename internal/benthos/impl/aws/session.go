@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"net/http"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -10,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-
+	"github.com/aws/smithy-go/logging"
 	"github.com/redpanda-data/benthos/v4/public/service"
 )
 
@@ -39,13 +40,14 @@ func GetSession(ctx context.Context, parsedConf *service.ParsedConfig, opts ...f
 		)))
 	}
 
+	// Enable AWS SDK logging to stderr for debugging purposes
+	//TODO remove after debugging
+	opts = append(opts, config.WithClientLogMode(aws.LogRequestWithBody|aws.LogResponseWithBody))
+	opts = append(opts, config.WithLogger(logging.NewStandardLogger(os.Stderr)))
+
 	conf, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		return conf, err
-	}
-
-	if endpoint, _ := parsedConf.FieldString("endpoint"); endpoint != "" {
-		conf.BaseEndpoint = &endpoint
 	}
 
 	if role, _ := credsConf.FieldString("role"); role != "" {
@@ -60,6 +62,10 @@ func GetSession(ctx context.Context, parsedConf *service.ParsedConfig, opts ...f
 
 		creds := stscreds.NewAssumeRoleProvider(stsSvc, role, stsOpts...)
 		conf.Credentials = aws.NewCredentialsCache(creds)
+	}
+
+	if endpoint, _ := parsedConf.FieldString("endpoint"); endpoint != "" {
+		conf.BaseEndpoint = &endpoint
 	}
 
 	if useEC2, _ := credsConf.FieldBool("from_ec2_role"); useEC2 {
