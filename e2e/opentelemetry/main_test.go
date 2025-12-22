@@ -96,7 +96,7 @@ p if http.send({"url":"%[1]s", "method":"GET"})
 		`Name           : v1/data`,
 		`InstrumentationScope rego_target_vm`,
 		`Name           : HTTP GET`,
-		`InstrumentationScope benthos`,
+		`InstrumentationScope redpanda-connect`,
 		`Name           : mapping`,
 		`Name           : output_stdout`,
 		`Name           : output_http_client`,
@@ -105,9 +105,9 @@ p if http.send({"url":"%[1]s", "method":"GET"})
 
 	retry.Run(t, func(t *retry.R) {
 		collectorOutput := output(t, ctx, coll)
-		found := findAllOccurrences(collectorOutput, expectedLines)
+		found := findAllOccurrences(string(collectorOutput), expectedLines)
 		for _, k := range expectedLines {
-			if act, exp := len(found[k]), 1; exp != act {
+			if act, exp := found[k], 1; exp != act {
 				t.Errorf("string %q expected %d occurrance(s), got %d", k, exp, act)
 			}
 		}
@@ -127,15 +127,10 @@ func output(t *retry.R, ctx context.Context, coll testcontainers.Container) []by
 	return b
 }
 
-func findAllOccurrences(data []byte, searches []string) map[string][]int { // https://stackoverflow.com/a/52684989/993018
-	results := make(map[string][]int)
+func findAllOccurrences(data string, searches []string) map[string]int {
+	results := make(map[string]int)
 	for _, search := range searches {
-		searchData := data
-		term := []byte(search)
-		for x, d := bytes.Index(searchData, term), 0; x > -1; x, d = bytes.Index(searchData, term), d+x+1 {
-			results[search] = append(results[search], x+d)
-			searchData = searchData[x+1:]
-		}
+		results[search] = strings.Count(data, search)
 	}
 	return results
 }
@@ -193,7 +188,7 @@ func binary() string {
 
 func collector(t *testing.T, ctx context.Context) (testcontainers.Container, string) {
 	req := testcontainers.ContainerRequest{
-		Image:        "otel/opentelemetry-collector-contrib:0.81.0",
+		Image:        "otel/opentelemetry-collector-contrib:0.142.0",
 		ExposedPorts: []string{"4317/tcp"},
 		WaitingFor:   tc_wait.ForLog("Everything is ready. Begin running and processing data."),
 	}
