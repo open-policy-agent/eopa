@@ -2,7 +2,7 @@ module github.com/open-policy-agent/eopa-examples-sdk
 
 go 1.25.2
 
-require github.com/open-policy-agent/opa v1.12.1
+require github.com/open-policy-agent/opa v1.12.3
 
 require (
 	github.com/hashicorp/vault/api v1.22.0
