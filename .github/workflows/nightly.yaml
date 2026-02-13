@@ -279,7 +279,7 @@ jobs:
         # Equivalent to:
         # $ trivy image $IMAGE
       - name: Run Trivy scan on image
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+        uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # 0.34.0
         with:
           image-ref: ${{ steps.eopa.outputs.image }}
           format: table
@@ -304,7 +304,7 @@ jobs:
       # Equivalent to:
       # $ trivy fs .
       - name: Run Trivy scan on repo
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+        uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284 # 0.34.0
         with:
           scan-type: fs
           format: table
@@ -381,14 +381,14 @@ jobs:
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@19b2f06db2b6f5108140aeb04014ef02b648f789 # v3.29.5
+        uses: github/codeql-action/init@9e907b5e64f6b83e7804b09294d44122997950d6 # v3.29.5
         with:
           languages: go
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@19b2f06db2b6f5108140aeb04014ef02b648f789 # v3.29.5
+        uses: github/codeql-action/autobuild@9e907b5e64f6b83e7804b09294d44122997950d6 # v3.29.5
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@19b2f06db2b6f5108140aeb04014ef02b648f789 # v3.29.5
+        uses: github/codeql-action/analyze@9e907b5e64f6b83e7804b09294d44122997950d6 # v3.29.5
         with:
           category: "/language:go"
