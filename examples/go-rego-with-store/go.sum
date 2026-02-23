@@ -127,8 +127,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/ncruces/go-strftime v0.1.9 h1:bY0MQC28UADQmHmaF5dgpLmImcShSi2kHU9XLdhx/f4=
 github.com/ncruces/go-strftime v0.1.9/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
-github.com/open-policy-agent/opa v1.13.1 h1:2odxAcL3L0GNTlsuDcoguxViGxQxlpGL6zR8jdJjID8=
-github.com/open-policy-agent/opa v1.13.1/go.mod h1:M3Asy9yp1YTusUU5VQuENDe92GLmamIuceqjw+C8PHY=
+github.com/open-policy-agent/opa v1.13.2 h1:c72l7DhxP4g8DEUBOdaU9QBKyA24dZxCcIuZNRZ0yP4=
+github.com/open-policy-agent/opa v1.13.2/go.mod h1:M3Asy9yp1YTusUU5VQuENDe92GLmamIuceqjw+C8PHY=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJwooC2xJA040=
