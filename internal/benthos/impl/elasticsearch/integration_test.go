@@ -9,9 +9,7 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
-	"github.com/ory/dockertest/v3"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/ory/dockertest/v4"
 
 	"github.com/redpanda-data/benthos/v4/public/service/integration"
 )
@@ -39,23 +37,18 @@ func TestIntegrationElasticsearchV8(t *testing.T) {
 	integration.CheckSkip(t)
 	t.Parallel()
 
-	pool, err := dockertest.NewPool("")
-	require.NoError(t, err)
+	pool := dockertest.NewPoolT(t, "")
 
-	pool.MaxWait = time.Minute * 3
-	resource, err := pool.Run("elasticsearch", "8.1.2", []string{
+	dockertest.WithMaxWait(time.Minute * 3)
+	resource := pool.RunT(t, "elasticsearch", dockertest.WithTag("8.1.2"), dockertest.WithEnv([]string{
 		"discovery.type=single-node",
 		"xpack.security.enabled=false",
 		"xpack.security.http.ssl.enabled=false",
 		"ES_JAVA_OPTS=-Xms512m -Xmx512m", // By default ES immediately gobbles half the available RAM, what a psychopath.
-	})
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		assert.NoError(t, pool.Purge(resource))
-	})
+	}))
 
 	var client *elastic.Client
-	if err = pool.Retry(func() error {
+	if err := pool.Retry(context.TODO(), 900*time.Second, func() error {
 		opts := []elastic.ClientOptionFunc{
 			elastic.SetURL(fmt.Sprintf("http://localhost:%v", resource.GetPort("9200/tcp"))),
 			elastic.SetHttpClient(&http.Client{
@@ -76,8 +69,6 @@ func TestIntegrationElasticsearchV8(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Could not connect to docker resource: %s", err)
 	}
-
-	_ = resource.Expire(900)
 
 	template := `
 output:
@@ -122,21 +113,16 @@ func TestIntegrationElasticsearchV7(t *testing.T) {
 	integration.CheckSkip(t)
 	t.Parallel()
 
-	pool, err := dockertest.NewPool("")
-	require.NoError(t, err)
+	pool := dockertest.NewPoolT(t, "")
 
-	pool.MaxWait = time.Minute * 3
-	resource, err := pool.Run("elasticsearch", "7.17.2", []string{
+	dockertest.WithMaxWait(time.Minute * 3)
+	resource := pool.RunT(t, "elasticsearch", dockertest.WithTag("7.17.2"), dockertest.WithEnv([]string{
 		"discovery.type=single-node",
 		"ES_JAVA_OPTS=-Xms512m -Xmx512m", // By default ES immediately gobbles half the available RAM, what a psychopath.
-	})
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		assert.NoError(t, pool.Purge(resource))
-	})
+	}))
 
 	var client *elastic.Client
-	if err = pool.Retry(func() error {
+	if err := pool.Retry(context.TODO(), 900*time.Second, func() error {
 		opts := []elastic.ClientOptionFunc{
 			elastic.SetURL(fmt.Sprintf("http://localhost:%v", resource.GetPort("9200/tcp"))),
 			elastic.SetHttpClient(&http.Client{
@@ -147,7 +133,7 @@ func TestIntegrationElasticsearchV7(t *testing.T) {
 
 		var cerr error
 		if client, cerr = elastic.NewClient(opts...); cerr == nil {
-			_, err = client.
+			_, err := client.
 				CreateIndex("test_conn_index").
 				Timeout("20s").
 				Body(elasticIndex).
@@ -160,8 +146,6 @@ func TestIntegrationElasticsearchV7(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Could not connect to docker resource: %s", err)
 	}
-
-	_ = resource.Expire(900)
 
 	template := `
 output:
@@ -205,21 +189,16 @@ output:
 func BenchmarkIntegrationElasticsearch(b *testing.B) {
 	integration.CheckSkip(b)
 
-	pool, err := dockertest.NewPool("")
-	require.NoError(b, err)
+	pool := dockertest.NewPoolT(b, "")
+	dockertest.WithMaxWait(time.Minute * 3)
 
-	pool.MaxWait = time.Minute * 3
-	resource, err := pool.Run("elasticsearch", "7.13.4", []string{
+	resource := pool.RunT(b, "elasticsearch", dockertest.WithTag("7.13.4"), dockertest.WithEnv([]string{
 		"discovery.type=single-node",
 		"ES_JAVA_OPTS=-Xms512m -Xmx512m", // By default ES immediately gobbles half the available RAM, what a psychopath.
-	})
-	require.NoError(b, err)
-	b.Cleanup(func() {
-		assert.NoError(b, pool.Purge(resource))
-	})
+	}))
 
 	var client *elastic.Client
-	if err = pool.Retry(func() error {
+	if err := pool.Retry(context.TODO(), 900*time.Second, func() error {
 		opts := []elastic.ClientOptionFunc{
 			elastic.SetURL(fmt.Sprintf("http://localhost:%v", resource.GetPort("9200/tcp"))),
 			elastic.SetHttpClient(&http.Client{
@@ -240,8 +219,6 @@ func BenchmarkIntegrationElasticsearch(b *testing.B) {
 	}); err != nil {
 		b.Fatalf("Could not connect to docker resource: %s", err)
 	}
-
-	_ = resource.Expire(900)
 
 	template := `
 output:
