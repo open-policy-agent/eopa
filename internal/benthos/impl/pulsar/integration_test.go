@@ -1,13 +1,13 @@
 package pulsar
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
-	"github.com/ory/dockertest/v3"
-	"github.com/stretchr/testify/assert"
+	"github.com/ory/dockertest/v4"
 	"github.com/stretchr/testify/require"
 
 	"github.com/redpanda-data/benthos/v4/public/service/integration"
@@ -17,22 +17,12 @@ func TestIntegrationPulsar(t *testing.T) {
 	integration.CheckSkip(t)
 	t.Parallel()
 
-	pool, err := dockertest.NewPool("")
-	require.NoError(t, err)
+	pool := dockertest.NewPoolT(t, "")
+	dockertest.WithMaxWait(time.Minute * 2)
 
-	pool.MaxWait = time.Minute * 2
-	if dline, ok := t.Deadline(); ok && time.Until(dline) < pool.MaxWait {
-		pool.MaxWait = time.Until(dline)
-	}
+	resource := pool.RunT(t, "apachepulsar/pulsar-standalone", dockertest.WithTag("2.8.3"), nil)
 
-	resource, err := pool.Run("apachepulsar/pulsar-standalone", "2.8.3", nil)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		assert.NoError(t, pool.Purge(resource))
-	})
-
-	_ = resource.Expire(900)
-	require.NoError(t, pool.Retry(func() error {
+	require.NoError(t, pool.Retry(context.TODO(), 900*time.Second, func() error {
 		client, err := pulsar.NewClient(pulsar.ClientOptions{
 			URL:    fmt.Sprintf("pulsar://localhost:%v/", resource.GetPort("6650/tcp")),
 			Logger: NoopLogger(),
