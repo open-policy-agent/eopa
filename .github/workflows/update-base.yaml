@@ -20,19 +20,19 @@ jobs:
       - name: Tune GitHub-hosted runner network
         uses: smorimoto/tune-github-hosted-runner-network@bb252dcb5c8609a31087e7993daa086f5a1c0069 # v1.0.0
       - name: Check out code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
       - name: Build & Publish OCI
         id: apko
-        uses: chainguard-images/actions/apko-publish@86c76897384d489bbd053726e796263dd9483d62
+        uses: chainguard-images/actions/apko-publish@03241d624cef245ada340d38c1ed42d44e2e15b0
         with:
           config: apko.yaml
           archs: x86_64,aarch64
           tag: ghcr.io/open-policy-agent/eopa-base:latest
       - name: Build & Publish OCI (Debug)
         id: apko-debug
-        uses: chainguard-images/actions/apko-publish@86c76897384d489bbd053726e796263dd9483d62
+        uses: chainguard-images/actions/apko-publish@03241d624cef245ada340d38c1ed42d44e2e15b0
         with:
           config: apko-debug.yaml
           archs: x86_64,aarch64
