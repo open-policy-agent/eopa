@@ -1,11 +1,17 @@
 # EOPA
 
+> [!WARNING]
+> Please feel free to use this code in any way you'd like -- mix and match your own "OPA+", for example.
+>
+> If you are interested in maintaining this project, please reach out to the maintainers over on the [OPA Slack](https://slack.openpolicyagent.org/), and we'll be happy to discuss it.
+
+
 [![OPA v1.8.0](https://openpolicyagent.org/badge/v1.8.0)](https://github.com/open-policy-agent/opa/releases/tag/v1.8.0)
 [![Regal v0.35.1](https://img.shields.io/github/v/release/open-policy-agent/regal?filter=v0.35.1&label=Regal)](https://github.com/open-policy-agent/regal/releases/tag/v0.35.1)
 
 A version of OPA designed for data heavy workloads, with data-filtering functionality included.
 
-## New!
+## Notes
 
 **EOPA has been donated to the OPA community**, and we invite you to take a look around.
 
