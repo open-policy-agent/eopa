@@ -109,7 +109,25 @@ func (h *hndl) SetManager(m *plugins.Manager) error {
 		h.decisionIDFactory = defaultDecisionIDFactory
 	}
 	h.manager = m
+
+	// Purge the prepared eval query cache whenever the compiler is swapped
+	// (policy update via bundle plugin, opal-client, /v1/policies/... etc.).
+	// Without this, cached PreparedEvalQueries keep referencing the old
+	// compiler and serve stale results. Mirrors the reload mechanism in
+	// upstream OPA's server (v1/server/server.go).
+	m.RegisterCompilerTrigger(h.onCompilerChange)
+
 	return nil
+}
+
+// onCompilerChange is invoked by the plugins manager whenever the compiler
+// is replaced (i.e., a policy change was committed to the store). Clearing
+// the prepared eval query cache ensures subsequent batch requests rebuild
+// against the current compiler instead of returning stale results.
+func (h *hndl) onCompilerChange(_ storage.Transaction) {
+	if h.preparedEvalQueryCache != nil {
+		h.preparedEvalQueryCache.Purge()
+	}
 }
 
 func (h *hndl) SetLicensedMode(licensed bool) {

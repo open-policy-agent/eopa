@@ -654,3 +654,81 @@ func wrapHandlerAuthz(handler http.Handler, manager *plugins.Manager, scheme ser
 // 	}
 // 	return httpHandler
 // }
+
+// TestBatchDataCacheInvalidationOnPolicyChange verifies that the prepared
+// eval query cache held by the batch handler is invalidated when the
+// underlying policy is updated. Without the compiler-change trigger the
+// handler would keep serving results computed against the old compiler.
+func TestBatchDataCacheInvalidationOnPolicyChange(t *testing.T) {
+	t.Parallel()
+
+	modV1 := `package p
+import rego.v1
+
+x := 1
+`
+	modV2 := `package p
+import rego.v1
+
+x := 2
+`
+
+	bqhnd, manager := setup(t, []byte(modV1), nil, nil, nil)
+
+	payload := []byte(`{"inputs": {"A": {}}}`)
+
+	// Prime the cache.
+	respV1, _ := evalReq(t, bqhnd, "/p/x", 200, payload, nil)
+	if got := resultFloat(t, respV1, "A"); got != 1 {
+		t.Fatalf("first eval: expected 1, got %v (resp=%+v)", got, respV1)
+	}
+
+	// Swap the policy. Manager.onCommit is registered on the store at
+	// Init time; on commit it reloads the compiler from the store and then
+	// fires the triggers registered via RegisterCompilerTrigger — including
+	// the one the batch handler installs in SetManager.
+	ctx := context.Background()
+	txn, err := manager.Store.NewTransaction(ctx, storage.WriteParams)
+	if err != nil {
+		t.Fatalf("new transaction: %v", err)
+	}
+	if err := manager.Store.UpsertPolicy(ctx, txn, "test", []byte(modV2)); err != nil {
+		manager.Store.Abort(ctx, txn)
+		t.Fatalf("upsert policy: %v", err)
+	}
+	if err := manager.Store.Commit(ctx, txn); err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+
+	// Sanity: the manager really did swap in the new compiler.
+	if rules := manager.GetCompiler().GetRules(ast.MustParseRef("data.p.x")); len(rules) == 0 {
+		t.Fatalf("compiler was not reloaded after policy update")
+	}
+
+	respV2, _ := evalReq(t, bqhnd, "/p/x", 200, payload, nil)
+	if got := resultFloat(t, respV2, "A"); got != 2 {
+		t.Fatalf("second eval: expected 2 (after policy update), got %v (resp=%+v)", got, respV2)
+	}
+}
+
+// resultFloat extracts a numeric result for the given key from a batch
+// response, asserting the success path.
+func resultFloat(t *testing.T, resp batchquery.BatchDataResponseV1, key string) float64 {
+	t.Helper()
+	raw, ok := resp.Responses[key]
+	if !ok {
+		t.Fatalf("missing response for key %q: %+v", key, resp)
+	}
+	dr, ok := raw.(batchquery.DataResponseWithHTTPCodeV1)
+	if !ok {
+		t.Fatalf("unexpected response type for key %q: %T (%+v)", key, raw, raw)
+	}
+	if dr.Result == nil {
+		t.Fatalf("nil result for key %q: %+v", key, dr)
+	}
+	v, ok := (*dr.Result).(float64)
+	if !ok {
+		t.Fatalf("result for key %q is not a number: %T (%v)", key, *dr.Result, *dr.Result)
+	}
+	return v
+}
