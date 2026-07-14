@@ -1,6 +1,6 @@
 module github.com/open-policy-agent/eopa-sdk-example
 
-go 1.25.2
+go 1.25.5
 
 require (
 	github.com/open-policy-agent/eopa v0.0.0-00010101000000-000000000000
@@ -43,7 +43,7 @@ require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/apache/arrow-go/v18 v18.4.0 // indirect
 	github.com/apache/pulsar-client-go v0.18.0 // indirect
-	github.com/apache/thrift v0.22.0 // indirect
+	github.com/apache/thrift v0.23.0 // indirect
 	github.com/ardielle/ardielle-go v1.5.2 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.41.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.4 // indirect
